@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/201441-B/cryptographically-impossible-bug-hunt" target="_blank"><h1 class="title mb-6">Cryptographically impossible bug hunt</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 24, 2024
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m currently deep in the process of modifying the internals of Voron, trying to eke out more performance out of the system. I&#x2019;m making great progress, but I&#x2019;m also touching parts of the code that haven&#x2019;t even been looked at for a long time. In other words, I&#x2019;m mucking about with the most stable and most critical portions of the storage engine. It&#x2019;s a lot of fun, and I&#x2019;m actually seeing some great results, but it is also nerve-wracking. We have enough tests that I&#x2019;ve great confidence I would catch any actual stability issues, but the drive back toward a fully green build has been a slog.The process is straightforward:Change something.Verify that it works better than before.Run the entire test suite (upward of 30K tests) to see if there are any breaks.The last part can be frustrating because it takes a while&#xA0;to run this sort of test suite. That would be bad enough, but some of the changes I made were things like marking a piece of memory that used to be read/write as read-only. Now any access to that memory would result in an access violation. I fixed those in the code, of course, but we have a lot&#xA0;of tests, including some tests that intentionally corrupt data to verify that RavenDB behaves properly under those conditions. One such test writes garbage to the RavenDB file, using read-write memory. The idea is to verify that the checksum matches on read and abort early. Because that test directly modifies what is now read-only memory, it generates a crash due to a memory access violation. That doesn&#x2019;t just result in a test failure, it takes the whole process down.I&#x2019;ve gotten pretty good at debugging those sorts of issues (--blame-crash&#xA0;is fantastic) and was able to knock quite a few of them down and get them fixed. And then there was this test, which uses encryption-at-rest. That test started to fail after my changes, and I was pretty confused about exactly what was going on. When trying to read data from disk, it would follow up a pointer to an invalid location. That is not&#xA0;supposed to happen, obviously. Looks like I have a little data corruption issue on my hands. The problem is that this shouldn&#x2019;t be possible. Remember how we validate the checksum on read? When using encryption-at-rest, we are using a mechanism called AEAD (Authenticated Encryption with Associated Data). That means that in order to successfully decrypt a page of data from disk, it must have been cryptographically&#xA0;verified to be valid.My test results showed, pretty conclusively, that I was generating valid data and then encrypting it. The next stage was to decrypt the data (verifying that it was valid), at which point I ended up with complete garbage.RavenDB trusts that since the data was properly decrypted, it is valid and tries to use it. Because the data is garbage, that leads to&#x2026; excitement. Once I realized what was going on, I was really confused. I&#x2019;m pretty sure that I didn&#x2019;t break 256-bit encryption, but I had a very clear chain of steps that led to valid data being decrypted (successfully!) to garbage. It was also quite frustrating to track because any small-stage test that I wrote would return the expected results. It was only when I ran the entire system and stressed&#xA0;it that I got this weird scenario.I started practicing for my Fields medal acceptance speech while digging deeper. Something here had&#xA0;to be wrong. It took me a while to figure out what was going on, but eventually, I tracked it down to registering to the TransactionCommit&#xA0;event when we open a new file. The idea is that when we commit the transaction, we&#x2019;ll encrypt all the data buffers and then write them to the file. We register for&#xA0;an event to handle that, and we used to do that on a per-file basis. My changes, among other things, moved that logic to apply globally. As long as we were writing to a single file, everything just worked. When we had enough workload to need a second file, we would encrypt the data twice&#xA0;and then write it to the file. Upon decryption, we would successfully decrypt the data but would end up with still encrypted data (looking like random fluff). The fix was simply moving the event registration to the transaction level, not the file level. I committed my changes and went back to the unexciting life of bug-fixing, rather than encryption-breaking and math-defying hacks.</p>
+        <a href="https://devblogs.microsoft.com/dotnet/how-use-a-blazor-quickgrid-with-graphql/" target="_blank"><h1 class="title mb-6">How use a Blazor QuickGrid with GraphQL</h1></a>
+        <p class="mb-2">by Frank Boucher</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 24, 2024
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this is the second post in a series of posts about GraphQL and .NET, we will see how to fill a Blazor QuickGrid component with data fetched with GraphQL. We will also use the virtualize feature of the QuickGrid to improve performance.</p>
         <a href="https://devblogs.microsoft.com/dotnet/announcing-dotnetconf-focus-on-ai/" target="_blank"><h1 class="title mb-6">Announcing .NET Conf: Focus on AI &#x2013; August 20th 2024</h1></a>
         <p class="mb-2">by Mehul Harry</p>
         <p class="mb-6 flex gap-1.5">
@@ -195,18 +219,6 @@
             posted on: July 18, 2024
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The initial beta release of the official libraries Microsoft.CoreWCF.Azure.StorageQueues and Microsoft.WCF.Azure.StorageQueues.Client library for .NET is now available.</p>
-        <a href="https://devblogs.microsoft.com/dotnet/dotnet-6-end-of-support/" target="_blank"><h1 class="title mb-6">.NET 6 will reach End of Support on November 12, 2024</h1></a>
-        <p class="mb-2">by Rahul Bhandari (MSFT)</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 18, 2024
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">.NET 6 will reach end of support on November 12, 2024, this blog breaks down all the valuable information you need to know and how to update to .NET 8.</p>
         <a href="https://ayende.com/blog/201409-A/temporal-cattle-and-other-important-jargon" target="_blank"><h1 class="title mb-6">Temporal cattle and other important jargon</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,30 +231,6 @@
             posted on: July 15, 2024
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was talking to a colleague about a particular problem we are trying to solve. He suggested that we solve the problem using a particular data structure from a recently published paper. As we were talking, he explained how this data structure works and how that should handle our problem.The solution was complex&#xA0;and it took me a while to understand what it was trying to achieve and how it would fit our scenario. And then something clicked in my head and I said something like:Oh, that is just epoch-based, copy-on-write B&#x2B;Tree with single-producer/ concurrent-readers? If this sounds like nonsense to you, it is fine. Those are very&#xA0;specific terms that we are using here. The point of such a discussion is that this sort of jargon serves a very important purpose. It allows us to talk with clarity and intent about fairly complex topics, knowing that both sides have the same understanding of what we are actually talking about.The idea is that we can elevate the conversation and focus on the differences&#xA0;between what the jargon specifies and the topic at hand. This is abstraction at the logic level, where we can basically zoom out a lot of details and still keep high intent accuracy.Being able to discuss something at this level is hugely important because we can convey complex ideas easily. Once I managed to put what he was suggesting in context that I could understand, we were able to discuss the pros and cons of this data structure for the scenario. I do appreciate that the conversation basically stopped making sense to anyone who isn&#x2019;t already well-versed in the topic as soon as we were able to (from my perspective) clearly and effectively communicate.&#x201C;When I use a word,&#x2019; Humpty Dumpty said in rather a scornful tone, &#x2018;it means just what I choose it to mean &#x2014; neither more nor less.&#x201D;Clarity of communication is a really important aspect of software engineering. Being able to explain, hopefully in a coherent fashion, why the software is built the way it is and why the code is structured just so can be really complex. Leaning on existing knowledge and understanding can make that a lot simpler.There is also another aspect. When using jargon like that, it is clear when you don&#x2019;t&#xA0;know something. You can go and research it. The mere fact that you can&#x2019;t understand the text tells you both that you are missing information and where you can find it. For software, you need to consider two scenarios. Writing code today and explaining how it works to your colleagues, and looking at code that you wrote ten years ago and trying to figure out what was going on there.In both cases, I think that this sort of approach is a really useful way to convey information.</p>
-        <a href="https://devblogs.microsoft.com/dotnet/dotnet-9-preview-6/" target="_blank"><h1 class="title mb-6">.NET 9 Preview 6 is now available!</h1></a>
-        <p class="mb-2">by .NET Team</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 15, 2024
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Try out the latest features in .NET 9 Preview 6 across the .NET runtime, SDK, libraries, ASP.NET Core, Blazor, and more!</p>
-        <a href="https://devblogs.microsoft.com/dotnet/why-and-how-to-execute-graph-ql-queries-in-dotnet/" target="_blank"><h1 class="title mb-6">Why and How to Execute GraphQL Queries in .NET</h1></a>
-        <p class="mb-2">by Frank Boucher</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 11, 2024
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post shows how to query a GraphQL API in .NET using Strawberry Shake from a console application</p>
         <a href="https://ayende.com/blog/201377-A/does-code-rot-over-time" target="_blank"><h1 class="title mb-6">Does code rot over time?</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -267,6 +255,18 @@
             posted on: July 10, 2024
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">What do you do when you find yourself in microservice hell? How do you keep the gains you (hopefully) made in breaking up your legacy ball&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://devblogs.microsoft.com/dotnet/csharp-13-explore-preview-features/" target="_blank"><h1 class="title mb-6">C# 13: Explore the latest preview features</h1></a>
+        <p class="mb-2">by Kathleen Dollard</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 09, 2024
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">C# 13 focuses on flexibility and performance, with top features like params collections for added flexibility, lock object for improved performance, and partial properties to support generators.</p>
         <div class="button flex justify-between">
             <a href="index.html"><span class="back arrow"></span></a>
 
