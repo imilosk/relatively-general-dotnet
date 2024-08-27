@@ -147,7 +147,31 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
-        <a href="https://ardalis.com/temporary-post-used-for-style-detection-e3d843b1-a1dd-4d7f-849e-13d424d94655/" target="_blank"><h1 class="title mb-6">Temporary Post Used For Style Detection (e3d843b1-a1dd-4d7f-849e-13d424d94655)</h1></a>
+        <a href="https://ayende.com/blog/178369/a-thread-per-task-keep-the-headache-away" target="_blank"><h1 class="title mb-6">A thread per task keep the headache away</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 29, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of very conscious choices we made in RavenDB 4.0 is to use threads. Not just run code that is multi threaded, but actively use the notion of a dedicated thread per task.In fact, most of the work in RavenDB (beyond servicing requests) is done by a dedicated thread. Each index, for example, has its own thread, transactions are merged and pushed using (mostly) a single thread. Replication is using dedicated threads, and so does the cluster communication mechanism. That runs contrary to advice that I have been told many times, that threads are expensive resource and that we should not hold up a thread if we can use async operations to give it up as soon as possible. And to a certain extent, I still very much believe it. Certainly all our request processing is using this manner. But as we got faster and faster we observed some really hard issues with using thread pools, since you can&#x2019;t rely on them executing a particular request in a given time frame, and having a mix bag of operations in a thread pool is a mix for slowing the whole thing down.Dedicated threads give us a lot of control and simplicity, from the ability to control the priority of certain tasks to the ability to debug and blame them properly.For example, here is how a portion of the threads on a running RavenDB server look like in the debugger:And done of our standard endpoints can give you thread timing for all the various tasks we do, so if there is an expensive thing going on, you can tell, and you can act accordingly. All of this has also led to an architecture that is mostly about independent thread doing their job in isolation, which means that a lot of the backend code in RavenDB doesn&#x2019;t have to worry about threading concerns. And debugging it is as simple as stepping through it. That isn&#x2019;t true for request processing threads, which are heavily async, so they are all doing mostly reads. Even when you are actually sending a write to RavenDB, what is actually happening is that we have the request thread parse the request, then queue it up for the transaction merging thread to actually process it. That means that there is usually little (if any) contention on locks throughout the system.It is a far simpler model, and it has proven itself capable of making a very complex system understandable and maintainable for us.</p>
+        <a href="https://ayende.com/blog/178337/throw-away-the-tests-im-debugging-this-in-production-mode" target="_blank"><h1 class="title mb-6">Throw away the tests, I&#x2019;m debugging this in production mode</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 25, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today I had a really strange revelation. We had an issue that related to race conditions in a distributed group, and we could just not figure out what was going on from the tests.Then we switch to a production mode, where each node was a separate process, and we debugged one of them. And it was easy, and it was obvious, and everything just worked.&#xA0; That was a profound revelation. What happened was that we build our system so we can service them in production, that includes the internal design and exposed instrumentation data that we have. When we were trying to figure things out from the tests, we were running everything in a single process, and the act of trying to debug a single thread would cause all other threads to stop. That would trigger cascade behaviors (since timeout would be fired, and the cluster would move into recovery mode).With us debugging just a single node in the cluster, the rest of the cluster just thought it was slow, it didn&#x2019;t have any impact, but allow us to observe the behavior of the system very easily. The solution was quite obvious once we got into that stage.</p>
+        <a href="https://ardalis.com/how-do-i-update-a-nuget-package-using-dotnet-cli/" target="_blank"><h1 class="title mb-6">How do I Update a Nuget Package using dotnet CLI</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -156,10 +180,34 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: September 16, 2006
+            posted on: May 25, 2017
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a temporary post that was not deleted. Please delete this manually. (f57df40f-2ff7-4942-9d90-d7bd327f8b2a)Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/strange-issue-with-httpcontext-current-with-webdevserver/" target="_blank"><h1 class="title mb-6">Strange Issue with HttpContext.Current with WebDevServer</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The current version of the dotnet command line interface provides features to add a nuget package, but doesn&#x2019;t expose a separate command to&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://enterprisecraftsmanship.com/posts/ienumerable-vs-ireadonlylist/" target="_blank"><h1 class="title mb-6">IEnumerable vs IReadOnlyList</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 24, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I apologize to everyone who&#x2019;s waiting for my response to their code review requests. I was busy dealing with some personal stuff the last couple of weeks. Moving forward, I&#x2019;m going to maintain a one post a week schedule where &quot;regular&quot; articles would take turns with code reviews. This article is a regular one, so the one next week would be a code review.&#xA;&#xA;&#xA;Today, I&#x2019;d like to talk about IEnumerable and IReadOnlyList collection interfaces. We&#x2019;ll discuss which of them is preferable and in what circumstance.</p>
+        <a href="https://ayende.com/blog/178305/keeping-secrets-on-linux-redux" target="_blank"><h1 class="title mb-6">Keeping secrets on Linux, Redux</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 24, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A few weeks ago I talked about how we can keep secrets on Linux. I wasn&#x2019;t really happy with the solution we came up with, namely a file that is ACLed so only the database user can access it, and I kept mulling that over in my head. We wanted something better, but we didn&#x2019;t want to start taking dependencies on technologies that the user might not have. What we came up with eventually was to externalize that decision. The only thing that we actually need is the single root key, so instead of keeping it on a file, we can let the admin provide a it for us (a script / executable / etc). What we&#x2019;ll do is we&#x2019;ll check if the user configured an executable to run, and if so, we&#x2019;ll run that exec, send it over STDIN the data, and read the result back over STDOUT.&#xA0; That free us from having to take dependencies and give the admin a great degree of freedom with how to deal with keeping secret in the way the organization is used to. After figuring this out, I found out that Apache is already doing something very similar with SSL Pass Phrase Dialog.</p>
+        <a href="https://ardalis.com/should-i-use-weblistener-or-kestrel-or-iis-on-windows/" target="_blank"><h1 class="title mb-6">Should I Use WebListener or Kestrel or IIS on Windows?</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -168,10 +216,10 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: September 16, 2006
+            posted on: May 24, 2017
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m working with a Trace class that I wrote back in .NET 1.1 that wraps System.Diagnostics and System.Web tracing. The class looks like this&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/conditional-attribute-and-trace-in-asp-net-2-0/" target="_blank"><h1 class="title mb-6">Conditional Attribute and TRACE in ASP.NET 2.0</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Someone recently asked this question on GitHub, and I thought it was worth spreading this information more widely: I&#x2019;ve been doing some&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://ardalis.com/life-hack-listen-faster/" target="_blank"><h1 class="title mb-6">Life Hack - Listen Faster</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -180,10 +228,34 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: September 16, 2006
+            posted on: May 24, 2017
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In ASP.NET 1.x I had created some helper classes that wrapped the ASP.NET Trace class. These included methods like this one: [Conditional&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/ultimate-asp-net-base-page-class/" target="_blank"><h1 class="title mb-6">Ultimate ASP.NET Base Page Class</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve been doing some traveling lately, which is when I tend to have time to catch up on listening to podcasts. I&#x27;m a fan of DotNetRocks&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://www.stevejgordon.co.uk/asp-net-core-correlation-ids" target="_blank"><h1 class="title mb-6">ASP.NET Core Correlation IDs</h1></a>
+        <p class="mb-2">by Steve Gordon</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 22, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">On a recent project we needed to implement the concept of correlation IDs across some ASP.NET Core API services. In our scenario we have an API service called from a front end JavaScript application which will then call one or more secondary back end API services to gather data. This is becoming a pretty common [&#x2026;]</p>
+        <a href="https://ayende.com/blog/178273/history-of-storage-costs-and-the-software-design-impact" target="_blank"><h1 class="title mb-6">History of storage costs and the software design impact</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 22, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Edgar F. Codd formulated the relational model in 1969. Ten years later, Oracle 2.0 comes to the market. And Sybase SQL Server came out with its first version in 1984. By the early 90s, it was clear that relational database has pushed out the competition (such as navigational or object oriented databases) to the sidelines. It made sense, you could do a lot more with a relational database, and you could do it easier, usually faster and certainly in a more convenient manner.Let us look at what environment those relational databases were written for. In 1979, you could buy the IBM&#x27;s 3370 direct access storage device. It offered a stunning 571MB (read, megabytes) of storage for the mere cost of $35,100. For reference the yearly salary of a programmer at that time was $17,535. In other words, the cost of a single 571MB hard drive was as much as two full time developers, for an entire year.In 1980, the first drives with more than 1 GB storage appeared. The IBM 3380, for example, was able to store a whopping 2.52 GB of information, the low end version cost, at the time, $97,650 and it was about as big as a washing machine. By 1986, the situation improved and purchasing a good internal hard drive with all of 20MB at merely $800. For reference, a good car at the time would cost you less than $7,000.Skipping ahead again, by 1996 you could actually purchase a 2.83 GB drive for merely $2,900. A car at that time would cost you $12,371. I could go on, but I&#x27;m sure that you get the point by now. Storage used to be expensive. So expensive that it dominated pretty much every other concern that you can think of.At the time of this writing, you can get a hard disk with 10 TB of storage for about $400 [1]. And a 1 TB SSD drive will cost you less than $300[2]. Those numbers give us about a quarter of a dollar (26 cents, to be exact) per GB for SSD drives, and less than 4 cents per GB for the hard disk.Compare that to a price of $38,750 per gigabyte in 1980. Oh, except that we forgot about inflation, so the inflation adjusted price for a single GB was $114,451.63. Now, you will be right if you&#x27;ll point out that this is very unfair comparison. I&#x27;m comparing consumer grade hardware to high end systems. Enterprise storage systems, the kind you actually run databases on tend to be a bit above that price range. We can compare the cost of storing information in the cloud, and based on current pricing it looks like storing a GB on Amazon S3 for 5 years (to compare with expected life time of a hard disk) will cost less than $1.5, with Azure being even cheaper.The really interesting aspect of those numbers is the way they shaped the software written at that time period. It made a lot of sense to put a lot more on the user, not because you were lazy, but because it was the only way to do things. Most document databases, for example, are storing the document structure alongside the document itself (so property names are stored in each document. It would be utterly insane to try to do that in a system where hard disk space was so expensive. On the other hand, decisions such as &#x201C;normalization is critical&#x201D; were mostly driven by the necessity to reduce storage costs, and only transitioned later on to the &#x201C;purity of data model&#x201D; reasoning once the disk space cost became a non issue.&#xA0;[1] ST10000VN0004 - 7200RPM with 256MB Cache[2] The SDSSDHII-1T00-G25 - with great then 500 MB / sec read/write speeds and close to 100,000 IOPS</p>
+        <a href="https://ardalis.com/science-of-great-ui-reviewed/" target="_blank"><h1 class="title mb-6">Science of Great UI Reviewed</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -192,81 +264,9 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: September 15, 2006
+            posted on: May 22, 2017
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m working on a base page for a new application and it seems like this is about the 5th or 6th time I&#x27;m building one of these things, so it&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/microsoft-shrugs-off-atlas-name/" target="_blank"><h1 class="title mb-6">Microsoft Shrugs Off Atlas Name</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 11, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Scott Guthrie today announced that the &quot;Atlas&quot; code name for the ASP.NET team&#x27;s rich client framework and set of server controls and&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/windows-principles-editorial-1/" target="_blank"><h1 class="title mb-6">Windows Principles Editorial</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 07, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">An editorial piece of mine was published in a local paper Tuesday: Microsoft opens a window to entrepreneursKeep Reading &#x2192;</p>
-        <a href="https://ardalis.com/windows-principles-editorial/" target="_blank"><h1 class="title mb-6">Windows Principles Editorial</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 07, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">An editorial piece of mine was published in a local paper Tuesday: Microsoft opens a window to entrepreneursKeep Reading &#x2192;</p>
-        <a href="https://ardalis.com/upgrading-tfs-from-rc-to-workgroup-edition-1/" target="_blank"><h1 class="title mb-6">Upgrading TFS from RC to Workgroup Edition</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 06, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today I came into work and my build/source control server, which I thought I remembered installing the RTM of TFS Workgroup Edition, was&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/upgrading-tfs-from-rc-to-workgroup-edition/" target="_blank"><h1 class="title mb-6">Upgrading TFS from RC to Workgroup Edition</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 06, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today I came into work and my build/source control server, which I thought I remembered installing the RTM of TFS Workgroup Edition, was&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/caching-in-o-r-mappers-and-data-layers-1/" target="_blank"><h1 class="title mb-6">Caching in O/R Mappers and Data Layers</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 01, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Frans Bouma, creator of LLBLGen, MVP, and all around very smart guy, wrote yesterday about the &#x2018;myth&#x2019; that caching inside an Object&#x2026;Keep Reading &#x2192;</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m reviewing Mark Miller&#x2018;s online course, The Science of Great UI. This course is the first in a series, with the forthcoming Design Like a&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="171.html"><span class="back arrow"></span></a>
 

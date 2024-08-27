@@ -147,7 +147,55 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
-        <a href="https://ardalis.com/proof-time-in-iraq-goes-by-more-slowly-than-in-us/" target="_blank"><h1 class="title mb-6">Proof Time In Iraq Goes By More Slowly Than in US!</h1></a>
+        <a href="https://ayende.com/blog/174566/the-guts-n-glory-of-database-internals-writing-to-a-data-file" target="_blank"><h1 class="title mb-6">The Guts n&#x2019; Glory of Database Internals: Writing to a data file</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 07, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So, we now know how we can write to a journal file efficiently, but a large part of doing that is relying on the fact that we are never actually going to read from the journal file. In other words, this is like keeping your receipts in case of an audit. You do that because you have to, but you really don&#x2019;t want to ever need it, and you just throw it in the most efficient way to a drawer and will sort if out when you need to.&#xA;In most database engines that implement a journal, there is this distinction, the journal is strict for durability and recovery, and the data file(s) are used to actually store the data in order to operate. In our case, we&#x2019;ll assume a single journal and a single data file.&#xA;On every commit, we&#x2019;ll write to the journal file, as previously discussed, and we ensure that the data is safely on the disk. But what happens to writes on the data file?&#xA;Simple, absolutely nothing. Whenever we need to write to the data file, we make buffered writes into the data file, which goes into the big chain of buffers that merge / reorder and try to optimize our I/O. Which is great, because we don&#x2019;t really need to care about that. We can let the operating system handle all of that.&#xA;Up to a point, of course.&#xA;Every now and then, we&#x2019;ll issue an fsync on the data file, forcing the file system to actually flush all those buffered writes to disk. We can do this in an async manner, and continue operations on the file. At the time that the fsync is done (which can be a lot of time, if we had a lot of write and a busy server), we know what is the minimum amount of data that was already written to the data file and persisted on disk. Since we can match it up to the position of the data on the journal, we can safely say that the next time we recover, we can start reading the journal from that location.&#xA;If we had additional writes, from later in the journal file, that ended up physically in the data file, it doesn&#x2019;t matter, because they will be overwritten by the journal entries that we have.&#xA;Doing it this way allows us to generate large batches of I/O, and in most cases, allow the operating system the freedom to flush things from the buffers on its own timeline, we just make sure that this doesn&#x2019;t get into degenerate case (where we&#x2019;ll need to read tens of GB of journal files) by forcing this every now and then, so recovery is fast in nearly all cases.&#xA;All of this I/O tend to happen in async thread, and typical deployments will have separate volumes for logs and data files, so we can parallelize everything instead of competing with one another.&#xA;By the way, I&#x2019;m running this series based on my own experience in building databases, and I&#x2019;m trying to simplify it as much as it is possible to simplify such a complex topic. If you have specific questions / topics you&#x2019;ll like me to cover, I&#x2019;ll be happy to take them.</p>
+        <a href="https://ayende.com/blog/174565/the-guts-n-glory-of-database-internals-getting-durable-faster" target="_blank"><h1 class="title mb-6">The Guts n&#x2019; Glory of Database Internals: Getting durable, faster</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 06, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned that fsync is a pretty expensive operation to do. But this is pretty much required if you need to get proper durability in the case of a power loss. Most database system tend to just implement fsync and get away with that, with various backoff strategies to avoid the cost of it.&#xA;LevelDB by default will not fsync, for example. Instead, it will rely on the operating system to handle writes and sync them to disk, and you have to take explicit action to tell it to action sync the journal file to disk. And most databases give you some level of choice in how you call fsync (MySQL and PostgresSQL, for example, allow you do select fsync, O_DSYNC, none, etc). MongoDB (using WiredTiger) only flush to disk every 100MB (or 2 GB, the docs are confusing), dramatically reducing the cost of flushing, at the expense of potentially losing data.&#xA;Personally, I find such choices strange, and when had a direct goal that after every commit, pulling the plug will have no affect on the database. We started out with using fsync (and its family of friends, fdatasync, FlushFileBuffers, etc) and quickly realized that this isn&#x2019;t going to be sustainable, we could only achieve nice performance by grouping multiple concurrent transactions and get them to the disk in one shot (effectively, trying to buffer ourselves). Looking at the state of other databases, it was pretty depressing.&#xA;In an internal benchmark we did, we were in 2nd place, ahead of pretty much everything else. The problem was that the database engine that was ahead of us was faster by x40 times. You read that right, it was forty times faster than we were. And that sucked. Monitoring what it did showed that it didn&#x2019;t bother to call fsync, instead, it used direct unbuffered I/O (FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH on Windows). Those flags have very strict usage rules (specific alignment for both memory and position in file), but the good thing about them is that they allow us to send the data directly from the user memory all the way to the disk while bypassing all the caches, that means that when we write a few KB, we write a few KB, we don&#x2019;t need to wait for the entire disk cache to be flushed to disk.&#xA;That gave us a tremendous boost. Other things that we did was compress the data that we wrote to the journal, to reduce the amount of I/O, and again, preallocation and writing in sequential manner helps, quite a lot.&#xA;Note that in this post I&#x2019;m only talking about writing to the journal here, since that is typically what is slowing down writes, in my next post, I&#x2019;ll talk about writes to the data file itself.</p>
+        <a href="https://ayende.com/blog/174817/ravendb-on-the-nosql-podcast" target="_blank"><h1 class="title mb-6">RavenDB on the NoSQL Podcast</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 06, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was interviewed by Nic Raboy and Matthew Groves from the NoSQL Podcast about RavenDB and how it came about.</p>
+        <a href="https://enterprisecraftsmanship.com/posts/growing-object-oriented-software-guided-by-tests-without-mocks/" target="_blank"><h1 class="title mb-6">Growing Object-Oriented Software, Guided by Tests Without Mocks</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 05, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a review of the Growing Object-Oriented Software, Guided by Tests book (GOOS for short) in which I&#x2019;ll show how to implement the sample project from the book in a way that doesn&#x2019;t require mocks to be tested.&#xA; Growing Object-Oriented Software, Guided by Tests Without Mocks Let me first explain why I&#x2019;m doing a review of this book. If you read this blog regularly, you probably noticed that I&#x2019;m pretty much against using mocks in tests.</p>
+        <a href="https://ardalis.com/multi-term-jquery-table-filter/" target="_blank"><h1 class="title mb-6">Multi-Term jQuery Table Filter</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -156,10 +204,46 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: September 30, 2004
+            posted on: June 30, 2016
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">FYI, clocks in Iraq are falling back an hour tonight (Oct 1st at 0100). I figure this post won&#x27;t be much help to any soldiers over here who&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/so-called-critically-needed-irrs-not-even-filling-open-positions/" target="_blank"><h1 class="title mb-6">So Called &#x27;Critically Needed IRRs&#x27; Not Even Filling Open Positions</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently I was mentoring a client who needed a simple filter for a table of data. In this case, they weren&#x2019;t using a viewmodel-based&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://enterprisecraftsmanship.com/posts/c-functional-extensions-nuget-library/" target="_blank"><h1 class="title mb-6">C# functional extensions NuGet library</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 24, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ve created a NuGet package out of the functional extensions I wrote about in this post series and in my Pluralsight course.&#xA; C# functional extensions NuGet library Thanks to one of the listeners of my Functional C# course, I finally made a separate NuGet package which is based on the Result class I wrote about awhile ago.&#xA; The package contains the following classes:&#xA;   Result&#xA;  ResultExtensions</p>
+        <a href="https://enterprisecraftsmanship.com/posts/pragmatic-integration-testing/" target="_blank"><h1 class="title mb-6">Pragmatic integration testing</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 21, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The topic described in this article is part of my Unit Testing Pluralsight course.&#xA; When trying to break down unit testing, the bigger picture stays incomplete if you overlook the subject of integration testing. In this post, we&#x2019;ll discuss how to make the most out of your integration tests with pragmatic integration testing.&#xA; Integration tests are tests that, unlike unit tests, work with some of the volatile dependencies directly (usually with the database and the file system).</p>
+        <a href="https://enterprisecraftsmanship.com/posts/pragmatic-unit-testing/" target="_blank"><h1 class="title mb-6">Pragmatic unit testing</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 15, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The topic described in this article is part of my Unit Testing Pluralsight course.&#xA; This post is about pragmatic unit testing: how to get the most out of your unit test suite.&#xA; Pragmatic unit testing: black-box vs white-box Pragmatic unit testing is about investing only in the tests that yield the biggest return on your effort. In the previous posts, we discussed what traits a valuable test possess (high chance of catching a regression, low chance of producing a false positive, fast feedback) and how various styles of unit testing (functional, state verification, collaboration verification) differ in terms of their value proposition.</p>
+        <a href="https://ardalis.com/using-custom-middleware-to-record-and-fix-404s-in-aspnet-core-apps/" target="_blank"><h1 class="title mb-6">Using Custom Middleware to Record and Fix 404s in ASPNET Core Apps</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -168,11 +252,11 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: September 30, 2004
+            posted on: June 14, 2016
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve been receiving an alarming number of emails recently from IRR-activated soldiers who are just now reaching their units in Iraq, only to&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/how-having-troops-in-iraq-protects-people-in-the-usa/" target="_blank"><h1 class="title mb-6">How having troops in Iraq protects people in the USA</h1></a>
-        <p class="mb-2">by Ardalis</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My most recent article in MSDN Magazine is now available online: ASP.NET &#x2013; Use Custom Middle Middleware to Detect and Fix 404s in ASP.NET&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://enterprisecraftsmanship.com/posts/styles-of-unit-testing/" target="_blank"><h1 class="title mb-6">Styles of unit testing</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -180,93 +264,9 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: September 29, 2004
+            posted on: June 09, 2016
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I think many people who favor the immediate pullout of our forces from Iraq believe that our presence here is not protecting US citizens&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/black-scorpions/" target="_blank"><h1 class="title mb-6">Black Scorpions</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 25, 2004
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Things are going fine here. Getting settled in, have everybody here now that&#x27;s not on leave. Was out talking to my commander and the other&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/new-home/" target="_blank"><h1 class="title mb-6">New Home</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 22, 2004
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Moved to a new home a few days ago. On the trip here our convoy was hit by a roadside bomb, injuring two of my fellow soldiers. Both will&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/making-datareaders-less-evil/" target="_blank"><h1 class="title mb-6">Making DataReaders Less Evil</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 17, 2004
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I admit it, I&#x2019;ve never been a big fan of the DataReader. There are two main reasons for this. Firstly, I&#x2019;m a big fan of caching, and&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/central-perk-iraqi-style/" target="_blank"><h1 class="title mb-6">Central Perk, Iraqi Style</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 17, 2004
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A few weeks ago a new building completed construction at FOB Caldwell. The Hickory Cafe (30th BCT&#x27;s tagline is &#x201C;Old Hickory&#x201D;) provides a&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/awesome-rock-band-local-to-northeast-ohio/" target="_blank"><h1 class="title mb-6">Awesome Rock Band (local to northeast Ohio)</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 16, 2004
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">An awesome rock band for anybody interested in such things is Redshift. Their song Infamy got a ton of play time on local stations back a&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/days-of-the-week-selector-control/" target="_blank"><h1 class="title mb-6">Writing a Days of the Week Selector Control</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 13, 2004
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">No Control Required Download Code My first stab at this, keeping things as simple as possible, was just to do it on a web form without the&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/new-domain-more-bloggers/" target="_blank"><h1 class="title mb-6">New Domain, More Bloggers</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 12, 2004
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve registered ArmyAdvice.org and mapped my ArmySteve.com domain to it. If you&#x27;re just interested in me, you&#x27;ll want to go to http&#x2026;Keep Reading &#x2192;</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The topic described in this article is part of my Unit Testing Pluralsight course.&#xA; In this post, I&#x2019;ll describe different styles of unit testing and compare them in terms of their value proposition.&#xA; Styles of unit testing and their value proposition There are 3 major styles of unit testing. The first one is functional, where you feed an input to the system under test (SUT) and check what output it produces:</p>
         <div class="button flex justify-between">
             <a href="205.html"><span class="back arrow"></span></a>
 
