@@ -147,7 +147,19 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
-        <a href="https://ardalis.com/days-of-the-week-selector-control/" target="_blank"><h1 class="title mb-6">Writing a Days of the Week Selector Control</h1></a>
+        <a href="https://ayende.com/blog/156065/beware-of-big-task-parallel-library-operations" target="_blank"><h1 class="title mb-6">Beware of big Task Parallel Library Operations</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 12, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Take a look at the following code: class Program&#xA;{&#xA;    static void Main()&#xA;    {&#xA;        var list = Enumerable.Range(0, 10 * 1000).ToList();&#xA;&#xA;        var task = ProcessList(list, 0);&#xA;&#xA;&#xA;        Console.WriteLine(task.Result);&#xA;&#xA;    }&#xA;&#xA;    private static Task&lt;int&gt; ProcessList(List&lt;int&gt; list, int pos, int acc = 0)&#xA;    {&#xA;        if (pos &gt;= list.Count)&#xA;        {&#xA;            var tcs = new TaskCompletionSource&lt;int&gt;();&#xA;            tcs.TrySetResult(acc);&#xA;            return tcs.Task;&#xA;        }&#xA;&#xA;        return Task.Factory.StartNew(() =&gt; list[pos] &#x2B; acc)&#xA;            .ContinueWith(task =&gt; ProcessList(list, pos &#x2B; 1, task.Result))&#xA;            .Unwrap();&#xA;    }&#xA;}&#xA;&#xA;&#xA;This is a fairly standard piece of code, which does a &#x201C;complex&#x201D; async process and then move on. It is important in this case to do the operation in the order they were given, and the real code is actually doing something that need to be async (go and fetch some data from a remote server).&#xA;It is probably easier to figure out what is going on when you look at the C# 5.0 code:&#xA;class Program&#xA;{&#xA;    static void Main()&#xA;    {&#xA;        var list = Enumerable.Range(0, 10 * 1000).ToList();&#xA;&#xA;        var task = ProcessList(list, 0);&#xA;&#xA;        Console.WriteLine(task.Result);&#xA;&#xA;    }&#xA;&#xA;    private async static Task&lt;int&gt; ProcessList(List&lt;int&gt; list, int pos, int acc = 0)&#xA;    {&#xA;        if (pos &gt;= list.Count)&#xA;        {&#xA;            return acc;&#xA;        }&#xA;&#xA;        var result = await Task.Factory.StartNew(() =&gt; list[pos] &#x2B; acc);&#xA;&#xA;        return await ProcessList(list, pos &#x2B; 1, result);&#xA;    }&#xA;}&#xA;&#xA;&#xA;I played with user mode scheduling in .NET a few times in the past, and one of the things that I was never able to resolve properly was the issue of the stack depth. I hoped that the TPL would resolve it, but it appears that it didn&#x2019;t. Both code samples here will throw StackOverFlowException when run.&#xA;It sucks, quite frankly. I understand why this is done this way, but I am quite annoyed by this. I expected this to be solved somehow. Using C# 5.0, I know how to solve this:&#xA;class Program&#xA;{&#xA;    static void Main()&#xA;    {&#xA;        var list = Enumerable.Range(0, 10 * 1000).ToList();&#xA;&#xA;        var task = ProcessList(list);&#xA;&#xA;        Console.WriteLine(task.Result);&#xA;&#xA;    }&#xA;&#xA;    private async static Task&lt;int&gt; ProcessList(List&lt;int&gt; list)&#xA;    {&#xA;        var acc = 0;&#xA;        foreach (var i in list)&#xA;        {&#xA;            var currentAcc = acc;&#xA;            acc &#x2B;= await Task.Factory.StartNew(() =&gt; i &#x2B; currentAcc);&#xA;        }&#xA;        return acc;&#xA;    }&#xA;}&#xA;&#xA;&#xA;The major problem is that I am not sure how to translate this code to C# 4.0. Any ideas?</p>
+        <a href="https://ardalis.com/beyond-role-based-authorization-in-aspnet-mvc/" target="_blank"><h1 class="title mb-6">Beyond Role Based Authorization in ASPNET MVC</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -156,11 +168,11 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: September 13, 2004
+            posted on: April 11, 2012
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">No Control Required Download Code My first stab at this, keeping things as simple as possible, was just to do it on a web form without the&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/new-domain-more-bloggers/" target="_blank"><h1 class="title mb-6">New Domain, More Bloggers</h1></a>
-        <p class="mb-2">by Ardalis</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A fairly frequent requirement in applications is to check for authorization to perform an action. At the most basic level, this might just&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://ayende.com/blog/152994/simplicity-is-prerequisite-for-reliability" target="_blank"><h1 class="title mb-6">Simplicity is prerequisite for reliability</h1></a>
+        <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -168,11 +180,11 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: September 12, 2004
+            posted on: April 11, 2012
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve registered ArmyAdvice.org and mapped my ArmySteve.com domain to it. If you&#x27;re just interested in me, you&#x27;ll want to go to http&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/mail-call-and-website-info/" target="_blank"><h1 class="title mb-6">Mail Call and WebSite Info</h1></a>
-        <p class="mb-2">by Ardalis</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just learned that the title of this post is a(n apparently) well known quote from Edsger W. Dijkstra. I like it, and I fully agree. And along with the following, it makes up my design philosophy:</p>
+        <a href="https://ayende.com/blog/152929/security-decisions-separate-operations-queries" target="_blank"><h1 class="title mb-6">Security decisions: Separate Operations &amp; Queries</h1></a>
+        <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -180,11 +192,11 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: September 10, 2004
+            posted on: April 10, 2012
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For those wondering how long mail takes, I got 2 letters and 2 packages today (9/10), 3 of which were sent on 8/26 and one on 8/28. So 13-1&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/more-stuff-to-bring/" target="_blank"><h1 class="title mb-6">More Stuff To Bring</h1></a>
-        <p class="mb-2">by Ardalis</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The question came up several times in the mailing list with regards to how the RavenDB Authorization Bundle operates, and I think it serves a broader discussion. Let us imagine a system where we have contracts, which may be in several states:   Mine &#x2013; Contracts that an employee signed.  Done &#x2013; Standard users can view, Lawyers assigned to the company can sign.  Draft &#x2013; Lawyers can view / edit, Partners can approve.  Proposed &#x2013; Lawyers can create / edit, but only the lawyer that created it can view it, Partners can accept. So far, fairly simple, right? Except the pure hell that you are going to get into when you are trying to show the users all of the contracts that they can see, sorted by edit date and in the NDA category. Why am I being so negative here? Well, let us look at what we are going to have to do in the most trivial of cases:  In this sort of system, we are going to have to show the user all of the contracts that they are allowed to see, and show them some indication what operations they can do on each. The problem is that generating this sort of view is expensive. Especially when you have large amount of data to work through. More interesting, from a UX perspective, it also doesn&#x2019;t really work that well. Most users would want a better separation of the things that they can do, probably something like this:  This allows us to do a first level filtering on the data itself, rather than try to apply security rules to it. In the first case, we need to get all the contracts that we are allowed to see. The security rules above are really simple, mind. But trying to translate them into an efficient query is going to be pretty hard. Both in terms of the code requires and the cost to actually perform the query on the server. There are other things that are involved as well, such as paging and sorting in such an environment.&#xA0; I have created several such systems in the past, Rhino Security is probably the most well known of them, and it gets really hard to optimize things and make sure that everything works when you start getting more complex security rules (especially when you have a user editable security system, which is a common request). The second case is cheaper because we can limit the choices that we see in the query itself. We may still need to apply security concerns, but those goes through the query directly, rather than a security sub system. This kind of change usually force people to be more explicit in what they want, and it result in a system that tends to be simpler. The security rules aren&#x2019;t just something arbitrary that can be defined, they are actually visible on the screen (My Contracts, Drafts, etc). Changing them isn&#x2019;t something that is done on an administrator&#x2019;s whim. Yes, this is a way to manage the client and their expectations, but that is important. But what about the complex security that they want?  That might still be there, certainly, but that would be active mostly for operations (stuff that happen on a single entity), not on things that happen over all entities. It is drastically easier to make a single entity security decisions work efficiently than make it work over the whole set inside the database.</p>
+        <a href="https://ayende.com/blog/153345/hiding-values-api-keys-and-other-fun-stuff" target="_blank"><h1 class="title mb-6">Hiding values, API keys and other fun stuff</h1></a>
+        <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -192,11 +204,11 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: September 06, 2004
+            posted on: April 09, 2012
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here&#x27;s some gadgets that are nice to have: Laptop. Yes, bring one. They&#x27;re great for watching movies on and you may have the opportunity to&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/ten-ways-to-make-your-code-more-testable/" target="_blank"><h1 class="title mb-6">Ten Ways to Make Your Code More Testable</h1></a>
-        <p class="mb-2">by Ardalis</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is mostly about fun ideas. In one scenario, we had the need to show data to the user, but there was some concern with regards to the hackability of the URL. In general, you should be handle such things within your code, checking permissions, etc. But I decided to see if I can do something nice with things, and I got this: private static object HideValues(string entityId, string tenantId, byte[] key, byte[] iv)&#xA;{&#xA;    using (var rijndael = Rijndael.Create())&#xA;    {&#xA;        rijndael.Key = key;&#xA;        rijndael.IV = iv;&#xA;        var memoryStream = new MemoryStream();&#xA;        using (var cryptoStream = new CryptoStream(memoryStream, rijndael.CreateEncryptor(), CryptoStreamMode.Write))&#xA;        using (var binaryWriter = new BinaryWriter(cryptoStream))&#xA;        {&#xA;            binaryWriter.Write(entityId);&#xA;            binaryWriter.Write(tenantId);&#xA;            binaryWriter.Flush();&#xA;&#xA;            cryptoStream.Flush();&#xA;        }&#xA;        var bytes = memoryStream.ToArray();&#xA;        var sb = new StringBuilder();&#xA;        for (int index = 0; index &lt; bytes.Length; index&#x2B;&#x2B;)&#xA;        {&#xA;            var b = bytes[index];&#xA;            sb.Append(b.ToString(&quot;X&quot;));&#xA;            if (index % (bytes.Length/4) == 0 &amp;&amp; index &gt; 0)&#xA;                sb.Append(&#x27;-&#x27;);&#xA;        }&#xA;        return sb;&#xA;    }&#xA;}&#xA;&#xA;&#xA;This will generate a &#x201C;guid looking&#x201D; value that we can send to the user. When they send it back to us, we can decrypt it and figure out what is actually going on in there.&#xA;Because it is encrypted, we know that this is a valid key, because otherwise we wouldn&#x2019;t be able to decrypt it to valid data.&#xA;Passing 15 and 32 as the first two values, I got the following value back: 2A8AC8888-46B92092-BFD81393-7A6FB1&#xA;And it handle larger values as easily, of course. Quite fun, even if I say so myself. Not sure if this is useful, but I got into writing code because it is a great hobby.</p>
+        <a href="https://ayende.com/blog/152961/monika-a-lesson-in-component-based-design" target="_blank"><h1 class="title mb-6">Monika: A lesson in component based design</h1></a>
+        <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -204,11 +216,11 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: September 03, 2004
+            posted on: April 06, 2012
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently found this awesome article on TheServerSide.NET&#x2013; I recommend it to anybody interested in TDD/Agile methodologies. 10 Ways to Make&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/bitmask-helper-function/" target="_blank"><h1 class="title mb-6">Bitmask Helper Function</h1></a>
-        <p class="mb-2">by Ardalis</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was giving a lecture on architecture recently, and the notion of components came in. The most important bit about that lecture was probably at the very end, when I discussed what it is that I consider to be a component. During that discussion, I introduced Monika, the payment processing component. Monika has the following Service Level Agreement:  Payment initiation is done messages. Notification about payment completion is handled via a callback REST call. The SLA calls for 90% of all successful payments to be processed in 2 business days. So far, it doesn&#x2019;t sound really complicated, right? And there isn&#x2019;t even a hint of how Monika works in the SLA or the contracts. This is Monica:   Well, not really, but it makes the point, doesn&#x2019;t it. Monica is a component in the system that respond to (SMTP) messages, does some work, and respond by clicking on a link in the email (REST call). Monica has a really sucky SLA, since she has only 22% uptime over the course of the year, and then there are those two weeks when she has her yearly maintenance period (vacation), etc. The most important thing about this is that we are able to abstract all of that away and treat this scenario as just another component in the system.  All too often, people hear components and they start thinking about things like this:  A component in a system is usually something much larger than a single class or a set of classes. It is an independent agent in the system that has its own behavior, resources, dedicated team and deployment schedule separate from all other components.</p>
+        <a href="https://ayende.com/blog/154753/beware-the-common-infrastructure" target="_blank"><h1 class="title mb-6">Beware the common infrastructure</h1></a>
+        <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -216,11 +228,11 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: August 31, 2004
+            posted on: April 05, 2012
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I had a need recently to be able to determine if a given position of an integer bitmask was set or not (for example, given the bitmask 010&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/big-guns/" target="_blank"><h1 class="title mb-6">Big Guns</h1></a>
-        <p class="mb-2">by Ardalis</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the common problems that I run into when consulting with clients, or just whenever I am talking to developers in general is the notion of common infrastructure. &#x201C;We are going to spend some time building a common infrastructure which we can then use on all of our applications.&#x201D; I made that mistake myself with Rhino Commons, and again very recently with RaccoonBlog (look at the code, you see the Loci stuff, that is stuff that is used from another project). Why is that a problem? Well, for the simplest reason of all. Different projects have different needs. A common infrastructure that tries to accommodate them all is going to be much more complex. Not only that, it is going to be much more brittle. If I am modifying it in the context of project A, can I really say that I didn&#x2019;t break something for project B? Let us take a simple example, executing tasks. In RaccoonBlog, we need tasks merely to handle comments and email (long running background tasks). In another application, we need to do retries, and we need to get notifications if after N retries, the task have failed. In a third project, we need a way to specify dependencies between tasks. Sure, you can build something that satisfy all three projects, but it would be drastically more complex than having to modify the original task executer for each project needs. And yes, I do mean copying the code and modifying it. And no, it is not a horrible sin against the Little Endianness. Even duplicated N times, the code is going to be simpler to read, perform faster, easier to maintain and modify over time. Nitpicker note: I am not talking about 3rd party libraries here. If you can find something that fits your needs that already exists, wonderful. I am talking about infrastructure that you build, inside your organization.</p>
+        <a href="https://ayende.com/blog/153121/got-to-debug-is-a-bug-fix-your-error-messages" target="_blank"><h1 class="title mb-6">Got to debug is a bug, fix your error messages</h1></a>
+        <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -228,11 +240,11 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: August 31, 2004
+            posted on: April 04, 2012
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">No, not my muscles... We had weapons qualification earlier this week and brought along some other weapons to familiarize with (courtesy of&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/some-product-reviews-and-packing-tips/" target="_blank"><h1 class="title mb-6">Some Product Reviews and Packing Tips</h1></a>
-        <p class="mb-2">by Ardalis</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is part of the RavenDB test suite.  It has a bug. Can you see it? One of the things that I learned when working on the Castle project is that errors are important. In fact, they are really important, so it is worth the time to check them very carefully. In this case, this code would fail but won&#x2019;t tell me why it is failing. Changing it to this:  Means that I get the actual error message right there and then, no need to do anything special.</p>
+        <a href="https://ayende.com/blog/154529/performance-implications-of-method-signatures" target="_blank"><h1 class="title mb-6">Performance implications of method signatures</h1></a>
+        <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -240,11 +252,11 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: August 29, 2004
+            posted on: April 03, 2012
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Still love all my UnderArmour stuff -- I don&#x27;t wear anything else for shirts/underwear now. Got a Gilette Mach3 razor from my wife a few&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/outlook-search-plugin-lookout/" target="_blank"><h1 class="title mb-6">Outlook Search Plugin Lookout!</h1></a>
-        <p class="mb-2">by Ardalis</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my previous post, I asked: What are the performance implications of the two options?  Versus:  And the answer is quite simple. The chance to optimize how it works. In the first example, we have to return an unknown amount of information. In the second example, we know how much data we need to return. That means that we can optimize ourselves based on that. What do I mean by that? Look at the method signatures, those requires us to scan a secondary index, and get the results back. From there, we need to get back to the actual data. If we knew what the size of the data that we need to return is, we could fetch just the locations from the index, then optimize our disk access pattern to take advantage of sequential reads.  In the first example, we have to assume that every read is the last read. Callers may request one item, or 25 or 713, so we don&#x2019;t really have a way to optimize things. The moment that we have the amount that the caller wants, things change. We can scan the index to get just actual position of the document on disk, and then load the documents from the disk based on the optimal access pattern in terms of disk access. It is a very small change, but it allowed us to make a big optimization.</p>
+        <a href="https://ayende.com/blog/154497/compare-and-contrast-performance-implications-of-method-signatures" target="_blank"><h1 class="title mb-6">Compare and contrast</h1></a>
+        <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -252,21 +264,9 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: August 26, 2004
+            posted on: April 02, 2012
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">http://www.microsoft.com/downloads/details.aspx?FamilyID=09b835ee-16e5-4961-91b8-2200ba31ea37&amp;displaylang=en Note to self &#x2013; download this&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/update-from-caldwell-2/" target="_blank"><h1 class="title mb-6">Update From Caldwell</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: August 24, 2004
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Things are moving along here. I&#x27;m fine. My roommate moved to another base a few days ago, so now I&#x27;ve got a room to myself. However, that&#x2026;Keep Reading &#x2192;</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">What are the performance implications of the two options?  Versus:</p>
         <div class="button flex justify-between">
             <a href="329.html"><span class="back arrow"></span></a>
 
