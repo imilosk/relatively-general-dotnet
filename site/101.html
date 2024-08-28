@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ardalis.com/using-multiple-solutions-in-visual-studio/" target="_blank"><h1 class="title mb-6">Using Multiple Solutions in Visual Studio</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: August 14, 2019
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve given this advice quite a number of times so I figured it was time to put it into an online article. If you&#x27;re a .NET developer you&#x2026;Keep Reading &#x2192;</p>
         <a href="https://ayende.com/blog/188193-A/the-big-red-sales-button" target="_blank"><h1 class="title mb-6">The big red sales button</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: July 29, 2019
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We have a bunch of smart people whose job description does not include breaking RavenDB, but nevertheless they manage to do so on a regular basis. This is usually done while subjecting RavenDB to new and interesting ways to distress it. The latest issue was being able to crash the system with an impossible bug. That was interesting to go through, so it is worth a post. Take a look at the following code:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          public class BufferedChannel : IDisposable&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              private readonly List&lt;string&gt; _destinations = new List&lt;string&gt;();&#xA;        &#xA;        &#xA;          &#xA;              private readonly List&lt;byte[]&gt; _buffers = new List&lt;byte[]&gt;();&#xA;        &#xA;        &#xA;          &#xA;              public void Dispose()&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  foreach (var buffer in _buffers)&#xA;        &#xA;        &#xA;          &#xA;                  {&#xA;        &#xA;        &#xA;          &#xA;                      ArrayPool&lt;byte&gt;.Shared.Return(buffer);&#xA;        &#xA;        &#xA;          &#xA;                  }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;                  _buffers.Clear();&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              ~BufferedChannel()&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  Dispose();&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          syskill.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;This code will your application (you can discard multi threading as a source, by the way) in a particularly surprising way.Let&#x2019;s assume that we have a system that is running under low memory conditions. The following sequence of events is going to occur:BufferedChannel is allocated.The BufferedChannel constructor is being run.The attempt to allocate the _destinations list fails.An exception is thrown upward and handled.So far, so good, right? Except that now your system is living on borrowed time.You see, this class has a finalizer. And the fact that the constructor wasn&#x2019;t called doesn&#x2019;t matter to the finalizer. It will still call the Finalize method, but that method calls to Dispose, and Dispose expect to get a valid object. At this point, we are going to get a Null Reference Exception from the finalizer, which is considered to be a critical error and fail the entire process.For additional fun, this kind of failure will happen only in under harsh conditions. When the OS refuses allocations, which doesn&#x2019;t happen very often. We have been running memory starvation routines for a while, and it takes a specific set of failures to get it failing in just the right manner to cause this.</p>
-        <a href="https://ardalis.com/how-to-grab-a-pull-request-locally-with-git-command-line/" target="_blank"><h1 class="title mb-6">How to Grab a Pull Request Locally with Git Command Line</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 29, 2019
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x27;re working with git, especially with open source, sometimes you&#x27;ll find that you want to work with a particular pull request, or PR&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="100.html"><span class="back arrow"></span></a>
 

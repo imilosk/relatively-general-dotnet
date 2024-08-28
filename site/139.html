@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/182402-A/ravendb-security-report-inconsistent-use-of-kdf-and-master-key" target="_blank"><h1 class="title mb-6">RavenDB Security Report</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 30, 2018
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The RavenDB security report pointed out that we weren&#x2019;t consistent in our usage of the Master Encryption Key. As a result, we changed things in a few locations, and we ended up never using the Master Encryption Key to encrypt anything in RavenDB. If you aren&#x2019;t familiar with encryption, that might raise a few eyebrows. If we aren&#x2019;t using an encryption key to encrypt, what are we using? And what is the Master Encryption Key (and with Capitals, too) all about?This is all part of the notion of defense in depth. A database has the Master Encryption Key. This is the key that open all the gates, but we never actually use this key to encrypt anything. Instead, we use it to generate keys. This is what the KDF (Key Derivation Function) comes into play. We start from the assumption that we have an attacker that was able to get us into a Bad State. For example, maybe we had nonce reuse (even though we already eliminated that), or maybe they have a team of Hollywood cryptographers that can crack encryption in under 30 seconds (if they have a gun to their head). Regardless of the actual reason, we assume that an attacker has found a way to get the encryption key from the data on disk. Well, that wouldn&#x2019;t really help them too much. Because that encryption key they got isn&#x2019;t the key to the entire kingdom, it is the key for a very specific cupboard inside a specific room into a specific house in that kingdom. The idea is that whenever we need to encrypt a particular piece of data, we&#x2019;ll use:pageKey = KDF(MasterEncryptionKey, &#x201C;Pages&#x201D;, PageNumber);And then we&#x2019;ll use the pageKey to actually encrypt the page itself. Even if an attacker somehow managed to crack the encryption key on the page, all that gave them is the page (typically 8KB). They don&#x2019;t get full access. In similar vein, we also use the notion of different domains (&#x201C;Pages, &#x201C;Transactions&#x201D;, &#x201C;Indexes&#x201D;, etc) to generate different keys for the same numeric value. This will generate a different key to encrypt any one of these values. So even if we have to encrypt Page 55 and Transaction 55, they would use a different derived key. This is not needed assuming all else is well, but we don&#x2019;t assume that, we actually assume Bad Stuff, and try to get ahead of the game so even then, we&#x2019;re still safe.</p>
         <a href="https://ayende.com/blog/182401-A/ravendb-security-report-redundant-or-missing-authentication" target="_blank"><h1 class="title mb-6">RavenDB Security Report</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: March 21, 2018
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just released another update to Inside RavenDB book, with chapter discussing advanced indexing scenarios and how RavenDB handles security, encryption in transit and authentication.</p>
-        <a href="https://ayende.com/blog/182306-C/more-ravendb-workshops" target="_blank"><h1 class="title mb-6">More RavenDB Workshops</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 21, 2018
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are running another set of full day RavenDB Workshops.&#xA;During the month of June we&#x2019;ll run workshop in:&#xA;&#xA;London, UK&#xA;S&#xE3;o Paolo, Brazil&#xA;Chicago, USA&#xA;&#xA;We are now running with the early bird discount, so I suggest early registration.&#xA;We will dive deeply into RavenDB 4.0, and all the new and exciting things it can do for you. This workshop is for developers and their operations teams who want to know RavenDB better.</p>
         <div class="button flex justify-between">
             <a href="138.html"><span class="back arrow"></span></a>
 
