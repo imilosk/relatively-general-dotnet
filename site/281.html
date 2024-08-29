@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/164097/write-optimizations-in-voron" target="_blank"><h1 class="title mb-6">Write optimizations in Voron</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 23, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As I mentioned, there is one scenario which produce worse &amp; worse performance for LMDB, random writes. The longer the data set, the more expensive the cost. This is due to the nature of LMDB as a Copy On Write database. Here is a simple explanation of what is the cost: We want to update the value in the red square.   Because the tree is Copy On Write, we need to modify the following pages:  An as the tree goes deeper, it becomes worse. Naturally, one consequence of doing random writes is tree fragmentation. In my tests, on a small 1 million records dataset we would get a cost of over hundred pages (roughly 4 MB) to update a hundred 16 &#x2B; 100 bytes values. Just to clarify, those tests were done on the LMDB code, not on Voron. So I am pretty sure that this isn&#x2019;t my problem. Indeed, I confirmed that this is a general problem with COW approach. I accepted that, and the benefits that we get are significant enough to accept that. But&#x2026; I never really was complete in my acceptance. I really wanted a better way. And after adding Write Ahead Log to Voron, I started thinking. Is there a reason to continue this? We are already dealing with writing to the log. So why modify the entire tree? Here is how it looks like:  Now, when you are looking at the tree, and you ask for the B page, you&#x2019;ll get the one in the log. However, older transactions would get to see the B page in the data file, not the one in the log. So we maintain MVCC.  This complicates matters somewhat because we need to sync the data file flushing with existing transactions (we can&#x2019;t flush the file until all transactions have progressed to the point where they look at the new pages in the log), but that is something that we have to do anyway. And that would cut down the amount of writes that we have to do by a factor of ten, according to my early estimation. Hell, this should improve write performance on sequential writes. For that matter, look what happens when we need to split page D:  Here we need to touch the tree, but only need to touch the the immediate root. Which again, gives us a lot of benefits in the size we need to touch.</p>
+        <a href="https://ayende.com/blog/164098/meantime-on-our-wall" target="_blank"><h1 class="title mb-6">Meantime on our wall</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 23, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We had an artist come to our offices yesterday and do some work on the wall. You can see the entire process here, but the entire result is:</p>
         <a href="https://ayende.com/blog/164066/ravendb-acid-base" target="_blank"><h1 class="title mb-6">RavenDB, ACID &amp; BASE</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: October 14, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Over a year ago I took the FreeDB data set and important to RavenDB, to see how it behaves with very large data sets. We got a customer request to handle a problem that was related to this data set, so I had to re-create the database. The numbers are interesting.    Before optimization, 2012 Two hours  After optimization, 2012 42 minutes  Current status 28 minutes Seeing this, I think that I am going to be re-running the entire perf suite again, just to see what the numbers looks like again.</p>
-        <a href="https://ayende.com/blog/163937/the-customer-is-always-right" target="_blank"><h1 class="title mb-6">The customer is always right</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 11, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Seriously?   &#xA0; Yes, dear [redacted] , the cost is 379$. You are absolutely right.</p>
-        <a href="https://ardalis.com/devreach-2013-recap-and-slides/" target="_blank"><h1 class="title mb-6">DevReach 2013 Recap and Slides</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 10, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last week I had the opportunity to visit Sofia, Bulgaria for the DevReach 2013 conference at which I was once more a presenter. DevReach is&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="280.html"><span class="back arrow"></span></a>
 

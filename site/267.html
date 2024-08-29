@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/166243/peeking-into-lucene-indexing" target="_blank"><h1 class="title mb-6">Peeking into Lucene indexing</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 04, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Continuing my trip into the Lucene codebase, now I&#x2019;m looking into the process indexing are happening. Interestingly enough, that is something that we never really had to look at before. It is quite clear that Lucene is heavily meant for utilizing additional threads for improving overall indexing speed. You can see it in the number of per thread state that exist all over the indexing code. That is also meant to reduce memory consumption, as far as I can see.   The real stuff happens in the ProcessDocument() where we have a chain of DocFieldConsumerPerThread and TermsHashConsumerPerThread which actually do the work. Then the real work is happening on a per field level in DocInverterPerField, where the analyzer is actually called. The process in which the analyzers return values for the text is interesting. There are &#x201C;attributes&#x201D; that are added to the stream, per token, and they are used to get the relevant values. I assume that this allows to have different levels of analyzers.  This way, you can have analyzers that don&#x2019;t deal with offesets or positions, etc. And the actual processing of this is done in a chain that appears to be:  Freq Prox Term Vectors  But that isn&#x2019;t something that I really care about now. I want to see how Lucene writes the actual terms. This is being written in the TermsInfoWriter, which took some time to find.  Terms are stored in a prefix compressed mode (sorted, obviously), and there is the actual terms, and an index into the terms, which allows for faster seeking into the file. This is actually done here:  This is a single term written to the file. A lot of the stuff Lucene does (prefixes, VInt, etc) are done in the name of conserving space, and it reminds me greatly of LevelDB&#x2019;s SST. In fact, the way terms are stored is pretty much an SST, except that this happens to be on multiple files. Pretty much the entire behavior and all the implications are the same. It also means that searching on this is fast, because the data is sorted, but pretty complex. And it also explains a lot about the actual exposed API that it has. I think that I have a pretty good idea on how things work now. I want to now go back up and look at specific parts of how it works&#x2026; but that is going to be the next post.</p>
+        <a href="https://ayende.com/blog/166242/ravendb-3-0-milestone" target="_blank"><h1 class="title mb-6">RavenDB 3.0 milestone</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 03, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, today we have reached a really big milestone for RavenDB 3.0. It is now the master branch in our development mode, and 2.5 is in maintenance mode. That means that you can go here: http://github.com/ayende/ravendb and see all the cool stuff that we are doing. Official builds will be up for the conference, so you can play with the new stuff .</p>
         <a href="https://ayende.com/blog/166273/last-ravendb-conference-tickets" target="_blank"><h1 class="title mb-6">Last RavenDB Conference tickets</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: March 25, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m currently working on a project using Voron (although only incidentally), and I was horrified to get the FatalExecutionEngineException that was discussed previously. Naturally, I assumed that this is something that I did wrong in Voron.  After a lot of work, I managed to narrow it down to&#x2026; not Voron. To be rather more exact, it is Voron that is causing it, but it isn&#x2019;t Voron&#x2019;s fault.  The actual issue is the fact that I&#x2019;ve accidently using Json.NET to serialize a Stream that I got from Voron. And Voron is giving us an UnmanagedMemoryStream. I kept thinking that I was doing something wrong with releasing memory, but as it turns out, here is a very small repro:  unsafe static void Main(string[] args)&#xA; {&#xA;     JsonConvert.SerializeObject(new Foo { Ptr = (byte*)0 });&#xA;&#xA; }&#xA;&#xA; public unsafe class Foo&#xA; {&#xA;     public byte* Ptr { get; set; }&#xA; }&#xA;&#xA;&#xA;&#xA;And that is enough to get the above mentioned error.&#xA;What actually happens is that Json.NET is using dynamic IL generation to optimize accessing properties. And it just doesn&#x2019;t know how to handle pointer properties. What it ended up doing is to generate invalid IL, which resulted in a crash when we tried to actually use it.&#xA;Nothing to do with Voron at all, just a class that has a pointer property that was attempting serialization.&#xA0; Nasty bug, and very annoying to try to figure out.</p>
-        <a href="https://ayende.com/blog/166081/todays-work-is" target="_blank"><h1 class="title mb-6">Today&#x2019;s work is&#x2026;</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 24, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It isn&#x2019;t enough to have just an ExecutionEngineException, I had to have this:</p>
-        <a href="https://ayende.com/blog/165986/everything-falls-down-in-its-proper-place" target="_blank"><h1 class="title mb-6">Everything falls down in its proper place</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 21, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As we are getting ready for the RavenDB Conference, our team is actually starting to show the fruits of all of this hard work. For example, take a look at the new studio replication UI configuration. There are a lot of things like that, and I am really pumped to see all the disparate things that we have been doing over the past year come together and join up into a single and very pretty picutre.</p>
         <div class="button flex justify-between">
             <a href="266.html"><span class="back arrow"></span></a>
 

@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/2674/validating-users-in-active-directory-gotcha" target="_blank"><h1 class="title mb-6">Validating Users in Active Directory Gotcha</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: August 02, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A while ago I asked about doing Active Directory Authentication, after getting some advice, I settled on using the Acitve Directory Membership provider. It worked, but after a while we started to get really bad feedback from the users about the time that it took to login. To give you an idea, I timed it and I have an average of 14 seconds spent just making the &quot;Membership.ValidateUser()&quot; call. For a while I insisted that it can&#x27;t be my code, after all, I was explicitly using the Microsoft recommended way of doing it. I am not an Active Directory / LDAP expert by any mean, so I just went with the recommended appraoch. Today the network guys finally hunt me down and show me the sniffer trace logs, which shows my application getting a response packet from the domain controller and spending 12 seconds doing something with it, before responding. I sat down and wrote the following benchmark.  Validate using MembershipProvider:  private static bool MembershipProvider(string user, string password){&#xA0;&#xA0;&#xA0; try&#xA0;&#xA0;&#xA0; {&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; return Membership.ValidateUser(user, password);&#xA0;&#xA0;&#xA0; }&#xA0;&#xA0;&#xA0; catch (Exception e)&#xA0;&#xA0;&#xA0; {&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Console.WriteLine(e);&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; return false;&#xA0;&#xA0;&#xA0; }}  &lt;system.web&gt;&#xA0;&#xA0;&#xA0; &lt;membership defaultProvider=&quot;ExtranetADMembershipProvider&quot;&gt;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &lt;providers&gt;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &lt;add name=&quot;ExtranetADMembershipProvider&quot;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; type=&quot;System.Web.Security.ActiveDirectoryMembershipProvider, System.Web&quot;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; connectionStringName=&quot;ADConnectionString&quot;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; attributeMapUsername=&quot;SAMAccountName&quot;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; connectionUsername=&quot;MyDomain\Beaker&quot;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; connectionPassword=&quot;Do you get the joke?&quot;/&gt;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &lt;/providers&gt;&#xA0;&#xA0;&#xA0; &lt;/membership&gt;&lt;/system.web&gt; Validate directly using System.DirectoryServices:  private static bool DirectLdap(string user, string password){&#xA0;&#xA0;&#xA0; try&#xA0;&#xA0;&#xA0; {&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; using (DirectoryEntry de = new DirectoryEntry(ldapPath,&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Domain &#x2B;&quot;\\&quot;&#x2B; user, password, &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; AuthenticationTypes.Secure))&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; return de.NativeObject != null;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }&#xA0;&#xA0;&#xA0; }&#xA0;&#xA0;&#xA0; catch (Exception e)&#xA0;&#xA0;&#xA0; {&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Console.WriteLine(e);&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; return false;&#xA0;&#xA0;&#xA0; }} The end result is rather suprising: LDAP:&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; First:&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;00:00.4531424&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; After first time, validate 1000 times same user: 00:20.9851808Membership:&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; First:&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; 00:24.7040736&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; After first time, validate 1000 times same user: 00:24.3603104 So, for the first request I made, it is 55 times faster to use the direct approach. and it is 16 precent slower on repeating calls. I have run the test a number of times, and the result of 0.4 seconds is actually very close to the high end for the first request. My actual usage scenario meant that the average login time was actually averaging on 14 seconds or so. I would guess that the issue is some sort of caching that it is doing, but the initial cost is so high, and apperantly there is continous cost associated with it that is visible over long term usage. I am using it for authenticaton only, so I just dropped the whole thing and use DirectoryServices myself. I am very disappointed about it, but the perf has shot thourgh the roof.</p>
+        <a href="https://ayende.com/blog/2673/on-spec-reading" target="_blank"><h1 class="title mb-6">On Spec Reading</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: August 01, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I feel like pushing someone through a window. I am reading a 200&#x2B; spec right now, and it is read exactly like a badly written combination of user documentation, wishful thinking and paper form specifications. This is a spec that truly demonstrate that the Blob is not just a coding anti pattern. I literally have to reverse engineer it in order to figure out what I am supposed to do.</p>
         <a href="https://ayende.com/blog/2672/soniccast-3-it-is-not-mvc" target="_blank"><h1 class="title mb-6">SonicCast #3 - It is not MVC</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: July 29, 2007
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am apparently the first Google result for &quot;How to make a complete fool of yourself&quot;, not really flattering. The web-cast about Implementing The Event Broker got 92,835 (!) downloads, more than all the rest combined. I have a terrible memory for certain stuff, I literally can speak to a person. make a commitment, close the phone and then completely forget the conversation until about 10 hours later, at which point I really need to apologize.</p>
-        <a href="https://ayende.com/blog/2665/now-that-is-a-nice-uptime" target="_blank"><h1 class="title mb-6">Now that is a nice uptime</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 29, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20"></p>
-        <a href="https://ardalis.com/visual-studio-orcas-beta-2-wcf-svcutil-exe-error/" target="_blank"><h1 class="title mb-6">Visual Studio Orcas Beta 2 WCF svcutil.exe Error</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 28, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you run into trouble using svcutil.exe with the Beta 2 release of Visual Studio / .NET FX, try this: sn-exe -Vr svcutil.exe It wasn&#x27;t&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="620.html"><span class="back arrow"></span></a>
 

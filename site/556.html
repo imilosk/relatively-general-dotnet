@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3233/hibernating-rhinos-8-going-distributed-building-our-own-bus" target="_blank"><h1 class="title mb-6">Hibernating Rhinos #8 - Going Distributed &amp; Building our own Bus</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 30, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, I was toying around with the idea for about a month or so, and finally I got around to actually record &amp; editing that.  Highlights:     Vastly improved sound quality. I think you&#x27;ll enjoy it.    Vastly extended in time &amp; scope. For some reason, this screencast is longer than many full length movies. We also write our own bus implementation from scratch, and discuss the implementation details there.    This is more of a low level discussion, not a high level architectural discussion about why you want a bus (well, I do talk about it a bit, but mostly we implement the bus).    The first 45 minutes are dedicated to moving from an old style RPC to an async batching bus approach, that still uses the request / reply. The rest is dedicated to building the one way, message passing, queue based, service bus.         There are some interesting challenges there, and I hope you&#x27;ll make sense of my grunts as I write the code.      The last hour or so of the screen cast it live coding, and you get to see how I revert some design decisions as they turn out to be problematic.      The technical details:     Total length: An hour and forth minutes(!)    Size: 160 MB    Code starts on 04:31   Go to download page</p>
+        <a href="https://ayende.com/blog/3232/how-did-it-get-to-that-point" target="_blank"><h1 class="title mb-6">How did it get to that point?</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 29, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Just finished recording Hibernating Rhino #8, somehow, it is 1 hour and 40 minutes long.  Then again, we get to implement a full service bus and some variations.</p>
         <a href="https://ayende.com/blog/3231/annoying" target="_blank"><h1 class="title mb-6">Annoying</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: March 28, 2008
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Following the recent profiling effort, I decided to put far more aggressive caching into SvnBridge.  I set it up so it would cache the full revision from TFS on any query, and then serve it from the cache. When I run it against the test server it worked beautifully. Then I had run into this issue:    I am pretty sure that this is not going to be an acceptable scenario. To be rather exact, I would find it acceptable if it was a one time cost, but the problem is that this is a cost that you have to pay per revision. And that is unacceptable. The major problem is that this uses the underlying QueryItems() method, which returns all of the results, including those from previous revisions. This means that on a busy server (like tfs03), the cost of doing such a query is high.  The number of files returned is actually pretty small (910 in this case), but I assume that it have to check all the files on the server for permission before it allows me to get them.   I wonder how Rhino Security would handle this situation, it wouldn&#x27;t even get the data out of the DB, and the query enhancement is pretty light weight. I assume it would be pretty fast.  Anyway, this is obviously a bad approach. For now, I made it load only the path (and its descendants) that we need, this mean that we don&#x27;t get the same benefit of preemptive caching and might talk to the server a bit too much. However, it turn out that the way SvnBridge and SVN makes requests in a way that make this style of caching work fairly well. We always ask for the directory before asking for the descendant, and we have fairly long conversations about the same revision, so that is good candidate.  That isn&#x27;t optimal for big projects, with a lot of files and a lot of activity, however. Because the way I handle it now, we download the entire project metadata for each revision, that can be a lot for those kind of projects, and having to download them each and every time is a waste.  SvnBridge already contains a very smart piece of code (the UpdateDiffCalculator class) that can figure out the differences between two revisions and only get the items that it needs. The problem is that the caching layer is built mainly in order to support that class.  I think that I&#x27;ll need to get a bit smarter about this in the future, but for now it seems to be doing the work very well.</p>
-        <a href="https://ayende.com/blog/3223/svnbridge-and-multiple-tfs-servers" target="_blank"><h1 class="title mb-6">SvnBridge and Multiple TFS Servers</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 28, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The most highly rated request for SvnBridge was adding support for multiple TFS servers without having to run multiple instances of SvnBridge, which was a hassle.  Today I finished working on the implementation, and the UI got a new check box:     Funny, but this took almost three days to implement.   Yes, I don&#x27;t do WinForms much, and I am pretty sure somewhere there is a way to do checkboxes, but I like writing code.*  What actually took a lot of time was working on the path routing inside SvnBridge, so it would send the proper response to the client, which would return it right back to it. The SVN WebDAV protocol is full of indirection, and that is not saying the least.  At any rate, this now works, and you can use a single instance.  Now, how do I do that? Well, using the Microsoft Mind Reading Patent technology, of course:     I mean, don&#x27;t you know that telepathy enabled software is the next big thing?  Now, all you have to do is start SvnBridge, and you can access any TFS server in your possession.   Just issue this command to get the SvnBridge code:     svn checkout http://localhost:8081/tfs03.codeplex.com/SvnBridge   Note the tfs03.codeplex.com in the URL ? This has nothing to do with how we specify which server we use. I am using mind reading technology, I remind you.  If we want to specify a port, we will use:      svn checkout http://localhost:8081/my-team-system-server:8080/MyProject   SvnBridge will also auto detect http and https, so you don&#x27;t have to worry about this.  * No, I didn&#x27;t spend three days writing my CheckboxControl.</p>
-        <a href="https://ayende.com/blog/3222/find-out-the-right-directory" target="_blank"><h1 class="title mb-6">Find out the right directory</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 28, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Another interesting challenge. Given the following API:     public interface IFileRepository&#xA;{&#xA;&#x9;void Save(IFile file);&#xA;&#xA;&#x9;IFile[] GetFiles(string path, Recursion recursion);&#xA;}&#xA;&#xA;public enum Recursion&#xA;{&#xA;&#x9;None,&#xA;&#x9;OneLevel,&#xA;&#x9;Full&#xA;}&#xA;&#xA;&#xA;And assuming that you are saving to a relational database, how are you going to build the GetFiles method?&#xA;&#xA;Oh, and just to make things interesting, Save(IFile) may only perform a single SQL INSERT statement.</p>
         <div class="button flex justify-between">
             <a href="555.html"><span class="back arrow"></span></a>
 

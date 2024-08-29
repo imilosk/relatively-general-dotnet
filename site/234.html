@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/171138/what-is-new-in-ravendb-3-5-my-thread-pool-is-smarter" target="_blank"><h1 class="title mb-6">What is new in RavenDB 3.5</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 14, 2015
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The .NET thread pool is a really amazing piece of technology, and it is suitable for a wide range of usages. RavenDB has been making use of it for almost of all concurrent work since the very beginning.  In RavenDB 3.5, we have decided to change that. RavenDB have a lot of parallel execution requirements, but most of them have unique characteristics that we can express better with our own thread pool. To start with, unlike the normal thread pool, we aren&#x2019;t registering just a delegate and some state for it to execute, we are always registering a list of items to process, and a delegate that takes either a single item from that list or a section of that list. This let us do a much better job at work stealing. Because we have a lot more context about the actual operation. We know that when we are done with executing a particular delegate, we get to run the same delegate on the next available item in the list that it got passed it. That give us higher locality of code, because we are always executing the same task, as long as we have tasks for that in the pool. We often have nested operations, a parallel task (execute indexing work) that spawn additional parallel work (index the following documents). By basing this all on our custom thread pool, we can perform those operations in a way that doesn&#x2019;t involve waiting for that work to be done. Instead, the thread pool thread that we run on is able to &#x201C;wait&#x201D; by executing the work that we are waiting for. We have no blocked threads, and in many cases we can avoid getting any context switches. Under load, that means that threads won&#x2019;t put a lot of work on the thread pool and then have to fight with each other over who will finish its work first, it means that we get to run our own tasks, and only when there are enough threads available for other word will we spread for additional threads. Speaking of load, the new thread pool also have dynamic load balancing feature. Because we know that RavenDB will use the thread pool for background work only, we can prioritize things accordingly. RavenDB is trying to keep the CPU usage in the 60% &#x2013; 80% range by default. And if we detect that we have a higher CPU usage, we&#x2019;ll start decreasing the background work we are doing, to make sure that we aren&#x2019;t impacting front row work (like serving requests). We&#x2019;ll start doing that by changing the priority of the background threads, and eventually just stop processing work in most of the background threads (we always have a minimum number of threads that will remain working, of course).  Another fun thing that the thread pool can do is to detect and handle slowpokes. A common example is an index that is taking a long time to run. Significantly more than all the other indexes. The thread pool can release all the other indexes, and let the calling code know that this particular task has been left to run on its own. RavenDB will then split the indexing work so the slow index will not slow all of the rest of the indexing.  And having split the thread pools between front row work (the standard .NET thread pool) doing request processing and the background pool (which is our own custom impl), we get a lot more predictability in the environment. We don&#x2019;t have to worry about indexing jobs taking over the threads required to serve requests, or for requests on the server to impact the loading of a new database, etc. And finally, like every other feature in RavenDB nowadays, we have a rich set of debug endpoints that can tell us in details exactly what is going on. That is crucial when we are talking about systems that run for months and years or when we are trying to troubleshoot a problematic server.</p>
+        <a href="https://enterprisecraftsmanship.com/posts/integration-testing-or-how-to-sleep-well-at-nights/" target="_blank"><h1 class="title mb-6">Integration testing or how to sleep well at nights</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 13, 2015
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Unit testing is good at checking the correctness of your code in isolation, but it&#x2019;s not a panacea. Only integration tests can give us confidence that the application we develop actually works as a whole. They are also a good substitute for mocks in the cases where you can&#x2019;t test important business logic without involving external dependencies.&#xA;&#xA;&#xA;&#xA;&#xA;Test-induced design damage or why TDD is so painful&#xA;&#xA;&#xA;How to do painless TDD&#xA;&#xA;&#xA;Integration testing or how to sleep well at nights&#xA;&#xA;&#xA;The most important TDD rule&#xA;&#xA;&#xA;Stubs vs Mocks&#xA;&#xA;&#xA;TDD best practices</p>
         <a href="https://ayende.com/blog/171137/production-postmortem-the-case-of-the-hung-over-server" target="_blank"><h1 class="title mb-6">Production postmortem</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: June 29, 2015
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Something I&#x2019;d love to see in a future version of Windows is a seamless way to use some of the extra computers I always tend to have on my&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/exposing-private-collection-properties-to-entity-framework/" target="_blank"><h1 class="title mb-6">Exposing Private Collection Properties to Entity Framework</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 25, 2015
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When following good object-oriented design principles and domain-driven design fundamentals, one should avoid exposing collection properties&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://enterprisecraftsmanship.com/posts/encapsulation-revisited/" target="_blank"><h1 class="title mb-6">Encapsulation revisited</h1></a>
-        <p class="mb-2">by Vladimir Khorikov</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 22, 2015
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The third most important software development principle is Encapsulation.</p>
         <div class="button flex justify-between">
             <a href="233.html"><span class="back arrow"></span></a>
 

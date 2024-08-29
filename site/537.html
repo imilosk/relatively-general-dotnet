@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3384/rhino-mocks-3-5-design-decisions-the-role-of-stub-vs-mock" target="_blank"><h1 class="title mb-6">Rhino Mocks 3.5 Design Decisions</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 29, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let us say that we have the following code that we want to test:     public void ForgotMyPassword(string username)&#xA;{&#xA;   var user = users.GetUserByName(username);&#xA;   user.HashedPassword = &quot;new pass&quot;;&#xA;   users.Save(user);&#xA;}&#xA;&#xA;&#xA;One way to write the test is:&#xA;&#xA;&#xA;  public void When_user_forgot_password_should_save_user()&#xA;{&#xA;    var mockUserRepository = MockRepository.GenerateMock&lt;IUserRepository&gt;();&#xA;    var stubbedSmsSender = MockRepository.GenerateStub&lt;ISmsSender&gt;();&#xA;&#xA;    var theUser = new User{HashedPassword = &quot;this is not hashed password&quot;};    &#xA;&#xA;    mockUserRepository.Stub(x =&gt; x.GetUserByName(&quot;ayende&quot;)).Return(theUser);&#xA;&#xA;    mockUserRepository.Expect( x =&gt; x.Save(theUser) );&#xA;&#xA;    var controllerUnderTest = new LoginController(mockUserRepository, stubbedSmsSender);&#xA;&#xA;    controllerUnderTest.ForgotMyPassword(&quot;ayende&quot;);&#xA;&#xA;    mockUserRepository.VerifyAllExpectations();&#xA;}&#xA;&#xA;&#xA;Another would be:&#xA;&#xA;&#xA;  public void When_user_forgot_password_should_reset_password()&#xA;{&#xA;    var stubUserRepository = MockRepository.GenerateStub&lt;IUserRepository&gt;();&#xA;    var stubbedSmsSender = MockRepository.GenerateStub&lt;ISmsSender&gt;();&#xA;&#xA;    var theUser = new User{HashedPassword = &quot;this is not hashed password&quot;};    &#xA;&#xA;    stubUserRepository.Stub(x =&gt; x.GetUserByName(&quot;ayende&quot;)).Return(theUser);&#xA;&#xA;    var controllerUnderTest = new LoginController(mockUserRepository, stubbedSmsSender);&#xA;&#xA;    controllerUnderTest.ForgotMyPassword(&quot;ayende&quot;);&#xA;&#xA;    stubUserRepository.AssertWasCalled( x =&gt; x.Save(user));&#xA;}&#xA;&#xA;&#xA;Again, we have the question of should we even allow asserts on stubs. But beyond that, consider this two tests, both are functionally the same. Thoughts?</p>
+        <a href="https://ayende.com/blog/3383/rhino-mocks-3-5-design-decisions-to-be-strict-or-not" target="_blank"><h1 class="title mb-6">Rhino Mocks 3.5 Design Decisions</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 29, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is an interesting problem. What should this piece of code do?     var stubSmsSender = MockRepository.GenerateStub&lt;ISmsSender&gt;();&#xA;// test code&#xA;stubSmsSender.VerifyAllExpectations();&#xA;&#xA;&#xA;Right now this is a no-op.&#xA;&#xA;But since stubs are explicitly not mocks, they shouldn&#x27;t be verified. Should I throw here? For something which is a test design decision?</p>
         <a href="https://ayende.com/blog/3382/rhino-mocks-3-5-release-candidate" target="_blank"><h1 class="title mb-6">Rhino Mocks 3.5 Release Candidate</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: June 25, 2008
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am a bit late on posting this, but I suggest taking a look here to read some of the community reactions to the issues we have observed in the Entity Framework.  I will let the document stand on its own, since there is no way I can be impartial here.  I would like to state something (which I also told the Entity Framework team in person):     If someone manages to come up with a kick ass OR/M solution that does what I need (allow me to create maintainable and flexible solutions and has the expendability points to be used on real world projects) and which I, personally, don&#x27;t have to (help to) write, I would be utterly overjoyed.</p>
-        <a href="https://ayende.com/blog/3375/nostalgic-reading-old-posts" target="_blank"><h1 class="title mb-6">Nostalgic: Reading old posts</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 24, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just read a few of my posts from 2004.   They are... an education. I forgot how I was then.  My project at the time was creating a writable configuration file API and rambling about bad OSS is.</p>
-        <a href="https://ayende.com/blog/3374/in-a-land-far-far-away" target="_blank"><h1 class="title mb-6">In a land far far away...</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 24, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is just wrong:</p>
         <div class="button flex justify-between">
             <a href="536.html"><span class="back arrow"></span></a>
 

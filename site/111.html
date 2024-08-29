@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://www.stevejgordon.co.uk/campaigning-for-a-dotnet-foundation-board-seat" target="_blank"><h1 class="title mb-6">Campaigning for a .NET Foundation Board Seat</h1></a>
+        <p class="mb-2">by Steve Gordon</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 07, 2019
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Please excuse me for interrupting the normally educational and generally technical .NET content for a short announcement! I&#x2019;m running for a seat on the board of directors of the .NET Foundation!!! It feels a bit mad even as I type that sentence and I won&#x2019;t lie and it cranks my impostor syndrome up to level [&#x2026;]</p>
+        <a href="https://ayende.com/blog/186529-C/play-broken-games-win-broken-prizes" target="_blank"><h1 class="title mb-6">Play broken games, win broken prizes</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 07, 2019
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post really annoyed me. Feel free to go ahead and go through it, I&#x2019;ll wait. The gist of the post, titled: &#x201C;WAL usage looks broken in modern Time Series Databases?&#x201D; is that time series dbs that uses a Write Ahead Log system are broken, and that their system, which isn&#x2019;t using a WAL (but uses Log-Structure-Merge, LSM) is also broken, but no more than the rest of the pack.This post annoyed me greatly. I&#x2019;m building databases for a living, and for over a decade or so, I have been focused primarily with building a distributed, transactional (ACID), database. A key part of that is actually knowing what is going on in the hardware beneath my software and how to best utilize that. This post was annoying, because it make quite a few really bad assumptions, and then build upon them. I particularly disliked the outright dismissal of direct I/O, mostly because they seem to be doing that on very partial information. I&#x2019;m not familiar with Prometheus, but doing fsync() every two hours basically means that it isn&#x2019;t on the same plane of existence as far as ACID and transactions are concerned. Cassandra is usually deployed in cases where you either don&#x2019;t care about some data loss or if you do, you use multiple replicas and rely on that. So I&#x2019;m not going to touch that one as well. InfluxDB is doing the proper thing and doing fsync after each write. Because fsync is slow, they very reasonable recommend batching writes. I consider this to be something that the database should do, but I do see where they are coming from.Postgres, on the other hand, I&#x2019;m quite familiar with, and the description on the post is inaccurate. You can configure Postgres to behave in this manner, but you shouldn&#x2019;t, if you care about your data. Usually, when using Postgres, you&#x2019;ll not get a confirmation on your writes until the data has been safely stored on the disk (after some variant of fsync was called).What really got me annoyed was the repeated insistence of &#x201C;data loss or corruption&#x201D;, which shows a remarkable lack of understanding of how WAL actually works. Because of the very nature of WAL, the people who build them all have to consider the nature of a partial WAL write, and there are mechanisms in place to handle it (usually by considering this particular transaction as invalid and rolling it back). The solution proposed in the post is to use SSTable (sorted strings table), which is usually a component in LSM systems. Basically, buffer the data in memory (they use 1 second intervals to write it to disk) and then write it in one go. I&#x2019;ll note that they make no mention of actually writing to disk safely. So no direct I/O or calls to fsync. In other words, a system crash may leave you a lot worse off than merely 1 second of lost data.&#xA0; In fact, it is possible that you&#x2019;ll have some data there, and some not. Not necessarily in the order of arrival.A proper database engine will:Merge multiple concurrent writes into a single disk operation. In this way, we can handle &gt; 100,000 separate writes per seconds (document writes, so significantly larger than the typical time series drops) on commodity hardware. Ensure that if any write was confirmed, it actually hit durable storage and can never go away.Properly handle partial writes or corrupted files, in such a way that none of the invariants on the system is violated.I&#x2019;m leaving aside major issues with LSM and SSTables, of which write amplification, and the inability to handle sustained high loads (because there is never a break in which you can do book keeping). Just the portions on the WAL usage (which shows broken and inefficient use) to justify another broken implementation is quite enough for me.</p>
         <a href="https://ayende.com/blog/186497-C/workflow-design-making-the-business-people-happy" target="_blank"><h1 class="title mb-6">Workflow design</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: February 26, 2019
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This one was in an experimental feature, as part of the extra testing process of making this into a stable feature, we run into a bug.Here is the bug fix:The code is meant to detect changes in a distributed environment and we checked the wrong location, meaning that we never actually did the check. In 99.999% of the time, this already happened, but it exposed us to some nasty race conditions.This particular piece of code has been the subject to multiple code reviews, all of which never noticed the issue.</p>
-        <a href="https://www.stevejgordon.co.uk/an-introduction-to-optimising-code-using-span-t" target="_blank"><h1 class="title mb-6">An Introduction to Optimising Code Using Span&lt;T&gt;</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 25, 2019
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post continues my series about writing high-performance C# code. In this post, we&#x2019;ll continue from the last two posts by introducing the Span&lt;T&gt; type and refactor some existing code by converting it to a Span-based version. We&#x2019;ll use Benchmark.NET to compare the methods and validate whether our changes have improved the code. If you [&#x2026;]</p>
-        <a href="https://ayende.com/blog/186309-C/ravendb-customers-portal" target="_blank"><h1 class="title mb-6">RavenDB Customers Portal</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 25, 2019
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I wanted to point out the RavenDB Customers Portal website, because it has a very important function that may not seem obvious.As part of the process of setting up RavenDB, we provide our users with a domain name so they can run their clusters securely. This is pretty easy and has been used by thousands of our users. However, advanced scenarios, such as adding a node to a cluster or changing a node IP required you to re-run the setup and weren&#x2019;t convenient. We have now made it even simpler, you can use the customers portal to edit your cluster DNS configuration.Here is how this looks like:This is available to customers who purchased a commercial license as well as users running on the community edition. As usual, we would love to get your feedback.</p>
         <div class="button flex justify-between">
             <a href="110.html"><span class="back arrow"></span></a>
 

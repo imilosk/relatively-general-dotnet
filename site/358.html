@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/14337/concurrent-max" target="_blank"><h1 class="title mb-6">Concurrent Max</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 12, 2011
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Can you think of a better way to implement this code? private volatile Guid lastEtag;&#xA;private readonly object lastEtagLocker = new object();internal void UpdateLastWrittenEtag(Guid? etag)&#xA;{&#xA;    if (etag == null)&#xA;        return;&#xA;&#xA;    var newEtag = etag.Value.ToByteArray();&#xA;&#xA;    // not the most recent etag&#xA;    if (Buffers.Compare(lastEtag.ToByteArray(), newEtag) &lt;= 0)&#xA;    {&#xA;        return;&#xA;    }&#xA;&#xA;    lock (lastEtagLocker)&#xA;    {&#xA;        // not the most recent etag&#xA;        if (Buffers.Compare(lastEtag.ToByteArray(), newEtag) &lt;= 0)&#xA;        {&#xA;            return;&#xA;        }&#xA;&#xA;        lastEtag = etag.Value;&#xA;    }&#xA;}&#xA;&#xA;&#xA;&#xA;We have multiple threads calling this function, and we need to ensure that lastEtag value is always the maximum value. This has the potential to be called often, so I want to make sure that I chose the best way to do this. Ideas?</p>
+        <a href="https://ayende.com/blog/13314/elegant-code-raccoon-blogs-css-controller" target="_blank"><h1 class="title mb-6">Elegant Code, Raccoon Blog&#x2019;s CSS Controller</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 07, 2011
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The following piece of code is responsible for the CSS generation for this blog: public class CssController : Controller&#xA;{&#xA;     public ActionResult Merge(string[] files)&#xA;     {&#xA;         var builder = new StringBuilder();&#xA;         foreach (var file in files)&#xA;         {&#xA;             var pathAllowed = Server.MapPath(Url.Content(&quot;~/Content/css&quot;));&#xA;             var normalizeFile = Server.MapPath(Url.Content(Path.Combine(&quot;~/Content/css&quot;, file)));&#xA;             if (normalizeFile.StartsWith(pathAllowed) == false)&#xA;             {&#xA;                 return HttpNotFound(&quot;Path not allowed&quot;);&#xA;             }&#xA;             if (System.IO.File.Exists(normalizeFile))&#xA;             {&#xA;                 Response.AddFileDependency(normalizeFile);&#xA;                 builder.AppendLine(System.IO.File.ReadAllText(normalizeFile));&#xA;             }&#xA;         }&#xA;&#xA;         Response.Cache.VaryByParams[&quot;files&quot;] = true;&#xA;         Response.Cache.SetLastModifiedFromFileDependencies();&#xA;         Response.Cache.SetETagFromFileDependencies();&#xA;         Response.Cache.SetCacheability(HttpCacheability.Public);&#xA;&#xA;         var css = dotless.Core.Less.Parse(builder.ToString(), new DotlessConfiguration());&#xA;&#xA;         return Content(css, &quot;text/css&quot;);&#xA;     }&#xA;}&#xA;&#xA;&#xA;There are a lot of things going on in a very short amount of code. The CSS for this blog is defined as:&#xA;&lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/blog/css?files=ResetCss.css&amp;files=custom/ayende.settings.less.css&amp;files=base.less.css&amp;files=custom/ayende.less.css&quot;&gt;&#xA;&#xA;&#xA;&#xA;This means that while we have multiple CSS files that make maintaining things easier, we only make a single request to the server to get all of them.&#xA;Next, and important, we have a security check that ensures that only files from the appropriate path can be served. If you aren&#x2019;t in the CSS directory, you won&#x2019;t be returned.&#xA;Then we have a lot of code that is related to caching, which basically means that we will rely on the ASP.Net output cache to do everything for us. The really nice thing is that unless the files change, we will not be executing this code again, rather, it would be served directly from the cache, without any computation on our part.&#xA;All in all, I am more than happy with this code.</p>
         <a href="https://ayende.com/blog/13313/fix-the-code-not-the-tooling" target="_blank"><h1 class="title mb-6">Fix the code, not the tooling</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: May 28, 2011
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ve had problems running batch files as scheduled tasks. I&#x2019;m not alone &#x2013; over the past couple of weeks, while I&#x2019;ve been trying to get a&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/9217/distributed-systems-podcast-interview" target="_blank"><h1 class="title mb-6">Distributed Systems Podcast Interview</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 23, 2011
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A while ago I recorded a show with the Distributed Systems Podcast gang. It is now available online. I think it is pretty interesting one, since it touches on quite a lot of aspects. RavenDB, how it is built, how you should approach building a product and a framework. You can listen to it here: http://distributedpodcast.com/2011/episode-007-interview-with-ayende-rahien</p>
-        <a href="https://ayende.com/blog/8193/the-big-event-is-just-a-week-away" target="_blank"><h1 class="title mb-6">The Big Event is just a week away</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 22, 2011
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am getting married on the 29th May, which is just a week away. You may notice a decline in the number of posts to this blog (and general activity for work related stuff) around that time frame.  For quite some time, I had to&#x2026; endure certain types of jokes about what would happen when I would get married. Given the choice between my own happiness and the desires of some members of the development community to see me in a dark room eating pizza and working at all hours, I know what I would take&#x2026;  Never the less, as a consolation prize to those people, and as a way to spread my happiness, the following coupon code with give you 29% discount for all the profilers (NH Prof, EF Prof, L2S Prof, LLBLGen Prof, Hibernate Prof): WDG-45K2D467C5 The coupon works for single license purchases, and it is only valid until the 1st of June.</p>
         <div class="button flex justify-between">
             <a href="357.html"><span class="back arrow"></span></a>
 

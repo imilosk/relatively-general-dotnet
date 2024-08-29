@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/167171/huffman-coding-and-encoding-compressed-data" target="_blank"><h1 class="title mb-6">Huffman coding and encoding compressed data</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 01, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So far, we have dealt with relatively straightforward topics. Given a corpus, find a shared dictionary that we can then use to extract repeated patterns. This is the classic view of compression, even if real world compression schemes are actually a lot more convoluted. Now, that we have compressed text like the following, what comes next?&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;&lt;-43,6&gt;11,&#x27;n&lt;-60,6&gt;Anna Nepal&lt;-40,13&gt;&lt;-18,8&gt;&lt;-68,8&gt;awest@twinte.gov&#x27;}&#xA;&#xA;&#xA;&#x9;Obviously, it would be pretty important to encoding this properly. Here is an example of a bad encoding scheme:&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;[prefix &#x2013; byte &#x2013; 1 for compressed, 0 for literal]&#xA;&#x9;&#xA;&#x9;&#x9;[length &#x2013; int &#x2013; length of compressed / literal]&#xA;&#x9;&#xA;&#x9;&#x9;[offset &#x2013; int &#x2013; back reference if the prefix was set to 1]&#xA;&#xA;&#xA;&#x9;The problem here is that we need 6 bytes to encode a one letter literal, and 9 bytes to encode any back reference. Using this inefficient method, encoding the compressed string above actually takes more space than the original one.&#xA;&#xA;&#x9;As you can imagine, there has been a lot of research into this. The RFC 1951 specification, for example, set us how to do that in detail, although I find this explanation much easier to go through.&#xA;&#xA;&#x9;Let us see a simple Huffman encoding scheme. We will use &#x201C;this is an example of a huffman tree&#x201D; as our text, and first, we&#x2019;ll build the table.&#xA;&#xA;&#x9;&#xA;&#xA;&#x9;And now we can encoding the above sentence in 135 bits, instead of 288.&#xA;&#xA;&#x9;For decoding, we just run over the table again, and stop the first time that we hit a leaf.&#xA;&#xA;&#x9;For example, let us see how we would decode &#x2018; &#x2018; and &#x2018;r&#x2019;.&#xA;&#xA;&#x9;Space is very common, appearing 7 times in the text. As such, it is encoded as 111. So, start from the root, and move right three times. We are in a leaf node, and we output space.&#xA;&#xA;&#x9;With the letter R, it only appear in the text 4 times, and its encoding is 10111. So move right from the root node, then left, then three times right, resulting in the leaf node R.&#xA;&#xA;&#x9;So the results of Huffman encoding using the above table is:&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;[t] = 0001&#xA;[h] = 1010&#xA;[i] = 1011&#xA;[s] = 0000&#xA;[ ] = 111&#xA;[i] = 1011&#xA;[s] = 0000&#xA;[ ] = 111&#xA;[a] = 010&#xA;[n] = 0011&#xA;[ ] = 111&#xA;[e] = 011&#xA;[x] = 10001&#xA;[a] = 010&#xA;[m] = 0010&#xA;[p] = 10010&#xA;[l] = 110010&#xA;[e] = 011&#xA;[ ] = 111&#xA;[o] = 110011&#xA;[f] = 1101&#xA;[ ] = 111&#xA;[a] = 010&#xA;[ ] = 111&#xA;[h] = 1010&#xA;[u] = 10000&#xA;[f] = 1101&#xA;[f] = 1101&#xA;[m] = 0010&#xA;[a] = 010&#xA;[n] = 0011&#xA;[ ] = 111&#xA;[t] = 0001&#xA;[r] = 10011&#xA;[e] = 011&#xA;[e] = 011&#xA;&#x9;&#xA;&#xA;&#xA;&#x9;However, we have a problem here, this result in 135 bits or 17 bytes (vs 36 bytes for the original code). However, 17 bytes contains 136 bits. How do we avoid corruption in this case? The answer is that we have to include an EOF Marker in there. We do that by just adding a new item to our Huffman table and recording this normally.&#xA;&#xA;&#x9;So, that is all set, and we are ready to go, right?&#xA0; Almost, we still need to decide how to actually encode the literals and compressed data. GZip (and FemtoZip) uses a really nice way of handling that.&#xA;&#xA;&#x9;The use of Huffman table means that it contains the frequencies of individual bytes values, but instead of having just 0 &#x2013; 255 entries in the Huffman table, they uses 513 entries.&#xA;&#xA;&#x9;256 entries are for the actual byte entries.&#xA;&#xA;&#x9;256 entries are just lengths.&#xA;&#xA;&#x9;1 entry for EOF.&#xA;&#xA;&#x9;What does it means, length entries? It basically means, we store the values 256 &#x2013; 511 for lengths. When we read the Huffman value, it will give us a value in the range of 0 &#x2013; 512.&#xA;&#xA;&#x9;If it is 512, this is the EOF marker, and we are done.&#xA;&#xA;&#x9;If it is 0 &#x2013; 255, it is a byte literal, and we can treat it as such.&#xA;&#xA;&#x9;But if it is in the range of 256 &#x2013; 511, it means that this is a length. Note that because lengths also cluster around common values, it is very likely that we&#x2019;ll be able to store most lengths in under a byte.&#xA;&#xA;&#x9;Following a length, we&#x2019;ll store the actual offset back. And again, FemtoZip is using Huffman encoding to do that. This is actually being done by encoding the offset into multiple 4 bits entries. The idea is to gain as much as possible from commonalities in the actual byte patterns for the offset.&#xA;&#xA;&#x9;Yes, it is confusing, and it took me a while to figure it out. But it is also very sleek to see this in action.&#xA;&#xA;&#x9;On my next post, I&#x2019;ll bring it all together and attempt to actually generate something that produces compressed data and can decompress it back successfully&#x2026;</p>
+        <a href="https://ayende.com/blog/167170/fun-with-compression-now-on-github" target="_blank"><h1 class="title mb-6">Fun with compression, now on GitHub</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 30, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My experiments with compression are live here: https://github.com/ayende/Rhea.Compression Note that they consist mostly of porting code from FemtoZip and adding some code that would generate human readable output so I can follow on what is going on.</p>
         <a href="https://ayende.com/blog/167169/using-shared-dictionary-during-compression" target="_blank"><h1 class="title mb-6">Using shared dictionary during compression</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: June 14, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In PowerPoint, especially if you&#x2019;re working with a complex slide with a lot of animations, it can be difficult to easily determine which&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/167042/interview-challenges-decompress-that" target="_blank"><h1 class="title mb-6">Interview challenges: Decompress that</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 13, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m always looking for additional challenges that I can ask people who interview at Hibernating Rhinos, and I run into an interesting challenge just now.  Implement a Decompress(Stream input, Stream output, byte[][] dictionary) routine for the following protocol: Prefix byte &#x2013; composed of the highest bit &#x2B; 7 bits len If the highest bit is not set, this is a uncompressed data, copy the next len from the input to the output. If the highest bit is set, this is compressed data, the next byte will be the index in the dictionary, copy len bytes from that dictionary entry to the output. After writing the code, the next question is going to be, what are the implication of this protocol? What is it going to be good for? What is it going to be bad for?</p>
-        <a href="https://ardalis.com/tip-&#x2013;-override-tostring-in-objects/" target="_blank"><h1 class="title mb-6">Tip &#x2013; Override ToString() in Objects</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 12, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Most of your domain objects should override ToString() for the simple reason that if you ever want to simply display the object&#x2019;s state, you&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="260.html"><span class="back arrow"></span></a>
 

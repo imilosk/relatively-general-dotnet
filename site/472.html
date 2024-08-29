@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3900/designing-a-document-database-concurrency" target="_blank"><h1 class="title mb-6">Designing a document database</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 10, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my previous post, I asked about designing a document DB, and brought up the issue of concurrency, along with a set of questions that effect the design of the system:     What concurrency alternatives do we choose?    We have several options. Optimistic and pessimistic concurrency are the most obvious ones. Merge concurrency, such as the one implemented by Rhino DHT, is another. Note that we also have to handle the case where we have a conflict as a result of replication.   I think that it would make a lot of sense to support optimistic concurrency only. Pessimistic concurrency is a scalability killer in most system. As for conflicts as a result of concurrency, Couch DB handles this using merge concurrency, which may be a good idea after all. We can probably support both of them pretty easily.  It does cause problems with the API, however. A better approach might be to fail reads of documents with multiple versions, and force the user to resolve them using a different API. I am not sure if this is a good idea or a time bomb. Maybe returning the latest as well as a flag that indicate that there is a conflict? That would allow you to ignore the issue.     What about versioning?    In addition to the Document ID, each document will have an associated version. The Document Id is a UUID, which means that it can be generated at the client side. Each document is also versioned by the server accepting it. The version syntax follow the following format: [server guid]/[increasing numeric id]/[time].  That will ensure global uniqueness, as well as giving us all the information that we need for the document version.</p>
+        <a href="https://ayende.com/blog/3899/designing-a-document-database-scale" target="_blank"><h1 class="title mb-6">Designing a document database</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 10, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my previous post, I asked about designing a document DB, and brought up the issue of scale, along with a set of questions that effect the design of the system:     Do we start from the get go as a distributed DB?   Yes and no. I think that we should start from the get go assuming that a database is not alone, but we shouldn&#x2019;t burden it with the costs that are associated with this. I think that simply building replication should be a pretty good task, which mean that we can push more smarts regarding the distribution into the client library. Simpler server side code usually means goodness, so I think we should go with that.     Do we allow relations?         Joins?      Who resolves them?      Joins are usually not used in a document DB. They are very useful, however. The problem is how do we resolve them, and by whom. This is especially true when we consider that a joined document may reside on a completely different server. I think that I am going to stick closely to the actual convention in other document databases, that is, joins are not supported. There is another idea that I am toying with, the notion of document attributes, which may be used to record this, but that is another aspect all together. See the discussion about attachments for more details.     Do we assume data may reside on several nodes?   Yes and no. The database only care about data that is stored locally, while it may reference data on other nodes, we don&#x2019;t care about that.     Do we allow partial updates to a document?   That is a tricky question. The initial answer is yes, I want this feature. The complete answer is that while I want this feature, I am not sure how I can implement this.  Basically, this is desirable since we can use this to reduce the amount of data we send over the network. The problem is that we run into an interesting issue of how to express that partial update. My current thinking is that we can apply a diff to the initial Json version vs. the updated Json version, and send that. That is problematic since there is no standard way of actually diffing Json. We can just throw it into a string and compare that, of course, but that expose us to json format differences that may cause problems.  I think that I am going to put this issue as: postphoned.</p>
         <a href="https://ayende.com/blog/3898/designing-a-document-database-storage" target="_blank"><h1 class="title mb-6">Designing a document database</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: March 03, 2009
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;re encountered an issue where Visual Studio 2008 SP1 crashes silently whenever you try to open a web form or master page (which by&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/some-code-quality-links/" target="_blank"><h1 class="title mb-6">Some Code Quality Links</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 03, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Caught a couple of nice links from @unclebobmartin via twitter this morning that I thought were worth sharing. The first one is a very nice&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/asp-net-control-panel/" target="_blank"><h1 class="title mb-6">ASP.NET Control Panel</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 03, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Something I think would be a nice addition to ASP.NET (ideally shipping in 4.0 or N.0, but a community effort would also work) is a control&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="471.html"><span class="back arrow"></span></a>
 

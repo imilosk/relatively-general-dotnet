@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4647/new-ravendb-features" target="_blank"><h1 class="title mb-6">New RavenDB features</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 02, 2010
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, to be frank, some of those features aren&#x2019;t actually new, but I only now got around to properly document them. I am rapidly coming to the realization that if it isn&#x2019;t document, it doesn&#x2019;t exists. (Especially true when you consider people browsing the documentation to see what you can do, as part of initial evaluation.)     Replication Bundle &#x2013; master slave, master multi slaves, and multi master are supported.         Mixing Replication and Sharding.      Dealing with replication conflicts.       Versioning Bundle &#x2013; seamless audit trails for document changes.    Optimizing referenced documents load &#x2013; the includes feature.    Spatial queries &#x2013; for geo location searches.    Authorization Bundle &#x2013; per document authorization.    Index Replication Bundle &#x2013; replicate an index to an RDBMS.    Hierarchical Indexing &#x2013; indexing hierarchical data structures.    Document metadata &#x2013; manipulating the document metadata at the client side.    Patching documents &#x2013; avoid having to send the entire document on the wire, send just the changes.    Custom serialization &#x2013; control how the client API serializes your documents.   The really fun part is that by the time that this post will go live, I hope to have another list, just as large, of cool features which were implemented (and documented).</p>
+        <a href="https://ayende.com/blog/4646/executing-ad-hoc-queries-with-ravendb" target="_blank"><h1 class="title mb-6">Executing ad-hoc queries with RavenDB</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 01, 2010
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just managed to solve the most annoying problem with implementing this feature, which is how to successfully run the queries in a separate AppDomain without serializing all the data:</p>
         <a href="https://ayende.com/blog/4645/the-compilers-quest-against-crud-systems" target="_blank"><h1 class="title mb-6">The compiler&#x2019;s quest against CRUD systems</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: September 25, 2010
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently got a bug report about an issue with EF Prof, apparently the application statistics would record the context being opened, but it wouldn&#x2019;t show them being closed. The customer was rightfully worried about that, and wanted to know if this is a bug in his code or in EF Prof.  Not closing connections is a pretty bad idea, obviously, because you are going to hold a lot more server resources than you need.  But we couldn&#x2019;t figure out what the problem was. On my end, I could see that EF Prof was recording the context close properly, but nearly the same code on the customer showed the problem. Note the word nearly. I asked for a repro of the issue, and once I had it, it took mere minutes to confirm that the problem exists.  Now was the time to find out why. The customer code was:     using(var context = new MyContext(new EntityConnection(&quot;name=MyConStr&quot;))&#xA;{&#xA;   // do stuff&#xA;}&#xA;  &#xA;&#xA;Now, what EF Prof tells you is a data context open &amp; close are actually more accurately connection open &amp; close. After some extensive study, I verified that it wasn&#x2019;t my code to blame, there was a leaking connection here.&#xA;&#xA;Checking a bit further, it became clear. We passed an existing connection to the context. When we dispose the context, the context asks: &#x201C;Am I the owner of this connection?&#x201D; And since the answer is no, it will not dispose it. It makes sense, you might want to use that connection for your own purposes, and it is pretty rude of the context to close a connection that it doesn&#x2019;t own.&#xA;&#xA;How can we resolve this? By giving the context the information to open the connection, but not the connection itself:&#xA;&#xA;&#xA;  using(var context = new MyContext(&quot;name=MyConStr&quot;)&#xA;{&#xA;   // do stuff&#xA;}&#xA;  &#xA;&#xA;This code will instruct the context to open its own connection, which it will know that it owns, so it can safely dispose it when it is disposed.&#xA;&#xA;Look Ma, no leaks!</p>
-        <a href="https://ayende.com/blog/4639/how-to-find-the-stack-trace-for-databinding-answer" target="_blank"><h1 class="title mb-6">How to find the stack trace for databinding? Answer</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 24, 2010
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a rather special request, I&#x2019;ll admit. For reasons of my own, I need to find the method(s) called to actually performed data binding in WPF &amp; WinForms.  WPF is actually quite simple:     WinForms, not so much. I resorted to creating a strongly typed data source and concating my extension there.     The answers are, by the way:  WPF:     at MS.Internal.Data.DataBindEngine.Task.Run(Boolean lastChance)    at MS.Internal.Data.DataBindEngine.Run(Object arg)   WinForms:     at System.Windows.Forms.CurrencyManager.SetDataSource(Object dataSource)    at System.Windows.Forms.BindingContext.EnsureListManager(Object dataSource, String dataMember)</p>
-        <a href="https://ayende.com/blog/4638/how-to-find-the-stack-trace-for-data-binding" target="_blank"><h1 class="title mb-6">How to find the stack trace for data binding?</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 23, 2010
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a rather special request, I&#x2019;ll admit. For reasons of my own, I need to find the method(s) called to actually performed data binding in WPF &amp; WinForms.  I have an elegant solution, which is too large to include in this blog post, but I&#x2019;ll say that it doesn&#x2019;t involves reflector at all.  Can you figure it out?</p>
         <div class="button flex justify-between">
             <a href="384.html"><span class="back arrow"></span></a>
 
