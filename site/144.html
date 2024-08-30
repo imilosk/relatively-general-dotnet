@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/181795-C/handling-resource-disposal-on-constrained-machines" target="_blank"><h1 class="title mb-6">Handling resource disposal on constrained machines</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: February 13, 2018
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A user reported that when running a set of unit tests against a RavenDB service running on a 1 CPU, 512MB Docker machine instance they were able to reliably reproduce an out of memory exception that would kill the server.They were able to do that by simply running a long series of pretty simple unit tests. In some cases, this crashed the server.It took a while to figure out what the root cause was. RavenDB unit tests are run on isolated databases, with each test having their own db. Running a lot of these tests, especially if they were short, will effectively create and delete a lot of databases on the server.So we were able to reproduce this independently of anything by just running the create/delete database in a loop and the problem became obvious. Spinning and tearing down a database are pretty big things. Unit tests asides, this is not something that you&#x2019;ll typically do very often. But with unit tests, you may be creating thousands of them very rapidly. And it looked like that caused a problem, but why?Well, we had hanging references to this databases. There were two major areas that caused this:Timers of various kinds that might hang around for a while, waiting to actually fire. We had a few cases where we weren&#x2019;t actually stopping the timer on db teardown, just checking that if the db was disposed when the timer fired. Queues for background operations, which might be delayed because we want to optimize I/O globally. In particular, flushing data to disk is expensive, so we defer it as late as possible. But we didn&#x2019;t remove the db entry from the flush queue on shutdown, relying on the flusher to check if the db was disposed or not.None of these are actually really leaks. In both cases, we will clean up everything eventually. But while that happens, this keeps a reference to the database instance, and prevent us from fully releasing all the resources associated with it. Being more explicitly about freeing all these resource now, rather than waiting a few seconds and have them released automatically made a major difference in this scenario. This was only the case in such small machines because the amount of memory they had was small enough that they run out before they could start clearing the backlog. On machines with a bit more resources, everything will hum along nicely, because we had enough spare capacity.</p>
         <a href="https://ardalis.com/javascript-let-const-and-var/" target="_blank"><h1 class="title mb-6">JavaScript let const and var</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: February 02, 2018
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Note: UPDATED: October 2022 I recently wrote about an example where I was able to apply the Builder Design Pattern to an Angular/TypeScript&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://www.stevejgordon.co.uk/aspnet-core-anatomy-how-does-usestartup-work" target="_blank"><h1 class="title mb-6">ASP.NET Core Anatomy &#x2013; How does UseStartup work?</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 01, 2018
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was recently explaining to someone the basics of the program flow for an ASP.NET Core application. One of the things included in the templates for ASP.NET Core and used very often is the UseStartup&lt;T&gt; extension method on the IWebHostBuilder. This gets called from our Program.cs when initialising the application. UseStartup allows us to set [&#x2026;]</p>
         <div class="button flex justify-between">
             <a href="143.html"><span class="back arrow"></span></a>
 

@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/162786/reviewing-lightning-memory-mapped-database-library-tries" target="_blank"><h1 class="title mb-6">Reviewing Lightning memory-mapped database library</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 12, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I decided to resume my attempt to figure out the LMDB codebase. The previous attempt ended when my eyes started bleeding a little, but I think that I can get a bit further now. One thing that I figured out already is that because this is C code, memory management is really painful. I noted previous how good it was from leveldb to use std::string for most allocations, since it frees both caller and lib from having to worry about the memory. LMDB only shows how important that was. Take a look at the following method:  Quick, what do you think it does. As it turn out, what is does is update the key to point to the key that the cursor is currently pointing at. The reason for that is that the library doesn&#x2019;t want to own the memory for key (since then it would have to provide a way to free it).  Now, to be fair, this appears to be an internal method, only used by the lib itself, but such things are pretty pervasive in the codebase, and it is really annoying that the code is all in one spot, with no real structure, since I am still trying to figure out some sort of hierarchy for the code so I could get a grip on what is actually going on. I decided to just go to the start and figure out how it opens a database:  It is interesting that you need a transaction to open the database. However, the opened database survives the transaction closing, and from the docs, if you open a db in a transaction, that is the only thing you can do in that transaction. I think that I just figured out something, the code in mdb.c is actually written in reverse depth order. So the closer to the end of the file a function is, the more visible it is.  Okay, it appears that there is the notion of multiple dbs, but there is also the notion of the main db. It looks like the main db is also used for tracking things for child dbs. In particular, when opening a named db, we have the following: We search for the db information in the main db. As you can see, mdb_cursor_set is actually setting the data on the cursor to the value we passed in. More interesting is what happens if the db is not there. It appears to merely create the db data and set it in the main db. Okay, looking at this function docs, it appears that this is just about allocating a database handle, not about opening the actual database. I am not really sure that I understand the reasoning behind it, but a new database is actually created in mdb_cursor_put. So only after the first time you create a value, will the db actually be created.  I guess that explains why this function goes on for over 400 lines of code and has no less than 10 goto(!) and 7 goto sections!  I get that this is C, but come on, seriously!</p>
         <a href="https://ayende.com/blog/162850/on-the-death-of-google-reader-blogging-content" target="_blank"><h1 class="title mb-6">On the death of Google Reader, blogging &amp; content</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: July 02, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Do you see it? It took me ages to find it.</p>
-        <a href="https://ayende.com/blog/162689/your-services-will-not-be-needed-thank-you" target="_blank"><h1 class="title mb-6">Your services will not be needed, thank you</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 01, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am not sure what to think about this, to be perfectly honest. But it is quite funny.</p>
         <div class="button flex justify-between">
             <a href="289.html"><span class="back arrow"></span></a>
 

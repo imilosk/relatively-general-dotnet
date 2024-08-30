@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/160450/ravendb-memory-issue-if-i-told-you-once-i-told-you-a-million-times" target="_blank"><h1 class="title mb-6">RavenDB Memory Issue, if I told you once, I told you a million times</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 26, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the really annoying things about doing production readiness testing is that you often run into the same bug over &amp; over again. In this case, we have fixed memory obesity issues over and over again.&#xA;&#xA;&#x9;Just recently, we had the following major issues that we had to deal with:&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;Optimizations gone wild, O(N!) memory leaks&#xA;&#x9;&#xA;&#x9;&#x9;Debugging memory issues with RavenDB using WinDBG&#xA;&#x9;&#xA;&#x9;&#x9;RavenDB 2.0 StopShip bug: Memory is nice, let us eat it all.&#xA;&#x9;&#xA;&#x9;&#x9;RavenDB Memory Issue, The Process&#xA;&#xA;&#xA;&#x9;Overall, not fun.&#xA;&#xA;&#x9;But the saga ain&#x2019;t over yet. We had a test case, we figure out what was going on, and we fixed it, damn it. And then we went to prod and figured out that we didn&#x2019;t fix it after all. I&#x2019;ll spare you the investigative story, suffice to say that we finally ended up figuring out that we are to blame for optimizing for a specific scenario.&#xA;&#xA;&#x9;In this case, we have done a lot of work to optimize for very large batches (import scenario), and we set the Lucene merge factor at a very high level (way too high, as it turned out). That was perfect for batching scenarios. But not so good for non batching scenarios. That resulted in us having to hold in memory a lot of lucene segments. Segments aren&#x2019;t expensive, but they each have their own data structures. That works, sure, but when you start having tens of thousands of those, we are back in the previous story, where a relatively small objects come together in unexpected ways to kill us in nasty ways. Reducing the merge factor meant that we would keep only very small amount of segments, and avoided the problem entirely.&#xA;&#xA;&#x9;The best thing about this? I had to chase a bunch of false leads and ended up fixing what would have been a separate memory leak that would have gone unnoticed otherwise .&#xA;&#xA;&#x9;And now, let us see if stopping work at quarter to six in the morning is conductive for proper rest, excuse me, I am off to bed.</p>
         <a href="https://ayende.com/blog/160449/tooling-shout-out-net-memory-profiler" target="_blank"><h1 class="title mb-6">Tooling shout out: .NET Memory Profiler</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: December 14, 2012
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Coming back a bit, before prefetching, we actually had something like this:  &#xA0;  With the new prefetching, we can parallelize the indexing &amp; the I/O fetching. That is good, but the obvious optimization is actually not going to the disk at all. We already have the documents we want in memory, why no send them directly to the pre fetched queue?  As you can see, we didn&#x2019;t need to even touch the disk to get this working properly. This gives us a really big boost in terms of how fast we can index things. Also note that because we already have those docs in memory, we can still merge separate writes into a single indexing batch, reducing the cost of indexing even further.</p>
-        <a href="https://ayende.com/blog/160290/ravendb-indexing-optimizations-step-ii-pre-fetching" target="_blank"><h1 class="title mb-6">RavenDB indexing optimizations, Step II&#x2013;Pre Fetching</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 13, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Getting deeper into our indexing optimization routines, when we last left it, we had the following system:  This was good because it was able to predictively decide when to increase the batch size and smooth over spikes easily. But note where we have the costs?  The next step was this:  Pre fetching, basically. What we noticed is that we were spending a lot of time just loading the data from the disk, and we changed our behavior to allow us to load things while we are indexing. So on the next indexing batch, we will usually find all of the data we needed already in memory and ready to rock. This gave us a pretty big boost in how fast we can index things , but we aren&#x2019;t done yet. In order to make this feature viable, we had to do a lot of work there. For starter, we had to make sure we would take too much memory, and we wouldn&#x2019;t impact other aspects of the database, etc. Interesting work, all around, even if I am just focusing on the high level optimizations. There is still a fairly obvious optimization waiting for us, but I&#x2019;ll discuss that in the next post.</p>
         <div class="button flex justify-between">
             <a href="306.html"><span class="back arrow"></span></a>
 

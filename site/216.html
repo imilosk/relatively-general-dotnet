@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://enterprisecraftsmanship.com/posts/reference-data-as-code/" target="_blank"><h1 class="title mb-6">Reference data as code</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 17, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this article, I&#x2019;d like to write about a powerful technique that can potentially save you a lot of work and make your code much more concise: representing reference data as code.</p>
         <a href="https://ayende.com/blog/173668/code-through-the-looking-glass-sorting-large-data-sets" target="_blank"><h1 class="title mb-6">Code through the looking glass</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: March 07, 2016
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Our second RavenDB conference is now open. You can visit the conference site to see our speakers and topic, but in general, we are going to talk about the new RavenDB 3.5 release, including some extremely exciting features that we kept as a surprise. We are going to hear from customers and users about their experiences in utilizing RavenDB in demanding and high performance environments and we are going to unveil our plans for RavenDB 4.0. Come and join us.</p>
-        <a href="https://ayende.com/blog/173601/the-case-of-the-queue-in-the-pool" target="_blank"><h1 class="title mb-6">The case of the queue in the pool</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 04, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today we found a bug in the way our connection pool.&#xA0; The code in question?   public HttpClient GetClient(TimeSpan timeout, OperationCredentials credentials, Func&lt;HttpMessageHandler&gt; handlerFactory)&#xA;{&#xA;    var key = new HttpClientCacheKey(timeout, credentials);&#xA;    var queue = cache.GetOrAdd(key, i =&gt; new ConcurrentQueue&lt;Tuple&lt;long, HttpClient&gt;&gt;());&#xA;&#xA;    Tuple&lt;long, HttpClient&gt; client;&#xA;    while (queue.TryDequeue(out client))&#xA;    {&#xA;        if (Stopwatch.GetTimestamp() - client.Item1 &gt;= _maxIdleTimeInStopwatchTicks)&#xA;        {&#xA;            client.Item2.Dispose();&#xA;            continue;&#xA;        }&#xA;        client.Item2.CancelPendingRequests();&#xA;        client.Item2.DefaultRequestHeaders.Clear();&#xA;        return client.Item2;&#xA;    }&#xA;&#xA;    return new HttpClient(handlerFactory())&#xA;    {&#xA;        Timeout = timeout&#xA;    };&#xA;}&#xA;public void ReleaseClient(HttpClient client, OperationCredentials credentials)&#xA;{&#xA;    var key = new HttpClientCacheKey(client.Timeout, credentials);&#xA;    var queue = cache.GetOrAdd(key, i =&gt; new ConcurrentQueue&lt;Tuple&lt;long, HttpClient&gt;&gt;());&#xA;    queue.Enqueue(Tuple.Create(Stopwatch.GetTimestamp(), client));&#xA;}&#xA;&#xA;Can you see the bug?&#xA;I&#x27;ll let you think about it for a while.&#xA;&#xA0;&#xA;&#xA0;&#xA;&#xA0;&#xA;&#xA0;&#xA;Done?&#xA;Okay, here we go!&#xA;The basic idea is that we&#x27;ll keep a bunch of client connected, and free them if they are too old.&#xA;The issue is with the use of the concurrent queue. Consider the case of having a sudden spike in traffic, and we suddenly need 100 connections. This code will generate them, and then put them back in the pool.&#xA;We then go back to normal level, only handle 20 concurrent requests, but because we are using a queue, we&#x27;ll actually cycle all the 100 requests we have through the queue all the time, keeping all of them opened.</p>
         <div class="button flex justify-between">
             <a href="215.html"><span class="back arrow"></span></a>
 

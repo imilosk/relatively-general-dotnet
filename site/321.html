@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/157154/it-uses-async-run-for-the-hills-on-net-4-0" target="_blank"><h1 class="title mb-6">It uses async, run for the hills (On .Net 4.0)</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 23, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the major problems in .NET 4.0 async operation stuff is the fact that an unobserved exception will ruthlessly kill your application. Let us look at an example:  On startup, check the server for any updates, without slowing down my system startup time. All well and good, as long as that server is reachable. When it doesn&#x2019;t, it will throw an exception, but not on the current thread, it will be thrown on another thread, and when the task is finalized, it will raise an UnobservedTaskException. Okay, so I&#x2019;ll fix that and write code like this: CheckForUpdatesAsync().ContinueWith(task=&gt; GC.KeepAlive(task.Exception));&#xA;&#xA;&#xA;&#xA;And that would almost work, except the implementation of CheckForUpdateAsync is:&#xA;private static Task CheckForUpdatesAsync()&#xA;{&#xA;    var webRequest = WebRequest.Create(&quot;http://myserver.com/update-check&quot;);&#xA;    webRequest.Method = &quot;POST&quot;;&#xA;    return webRequest.GetRequestStreamAsync()&#xA;        .ContinueWith(task =&gt; task.Result.WriteAsync(CurrentVersion))&#xA;        .ContinueWith(task =&gt; webRequest.GetResponseAsync())&#xA;        .ContinueWith(task =&gt; new StreamReader(task.Result.GetResponseStream()).ReadToEnd())&#xA;        .ContinueWith(task =&gt;&#xA;                          {&#xA;                              if (task.Result != &quot;UpToDate&quot;)&#xA;                                  ShowUpdateDialogToUser();&#xA;                          });&#xA;}&#xA;&#xA;&#xA;&#xA;Note the highlighted line, where we are essentially ignoring the failure to write to the server. That task is going to go away unobserved, the result, when GC happens, you&#x2019;ll have an unobserved task exception.&#xA;This sort of error has all of the fun aspects of a good problem:&#xA;&#xA;Only happen during errors&#xA;Async in nature&#xA;Bring down your application&#xA;Error location and error notification are completely divorced from one another&#xA;It is actually worse than having a memory leak!&#xA;This post explains some of the changes made with regards to unobserved exceptions in 4.5, and I wholeheartedly support this, but in 4.0, writing code that uses the TPL is easy and fun, but require careful code review to make sure that you aren&#x2019;t leaking an unobserved exception.</p>
         <a href="https://ayende.com/blog/157153/rant-signalr-crazyiness-head-butting-wall-crashing" target="_blank"><h1 class="title mb-6">Rant</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: July 12, 2012
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In RavenDB, when you make an query without explicitly specifying which index you want to use, the query optimizer will select one for you. If none is found that can satisfy your query, the query optimizer will create one that matches your query, but it will do so on a temporary basis. That index will function normally, but if it isn&#x2019;t used, it will be removed after a while. If it is heavily used, it will be converted to a real index.  I was reminded of this today when I realized that I had a bug in our code that caused a value to be misspelled. There were just a few such documents, and I went into the studio and fixed them manually. I had to use a dynamic query to do so, and I was amused to realize that this is the exact scenario for which we built them. An admin doing ad hoc operations, probably to resolve some bug or issue. Sometimes, just having things work out the way you planned make for a great day. And hey, this is what I was avoiding:</p>
-        <a href="https://ayende.com/blog/156929/good-errors" target="_blank"><h1 class="title mb-6">Good errors</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 11, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am trying out the new Encryption support in RavenDB 1.2 (written by Dor), and the very first thing I got was a failure: The Raven/Encryption/Key setting must be set to an encryption key. The key should be in base 64, and should be at least 8 bytes long.You may use EncryptionSettings.GenerateRandomEncryptionKey() to generate a key.&#xA;If you&#x27;d like, here&#x27;s a key that was randomly generated:&#xA;&lt;add key=&quot;Raven/Encryption/Key&quot; value=&quot;3w17MIVIBLSWZpzH0YarqRlR2&#x2B;yHiv1Zq3TCWXLEMI8=&quot; /&gt;&#xA;&#xA;I like this!</p>
         <div class="button flex justify-between">
             <a href="320.html"><span class="back arrow"></span></a>
 

@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/67585/high-memory-usage-with-wcf-discovery" target="_blank"><h1 class="title mb-6">High memory usage with WCF Discovery</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 22, 2011
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yes, I know that this is basically saying that select is broken, but I am seeing some very strange stuff here. The code in question is this: for (int i = 0; i &lt; 15; i&#x2B;&#x2B;)&#xA;{&#xA;    var discoveryClient = new DiscoveryClient(new UdpDiscoveryEndpoint());&#xA;    var findCriteria = new FindCriteria(typeof(IDiscoverableService))&#xA;    {&#xA;        Duration = TimeSpan.FromSeconds(1)&#xA;    };&#xA;    discoveryClient.Find(findCriteria);&#xA;    discoveryClient.Close();&#xA;}&#xA;&#xA;&#xA;The full repro can be found here.&#xA;The problem is, put simply, that before this code, the working set is:&#xA0; Working Set: 57,640 kb, after this have executed, it is 90,288 kb.&#xA;I went over the code with a fine tooth comb, but I don&#x2019;t really see where all of this memory have gone. &#xA;The actual memory reported by GC.GetTotalMemory does go down after the cleanup, so I guess it could be that .NET isn&#x2019;t releasing the memory back to the OS, but it still worries me somewhat.&#xA;I tried it with higher numbers for the loop, and it seems like eventually it settles down on some number and doesn&#x2019;t grow from there. My main problem is what happens when you start doing async stuff. Let us take a look here:&#xA;int count = 150;&#xA;var countdown = new CountdownEvent(count);&#xA;&#xA;for (int i = 0; i &lt; count; i&#x2B;&#x2B;)&#xA;{&#xA;    var discoveryClient = new DiscoveryClient(new UdpDiscoveryEndpoint());&#xA;    var findCriteria = new FindCriteria(typeof(IDiscoverableService))&#xA;    {&#xA;    };&#xA;    discoveryClient.FindProgressChanged &#x2B;= (sender, eventArgs) =&gt; {  }; // do nothing&#xA;    discoveryClient.FindCompleted &#x2B;= (sender, eventArgs) =&gt;&#xA;    {&#xA;        countdown.AddCount();&#xA;        discoveryClient.Close();&#xA;        PrintMemory(&quot;Complete: &quot;);&#xA;    };&#xA;    discoveryClient.FindAsync(findCriteria);&#xA;}&#xA;&#xA;countdown.Wait();&#xA;&#xA;&#xA;At peek, I am seeing 600 MB (!) of memory used. Note that we are now using the default duration of 20 seconds, and it seems that DiscoveryClient is very heavy on memory.&#xA;If you know how, can you take a look at the code and tell me that I am crazy?</p>
         <a href="https://ayende.com/blog/46081/why-i-love-raccoon-blog" target="_blank"><h1 class="title mb-6">Why I love Raccoon Blog</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: July 15, 2011
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Continuing my review of http://microsoftnlayerapp.codeplex.com/, an Official Guidance (shows up at: http://msdn.microsoft.com/es-es/architecture/en) which people are expected to read and follow. Is it not invented here if a Microsoft project chooses to re-invent something that Microsoft already did? Take a look at how queries are being performed:  That looks strange, let us dig a bit deeper, shall we?  And it is not alone! It has a full family and some friends too:    &#xA0; So you create a specification, and then you call that specification to create an expression tree, and then you use that expression tree for the queries.&#xA0; If only we had builtin specification support in the framework! Oh, wait! It is called Linq! And it is already being used here, so they obviously know about it. And no, this isn&#x2019;t the case of needing to serialize specification over the wire, they are used in the same process as the one where the queries execute on. I mean, seriously! You didn&#x2019;t consider just dropping all of those abstractions and getting the work done? Oh, I forgot, there isn&#x2019;t any work to be done, the application isn&#x2019;t actually doing anything, all the abstractions are the point.</p>
-        <a href="https://ayende.com/blog/37889/a-visual-look-at-ravendb-velocity" target="_blank"><h1 class="title mb-6">A visual look at RavenDB velocity</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 14, 2011
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We recently added a very small feature to our build server, generating tags on the repository for every successful build. This has the surprising effect of giving us a really nice way of looking into something that I always wanted, the rate of change across pushes to production. The way we work in Hibernating Rhinos, every single push to the remote repository is a viable product, and it becomes a a publicly available build. The problem is that in git there isn&#x2019;t really a way to track pushes, so it was quite hard to figure out after the fact the scope of change of each build without looking at the individual commits.  With the new tags, we have a much easier time. I mean, just take a look:  You can see pretty rapid velocity here, with new goodies that come abroad.</p>
         <div class="button flex justify-between">
             <a href="352.html"><span class="back arrow"></span></a>
 

@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/170177/the-ravendb-comics" target="_blank"><h1 class="title mb-6">The RavenDB Comics</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: February 16, 2015
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The new flyers just arrived, and we also have a new comics to go with them. We are going to give them out at QCon London in March 4 &#x2013; 5, I have a really good feeling about this. And I really like the comics.  Nitpicker: Yes, I know it isn&#x2019;t readable at this resolution. We&#x2019;ll post this online a few weeks after the QCon conference, come see us there!</p>
         <a href="https://enterprisecraftsmanship.com/posts/code-contracts-vs-input-validation/" target="_blank"><h1 class="title mb-6">C# code contracts vs input validation</h1></a>
         <p class="mb-2">by Vladimir Khorikov</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: February 05, 2015
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m not sure what is going on, but it is strange.  This seems to be related to having multiple catch statements with the same exception name, but I can&#x2019;t reproduce this in isolation. And it seems that other people have run into it as well: http://stackoverflow.com/questions/5650868/net-exception-caught-is-unexpectedly-null Worked around it by changing the parameter name&#x2026; but still, really strange.</p>
-        <a href="https://ayende.com/blog/169860/excerpts-from-the-ravendb-performance-team-report-optimizing-compare-conclusions" target="_blank"><h1 class="title mb-6">Excerpts from the RavenDB Performance team report</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 05, 2015
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Note, this post was written by Federico. We are done with the optimizations, but the question remains. Was all this trouble worthwhile?  If you remember from the first post in this series, based on our bulk insert scenario I said that each comparison in average takes us 97.5 nanoseconds. Now let&#x2019;s first define what that means.  The most important thing is to understand what are the typical characteristics of this scenarios.   All the inserts are in the same collection. Inserts are in batches and with sequential ids. Document keys share the first 10 bytes. (which is very bad for us but also explains why we have a cluster around 13 bytes). No map-reduce keys (which are scattered all over the place) No indexing happens.  In short, we gave ourselves a pretty bad deal.  We are dealing with a live database here, we can control the scenario, but it is insanely difficult to control the inner tasks as we do with micro-benchmarks. Therefore all percentage gains use call normalization which allows us to make an educated guess of what would have been the gain under the same scenario. The smaller the difference in calls, the less noise or jitter in the measurement.  So without further ado this is the comparison before-after with call normalization.  With our nightmare scenario we get a 10% improvement. We went from 97.5 nanoseconds per compare to 81.5 nanoseconds. Which is AWESOME if we realize we were optimizing an already very tight method.  What this means in context? Let&#x2019;s take a look at the top user on this workload, searching a page.  Before:  After:  It seems that we got better, but also there is something different. Why those gets are missing? In the first batch of optimizations we requested the compiler to aggressively inline those properties, now those properties are part of the call-site with optimized code. A bit off-topic but when optimizing first look for these before going in an optimization frenzy.  This is the search method after optimization.   Our 10% improvement on the Memory Compare gave us almost an extra 4% in the search when bulk inserting. Which for a method that is called in the billions range calls on real life workloads, is pretty damn good.  And this concludes the series about memory compare, hope you have enjoyed it.  PS: With all the information provided, where do you guess I will look afterwards for extra gains?</p>
         <div class="button flex justify-between">
             <a href="241.html"><span class="back arrow"></span></a>
 

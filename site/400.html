@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4529/porting-mvc-music-store-to-raven-storemanagercontroller" target="_blank"><h1 class="title mb-6">Porting MVC Music Store to Raven</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 29, 2010
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The final part of the port of the MVC Music Store to Raven is the administration section, implemented in StoreManagerController. I am going to show comparisons of all the methods where the port doesn&#x2019;t offer anything new, and then focus on an interesting conceptual difference between the implementations.      Please note that the main reason that the Raven code is so much shorter is that I threw away the nonsensical error handling (or lack thereof).  &#xA0; &#xA0;&#xA0;    Again, throwing away the error handling that isn&#x2019;t made a lot of the difference in the code.      Now we get to an interesting difference. The old code will delete orders if they include the deleted album. Raven&#x2019;s code does no such thing.  It is important to understand that there is no such thing as referential integrity in Raven (or document databases in general). This can be a plus or a minus, but in this case, we are turning that into a plus, because we can delete an album without losing orders.&#xA0; I don&#x2019;t know about you, but I like the idea of keeping the orders around. :-)    A bit more formally, documents in Raven are independent, they aren&#x2019;t affected by changes to other documents.  There are two more methods to discuss with regards to the StoreManagerController, but I&#x2019;ll discuss them in my next post.</p>
         <a href="https://ayende.com/blog/4528/who-stole-my-transaction" target="_blank"><h1 class="title mb-6">Who stole my transaction?</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: May 25, 2010
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We will start with the Index() method:     There are one this in this code that bothers me, and that is that this code is going to perform two DB queries. But that is beside the point, since we are going to modify the whole thing.  And here is my port:     As you can see, it is pretty much the same, and not really that interesting. Let us see what else we have:     Something that is important to note here is that we are doing a search on the name of a genre. The problem is that the genre name isn&#x2019;t the primary key, worse, there isn&#x2019;t even an index on the name column. Now, admittedly, the genre table contains ten rows, but it is the principal of the thing. (If you are smart, you only have to be read the riot act by the DBA about non index queries in production once).  Now, it would be trivial for us to implement this in Raven using the same approach, but I don&#x2019;t see a reason to do this. The genre that we get in the Browse method is dependant on the data that we return from the Index method, so there is no reason no to pass the id of the genre directly. I modified the Index() action to pass the entire genre, not just the genre name, and to pass the id back to the Browse() action, not the name.   I gotten started implementing this, but I got stuck on the association of Albums from the genre.      Document database doesn&#x2019;t normally have associations, and they don&#x2019;t have joins. So how can we do this?  By now, you should be pretty familiar with the answer, we need to define an index :-)     // AlbumsByGenre&#xA;from album in docs.Albums&#xA;where album.Genre != null&#xA;select new { Genre = album.Genre.Id }&#xA;&#xA;&#xA;&#xA;And this index allows us to write this code:&#xA;&#xA; &#xA;&#xA;And finally, we have the GenreMenu:&#xA;&#xA;&#xA;&#xA;Which we can port very easily: &#xA;&#xA; &#xA;&#xA;&#xA;&#xA;And that is all for the StoreController</p>
-        <a href="https://ayende.com/blog/4520/and-now-this-is-what-i-call-error-handling" target="_blank"><h1 class="title mb-6">And now this is what I call error handling</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 25, 2010
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20"></p>
         <div class="button flex justify-between">
             <a href="399.html"><span class="back arrow"></span></a>
 

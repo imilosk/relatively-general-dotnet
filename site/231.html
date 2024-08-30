@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/171810/dedicated-operations-road-bypasses" target="_blank"><h1 class="title mb-6">Dedicated operations road bypasses</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: August 21, 2015
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We care very deeply about the operations side of RavenDB. Support calls are almost never about &#x201C;where are you? I want to send you some wine &amp; roses&#x201D;, and they tend to come at unpleasant timing. One of the things that we had learnt was that when stuff breaks, it tend to do so in ways that are&#x2026; interesting. Let me tell you a story&#x2026;  A long time ago, a customer was using an index definition that relied on the presence of a custom assembly to enrich the API available for indexing. During the upgrade process from one major version of RavenDB to the next, they didn&#x2019;t take into account that they need to also update the customer assembly. When they tried to start RavenDB, it failed because of the version mismatch, since they weren&#x2019;t actually using that index anyway. The customer then removed the assembly, and started RavenDB again. At this point, the following sequence of events happened:  The database started, saw that it is using an old version of the storage format, and converted to the current version of the storage format. The database started to load the indexes, but the index definition was invalid without the customer assembly, so it failed. (Index definitions are validated at save time, so the code didn&#x2019;t double check that at the time). The customer was now stuck, the database format was already converted, so in order to rollback, they would need to restore from backup. They could also not remove the index from the database, because the database wouldn&#x2019;t start to let them do so. Catch 22. At this point, the admin went into the IndexDefinitions directory, and deleted the BadIndex.index-definition file, and restarted RavenDB again. The database then recognized that the index definition is missing, but the index exists, deleted the index from the server, and run happily ever after. Operations road bypass is our terminology for giving administrators a path to changing internal state in our system using standard tools, without requiring the system to be up and functioning. The example with the index definition is a good one, because the sole reason we keep the index definition on disk is to allow administrators the ability to touch them without needing RavenDB in a healthy state. What do you do in your system to make it possible for the admin to recover from impossible situations?</p>
         <a href="https://ayende.com/blog/171809/repeatable-random-tests" target="_blank"><h1 class="title mb-6">Repeatable random tests</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: August 11, 2015
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB 3.5 have just a few of major monitoring features (although wait for the next one, it is a biggie), but this one is a pretty important one. This feature allows RavenDB to track, at a very detailed level, all the I/O work that is done by the server, and give you accurate information about what exactly is going on with the system. Take a look at this report:  As you can see, you see a one minute usage, with writes going on and some indexing work along the way.  The idea here is that you can narrow down any bottlenecks that you have in the system. Not only by looking at the raw I/O stats that the OS provides, but actually be able to narrow it down to a particular database and a particular action inside that database. For users with multi tenants databases, this can be a very useful tool in figuring out what is actually going on in their system. The mechanics behind this report are actually interesting. We are using ETW to capture the I/O rates, but since we are capturing kernel events, that require admin privileges. Typically, RavenDB isn&#x2019;t run with those privileges. To work around that, the admin is going to run the Raven.Monitor.exe process, in an elevated context. That gives us access to the kernel events, and we then process the information and show them to the user in the studio.</p>
-        <a href="https://enterprisecraftsmanship.com/posts/database-versioning-best-practices/" target="_blank"><h1 class="title mb-6">Database versioning best practices</h1></a>
-        <p class="mb-2">by Vladimir Khorikov</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: August 10, 2015
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The topic described in this article is a part of my Database Delivery Best Practices Pluralsight course.&#xA; Keeping track of your application&#x2019;s database is not an easy task. Database schemas tend to mismatch in different environments, data in one of the databases may miss some crucial piece of data. Such occasions can be irritating, especially when caught in production.&#xA; The situation gets worse when you develop redistributable software. In this case, each of your clients has their own database instance whose structure may differ from others&#x27;.</p>
         <div class="button flex justify-between">
             <a href="230.html"><span class="back arrow"></span></a>
 

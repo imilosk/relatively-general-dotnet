@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/160290/ravendb-indexing-optimizations-step-ii-pre-fetching" target="_blank"><h1 class="title mb-6">RavenDB indexing optimizations, Step II&#x2013;Pre Fetching</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 13, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Getting deeper into our indexing optimization routines, when we last left it, we had the following system:  This was good because it was able to predictively decide when to increase the batch size and smooth over spikes easily. But note where we have the costs?  The next step was this:  Pre fetching, basically. What we noticed is that we were spending a lot of time just loading the data from the disk, and we changed our behavior to allow us to load things while we are indexing. So on the next indexing batch, we will usually find all of the data we needed already in memory and ready to rock. This gave us a pretty big boost in how fast we can index things , but we aren&#x2019;t done yet. In order to make this feature viable, we had to do a lot of work there. For starter, we had to make sure we would take too much memory, and we wouldn&#x2019;t impact other aspects of the database, etc. Interesting work, all around, even if I am just focusing on the high level optimizations. There is still a fairly obvious optimization waiting for us, but I&#x2019;ll discuss that in the next post.</p>
         <a href="https://ayende.com/blog/160289/ravendb-indexing-optimizations-step-i-dynamic-batches" target="_blank"><h1 class="title mb-6">RavenDB indexing optimizations, Step I&#x2013;dynamic batches</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: November 26, 2012
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When we started full fledged active development on the next version of RavenDB, we used the tag name &#x201C;1.2&#x201D; for that release version. We wanted to take the time and punch some big tickets items that were going to be very hard to do with small incremental releases. I think we did quite a good job of that. But one of the major things that we wanted to do was to be able to go back and fix some of the early on design decisions that we made. Some of them were minor (null handling improvements during indexing), some of them were pretty major (changing indexing format for dates to human readable ones). Some are obvious (moving things around in the client API to make it easier to avoid mistakes), some are not so much (far superior handling of DateTime and DateTimeOffset). Interestingly enough, we didn&#x2019;t get any big breaking changes, only a lot of minor course corrections. For the most part, I expect people to move from 1.0 to 2.0 without even noticing that things got much better. We stilled called this release RavenDB 1.2, but we have some breaking changes, and we have done tremendous amount of work on the system. We started getting pushback from users and customers about the version number. This isn&#x2019;t just some minor release, this is a major step up. Thus, what we were calling 1.2 became 2.0. And I&#x2019;ll be posting about what exactly is new in RavenDB 2.0 in just a bit&#x2026;</p>
-        <a href="https://ayende.com/blog/160065/upgrading-to-ravendb-2-0-in-our-production-systems" target="_blank"><h1 class="title mb-6">Upgrading to RavenDB 2.0 in our production systems</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: November 23, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, we tried to upgrade to RavenDB 2.0 build 2152, and then we quickly had to roll things back. The reason for that, by the way, was authentications issues. In RavenDB 2.0, we did a lot of stuff to tighten security. In particular, we actively try to push you away from using the system database, and into using named databases. And we also made it easier to specify which databases which users has access to (and what kind of an access). Unfortunately, while it worked perfectly during testing, going to production revealed that we had a few&#x2026; issues in it.  Surprisingly enough, those issues weren&#x2019;t in the logic or how it worked. Those issues boiled down to&#x2026;. case sensitivity. It turned out that both the user names and the database names were case sensitive in the permission configuration, leading to&#x2026; well, you probably saw that the site threw a 401 error. Fixing that config issue was pretty high on my list of things to fix. If only because case sensitivity in this place was just a trap waiting to happen. Once we figured out what was going on, it was relatively easy to fix. This post is now written on a system running the very latest version of RavenDB 2.0.</p>
         <div class="button flex justify-between">
             <a href="307.html"><span class="back arrow"></span></a>
 

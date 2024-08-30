@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/167393/message-passing-performance-take-2" target="_blank"><h1 class="title mb-6">Message passing, performance&#x2013;take 2</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 15, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my previous post, I did some rough &#x201C;benchmarks&#x201D; to see how message passing options behave. I got some great comments, and I thought I&#x2019;ll expand on that. The baseline for this was a blocking queue, and we managed to process using that we managed to get:  145,271,000 msgs in 00:00:10.4597977 for 13,888,510 ops/sec And the async BufferBlock, using which we got:  43,268,149 msgs in 00:00:10 for 4,326,815 ops/sec. Using LMAX Disruptor we got a disappointing:  29,791,996 msgs in 00:00:10.0003334 for 2,979,100 ops/sec However, it was pointed out that I can significantly improve this if I changed the code to be:  var disruptor = new Disruptor.Dsl.Disruptor&lt;Holder&gt;(() =&gt; new Holder(), new SingleThreadedClaimStrategy(256), new YieldingWaitStrategy(), TaskScheduler.Default);&#xA;After which we get a very nice:&#xA;&#xA;141,501,999 msgs in 00:00:10.0000051 for 14,150,193 ops/sec&#xA;Another request I got was for testing this with a concurrent queue, which is actually what it is meant to do. The code is actually the same as the blocking queue, we just changed Bus&lt;string&gt; to ConcurrentQueue&lt;string&gt;.&#xA;&#xA0;&#xA;Using that, we got:&#xA;&#xA;170,726,000 msgs in 00:00:10.0000042 for 17,072,593 ops/sec&#xA;And yes, this is pretty much just because I could. Any of those methods is quite significantly higher than anything close to what I actually need.</p>
         <a href="https://ayende.com/blog/167361/message-passing-performance" target="_blank"><h1 class="title mb-6">Message passing, performance</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: July 03, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are working hard on RavenDB 3.0 and a lot of the work now goes into the spit &amp; polish phase. Usually this is a pretty boring part. Making sure that intellisense works in the right places, that the UI makes sense, that we give the right results, that the logs are helpful, etc. But occasionally we get to actually do really cool stuff in this phase, and one of them is this guy:   Map/Reduce is a very powerful technique, but it can be hard to figure out issues sometimes. We always had debug endpoints to help actually figuring this out, but we are now putting a lot of attention on surfacing them to the user and making this easy to understand. The map/reduce visualizer is a great example of that.</p>
-        <a href="https://ayende.com/blog/167201/compression-finale" target="_blank"><h1 class="title mb-6">Compression finale</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 02, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After a fairly long road, we are done. We have all the pieces, generating a shared dictionary, writing using Huffman encoding and getting the results back out. Hopefully by now the theory behind it is fairly clear to you, and it is time to actually put this into practice. I&#x2019;ve 100,000 random users documents in this file, and I want to see what kind of compression I can get from a shared dictionary approach. The project with the code for all of this can be found here: Rhea Compression (most of it is basically a port of FemtoZip to .NET). The actual file size is 8.49 MB, and when compressing it with Zip (Windows&#x2019; send to compress folder) it turn into a 1.93 MB file.  The original file size in bytes is: 8,809,353. I then tried to compress each document individually using GZipStream, resulting in a total of: 10,004,614 bytes used. Or 9.5 MB! In other words, and not to anyone surprise (I hope), we see an increase in the file size. However, when using Rhea&#x2019;s compression, we do the following: var trainer = new CompressionTrainer();&#xA;&#xA;for (int i = 0; i &lt; json.Length/100; i&#x2B;&#x2B;)&#xA;{&#xA;    trainer.TrainOn(json[i*100]);&#xA;}&#xA;&#xA;var compressionHandler = trainer.CreateHandler();&#xA;&#xA;&#xA;This creates a shared dictionary from every 100th document. So we have 1,000 documents as our sampling data. Then, I compressed all the individual documents one at a time.&#xA;The result took: 2,593,235 bytes or just 2.47 MB. We got 29% compression ratio! Note that we did this with a 34Kb shared dictionary.&#xA;Here is the actual compression code:&#xA;foreach (var dic in docs)&#xA;{&#xA;    size &#x2B;= s.Length;&#xA;    ms.SetLength(0);&#xA;    compressedSize &#x2B;= compressionHandler.Compress(s, ms);&#xA;}&#xA;&#xA;&#xA;&#xA;And that is pretty much it. Rhea Compression is on github, and that concludes my spike into compression. In general, Rhea (and FemtoZip, obviously) are meant for very specific scenarios. I have high hopes to be able to use it in the future for doing great things .</p>
         <div class="button flex justify-between">
             <a href="259.html"><span class="back arrow"></span></a>
 

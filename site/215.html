@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/173793/the-deadlock-in-the-fairness-assumption" target="_blank"><h1 class="title mb-6">The deadlock in the fairness assumption</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 11, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Looking into some benchmark code, I noticed that the developer has put some stuff there that shouldn&#x27;t be there (and is likely slowing down the benchmark). When I commented on that, the answer was: &quot;If I don&#x27;t do that, this breaks&quot;. Indeed, he was able to show me that this will actually break. And that was very bad news. Because that was a pretty sensitive spot. In fact, afterward he actually filed several bugs, including scary looking deadlock detected one. The problem is that this code works. In fact, it has been deployed, in production, for years, and I have very high confidence that it works. But eventually I was able to reproduce this locally, and then track it down to the actual root cause. First, let me show you the reproduction. First, the sample code:   public class Program&#xA;{&#xA;    public static void Main(string[] args)&#xA;    {&#xA;        var fair = new FairPractice();&#xA;        var thread = new Thread(fair.OtherWork);&#xA;        thread.Start();&#xA;&#xA;        while (thread.IsAlive)&#xA;        {&#xA;            fair.DoMainWork();&#xA;        }&#xA;    }&#xA;}&#xA;&#xA;public class FairPractice&#xA;{&#xA;    SemaphoreSlim _s = new SemaphoreSlim(1);&#xA;&#xA;    public void OtherWork()&#xA;    {&#xA;        while (true)&#xA;        {&#xA;            Thread.Sleep(100);&#xA;            if (_s.Wait(1000) == false)&#xA;            {&#xA;                Console.WriteLine(&quot;\r\nCan&#x27;t get it!&quot;);&#xA;                return;&#xA;            }&#xA;            Console.WriteLine(&quot;\r\nGot IT!!!!&quot;);            _s.Release();&#xA;        }&#xA;    }&#xA;&#xA;    private int _work;&#xA;    public void DoMainWork()&#xA;    {&#xA;        if (_s.Wait(500) == false)&#xA;            throw new TimeoutException(&quot;Can&#x27;t get semaphore&quot;);&#xA;&#xA;        Console.Write(&quot;\r{0}&quot;, &#x2B;&#x2B;_work);&#xA;        Thread.Sleep(30);&#xA;        _s.Release();&#xA;    }&#xA;}&#xA;&#xA;&#xA;&#xA;Now, this code seems pretty simple. We have a bunch of work that happens in the main loop. Taking the semaphore and holding it, then doing a small amount of work, then releasing the semaphore. &#xA;On the other thread, we have a (long) wait for this semaphore, and that is it. Now, the interesting thing here is that we would expect the 2nd thread to register a wait on the semaphore so when it is released, the 2nd thread wakes up, and get the semaphore. In practice, it looks like the main thread is the one having all the fun, and it is fast enough to re-acquire the semaphore before the 2nd thread can catch it. Looking into the code of SemaphoreSlim seems to confirm it. There are actually a bunch of stuff going on there, and this particular scenario (very short wait, just a single entry in the semaphore, a second waiter with a high threshold) seems to hit it very hard, and violate all fairness assumptions.&#xA;The good thing is that in order to hit this issue, you need to have very high speed. The reason this is good is that we are benchmarking, and that means that our code (which actually also does disk I/O) is now fast enough to his this issue.</p>
         <a href="https://ardalis.com/how-to-find-all-objects-in-a-sql-server-schema/" target="_blank"><h1 class="title mb-6">How to find all objects in a SQL Server Schema</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: March 18, 2016
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The final piece for this candidate is the code to actually search through the sorted array. As you&#x27;ll recall, the candidate certainly made our computer pay for that sorting and merging. But we are fine now, we have manage to recover from all of that abuse, and we are ready to rock. Here is how the search (over sorted array) was implemented.  public List&lt;int&gt; EmailSearcher(string email)&#xA;{&#xA;    List&lt;int&gt; answer = new List&lt;int&gt;();&#xA;    for (int i = 0; i &lt; emailsArray.Length; i&#x2B;&#x2B;)&#xA;    {&#xA;        if (emailsArray[i].STR.ToString().Equals(email, StringComparison.OrdinalIgnoreCase))&#xA;        {&#xA;            answer = emailsArray[i].ID;&#xA;            return answer;&#xA;        }&#xA;    }&#xA;&#xA;    return answer;&#xA;}&#xA;&#xA;&#xA;And with that, I have nothing left to say.</p>
-        <a href="https://enterprisecraftsmanship.com/posts/reference-data-as-code/" target="_blank"><h1 class="title mb-6">Reference data as code</h1></a>
-        <p class="mb-2">by Vladimir Khorikov</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 17, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this article, I&#x2019;d like to write about a powerful technique that can potentially save you a lot of work and make your code much more concise: representing reference data as code.</p>
         <div class="button flex justify-between">
             <a href="214.html"><span class="back arrow"></span></a>
 
