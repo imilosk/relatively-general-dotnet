@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/152705/application-analysis-northwind-net" target="_blank"><h1 class="title mb-6">Application analysis: Northwind.NET</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 30, 2011
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For an article I am writing, I wanted to compare a RavenDB model to a relational model, and I stumbled upon the following Northwind.NET project. I plugged in the Entity Framework Profiler and set out to watch what was going on. To be truthful, I expected it to be bad, but I honestly did not expect what I got. Here is a question, how many queries does it take to render the following screen?  The answer, believe it or no, is 17:  You might have noticed that most of the queries look quite similar, and indeed, they are. We are talking about 16(!) identical queries: SELECT [Extent1].[ID]           AS [ID],&#xA;       [Extent1].[Name]         AS [Name],&#xA;       [Extent1].[Description]  AS [Description],&#xA;       [Extent1].[Picture]      AS [Picture],&#xA;       [Extent1].[RowTimeStamp] AS [RowTimeStamp]&#xA;FROM   [dbo].[Category] AS [Extent1]&#xA;&#xA;&#xA;Looking at the stack trace for one of those queries led me to:&#xA;&#xA;And to this piece of code:&#xA;&#xA;&#xA;You might note that dynamic is used there, for what reason, I cannot even guess. Just to check, I added a ToArray() to the result of GetEntitySet, and the number of queries dropped from 17 to 2, which is more reasonable. The problem was that we passed an IQueryable to the data binding engine, which ended up evaluating the query multiple times.&#xA;And EF Prof actually warns about that, too:&#xA;&#xA;At any rate, I am afraid that this project suffer from similar issues all around, it is actually too bad to serve as the bad example that I intended it to be.</p>
         <a href="https://ayende.com/blog/152673/ravendb-videos-on-youtube" target="_blank"><h1 class="title mb-6">RavenDB videos on YouTube</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: December 20, 2011
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We had the following code: public static void WriteDataToRequest(HttpWebRequest req, string data)&#xA;{&#xA;    var byteArray = Encoding.UTF8.GetBytes(data);&#xA;&#xA;    req.ContentLength = byteArray.Length;&#xA;&#xA;    using (var dataStream = req.GetRequestStream())&#xA;    {&#xA;        dataStream.Write(byteArray, 0, byteArray.Length);&#xA;        dataStream.Flush();&#xA;    }&#xA;}&#xA;&#xA;&#xA;And that is a problem, because it allocates the memory twice, once for the string, once for the buffer. I changed that to this:&#xA;public static void WriteDataToRequest(HttpWebRequest req, string data)&#xA;{&#xA;    var byteCount = Encoding.UTF8.GetByteCount(data);&#xA;    req.ContentLength = byteCount;&#xA;    using (var dataStream = req.GetRequestStream())&#xA;    {&#xA;        if(byteCount &lt;= 0x1000) // small size, just let the system allocate it&#xA;        {&#xA;            var bytes = Encoding.UTF8.GetBytes(data);&#xA;            dataStream.Write(bytes, 0, bytes.Length);&#xA;            dataStream.Flush();&#xA;            return;&#xA;        }&#xA;&#xA;        var buffer = new byte[0x1000];&#xA;        var maxCharsThatCanFitInBuffer = buffer.Length / Encoding.UTF8.GetMaxByteCount(1);&#xA;        var charBuffer = new char[maxCharsThatCanFitInBuffer];&#xA;        int start = 0;&#xA;        var encoder = Encoding.UTF8.GetEncoder();&#xA;        while (start &lt; data.Length)&#xA;        {&#xA;            var charCount = Math.Min(charBuffer.Length, data.Length - start);&#xA;&#xA;            data.CopyTo(start, charBuffer, 0, charCount);&#xA;            var bytes = encoder.GetBytes(charBuffer, 0, charCount, buffer, 0, false);&#xA;            dataStream.Write(buffer, 0, bytes);&#xA;            start &#x2B;= charCount;&#xA;        }&#xA;        dataStream.Flush();&#xA;    }&#xA;}&#xA;&#xA;&#xA;&#xA;And I was quite proud of myself.&#xA;Then I realized that I was stupid. Why?</p>
-        <a href="https://ayende.com/blog/146433/i-am-turning-0x1e-tomorrow" target="_blank"><h1 class="title mb-6">I am turning 0x1E tomorrow</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 19, 2011
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In hex, I am still a teenager . To celebrate that, starting from the 20 Dec all the way to the new year, I decided to offer a 30% discount on all the profilers. All you need to do is to use the following coupon code:   01E-45K2D46V6K The offer is valid for:  Uber Prof NHibernate Profiler Entity Framework Profiler Linq to SQL Profiler LLBLGen Profiler Hibernate Profiler Commercial support for NHibernate</p>
         <div class="button flex justify-between">
             <a href="340.html"><span class="back arrow"></span></a>
 

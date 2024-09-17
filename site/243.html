@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/170113/this-exception-never-happened" target="_blank"><h1 class="title mb-6">This exception never happened</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: February 05, 2015
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m not sure what is going on, but it is strange.  This seems to be related to having multiple catch statements with the same exception name, but I can&#x2019;t reproduce this in isolation. And it seems that other people have run into it as well: http://stackoverflow.com/questions/5650868/net-exception-caught-is-unexpectedly-null Worked around it by changing the parameter name&#x2026; but still, really strange.</p>
         <a href="https://ayende.com/blog/169860/excerpts-from-the-ravendb-performance-team-report-optimizing-compare-conclusions" target="_blank"><h1 class="title mb-6">Excerpts from the RavenDB Performance team report</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: January 29, 2015
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So, this just happened:  Note that this is a very important step, but it is just a first step. We have a few Linux experts review the code, and we haven&#x2019;t even started yet with working on RavenDB itself. But I&#x2019;m pretty happy right now.</p>
-        <a href="https://ayende.com/blog/169828/excerpts-from-the-ravendb-performance-team-report-optimizing-memory-comparisons-size-does-matter" target="_blank"><h1 class="title mb-6">Excerpts from the RavenDB Performance team report</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 29, 2015
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Note, this post was written by Federico. In the previous post after inspecting the decompiled source using ILSpy&#xA0; we were able to uncover potential things we could do. In this fragment we have a pretty optimized method to compare an entire 4 bytes per loop. What if we could do that on 8 bytes?  To achieve that we will use a ulong instead of a uint. This type of optimization makes sense for 2 reasons.  Most of our users are already running RavenDB in x64 where the native word is 8 bytes and Voron is compiled on x64 only. But even if that were not true, since the late 2000&#x2019; most CPUs would have a 64 bytes L1 cache line with half a cycle cost for a hit. So even if you can&#x2019;t handle 64 bits in one go and the JIT or processor have to issue 2 instructions you are still getting a L1 cache hit and no pipeline stall. Which is GREAT .  So without farther ado, this is the resulting code:    Ayende&#x2019;s note: In the code, the lp &#x2B;= (IntPtr)8/8; is actually defined as lp &#x2B;= 1; What is actually happening is that we are increasing by 8 bytes (size of ulong), and this is how ILSpy decided to represent that for some reason. The actual IL generated for this is good:  It is just that the translation here is kind of strange.   Therefore the question to ask here is: Will skipping over the parts of the memory block that is equal at a faster rate will compensate for the cost of doing a final check with 8&#xA0; bytes instead of 4 bytes?  Well the answer is a resounding yes. It won&#x2019;t have much impact in the first 32 bytes (around 3% or less). We won&#x2019;t lose, but we won&#x2019;t win much either. But after that it skyrocket. // Bandwidth optimization kicks inSize:&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; 32 Original:&#xA0;&#xA0;&#xA0;&#xA0; 535 Optimized:&#xA0;&#xA0; 442 Gain:&#xA0;&#xA0;&#xA0; 5.01%Size:&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; 64 Original:&#xA0;&#xA0;&#xA0;&#xA0; 607 Optimized:&#xA0;&#xA0; 493 Gain:&#xA0;&#xA0;&#xA0; 7.08%Size:&#xA0;&#xA0;&#xA0; 128 Original:&#xA0;&#xA0;&#xA0;&#xA0; 752 Optimized:&#xA0;&#xA0; 573 Gain:&#xA0;&#xA0; 11.77%Size:&#xA0;&#xA0;&#xA0;&#xA0; 256 Original: 1,080 Optimized:&#xA0;&#xA0; 695 Gain:&#xA0;&#xA0; 35.69%Size:&#xA0;&#xA0;&#xA0;&#xA0; 512 Original: 1,837 Optimized:&#xA0;&#xA0; 943 Gain:&#xA0;&#xA0; 74.40%Size: 1,024 Original: 3,200 Optimized: 1,317 Gain: 122.25%Size: 2,048 Original: 5,135 Optimized: 2,110 Gain: 123.13%Size: 4,096 Original: 8,753 Optimized: 3,690 Gain: 117.29% Those are real measurements. You can see that when bandwidth optimization kicks in the gains start to get really high. This means that changing the bandwidth size alone from 4 byte to 8 bytes got us an order of magnitude improvement stabilizing around 120%.  Not bad for 2 lines of work.</p>
         <div class="button flex justify-between">
             <a href="242.html"><span class="back arrow"></span></a>
 

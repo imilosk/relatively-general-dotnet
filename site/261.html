@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/167233/visualizing-map-reduce-in-ravendb-3-0" target="_blank"><h1 class="title mb-6">Visualizing Map/Reduce in RavenDB 3.0</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 03, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are working hard on RavenDB 3.0 and a lot of the work now goes into the spit &amp; polish phase. Usually this is a pretty boring part. Making sure that intellisense works in the right places, that the UI makes sense, that we give the right results, that the logs are helpful, etc. But occasionally we get to actually do really cool stuff in this phase, and one of them is this guy:   Map/Reduce is a very powerful technique, but it can be hard to figure out issues sometimes. We always had debug endpoints to help actually figuring this out, but we are now putting a lot of attention on surfacing them to the user and making this easy to understand. The map/reduce visualizer is a great example of that.</p>
         <a href="https://ayende.com/blog/167201/compression-finale" target="_blank"><h1 class="title mb-6">Compression finale</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: June 24, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It has been a while since I have shown you some of the cool stuff that we have been doing with RavenDB 3.0.  Here is a quick taste:     We have turned a lot of the previously mysterious operational endpoints into pretty graphs, and you can see how the database is behaving in a pretty detailed way.</p>
-        <a href="https://ayende.com/blog/167073/decompression-code-discussion" target="_blank"><h1 class="title mb-6">Decompression code &amp; Discussion</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 23, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As I said, a good &amp; small interview question is this one, it is a good one because it is short, relatively simple to handle, but it should show a lot of things about your code. To start with, being faced with a non trivial task that most people are not that familiar with.  Implement a Decompress(Stream input, Stream output, byte[][] dictionary) routine for the following protocol: Prefix byte &#x2013; composed of the highest bit &#x2B; 7 bits len If the highest bit is not set, this is a uncompressed data, copy the next len from the input to the output. If the highest bit is set, this is compressed data, the next byte will be the index in the dictionary, copy len bytes from that dictionary entry to the output. I couldn&#x2019;t resist doing this myself, and I came up with the following:  public void Decompress(Stream input, Stream output, byte[][] dictionary)&#xA;{&#xA;    var tmp = new byte[128];&#xA;    while (true)&#xA;    {&#xA;        var readByte = input.ReadByte();&#xA;        if (readByte == -1)&#xA;            break;&#xA;            &#xA;        var prefix = (byte) readByte;&#xA;        var compressed = (prefix &amp; 0x80) != 0;&#xA;        var len = prefix &amp; 0x7f;&#xA;&#xA;        if (compressed == false)&#xA;        {&#xA;            while (len &gt; 0)&#xA;            {&#xA;                var read = input.Read(tmp, 0, len);&#xA;                if(read == 0)&#xA;                    throw new InvalidDataException(&quot;Not enough data to read from compressed input stream&quot;);&#xA;                len -= read;&#xA;                output.Write(tmp, 0, read);&#xA;            }&#xA;        }&#xA;        else&#xA;        {&#xA;            readByte = input.ReadByte();&#xA;            if(readByte == -1)&#xA;                throw new InvalidDataException(&quot;Not enough data to read from compressed input stream&quot;);&#xA;            output.Write(dictionary[readByte], 0, len);&#xA;        }&#xA;    }&#xA;}&#xA;&#xA;&#xA;Things to pay attention to: Low memory allocations, error handling, and handling of partial reads from the stream.&#xA;But that is just part of the question. After reading the protocol, and implementing it. The question now turns to what does the protocol says about this kind of compression scheme. The use of just 7 bits to store len drastically limit the compression utility in a general format. It also requires an external dictionary, which most compression formats don&#x2019;t use, they use the actual compressed text itself as the dictionary.&#xA0; Of course, I&#x2019;ve been reading compression algorithms for a while now, so that isn&#x2019;t that fair. But I would expect people to note that that 7 bit limits the compression usability.&#xA;And hopefully, with a bit of a hint, they should note that the external dictionary is useful for small data sets where the repetitions are actually between entry, not per entry.</p>
         <div class="button flex justify-between">
             <a href="260.html"><span class="back arrow"></span></a>
 

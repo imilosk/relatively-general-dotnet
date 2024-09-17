@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/160834/floss-moling-with-ravendb" target="_blank"><h1 class="title mb-6">FLOSS Moling with RavenDB</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 24, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There is the FLOSS Mole data set, which provide a lot of interesting information about open source projects. As I am always interested in testing RavenDB with different data sets, I decided that this would be a great opportunity to do that, and get some additional information about how things are working as well. The data is provided in a number of formats, but most of them aren&#x2019;t really easy to access. SQL statements and raw text files that I assume to be tab separated, but I couldn&#x2019;t really figure out quickly. I decided that this would be a great example of actually migrating content from a SQL System to a RavenDB System. The first thing to do was to install MySQL, as that seems to be the easiest way to get the data out. (As a note, MySQL Workbench is really not what I would call nice.) The data looks like this, this is the Google Code projects, and you can also see that a lot of the data is driven from the notion of a project.  I explored the data a bit, and I came to the conclusion that this is pretty simple stuff, overall. There are a few many to one associations, but all of them were capped (the max was 20 or so). That meant, in turn, that we had a really simple work to do for the import process. I started by creating the actual model which we will use to save to RavenDB:  The rest was just a matter of reading from MySQL and writing to RavenDB. I chose to use Peta Poco for the SQL access, because it is the easiest. The following code sucks. It is written with the assumption that I know what the data sizes are, that the cost of making so many queries (roughly a 1,500,000 queries) is acceptable, etc. using (var docStore = new DocumentStore&#xA;    {&#xA;        ConnectionStringName = &quot;RavenDB&quot;&#xA;    }.Initialize())&#xA;using (var db = new PetaPoco.Database(&quot;MySQL&quot;))&#xA;using (var bulk = docStore.BulkInsert())&#xA;{&#xA;    foreach (var prj in db.Query&lt;dynamic&gt;(&quot;select * from gc_projects&quot;).ToList())&#xA;    {&#xA;        string name = prj.proj_name;&#xA;        bulk.Store(new Project&#xA;            {&#xA;                Name = name,&#xA;                CodeLicense = prj.code_license,&#xA;                CodeUrl = prj.code_url,&#xA;                ContentLicense = prj.content_license,&#xA;                ContentUrl = prj.content_url,&#xA;                Description = prj.project_description,&#xA;                Summary = prj.project_summary,&#xA;                Labels = db.Query&lt;string&gt;(&quot;select label from gc_project_labels where proj_name = @0&quot;, name)&#xA;                                .ToList(),&#xA;                Blogs = db.Query&lt;dynamic&gt;(&quot;select * from gc_project_blogs where proj_name = @0&quot;, name)&#xA;                            .Select(x =&gt; new Blog { Link = x.blog_link, Title = x.blog_title })&#xA;                            .ToList(),&#xA;                Groups = db.Query&lt;dynamic&gt;(&quot;select * from gc_project_groups where proj_name = @0&quot;, name)&#xA;                            .Select(x =&gt; new Group { Name = x.group_name, Url = x.group_url })&#xA;                            .ToList(),&#xA;                Links = db.Query&lt;dynamic&gt;(&quot;select * from gc_project_links where proj_name = @0&quot;, name)&#xA;                            .Select(x =&gt; new Link { Url = x.link, Title = x.link_title })&#xA;                            .ToList(),&#xA;                People = db.Query&lt;dynamic&gt;(&quot;select * from gc_project_people where proj_name = @0&quot;, name)&#xA;                    .Select(x =&gt; new Person&#xA;                        {&#xA;                            Name = x.person_name,&#xA;                            Role = x.role,&#xA;                            UserId = x.user_id&#xA;                        })&#xA;                    .ToList(),&#xA;            });&#xA;    }&#xA;}&#xA;&#xA;&#xA;But, it does the work, and it was simple to write. Using this code, I was able to insert 299,949 projects in just under 13 minutes. Most of the time went to making those 1.5 million queries to the db, by the way.&#xA;Everything is cool, and it is quite nice. On the next post, I&#x2019;ll talk about why I wanted a new dataset. Don&#x2019;t worry, it is going to be cool.</p>
         <a href="https://ayende.com/blog/160833/todays-comic-relief" target="_blank"><h1 class="title mb-6">Today&#x2019;s comic relief</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: January 12, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today I gave two sessions at the Telerik Software Professionals Conference in New Delhi, India. The event is still ongoing (Chris Sells is&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/intellicommand-and-justcode/" target="_blank"><h1 class="title mb-6">IntelliCommand and JustCode</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 08, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ve been using JustCode regularly, lately, but I&#x2019;m still learning some of the keyboard shortcuts and features (and probably always will be&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="304.html"><span class="back arrow"></span></a>
 

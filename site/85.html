@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ardalis.com/streaming-checklist/" target="_blank"><h1 class="title mb-6">Streaming Checklist</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 27, 2020
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m a fan of checklists &#x2013; they&#x27;re an intermediate step before automating a process to ensure it&#x27;s done correctly and consistently. You&#x27;ll&#x2026;Keep Reading &#x2192;</p>
         <a href="https://ayende.com/blog/190401-A/investigating-a-query-sort-issue-in-ravendb" target="_blank"><h1 class="title mb-6">Investigating a query sort issue in RavenDB</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: March 19, 2020
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We got a query perf issue from a user. Given a large set of documents, we run the following queries:Query time: 1 &#x2013; 2 msAnd:Query time: 60 &#x2013; 90 msLooking into the details, I run the following query:Which gives us the following details (I was running this particular result under a profiler, which is why we get this result):That was strange, so I decided to look deeper and look into a profiler. I run five queries, and then look into where the costs are:This is really strange. What is going on there?Looking into the reasons, it seems that the core of the issue is here:What is going on here? The rough it is that we have: For each term inside the IN, find all documents and set the relevant bit in the bit set.We have roughly 100,000 documents that match the query, so we have to do 100,000 index entry lookups. But how does this work when using an OR? It is much faster, but I really couldn&#x2019;t see how that could be, to be frank.Here is the profiler output of running the OR query, note that we call the same thing, SegmentTermDocs.Read as well here. In fact, the IN clause has been specifically optimized in order to make such things extremely efficient, what is going on here?The key here is in the number of calls that we have. Note that in the OR case, we call it only 16 times? This is because of a very interesting dynamic very deep inside Lucene. The query we have return no results. This is because there is no &#x201C;customers/100&#x201D; in the data set. That, in turn, means that the OR query that match between the two clauses need to do a lazy scan. There are no results, so the OR needs to only access evaluate very little of the potential space we have there. On the other hand, the way we implemented the IN clause, we select all the matches upfront, but then they are all filtered out by the query.In other words, the OR query is lazy, and the IN is eager, which cause the difference. When we have data for the query, we see much closer behavior. The OR query is still about 20ms faster, but now that we understand what is going on, this is something that can be fixed.</p>
-        <a href="https://www.stevejgordon.co.uk/asp-net-core-5-features-introducing-httpprotocol" target="_blank"><h1 class="title mb-6">ASP.NET Core 5 Features &#x2013; Introducing HttpProtocol</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 18, 2020
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this blog post, which will be a quick read, I&#x2019;m going to begin what I expect to be a long-running endeavour, to dig into new APIs available in .NET 5 and ASP.NET Core 5.0. This time, I&#x2019;m going to look at a new helper for HTTP protocol versions. What are HTTP Protocol Versions? Through [&#x2026;]</p>
         <div class="button flex justify-between">
             <a href="84.html"><span class="back arrow"></span></a>
 

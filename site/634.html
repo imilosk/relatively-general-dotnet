@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/2565/using-partials-in-web-forms" target="_blank"><h1 class="title mb-6">Using partials in Web Forms</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 15, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Partial is a MonoRail term to a piece of&#xA0;UI that you extract outside, so you can call it again, often with Ajax. This is something that is harder to do in WebForms. Yesterday I found an elegant solution to the problem.  ASPX code:&lt;div id=&quot;UserDetailsDiv&quot;&gt;&#xA;   &lt;ayende:UserDetails runt=&quot;server&quot; ID=&quot;TheUserDetails&quot;/&gt;&#xA;&lt;/div&gt;&#xA;User Control:&lt;div&gt;&#xA;Name: &lt;asp:label ID=&quot;Name&quot; runat=&quot;server&quot;/&gt; &lt;br/&gt;&#xA;Email: &lt;asp:label ID=&quot;Email&quot; runat=&quot;server&quot;/&gt; &#xA;&lt;/div&gt;&#xA;Client Side Code:function changeUser(newUserId, div)&#xA;{&#xA;&#x9;var srv = new MyApp.Services.UserDetails();&#xA;&#x9;srv.GetUserDetailsView(newUserId, onSucccessGetUserDetailsView, null, div);&#xA;}&#xA;&#xA;function onSucccessGetUserDetailsView(response, userContext)&#xA;{&#xA;&#x9;var div = $(userContext);&#xA;&#x9;div.innerHTML = response;&#xA;&#x9;new Effect.Highlight(div);&#xA;}&#xA;Web Service Code:[WebMethod(EnableSession = true)]&#xA;public string GetUserDetailsView(int userId)&#xA;{&#xA;&#x9;User user = Controller.GetUser(userId);&#xA;&#x9;//there may be a better way to do this, I haven&#x27;t bothered looking&#xA;&#x9;UserDetails userDetails = (UserDetails)new Page().LoadControl(&quot;~/Users/UserControls/UserDetails.ascx&quot;);&#xA;&#x9;userDetails.User = user;&#xA;&#x9;userDetails.DataBind();&#xA;&#x9;using(StringWriter sw = new StringWriter())&#xA;&#x9;using(HtmlTextWriter ht = new HtmlTextWriter(sw))&#xA;&#x9;{&#xA;&#x9;&#x9;userDetails.RenderControl(ht);&#xA;&#x9;&#x9;return sw.GetStringBuilder().ToSTring();&#xA;&#x9;}&#xA;}</p>
         <a href="https://ayende.com/blog/2564/the-myth-of-the-all-inclusive-meta-entity" target="_blank"><h1 class="title mb-6">The myth of the all inclusive meta-entity</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: June 14, 2007
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So, it looks like the vote goes decidefully for MonoRail, so that is what I am going to build it with. I have setup a project here:         https://rhino-tools.svn.sourceforge.net/svnroot/rhino-tools/trunk/SampleApplications/Hibernating.Forums    I have decided to take advantage of this series and show some other cool stuff that I have used, from the Repository&lt;T&gt; &amp; NHQG to Binsor and MonoRail Windsor Integration.    The application is basically just UI and configuration right now. I did some very rough strcuturing of the UI in a way that should help me work on it.    The most interesting part is probably the windsor configuration:            import System.Reflection                        import Castle.MonoRail.Framework                        import Castle.MonoRail.WindsorExtension                                &#xA0;                        Facility( &quot;rails&quot;, RailsFacility )                                &#xA0;                        webAsm = Assembly.Load(&quot;HibernatingForums.Web&quot;)                        activeRecordAssemblies = ( Assembly.Load(&quot;HibernatingForums.Model&quot;), )                                &#xA0;                        for type in webAsm.GetTypes():                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; if typeof(Controller).IsAssignableFrom(type):                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Component(type.Name, type)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; elif typeof(ViewComponent).IsAssignableFrom(type):                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Component(type.Name, type)                                &#xA0;                                &#xA0;                        Component(&quot;active_record_repository&quot;, IRepository, ARRepository)                        Component(&quot;active_record_unit_of_work&quot;,                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; IUnitOfWorkFactory,                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ActiveRecordUnitOfWorkFactory,                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; assemblies: activeRecordAssemblies )        I will probably start recording tomorrow (unlikely) or on Friday.</p>
-        <a href="https://ardalis.com/orcas-vpc-timebombedbase-missing/" target="_blank"><h1 class="title mb-6">Orcas VPC TimeBombedBase Missing</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 13, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I downloaded the Orcas Visual Studio Beta 1 VPC from MSDN yesterday and stitched all of the zip files together, and launched it. Ran into&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="633.html"><span class="back arrow"></span></a>
 

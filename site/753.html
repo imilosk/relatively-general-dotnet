@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/1524/elegant" target="_blank"><h1 class="title mb-6">Elegant</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 05, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#xA;would let this piece of code to stand on its own. I like it.&#xA;&#xA;&#xA0;&#xA;&#xA;UPDATE&#xA;TOP (100) Messages&#xA;&#xA;SET&#xA;Status = &#x27;Sending&#x27;&#xA;&#xA;OUTPUT&#xA;Inserted.*&#xA;&#xA;WHERE&#xA;Status&#xA0; IN (&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#x27;New&#x27;,&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#x27;Sending&#x27;) -- we previously failed to send this message</p>
         <a href="https://ardalis.com/19221/" target="_blank"><h1 class="title mb-6">BoundField DataFormatString attribute not working</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: July 01, 2006
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I need to be able to ask the database for some rows to work on, and I need to be sure that I am the only one that works on those rows. After thinking about it, I came up with this SQL:            SET TRANSACTION ISOLATION LEVEL SERIALIZABLE                        BEGIN TRANSACTION                                         &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; INSERT INTO Locks(LockedBy, LockedAt, LcokedItemId, LockedItemType)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; OUTPUT inserted.Id                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT TOP 100 @lockedBy, getdate(), item.Id, @itemType                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; FROM Items item                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; WHERE NOT EXISTS (SELECT 1 FROM Locks lock                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; WHERE lock.LcokedItemId = item.id AND lock.LockedItemType = @itemType)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ORDER BY item.Id                                &#xA0;                        COMMIT TRANSACTION         This is the first time I need to implement pessimistic locking, and I am not sure if this is the right way to go. The work I am doing is disconnected, so I can&#x27;t just lock the rows and continue to work.    Any suggestions?    Update: This is what I have now:            CREATE PROCEDURE lockAndGetItems AS                                &#xA0;                        SET TRANSACTION ISOLATION LEVEL SERIALIZABLE                        BEGIN TRANSACTION                                         &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; DECLARE @lockedBy uniqueIdentifier, @countOfItemsToLock int                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SET @lockedBy&#xA0; = &#x27;68A6D54C-557D-428D-8B82-5D68C9C1B33E&#x27;                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; -- Get number of rows already locked by me                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT @countOfItemsToLock = 100 - COUNT(Id) From Locks where LockedBy = @lockedBy                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; -- Lock rows to complete to an even 100                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; INSERT INTO Locks(LockedBy, LockedAt, LockedItemId)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT TOP (@countOfItemsToLock)&#xA0; @lockedBy, getdate(), item.Id                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; FROM Items item                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; WHERE NOT EXISTS (SELECT 1 FROM Locks lock                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; WHERE lock.LockedItemId = item.id and lock.LockedBy = @lockedBy)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ORDER BY item.Id                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; -- Return row data                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT Items.* FROM Items JOIN Locks ON Items.Id = Locks.LockedItemId AND LockedBy = @lockedBy                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;                                 COMMIT TRANSACTION        Basically it fetch the first 100 items designated for this SP.&#xA0;Each SP has a single caller, so I don&#x27;t worry about expiring the lock. I will always get the locked rows. In the case of a crash when the rows are locked, when the client is restarted, it will get the same rows that it already locked, and can start working on them. The reason that I implement is as a SP with hard coded Guid is that each SP locks a different table.</p>
-        <a href="https://ayende.com/blog/1516/how-much-code-you-need-to-read-a-file-to-database" target="_blank"><h1 class="title mb-6">How much code you need to read a file to database?</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 01, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, in my case, it looks like I need:            12 classes            5 intrefaces            1 (modified) Inversion Of Control&#xA0;Container            700 Lines of code            80 lines of XML configuration            350 lines of tests            ~8 - 12 hours         But hey, at least it can read big files :-)</p>
         <div class="button flex justify-between">
             <a href="752.html"><span class="back arrow"></span></a>
 

@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/176385/ravendb-4-0-alpha-is-out" target="_blank"><h1 class="title mb-6">RavenDB 4.0 Alpha is out!</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 16, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For the past two years or so, we have been working very hard on RavenDB 4.0. You have seen some of the posts in this blog detailing some of the work we have been doing. In RavenDB 4.0 we have put a tremendous amount of emphasis on performance and reducing the amount of work we are doing. We have been quite successful. Our metrics show a minimum of 10x improvement across the board, and often we are even faster. I&#x2019;m going to be posting a lot about RavenDB 4.0 in the next few weeks, to highlight some of the new stuff, this time in context, but for now, let me just say that I haven&#x2019;t been this excited about releasing software since the 1.0 release of RavenDB.  You can download the new alpha here, we have pre-built binaries for Windows, Linux (Ubuntu) and Raspberry PI. Mac OS support is scheduled and will likely be in the next alpha.  The alpha version supports building databases, working with documents, subscriptions, changes, indexing (simple, full text and map/reduce). There have been significant improvements to indexing speed and how they work, memory utilization across the board is much lower and CPU utilization is much reduced. We aren&#x2019;t ready to do full blown benchmarks yet, but a sample scenario that has RavenDB 3.5 pegged at 100% with 45,000 requests per second has RavenDB 4.0 relaxing with 70% CPU with 153,000 requests per second. We would like to get feedback on RavenDB 4.0, and so please download the software and give it a whirl.  You need to make sure that you use both server &amp; client from the same version (older versions will not work with the new server). We actually have a couple of clients, we have the updated client for 4.0, which is pretty much the same as the old client, just updated to work with the new server, and we have a completely new client, which is built to provide much higher performance and apply the same lessons we learned while building the server to the client code. Over time, the new client is going to be the default one, but while we aren&#x2019;t there yet, we want people to have access to it from the get go. Please remember that this is pre-release alpha software, as such, bugs are expected, and should be reported.</p>
         <a href="https://ayende.com/blog/176353/business-features-vs-technical-features" target="_blank"><h1 class="title mb-6">Business features vs. technical features</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: December 08, 2016
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We an investigation into locking cost we have when we noticed this:&#xA;&#xA;And then we realized that we also need to have hold the reader lock across async/await calls (which is not safe to do with ReaderWriterLockSlim. And as long as we need to do this, we might as well customize it for our needs.&#xA;We need something that has as little cost as possible, allows us to support entering the read lock from one thread while exiting from another and need to handle contention well. Our scenario in this case is producers holding the lock while the generate work, and then a flusher that goes and clean this up while holding the write lock.&#xA;This means that we also need to consider that we have only two states (readers &amp; single writer), and that the writer will likely hold the lock for a significant amount of time.&#xA;Reading the code for RederWriterLockSlim is quite instructive. And I got some really cool ideas from it.&#xA;Here is the most important piece in my implementation&#xA;&#xA;The _waiters variable holds the key state for the lock. Here is how we take a reader lock:&#xA;&#xA;We increment the _waiters using interlocked operation, and then check if we have a waiter pending, if not, we are done and we have the read lock.&#xA;This means that the cost of taking a write lock is simply a single interlocked instruction, a mask and comparison. That is pretty cheap.&#xA;To take a write lock is just a bit more complex:&#xA;&#xA;We declare the fact that we want a writer using the Interlocked.Add, which will block future readers from taking the lock, then we try to get the lock for the writer. If we fail with either, we just wait to do this again after the next lock release.&#xA;In other words, the cost for uncontended read is 1 interlocked operation, and the cost for uncontended write is two interlocked operations. Which is pretty cool, all around.&#xA;The actual implementation can be found here, and it handle cases such as too many reader locks, and all the rest of the actual details.</p>
-        <a href="https://ardalis.com/developer-on-fire-interview/" target="_blank"><h1 class="title mb-6">Developer on Fire Interview</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 08, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently spoke with David Rael of the Developer on Fire podcast. We talked about a lot of things in our 40 minute conversation. Here are&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="189.html"><span class="back arrow"></span></a>
 

@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/180835/reducing-the-cost-of-support-with-anticipatory-errors" target="_blank"><h1 class="title mb-6">Reducing the cost of support with anticipatory errors</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 08, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I speak a lot about good error handlings and our perspective on support. We consider support to be a cost center (as in, we don&#x2019;t want or expect to make money from support), I spoke at this at more length here. Today I run into what is probably the best example for exactly what this means in a long while.A user got an error:The error is confusing, because they are able to access this machine and URL. The actual issue, if you open the show details is here:Connection test failed: An exception was thrown while trying to connect to http://zzzzzzzz.com:8081 : System.Net.Internals.SocketExceptionFactory&#x2B;ExtendedSocketException (0x80004005): A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond 143.29.63.128:53329And that is good enough to explain to me, what is going on. RavenDB is usually using HTTP for most things, but it is using TCP connections to handle performance critical stuff, such as clustering, replication, etc. In this case, the server is listening on port 53329 for TCP connections, but since this is a public facing instance, the port is not accessible from the outside world. This issue has generated a support call, but a better message, explaining that we could hit the HTTP endpoint and not the TCP endpoint would have led the user knowing exactly what the issue is and solving the problem on their own, much faster.</p>
         <a href="https://ayende.com/blog/180897/queries-in-ravendb-facets-of-information" target="_blank"><h1 class="title mb-6">Queries&#x2B;&#x2B; in RavenDB</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: November 30, 2017
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">On November 1st I got a very nice surprise in my inbox from Microsoft. I was being awarded an MVP in the &#x2018;Visual Studio and Development Technologies&#x2019; category. This is an achievement that I am extremely proud of and very excited about. It&#x2019;s an honour and honestly quite daunting to join such an amazing group [&#x2026;]</p>
-        <a href="https://ayende.com/blog/180641/if-you-have-a-finalizer-watch-your-ctor" target="_blank"><h1 class="title mb-6">If you have a finalizer, watch your ctor</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: November 30, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We recently got into a very bad state with our build server. We had a few dozens failing tests in an area of the code that didn&#x2019;t change in months. That was annoying, to say the least. I tried to run this on my machine, to see what was going on, and we got an even worse state, a process crash.The good thing was that this is managed code, so you get stack traces, and we were able to figure out that the issue is with the SqlClient assembly. It looks like a recent change meant that loading it by reflection will give you the netstadnard 2.0 release, which is basically just a filler that always throw PlatformNotSupported. That is perfectly fine, we&#x2019;ll change the way we do things to load the direct reference.What killed us was this:This will kill the process. How is that? Well, DbConnection inherits from Component, and Component has a finalizer. Care to guess how what will happen when that is called?So here is what will happen, the ctor throws, so no one can have an instance of this class. But the finalizer is already tracking it, and will call the finalizer. The finalizer will call the Dispose method, and that will end up throwing, and an exception during finalization is fatal to the entire process. Bye!The general idea is that when you are working with a throwing ctor, you either make sure to call GC.SupprressFinalize or you cleanup in such a way that you can safely finalize things.</p>
         <div class="button flex justify-between">
             <a href="150.html"><span class="back arrow"></span></a>
 

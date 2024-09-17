@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/162530/tpl-and-the-case-of-the-hung-process" target="_blank"><h1 class="title mb-6">TPL and the case of the !@#(*@! hung process</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 18, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So, here I am writing some really fun code, when I found out that I am running into dead locks in the code. I activate emergency protocols and went into deep debugging mode. After being really through in figuring out several possible causes, I was still left with what is effectively a WTF @!(*!@ DAMN !(@*#!@* YOU !@*!@( outburst and a sudden longing for something to repeatedly hit. Eventually, however, I figure out what was going on. I have the following method: Aggregator.AggregateAsync(), inside which we have a call to the PulseAll method. That method will then go and execute the following code:      1: public void PulseAll()   2: {   3:     Interlocked.Increment(ref state);   4:     TaskCompletionSource&lt;object&gt; result;   5:     while (waiters.TryDequeue(out result))   6:     {   7:         result.SetResult(null);   8:     }   9: }&#xA;After that, I return from the method. In another piece of the code (Aggregator.Dispose) I am waiting for the task that is running the AggregateAsync method to complete.&#xA;Nothing worked! It took me a while before I figured out that I wanted to check the stack, where I found this:&#xA;&#xA;&#xA;Basically, I had a dead lock because when I called SetResult on the completion source (which freed the Dispose code to run), I actually switched over to that task and allowed it to run. Still in the same thread, but in a different task, I run through the rest of the code and eventually got to the Aggregator.Dispose(). Now, I could only get to it if it the PulseAll() method was called. But, because we are on the same thread, that task hasn&#x2019;t been completed yet!&#xA;In the end, I &#x201C;solved&#x201D; that by introducing a DisposeAsync() method, which allowed us to yield the thread, and then the AggregateAsync task was completed, and then we could move on.&#xA;But I am really not very happy about this. Any ideas about proper way to handle async &amp; IDisposable?</p>
         <a href="https://ayende.com/blog/162532/deadlocking-with-the-tpl-how-to" target="_blank"><h1 class="title mb-6">Deadlocking with the TPL, how to</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: June 11, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday I presented at the first ever FalafelCon conference in Mountain View, California. My session Refactoring with SOLID Principles is&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/162433/raft-consensus" target="_blank"><h1 class="title mb-6">Raft Consensus</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 11, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After having struggled with understanding Paxos for a while, I run into the Raft Draft paper, and I was very impressed. To start with, I have read at least four or five papers about Paxos, read 2 &#x2013; 5 implementations of the algorithm in different languages, implemented it myself, and I am still not really comfortable about it. On the other hand, after doing a single pass through the Raft paper, I have a much greater sense of understanding what it is about, how it works and even how I can implement that, if I want to. Hell, I fully expect to be able to hand that paper to a passerby CS student and get a working implementation without needing to get Sheldon Cooper involved.&#xA0; One thing to note, this paper and algorithm were heavily focused on making this understandable, and I think that they were quite successful in doing that. For that matter, I wish that other papers were this easy to read and follow. Very interesting, and unlike the Paxos paper, immediately and almost painfully obvious how you would actually make use of something like that.</p>
         <div class="button flex justify-between">
             <a href="291.html"><span class="back arrow"></span></a>
 
