@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3089/task-scheduling-improvements" target="_blank"><h1 class="title mb-6">Task Scheduling Improvements</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 08, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I took some time to see how I can improve the sample implementation of the task scheduling that I posted yesterday. You can checkout the code here. What I wanted to check is the ability to scale the solution to many tasks and to IO bound tasks. In a stress test that I made, the library held its own while scheduling 9,864,100 tasks, at one point we had ~3,500,000 concurrently queued tasks. Memory usage hovered at the ~500Mb range. The next stage was to see what happens when we have tasks that takes a long amount of time to execute, depends on IO, etc. I wrote this piece of code: public class GatherAllFiles : AbstractTask&#xA;{&#xA;    private readonly string root;&#xA;&#xA;    public GatherAllFiles(string root)&#xA;    {&#xA;        this.root = root;&#xA;    }&#xA;&#xA;    protected override IEnumerable&lt;Condition&gt; Execute()&#xA;    {&#xA;        List&lt;string&gt; results = new List&lt;string&gt;();&#xA;        results.Add(root);&#xA;        &#xA;        List&lt;Future&gt; futures = new List&lt;Future&gt;();&#xA;        foreach (string directory in Directory.GetDirectories(root))&#xA;        {&#xA;            Future spawn = Spawn(new GatherAllFiles(directory));&#xA;            futures.Add(spawn);&#xA;        }&#xA;        string[] files = Directory.GetFiles(root);&#xA;&#xA;        yield return Done(futures);&#xA;&#xA;        foreach (Future future in futures)&#xA;        {&#xA;            results.AddRange(future.GetValue&lt;IEnumerable&lt;string&gt;&gt;());&#xA;        }&#xA;        results.AddRange(files);&#xA;        SetResult(results);&#xA;    }&#xA;}&#xA;I then run it on my OSS directory. This directory contains 133,108 directories and 206,298 files (ask me how I know... ). &#xA;The library just ate it up without even noticing. Very nice, even if I say so myself :-)</p>
+        <a href="https://ayende.com/blog/3088/concurrency-solutions" target="_blank"><h1 class="title mb-6">Concurrency Solutions</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 08, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am not sure why, but recently I have became interested in concurrency again. I blogged about both the pipeline and the tasks scheduling approaches recently, and I was repeatedly pointed to Retlang, Parallel FX and the Concurrency and Coordination Runtime. I thought that it would be interesting to compare those approaches. The pipeline The pipeline can be easily parallelized, because there is an explicit handoff of objects as they pass from one stage of the pipeline to another. The only synchronization needed for this would be in terms of passing the objects between the stages. Task Scheduling Task scheduling is interesting, mainly because the way it operates is fits the concurrent model so nicely. You execute something, you wait for it, you don&#x27;t take any resources while you do this. To me, it looks like quite a natural way of programming, especially with the ability to wait on other tasks.  Retlang Retlang&#x27;s concurrency model is based on message passing. As such, it is ideally suited to supporting cross thread communication, event driven systems, pipeline processing, etc. Bind Retlang with the Task Scheduling solution, and you are nearly at Erlang&#x27;s capabilities. Parallel FX I get to run things in parallel, that is about it. The ability to scale a for loop to the number of processors on the machine is nice, but I am seeing it as a low level utility more than anything else. PLinq is much more interesting. Then again, I am currently in search for higher level concurrency solutions than what Parallel FX supply.  Concurrency and Coordination Runtime This looks a lot more like what I had in mind. The concurrency primitive that we have here are high level enough to be really useful, and it looks like it has implemented the same ideas that I had, both message passing and task based. I haven&#x27;t played with it, just read the docs, so I am not sure how useful this really is.  State The real problem with concurrency is state. Erlang gets away with dealing with it because it has no mutable state. In most imperative languages, we have to deal with this somehow. The usual answer for that is don&#x27;t share state. The pipeline example is a good one, you don&#x27;t get two processes dealing with the same object at the same time. In my task scheduling code, I am ensuring that a task can run on a single thread at a time (but not that it run on the same thread all the time. This should take care of most state issues, since as long as you keep to your own instance, you are safe. If you start passing around mutable variables, then you need to thread more carefully. Ordering Another issue that you have with concurrency is that you usually have some requirements about in what order you want to deal with operations. You can&#x27;t really approve an order before it was created, now can you? Different approaches for concurrency has different guarantees in regards to ordering. Retlang will always preserve ordering, which make some things extremely simple. My Task Scheduling library will not preserve ordering (it will schedule the first task that is ready to go), and Parallel FX doesn&#x27;t preserve ordering unless you explicitly request it (couldn&#x27;t find out about the CCR). An interesting observation about the task scheduling library, it doesn&#x27;t really need ordering, because of the way we yield in the method, we can get away with just waiting for the values to be completed. I don&#x27;t think that there is a right approach, but I strongly lean toward tasks and message passing as a default concurrency approach.</p>
         <a href="https://ayende.com/blog/3087/erlang-processes-on-the-clr" target="_blank"><h1 class="title mb-6">Erlang processes on the CLR</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: January 04, 2008
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Like so many others have noted, I think 2008 and the next few years will see a shakeup in some of the &#x201C;web 2.0&#x201D; and social networking&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/attending-codemash-2008/" target="_blank"><h1 class="title mb-6">Attending CodeMash 2008</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 04, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ll be attending CodeMash again for its second year, at the Kalahari Resort in Ohio. Last year it was a great local conference and this&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/simplecms-for-iis7/" target="_blank"><h1 class="title mb-6">SimpleCMS for IIS7</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 04, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">SimpleCMSis a (very) simple content management system I developed with Brendan for ASPAlliance.com and which is now available from CodePlex&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="574.html"><span class="back arrow"></span></a>
 

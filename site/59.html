@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/193955-A/sorted-integer-compression" target="_blank"><h1 class="title mb-6">Sorted integer compression</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 15, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the database field and information retrieval in general, there is a very common scenario. I have a list of (sorted) integers that I want to store, and I want to do that in an as efficient a manner as possible. There are dozens of methods to do this and this is a hot topic for research. This is so useful because there are so many places where you can operate on a sorted integer list and gain massive benefits. Unlike generic compression routines, we can usually take advantage of the fact that we understand the data we are trying to work with and get better results. The reason I need to compress integers (actually, int64 values) is that I&#x2019;m trying to keep track of matches for some data, so the integers that I&#x2019;m tracking are actually file offsets for user&#x2019;s data inside of Voron. That lead to a few different scenarios that I have to deal with:There is a single resultThere is a reasonable number of resultsThere is a boatload of resultsI&#x2019;m trying to figure out what is the best way to store the later two options in as efficient manner as possible.The first stop was Daniel Lemire&#x2019;s blog, naturally, since he has wrote about this extensively. I looked at the following schemes: FastPFor and StreamVByte. They have somewhat different purposes, but basically, FastPFor is using a bits stream while StreamVByte is using byte oriented mode. Theoretically speaking, you can get better compression rate from FastPFor, but StreamVByte is supposed to be faster. Another integer compression system come from the Gorilla paper from Facebook, that is a bigger scheme, which include time series values compression. However, part of that scheme talks about how you can compress integers (they use that to store the ticks of a particular operation). We are actually using that for the time series support inside of RavenDB.I&#x2019;m not going to cover that in depth, here is the paper on Gorilla compression, the relevant description is at section 4.1.1. Suffice to say that they are using a bit stream and delta of deltas computation. Basically, if you keep getting values that are the same distance apart, you don&#x2019;t need to record all the value, you can compute that naturally. In the best case scenario, Gorilla compression needs a single bit per value, assuming the results are spaced similarly.For my purpose, I want to get as high a compression rate as possible, and I need to store just the list of integers. The problem with Gorilla compression is that if we aren&#x2019;t getting numbers that are the same distance apart, we need to record the amount that they are different. That means that at a minimum, we&#x2019;ll need a minimum of 9 bits per value. That adds up quickly, sadly.On the other hand, with PFor, there is a different system. PFor computes the maximum number of bits required for a batch of integer, and then record just those values. I found the Binary Packing section (2.6) in this paper to be the clearest explanation on how that works exactly.&#xA0; The problem with PFor, however, is that if you have a single large outlier, you&#x2019;ll waste a lot of bits unnecessarily. I decided to see if I can do something about that and created an encoder that works on batches of 128 integers at a time. This encoder will:Check the maximum number of bits required to record the deltas of the integers. That along already saves us a lot.Then we check the top and bottom halves of the batch, to see if we&#x2019;ll get a benefit from recording them separately. A single large value (or a group of them) that is localized to a part of the batch will be recorded independently in this case.Finally, instead of only recording the meaningful bit ranges, we&#x2019;ll also analyze the batch we get further. The idea is to try to find ranges within the batch that have the same distance from one another. We can encode those as repetitions instead of each independent value. That can end up saving a surprisingly amount of space.You can look at the results of my research here. I&#x2019;ll caution you that this is raw, but the results are promising. I&#x2019;m able to beat (in terms of compression rate) the standard PFor implementation by a bit, with a lot less code.I&#x2019;m also looking at a compression rate of 30% &#x2013; 40% for realistic data sets. And if the data is setup just right and I&#x2019;m able to take advantage of the repeated delta optimization, I can pack things real tight.Currently numbers say that I can push upward of 10,000 int64 values in an 8KB buffer without any repeated deltas. It goes to just under 500,000 int64 values in an 8KB buffer if I can take full advantage of the deltas.The reason I mention the delta so often, it is very likely that I&#x2019;ll record values that are roughly the same size, so we&#x2019;ll get offsets that are the same space from one another. In that case, my encoder goes to town and the compression rate is basically crazy.This is a small piece of a much larger work, but this is the first time in a while that I got to code at Voron&#x2019;s level. This is fun.</p>
+        <a href="https://ardalis.com/prioritizing-and-microservices/" target="_blank"><h1 class="title mb-6">Prioritizing and Microservices</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 15, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It&#x27;s not unusual to have different levels of prioritization in backend systems. Imagine you have a process that generates and sends reports&#x2026;Keep Reading &#x2192;</p>
         <a href="https://ayende.com/blog/193954-A/hot-failures-and-high-availability" target="_blank"><h1 class="title mb-6">Hot failures and high availability</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: June 01, 2021
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In most organizations, if there&#x27;s a Product Owner, the dev team is generally subservient to it and charged with building whatever the&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://www.stevejgordon.co.uk/using-dateonly-and-timeonly-in-dotnet-6" target="_blank"><h1 class="title mb-6">Using DateOnly and TimeOnly in .NET 6</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 25, 2021
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In .NET 6 (preview 4), two long-awaited types have been introduced as part of the core library. DateOnly and TimeOnly allow developers to represent either the date or time portion of a DateTime. These two new types are structs (value types) and may be used when your code deals with date or time concepts independently. [&#x2026;]</p>
-        <a href="https://ardalis.com/vs-code-disable-logging-loading-symbols/" target="_blank"><h1 class="title mb-6">VS Code Disable Logging Loading Symbols</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 25, 2021
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When I create a new .NET (5) console application and run it in VS Code, I get output like the following: console output loading symbols This&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="58.html"><span class="back arrow"></span></a>
 

@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/2790/playing-with-boos-dsls" target="_blank"><h1 class="title mb-6">Playing with Boo&#x27;s DSLs</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: September 21, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Boo has gotten a lot better in terms of flexibility lately, a lot better. I was able to churn this little DSL in about an hour: OnCreate Account:&#xA;&#x9;Entity.AccountNumber = date.Now.Ticks&#xA;&#x9;&#xA;&#x9;&#xA; OnCreate Order:&#xA;&#x9;if Entity.Total &gt; Entity.Account.MaxOrderTotal:               BeginManualApprovalFor Entity &#xA;&#xA;From the perspective of the DSL, it is very easy to use, and from the implementer perspective, this was ridiculously easy to implement.&#xA;The only half-way complex thing here is the introduce base class action, which is usually the first approach that you take, which is why I don&#x27;t consider it complex. Then you can just do create the base class:&#xA;abstract class DslBase:&#xA;&#xA;&#x9;[property(Entity)]         entity as object         def OnCreate(entity as System.Type, action as callable()):&#xA;&#x9;&#x9;Actions.RegisterOnCreate(entity.Name, action)&#xA;&#x9;&#x9;&#xA;&#x9;abstract def Execute():&#xA;&#x9;&#x9;pass&#xA;&#x9;&#xA;&#x9;def BeginManualApprovalFor(order as Order):&#xA;&#x9;&#x9;print &quot;Starting approval process for Order #${order.Id}&quot;&#xA;In the base class you just do what you would normally do, in this case, it just register the new action. Here is the implementation:&#xA;class Actions:&#xA;&#x9;&#xA;&#x9;static onCreateActions = {}&#xA;&#x9;&#xA;&#x9;static def RegisterOnCreate(entityName as string, action as callable()):&#xA;&#x9;&#x9;onCreateActions[entityName] = action&#xA;&#x9;&#x9;&#xA;&#x9;&#xA;&#x9;static def OnCreate(entity as object):&#xA;&#x9;&#x9;entityName = entity.GetType().Name&#xA;&#x9;&#x9;action = onCreateActions[entityName] as callable()&#xA;&#x9;&#x9;if not action:&#xA;&#x9;&#x9;&#x9;print &quot;No action defined for ${entityName}&quot;&#xA;&#x9;&#x9;&#x9;return&#xA;&#x9;&#x9;dsl = (action.Target as DslBase)&#xA;&#x9;&#x9;dsl.Entity = entity&#xA;&#x9;&#x9;action()&#xA;&#xA;The client code is simply:&#xA;SampleDSL().Prepare(&quot;Sample.boo&quot;)&#xA;&#xA;account = Account(MaxOrderTotal: 100)&#xA;&#xA;print &quot;Before: ${account.AccountNumber}&quot;&#xA;Actions.OnCreate( account )&#xA;print &quot;After: ${account.AccountNumber}&quot;&#xA;&#xA;order = Order(Account: account, Total: 500 )&#xA;Actions.OnCreate( order )&#xA;All you have left then is to get a rich enough library of methods on the DslBase, for the business user to work with, document how this is done, and that is it.</p>
+        <a href="https://ayende.com/blog/2789/resharper-for-boo" target="_blank"><h1 class="title mb-6">ReSharper for Boo</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: September 21, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, it has not gotten to that level, but I just hit ALT&#x2B;Insert in #Develop, and I got this dialog:   Wow!</p>
         <a href="https://ayende.com/blog/2788/i-will-not-be-at-the-alt-net-conference" target="_blank"><h1 class="title mb-6">I will not be at the ALT.Net conference</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: September 21, 2007
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Scott Bellware&#xA0;is talking about application embedded databases, an application that is the sole domain of the application that is using it. I don&#x27;t like the term, because embedded databases have another meaning, but I fully support the idea that the database should be an implementation detail of the applications. I had a project where we needed to use an existing database, and I want to cry when I think about the length and breath of of effort that we had to go through to get it to really work. In the last project, I have had at one time to change the DB password daily, to keep [Some Other Party] from trying to integrate with the application through the database. (In the end, we create a separate database, just for them, and they integrate through it). The problems with per application databases are silos and getting the data out to other applications. This bring us back to the data outlives the application, etc. I have a longer post in the pipeline that is going to talk about that.</p>
-        <a href="https://ayende.com/blog/2780/generated-code-quality" target="_blank"><h1 class="title mb-6">Generated Code Quality</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 21, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Jeremy Miller&#xA0;made the mistake of opening the DataSet.Designer.cs file&#xA0;and got:  You know the orange bars that ReSharper puts into the vertical scroll bar to denote warnings in the code?&#xA0; In the DataSet code it looked like a solid bar of orange sherbert.&#xA0; The discussion in the comments is about the quality of generated code, and it is fairly interesting. As someone who does quite a bit with code generation, I wanted to note two things:  The quality of the generated code is the result of the generator, with the qualification that the generated code may be used to off load nasty parts of the code base. The code generated by NHQG is doing some really crazy stuff with generics and operator overloading, and it is something that can get very hairy very fast. The other issue is that the use of CodeDOM means that you are often specifying redundant things. In this case, this this.myName and the fully qualified namespaces could go away, and this is something that ReSharper detects and warns against. public virtual Query_Post&lt;T1&gt; With() {&#xA;&#x9;Query_Post&lt;T1&gt; query = new Query_Post&lt;T1&gt;(this, this.myName, this.associationPath);&#xA;&#x9;query.joinType = NHibernate.SqlCommand.JoinType.InnerJoin;&#xA;&#x9;query.fetchMode = NHibernate.FetchMode.Default;&#xA;&#x9;return query;&#xA;}&#xA;It is not code generation in general that is problematic, in my view, it is the use of code generation to cover problems with the underlying platform that is usually what is causing the pain.</p>
-        <a href="https://ayende.com/blog/2779/a-most-applicable-approach-to-the-fertilizer-pattern" target="_blank"><h1 class="title mb-6">A most applicable approach to the Fertilizer pattern</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 21, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently had a chance to go through several legacy applications, bug spotting in one and evaluating the possibilities of code reuse in another. Stuff like &quot;a most applicable approach to the Fertilizer pattern&quot; began to run on my head as I read it, and at one point I had to go away to be able to curse in private (there were ladies present). Some of the things that I run into (across all the applications):  Goto inside a grid implementation, after a little fact finding, it was discovered that they lost the original source, and just copy / pasted the result of Reflector&#x27;s de-compilation and moved on. SQL Injection problems in stored procedures that were found by reading the documentation. Naming convention like bo_showinui, id_file, nm_folder, tx_folderpath We fixed the bug (which made me learn some stuff about double hop windows authentication and citrix, of all the things in the world, and we will not be reusing the code. In retrospect, I should have known, everyone else went to the far side of the room when I started reading the code...</p>
         <div class="button flex justify-between">
             <a href="608.html"><span class="back arrow"></span></a>
 

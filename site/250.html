@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://enterprisecraftsmanship.com/posts/cqs-with-database-generated-ids/" target="_blank"><h1 class="title mb-6">CQS with Database-Generated Ids</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 15, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Mark Seemann brings up a very interesting subject in his post: how to fit Command Query Separation principle&#xA0;in case you have to save a brand-new object in a database and also need the created id back? Sure, you can have GUIDs for identifiers (which have some drawbacks as I&#x2019;ll show later on), but what if you really need integers?&#xA;I&#x2019;ve been asked the same question for several times, so in this post I&#x2019;ll share the solution I use for this problem.</p>
+        <a href="https://ayende.com/blog/169057/is-the-library-open-or-not" target="_blank"><h1 class="title mb-6">Is the library open or not?</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 14, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">An interesting challenge came across my desk. Let us assume that we have a set of libraries, which looks like this:    {&#xA;    &quot;Name&quot;: &quot;The Geek Hangout&quot;,&#xA;    &quot;OpeningHours&quot;: {&#xA;        &quot;Sunday&quot;: [&#xA;            {   &quot;From&quot;: &quot;08:00&quot;, &quot;To&quot;: &quot;13:00&quot;  },&#xA;            {   &quot;From&quot;: &quot;16:00&quot;, &quot;To&quot;: &quot;19:00&quot;  }&#xA;        ],&#xA;        &quot;Monday&quot;: [&#xA;            {   &quot;From&quot;: &quot;09:00&quot;, &quot;To&quot;: &quot;18:00&quot;  },&#xA;            {   &quot;From&quot;: &quot;22:00&quot;, &quot;To&quot;: &quot;23:59&quot;  }&#xA;        ],&#xA;        &quot;Tuesday&quot;: [&#xA;            {   &quot;From&quot;: &quot;00:00&quot;, &quot;To&quot;: &quot;04:00&quot;  },&#xA;            {   &quot;From&quot;: &quot;11:00&quot;, &quot;To&quot;: &quot;18:00&quot;  }&#xA;        ]&#xA;    }&#xA;}&#xA;&#xA;&#xA;{&#xA;    &quot;Name&quot;: &quot;Beer &amp; Books&quot;,&#xA;    &quot;OpeningHours&quot;: {&#xA;        &quot;Sunday&quot;: [&#xA;            {   &quot;From&quot;: &quot;16:00&quot;, &quot;To&quot;: &quot;23:59&quot;  }&#xA;        ],&#xA;        &quot;Monday&quot;: [&#xA;            {   &quot;From&quot;: &quot;00:00&quot;, &quot;To&quot;: &quot;02:00&quot;  },&#xA;            {   &quot;From&quot;: &quot;10:00&quot;, &quot;To&quot;: &quot;22:00&quot;  }&#xA;        ],&#xA;        &quot;Tuesday&quot;: [&#xA;            {   &quot;From&quot;: &quot;10:00&quot;, &quot;To&quot;: &quot;22:00&quot;  }&#xA;        ]&#xA;    }&#xA;}&#xA;&#xA;&#xA;I only included three days, to make it shorter, but you get the points. You can also see that there are times that the opening hours go through a day.&#xA;Now, the question we need to answer is: &#x201C;find me an open library now&#x201D;.&#xA;How can we answer such a question? If we were using SQL, it would be something like this:&#xA;select * from Libraries l &#xA;where Id in (&#xA;         select Library Id OpeningHours oh &#xA;         where oh.Day = dayofweek(now()) AND oh.From &gt;= now() AND oh.To &lt; now()&#xA;) &#xA;&#xA;&#xA;I&#x2019;ll leave the performance of such a query to your imagination, but the key point is that we cannot actually express such a computation in RavenDB. We can do range queries, but in this case, it is the current time that we compare to the range of values. So how do we answer such a query?&#xA;As usual, but not trying to answer the same thing at all. Here is my index:&#xA;&#xA;The result of this is an index entry per day, and in each index entry, we have outputted the half hours that this library is open. So if we want to check for libraries that are open on Sunday at 4:30 PM, all we have to do is issue the following query:&#xA;&#xA;The power of dynamic fields and index time computation means that this is an easy query to make, and even more importantly, this is something that we can answer very efficiently.</p>
         <a href="https://enterprisecraftsmanship.com/posts/entity-base-class/" target="_blank"><h1 class="title mb-6">Entity Base Class</h1></a>
         <p class="mb-2">by Vladimir Khorikov</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: November 01, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It&#x2019;s the first post on the blog I&#x2019;m starting today. The idea to start blogging was with me quite for a while, so I decided to give it a try.</p>
-        <a href="https://ayende.com/blog/168900/corvus-manage-your-databases-from-your-android" target="_blank"><h1 class="title mb-6">Corvus: Manage your databases from your Android</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 29, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Corvus is an open source mobile client for the RavenDB document database. It is available on the Google Store now.</p>
-        <a href="https://ayende.com/blog/168899/modeling-exercise-the-grocery-stores-checkout-model-process-approach" target="_blank"><h1 class="title mb-6">Modeling exercise</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 28, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I posted about the grocery store checkout process exercise before. Now I want to see if I can do a short outline on how I would handle this. The key aspect from my perspective is that we need to separate the notion of the data we have and the processing of the data. That means that we are going to have the following model: public class ShoppingCart&#xA;{&#xA;   public List&lt;ProductInShoppingCart&gt; Products {get;set;}&#xA;   public List&lt;Discount&gt; Discounts { get;set; }&#xA;}&#xA;&#xA;public class ProductInShoppingCart&#xA;{&#xA;   public string ProductId;&#xA;   public Discount Discount;&#xA;}&#xA;&#xA;&#xA;Note that we explicitly do not have a quantity field here. If we purchase 6 bottles of milk, that would appear three times in the cart. Why is that?&#xA;Let us assume that we have a sale for 2 bottles of milk for 20% discount or a 3 &#x2B;1 bottles of milk offer. Consider the kind of code you would have to write in the offer code:&#xA;&#xA;Find all products that have this offer and have 4 items without discount.&#xA;Add the discount to those products.&#xA;After searching for products without discount, need to search for products with a discount, but that we can apply this to and get a better option.&#xA;In this case, we start by doing:&#xA;&#xA;Add bottle of milk&#xA;Add bottle of milk &#x2013; 2 for 20% discount is triggered.&#xA;Add bottle of milk&#xA;Add bottle of milk &#x2013; 3&#x2B;1 offer is triggered, removing the previous discount.&#xA;Because this is likely going to be complex, I&#x2019;m going to be writing this once. A set of offers and the kind of rules that we want. Then we will give the users the ability to define those rules.&#xA;Note that we keep the raw data (products) and the transformations (discounts) separate, so we can always reapply everything without losing any data.</p>
         <div class="button flex justify-between">
             <a href="249.html"><span class="back arrow"></span></a>
 

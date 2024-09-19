@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/172225/how-saving-a-single-byte-cost-me-over-a-day-and-solved-with-a-single-byte" target="_blank"><h1 class="title mb-6">How saving a single byte cost me over a day (and solved with a single byte)</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 27, 2015
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m currently doing something that I would rather not do. I&#x2019;m doing significant refactoring to the lowest level of RavenDB, preparing some functionality that I need to develop some use visible features. But in the meantime, I&#x2019;m mucking about in the storage layer, dealing with how Voron actually persists and manage the information we have. And I&#x2019;m making drastic changes. That means that stuff breaks, but we have got the tests to cover for us, so we are good in that regard, yeah! The case for this post is that I decided to break apart a class that had too many responsibilities. The class in question is:  As you can see, there are multiple concerns here. There are actually several types of Page in the system, but changing this would have been a major change, so I didn&#x2019;t do that at the time, and just tucked more responsibility into this poor class. When I finally got around to actually handling this, it was part of a much larger body of work, but I felt really great that I was able to do that. Until I run the tests, and a few of them broke. In particular, only the tests that deal with large amount of information (over four million entries) broke. And they broke in a really annoying way, it looked like utter memory corruption was happening. It was scary, and it took me a long while to figure out what was going on. Here is the fix:  This error happens when adding a new entry to a tree. In particular, this piece of code will only run when we have a page split on a branch page (that is, we need to move from 2 levels in the tree to 3 levels). The issue turned out to be because when we split the Fixed Size Tree from the Variable Size Tree, I was able to save a single byte in the header of the fixed size tree page. The previous header was 17 bytes in size, and the new header was 16 bytes in size.  The size of BranchEntrySize is 16 bytes&#x2026; and I think you get the error now, right? Before, with page size of 4K, we had a PageMaxSize of 4079 bytes. So on the 255 entry, we would be over the limit, and split the page. By reducing a single byte from the header, the PageMaxSize was 4080, and because we only checked from greater than, we though that we could write to that page, but we ended up writing to the next page, corrupting it. The fix, ironically enough, was to add another byte, to check for greater than or equal .</p>
+        <a href="https://ardalis.com/nulls-break-polymorphism/" target="_blank"><h1 class="title mb-6">Nulls Break Polymorphism</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 26, 2015
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Sir Charles Hoare has called it his &#x201C;billion dollar mistake.&#x201D; The .NET exception related to it is one of the most common, most hated, and&#x2026;Keep Reading &#x2192;</p>
         <a href="https://ayende.com/blog/172193/recording-available-highly-available-scalable-solutions-with-ravendb" target="_blank"><h1 class="title mb-6">Recording available - Highly Available &amp; Scalable Solutions with RavenDB</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: October 16, 2015
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">With the release of ASP.NET 5 / DNX Beta 8, there is now a new command line tool, dnx-watch, that can be used to automatically re-run dnx&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/172097/micro-benchmarks-and-hot-paths" target="_blank"><h1 class="title mb-6">Micro benchmarks and hot paths</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 16, 2015
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m doing some work to refactor a complex piece of code, and I have a piece of memory that is allocated, then accessed via a struct pointer. This piece of code gets called a lot, so I wondered about the tradeoff of holding a pointer that is already casted to the right struct pointer vs the cost of another pointer in the object. Note, those are objects that are created a lot, and used a lot. Those are not the kind of things that you would usually need to worry about. Because I wasn&#x2019;t sure, I decided to test this out. And I used BenchmarkDotNet to do so:  public struct FooHeader&#xA;{&#xA;    public long PageNumber;&#xA;    public int Size;&#xA;}&#xA;&#xA;[BenchmarkTask(platform: BenchmarkPlatform.X86,&#xA;           jitVersion: BenchmarkJitVersion.LegacyJit)]&#xA;[BenchmarkTask(platform: BenchmarkPlatform.X64,&#xA;               jitVersion: BenchmarkJitVersion.LegacyJit)]&#xA;[BenchmarkTask(platform: BenchmarkPlatform.X64,&#xA;               jitVersion: BenchmarkJitVersion.RyuJit)]&#xA;public unsafe class ToCastOrNotToCast&#xA;{&#xA;    byte* p;&#xA;    FooHeader* h;&#xA;    public ToCastOrNotToCast()&#xA;    {&#xA;        p = (byte*)Marshal.AllocHGlobal(1024);&#xA;        h = (FooHeader*)p;&#xA;    }&#xA;&#xA;    [Benchmark]&#xA;    public void NoCast()&#xA;    {&#xA;        h-&gt;PageNumber&#x2B;&#x2B;;&#xA;    }&#xA;&#xA;    [Benchmark]&#xA;    public void Cast()&#xA;    {&#xA;        ((FooHeader*)p)-&gt;PageNumber&#x2B;&#x2B;;&#xA;    }&#xA;&#xA;    [Benchmark]&#xA;    public void DirectCastArray()&#xA;    {&#xA;        ((long*)p)[0]&#x2B;&#x2B;;&#xA;    }&#xA;&#xA;&#xA;    [Benchmark]&#xA;    public void DirectCastPtr()&#xA;    {&#xA;        (*(long*)p)&#x2B;&#x2B;;&#xA;    }&#xA;}&#xA;&#xA;&#xA;The last two tests are pretty much just to have something to compare to, because if needed, I would just calculate memory offsets manually, but I doubt that those would be needed.&#xA;The one downside of BenchmarkDotNet is that it takes a very long time to actually run those tests. I&#x2019;ll save you the suspense, here are the results:&#xA;&#xA;I was expected the NoCast method to be faster, to be honest. But the Cast method is consistently (very slightly) the fastest one. Which is surprising.&#xA;Here is the generated IL:&#xA;&#xA;And the differences in assembly code are:&#xA;&#xA;Note that I&#x2019;m not 100% sure about the assembly code. I got it from the disassembly windows in VS, and it is possible that it changed what is actually going on.&#xA;So I&#x2019;m not really sure why this would be difference, and it is really is a small difference. But it is there.</p>
-        <a href="https://enterprisecraftsmanship.com/posts/most-valuable-software-development-principles/" target="_blank"><h1 class="title mb-6">Most valuable software development principles</h1></a>
-        <p class="mb-2">by Vladimir Khorikov</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 12, 2015
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;d like to wrap up the &quot;Most valuable software development principles&quot; article series with this post.</p>
         <div class="button flex justify-between">
             <a href="226.html"><span class="back arrow"></span></a>
 

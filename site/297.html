@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/161729/ravens-storage-building-a-sorted-string-table" target="_blank"><h1 class="title mb-6">Raven&#x2019;s Storage: Building a Sorted String Table</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 29, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Applying the lessons from the leveldb codebase isn&#x2019;t going to be a straightforward task. I already&#xA0; discussed why we can&#x2019;t just use leveldb directly, so I won&#x2019;t go into that. I decided to see if I can implement a leveldb inspired storage for RavenDB. And the first thing that I wanted to try is to build an SST. That seems like an easy first step. SST are just sorted data in a file, and it require nothing much to write to them. As mentioned, we can&#x2019;t just do a line by line port of the code. As easy as that would be. The way leveldb manages memory is&#x2026; not really suitable for what we can / should do in .NET.  I want this to be an efficient .NET implementation. It is inspired, but not intended to be compatible with leveldb. The leveldb API deals with byte arrays all over the place. This makes sense for a C&#x2B;&#x2B; codebase, but it is horrible for a .NET application, especially when we expect a lot of our values to be large enough to hit the LOH. That means fragmentation, and pain down the road. Instead, our API uses ArraySegment&lt;byte&gt; for keys, and Stream for values. Since keys are expected to be relatively small, I don&#x2019;t foresee this being a problem. And the values are streams, so they are easily handled without introducing any cost from the API. Another thing that leveldb does quite a lot is batch things in memory for a while. It may be the current block, it may be the current data block, it may be the index block, but it does so quite often. That works nicely for C&#x2B;&#x2B; apps with expected small values, but not so much for our expected use case. So I want to avoid as much as possible holding items in managed memory. Here is the API for creating an SST:      1: var options = new StorageOptions();   2: using (var file = File.Create(&quot;test.sst&quot;))   3: using(var temp = new FileStream(Path.GetTempFileName(),FileMode.CreateNew,FileAccess.ReadWrite,    4:                     FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan))   5: {   6:     var tblBuilder = new TableBuilder(options, file, temp);   7:&#xA0;    8:     for (int i = 0; i &lt; 100; i&#x2B;&#x2B;)   9:     {  10:         var key = &quot;tests/&quot; &#x2B; i.ToString(&quot;0000&quot;);  11:         tblBuilder.Add(key, new MemoryStream(Encoding.UTF8.GetBytes(key)));  12:     }  13:&#xA0;   14:     tblBuilder.Finish();  15: }&#xA;As you can see, we uses two streams here, one to actually write to the table, the second is a temporary stream that we use to write the index block while we are working, then we merged it back to the actual sst file. Note that after building the table, the temp file can be deleted (indeed, we marked is as delete on close, so that would automatically happen).&#xA;That part was easy, all it required was simple I/O for generating the file. The more interesting part is going to be reading the values out.</p>
+        <a href="https://ayende.com/blog/162081/state-of-the-raven-operational-maintenance-tasks-and-features-sneak-peaks" target="_blank"><h1 class="title mb-6">State of the Raven - Operational &amp; Maintenance tasks and features sneak peaks</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 27, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20"></p>
         <a href="https://ayende.com/blog/161710/reviewing-leveldb-part-xviii-summary" target="_blank"><h1 class="title mb-6">Reviewing LevelDB</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: April 18, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are working on Excel Integration with RavenDB.  I just told a customer, that is a bug, but you can set this config value and it will fix this issue.</p>
-        <a href="https://ayende.com/blog/161665/what-is-making-us-slow-for-the-first-time-after-an-idle-period" target="_blank"><h1 class="title mb-6">What is making us slow (for the first time, after an idle period)?</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 17, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We recently covered this question in several iterations in the ravendb mailing list. The actual content of the discussion wasn&#x2019;t so interesting as the number of ways idle time can make you life&#x2026; interesting. In order to avoid having issues with idle time, you need to:  Disable IIS unloading for inactive websites. Disable RavenDB&#xA0; unloading for inactive databases. Make sure that the HD doesn&#x2019;t spin down during inactivity. You need to make sure that the system doesn&#x2019;t got to idle / hibenration. Check that the server hasn&#x2019;t been paged. Check that the CPU hasn&#x2019;t moved to low power mode. Check authentication timeouts. In the end, it was actually the last one that caused the problem. By default, Windows Auth token expire after 15 minutes, so you have to re-authenticate again, and that may make the first query after a while a little slower. Just for fun, by default, all of the above happen. And that is just when running on a physical machine. When running on VMs (or in the cloud), you need to do all of those checks for the VM and the host machines.</p>
-        <a href="https://ayende.com/blog/161634/ravendb-books-update" target="_blank"><h1 class="title mb-6">RavenDB Books Update</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 16, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yes, you read the title correctly. Books as in plural. Currently I am aware of at least 4 different&#xA0; books about RavenDB that are in various working stages. Here is what happens when I reviewed one of them .   And no, I don&#x2019;t think that I am going to tell you more at this time.</p>
         <div class="button flex justify-between">
             <a href="296.html"><span class="back arrow"></span></a>
 

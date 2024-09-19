@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/166753/voron-graphs" target="_blank"><h1 class="title mb-6">Voron &amp; Graphs</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 22, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of our guys is having fun playing with graph databases, and we had a serious discussion on how we can use Voron for that.  No, we don&#x2019;t have any plans to do a graph database. This is purely one of the guys playing with something that interest him. For the purpose of this post, I&#x2019;m only concerned with having the ability to store graph data and read them efficiently. I don&#x2019;t care for the actual graph operations. Let us look at the following graph:  Here is how we can define this in code: var michael = db.CreateNode();&#xA;michael[&quot;Name&quot;] = &quot;Michael&quot;;&#xA;&#xA;var graphs = db.CreateNode();&#xA;graphs[&quot;Name&quot;] = &quot;Graphs&quot;;&#xA;&#xA;var edge = michael.RelatesTo(graphs, db.Relationship(&quot;Plays With&quot;));&#xA;&#xA;&#xA;Now, how would we go about implementing something like this? Well, with Voron, that is pretty easy. &#xA;We&#x2019;ll start with defining a Nodes tree, which is going to using an incremental 64 bits integer for the key, and a JSON object for the value. This means that on CreateNode, we&#x2019;ll just allocate the id for it, and just have the node itself as a JSON object that can be as complex as you want.&#xA;We also have relationships, and here it gets a bit complex, a relationship is always from a node to a node, and it has a specific type. Because the types of relationships tend to be very few, we will limit them to 65,536 relationship types. I think that this would be more than enough. As a result, I can quickly get the id of a relationship type. This leads us to having another tree in Voron, the RelationshipTypes tree, with a key that is the string name of the relationship and the value is just an incremental short. The reason we need to do this will be obvious shortly.&#xA;After we have the relationship type, we need to record the actual relationships. That means that we need to consider how we want to record that. Relationships can have their own properties, so the actual relationship is going to be another JSON object as the value in a tree. But what about the key for this tree? The question here is how are we going to work with this? What sort of queries are we going to issue. Obviously, in a graph database, we are going to follow relationships a lot. And the kind of questions we are going to ask are almost always going to be &#x201C;from node X, find all outgoing relations of type Y&#x201D;. So we might as well do this properly.&#xA;The key for the relations tree would be 18 bytes, the first 8 bytes are the source node id, the next 2 bytes are the relationship type and the last 8 bytes are the destination node id. That means that on the disk, the data is actually sorted first by the node id, then by the relationship type. Which make the kind of queries that I was talking about very natural and fast.&#xA;And that is pretty much it. Oh, you&#x2019;re going to need metadata tree for things like the last relationship type id, and probably other stuff. But that is it, when speaking from the point of view of the storage.&#xA;The overall structure is:&#xA;&#xA;Nodes - (Key: Int64, Val: JSON)&#xA;RelationshipTypes &#x2013; (Key: string, Val: Int16)&#xA;Relationships ( Key: Int64, Int16, Int64, Val: JSON)&#xA;And on top of that you&#x2019;ll be able to write any sort of graph logic.</p>
+        <a href="https://ayende.com/blog/166721/bisecting-ravendb" target="_blank"><h1 class="title mb-6">Bisecting RavenDB</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 21, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the results of expanding the RavenDB&#x2019;s team is that we have to deal with a lot more pull requests. We have individual developers working on their features, and submitting pull requests on a daily basis. That usually means that I have to merge anything between ten to thirty pull requests per day.  Given our test suite runtime, it isn&#x2019;t really reasonable to run the full test suite after each pull request, so we merge them all, review them, and then run the tests. The problem then is that if there was a test failure&#x2026; which pull request, and which commit cause it? That is why git has the wonderful git bisect command. And we have taken advantage of that to enable the following development time feature:  ./bisect.ps1 HEAD HEAD~10 General_Initialized_WithoutErrors It will output something like:  631caa60719b1a65891eec37c4ccb4673eb28d02 is the first bad commitcommit 631caa60719b1a65891eec37c4ccb4673eb28d02Author: Pawel PekrolDate: Fri May 9 08:57:55 2014 &#x2B;0200another temp commit Pin pointing exactly where the issue is. And yes, this is here as a post primarily because I might forget about it.</p>
         <a href="https://ayende.com/blog/166785/compression-memory-sizing-in-ravendb" target="_blank"><h1 class="title mb-6">Compression &amp; Memory Sizing in RavenDB</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: May 08, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this talk I&#x2019;m talking about the new features of RavenDB 3.0</p>
-        <a href="https://ayende.com/blog/166596/ravendb-conf-videos-extending-ravendb-with-bundles-plugins-and-listeners" target="_blank"><h1 class="title mb-6">RavenDB Conf Videos</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 07, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Matt Johnson is talking about how you can extend RavenDB client &amp; server side.</p>
-        <a href="https://ayende.com/blog/166595/ravendb-conf-videos-mastering-date-and-time-data-in-ravendb" target="_blank"><h1 class="title mb-6">RavenDB Conf Videos</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 06, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Matt Jonson talks about date &amp; time in general and in RavenDB in particular. And if you ever want to hear an expert talking about his pet topic, that is Matt.</p>
         <div class="button flex justify-between">
             <a href="263.html"><span class="back arrow"></span></a>
 
