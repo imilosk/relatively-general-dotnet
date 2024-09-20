@@ -147,7 +147,7 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
-        <a href="https://ayende.com/blog/1020/pitfalls-of-moving-data-to-sql-server-from-oracle" target="_blank"><h1 class="title mb-6">Pitfalls of moving data to SQL Server from Oracle</h1></a>
+        <a href="https://ayende.com/blog/1139/advantages-cooperative-threading" target="_blank"><h1 class="title mb-6">Advantages Cooperative Threading</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -156,10 +156,10 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 04, 2006
+            posted on: March 11, 2006
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I need to move a couple oftables from an Oracle database to SQL Server, how do I do this?    Well, there is SSMA*, but it has a couple of problems dealing with strange decisions on the Oracle side. It also require a hefty machine to run on, as well as taking quite&#xA0;a bit of time to run.     I used it to generate the schema, and then defined a linked server to Oracle and wrote a very simple script to port the data. It failed, miserably. Let&#x27;s assume that my script looked like this:            INSERT INTO Customers                        (                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [Name],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [Email],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [Address],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [RegisteredAt]                        )                        SELECT                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [Name],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [Email],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [Address],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [RegisteredAt]                        FROM ORACLE..ADMIN.CUSTOMERS                        What is there to go wrong? Well, for one thing the range of allowed dates in SQL Server and Oracle is different (1753 - 9999 in SQL, -4712 - 4712 in Oracle). Apperantly some of the customers where registered quite some time ago, about two thousands years ago, to be precise. So I bumped them up to the twentieth century, and tried again.    It failed again. This time it complained about a primary key violation during the copy. That really made me scratch my head. I checked Oracle, and the PK was enabled and doing its job quite well. For the purposed of this conversation, let&#x27;s assume that the PK is composed of [Name] and [Address].    Can you guess what the problem is now? I couldn&#x27;t, so I started running the following queries on both SQL Server &amp; Oracle             SELECT     COUNT(DISTINCT [Name]) FROM Customers                 SELECT     COUNT(DISTINCT [Address]) FROM Customers        Well, the Address query returned the same count, but the Name query returned a wildly different result. Looking into it a bit, I discovered that I had set of names that looked like this: Alice, ALICE, alice, bob, Bob, BOB, etc.     But SQL Server&#x27;s case sensitivity is a server wide option. For a couple of minutes, it looked like I was stuck, but then a friend reminded me about the Collation option in the column spesification, and that does allows you to define case sensitivity in the column level. Once I did that, everything worked just fine.    * Sql Server Migration Assistant</p>
-        <a href="https://ayende.com/blog/1019/great-debugging-blog" target="_blank"><h1 class="title mb-6">Great Debugging Blog</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">James&#xA0;has a post about SQL Server &amp; Cincom Smalltalk both using application level threading for scalability, but I think that the comparision he makes is flawed. While I admit that I don&#x27;t know how you manage the threads in smalltalk, I&#x27;m well aware of the differences between threads and fibers (app-threads, in windows).    Cooperative threads relies on programmers&#x27; disipline to yield often enough to make sure that other threads are not starved. I can see several cases for doing this in SQL Server, since this can ensure that you&#x27;ll not be pre-empted before you finished. I would guess that this is a good way to reduce locks in certain situation, since in this scenario you know that you will not be interrupted until you are ready. Windows 3.1 and Mac OS before X proved that this just doesn&#x27;t work in the general case. A single ruoge application can take hold on the whole system.    Doing any kind of thread management myself is just adding more overhead to the stuff that I need to remember. Offhand, I can&#x27;t think of many applications that recieve the amount of testing that SQL Server does. I don&#x27;t relish trying to test thread starvation scenarios with cooperative threading models in my applications.</p>
+        <a href="https://ayende.com/blog/1138/matt-on-rhino-mocks" target="_blank"><h1 class="title mb-6">Matt on Rhino Mocks</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -168,10 +168,46 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 04, 2006
+            posted on: March 11, 2006
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just found this blog&#xA0;by Tess, it talks about all the ways to track down issues with your applications. There is a lot of great info there, and I&#x27;m sure to head that way any time that I need to solve any complex issues with an application.</p>
-        <a href="https://ayende.com/blog/1018/on-production-agile-databases" target="_blank"><h1 class="title mb-6">On Production &quot;Agile&quot; Databases</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just read this post&#xA0;from Matt&#xA0;about Rhino Mocks and events. I recall seeing something very similar to that&#xA0;in the Rhino Mocks mailing list, but it never made it to the code base.    Reading the post, the capabilities are awesome. I&#x27;ll need to take a much closer look at this, and see if I can make it work on 1.1 as well, but this is defiantly going into the next release.</p>
+        <a href="https://ardalis.com/vsts-team-suite-product-key-from-msdn/" target="_blank"><h1 class="title mb-6">VSTS Team Suite Product Key From MSDN</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 10, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I noticed that my Visual Studio Team Suite install on my dev machine was down to less than 60 days for its trial. I&#x2019;d completely forgotten&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://ardalis.com/vsts-tfs-install-notes/" target="_blank"><h1 class="title mb-6">VSTS TFS Install Notes</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 10, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As I wrote yesterday, I&#x2019;ve just gone through my first real install of VSTS Team Foundation Server. For the most part it went without a hitch&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://ardalis.com/team-system-delete-project/" target="_blank"><h1 class="title mb-6">Team System Delete Project</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 10, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you need to delete a Team System Project you need to do it through a command line utility that is installed with Team Explorer. In my&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://ayende.com/blog/1137/value-of-a-framework" target="_blank"><h1 class="title mb-6">Value of a framework</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -180,70 +216,10 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 04, 2006
+            posted on: March 10, 2006
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In most cases, the database is the heart and soul of the application. Every database book or class will be sure to mention that most databases outlast the application that created it.    This usually cause to organization to threat a database as a fragile thing that need nurturing and three levels of approval (including from the Janitor&#x27;s Sister, who once read a book about building data driven application in VB 3.0) before the smallest change can go into the database. It&#x27;s worse when it is a production database. I don&#x27;t think that I would&#x27;ve liked wprking in such a place.    And then there is the other extreme. The production database is a free-for-all bring-all-your-friends and let&#x27;s-decorate-this-place-because-it-looks-boring. Common signs for such a database is prolification of tables with names that contains OLD, TEMP, TMP, FOO, etc. It makes working with the database interesting.    Out of the two extremes, I would choose the first one in a nine out of ten cases.</p>
-        <a href="https://ardalis.com/textpayme-&#x2013;-the-next-paypal/" target="_blank"><h1 class="title mb-6">TextPayMe &#x2013; The Next PayPal</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 03, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">SignUp at TextPayMe  TextPayMe is a new service that I just learned about from Scott Hanselman. Basically, it lets you send money to anybody&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/and-you-thought-waterfall-software-development-process-was-dead/" target="_blank"><h1 class="title mb-6">And You Thought Waterfall Software Development Process Was Dead</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 01, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Help bring back the Waterfall Software Development Process! Attend Waterfall 2006 this year, being held April 1st in Niagara Falls, NY&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/cache-manager-released/" target="_blank"><h1 class="title mb-6">Cache Manager Released</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 30, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Those of you who subscribe to the ASPAlliance Times weekly newsletter already know that Cache Manager 1.0 was released earlier this week&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/c-code-snippets/" target="_blank"><h1 class="title mb-6">C# Code Snippets</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 30, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">David Yack just pointed me to the C# Code Snippets that should have been in VS 2005 but weren&#x2019;t. Download them now from MSDN. C# Code&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/microsoft-mix-2006-conference-in-las-vegas/" target="_blank"><h1 class="title mb-6">Microsoft Mix 2006 Conference in Las Vegas</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 30, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;ve been suffering withdrawal from Microsoft conferences since you left PDC 05 last September after going to TechEd 05 last summer&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/1017/tip-searching-stored-procedures-text" target="_blank"><h1 class="title mb-6">Tip: Searching Stored Procedures Text</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One important criteria about frameworks is how it handle complexity. For instance, consider VB6. You really don&#x27;t need to do anything with it to get usable COM objects with all the fancy interfaces that you can want, and writing office automation there was actually easy. But try to write mutli threaded app in VB6, and you&#x27;re up against a wall.    I like MonoRail and I don&#x27;t Like WebForms. It&#x27;s probably easier to design pages using WebForms for most common scenarios. It&#x27;s easy to write views in MonoRail in nearly any scenario. Both frameworks uses the same ASP.Net stack (ASP.Net != WebForms !!!), both allow me to write pages pretty easily. But WebForms hides the eventless nature of the web with quite a bit of complexity of its own. MonoRail does quite a bit to reduce the amount of stuff that I need to do manually, but it manage this complexity, it doesn&#x27;t hide it. I can easily change the amount of stuff the framework does for me (from full blown parameters-to-database-objects to let-me-do-it-all-alone) on a case by case basis, with no consequences.    The way I see it, a good&#xA0;framework should manage complexity, a bad framework&#xA0;hide complexity. A framework that hide complexity will limit what I can do with it pretty quickly. The problem is that you don&#x27;t feel the pain until you are commited and starting to do the complex stuff.</p>
+        <a href="https://ayende.com/blog/1136/josling-on-other-languagues" target="_blank"><h1 class="title mb-6">Josling On Other Languagues</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -252,10 +228,34 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: January 30, 2006
+            posted on: March 10, 2006
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is another tip for those who need to explore big SQL databases with a lot of stored procedures and quite a bit of logic. This will gives you a list of all the procedures that has a certain string in them:            CREATE PROCEDURE dev_FindInSP                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; @str nvarchar(max)                        AS                        select distinct name from sys.procedures procs join syscomments comments                        on procs.object_id = comments.id where [text] like &#x27;%&#x27; &#x2B; @str &#x2B; &#x27;%&#x27;</p>
-        <a href="https://ardalis.com/outlook-calendar-default-month-view/" target="_blank"><h1 class="title mb-6">Outlook Calendar Default Month View</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Josling (the father of Java) was quoted&#xA0;talking about C#, Ruby and PHP. It&#x27;s amazing how such a short piece can annoy me so much.     First, I did very short work with PHP (and really couldn&#x27;t stand the dot operator for concantation), and virtually no work with Ruby. I work quite a bit in C#, as you probably know. I don&#x27;t know of any usages of PHP outside the web, but I can certainly think of usages for Ruby outside the web. Ruby != Rails !! Ruby is used in WATIR&#xA0;(wrapper for IE&#x27;s COM interfaces), Stocks watcher, File Systems, etc (just from looking at RubyForge for a couple of minutes).    The comment that really irritated me was:We were afraid they [C#]&#xA0;were going to do something really creative - but they&#x27;re hopelessly focused on one platform.    I understand that there are some people to whom cross platofrmism is the holy grail. But I just don&#x27;t get this type of attidute. Platforms don&#x27;t really mean anything without applications, and application are created when developers like a platform. If developers don&#x27;t like a platform, it will quickly be delegated to the legacy benches, to chat with Cobol to the end of time.    To claim that .Net is not relevant because it is focused on Windows in to turn a blind eye to the truth. First, this claim is not true, I can run my applications on Windows, Linux, Solaris, Mac&#xA0;OS&#xA0;X, and Unix. I can run it on anything from a honking server to a phone. No, it&#x27;s not as portable as Java, and it will probably not run on AS400. For the relevant applications, I can take the same assemblies, and use them on all those platforms (you can&#x27;t run an ASP.Net app on your phone, though).    That said, I would still consider this irrelevant. There are some great advantages to Java, but I would consider this mainly in the culture and maturity of the development community. Most of the tools that I use daily have their roots in Java (NHibernate, NUnit, NAnt). Hell, I can trace the roots of Rhino Mocks to Easy Mocks.Net, which is a port of Easy Mocks, a Java mocking framework.    I don&#x27;t see any ground breaking differences between Java and .Net, to tell you the truth. There are some things that I like in .Net that I can&#x27;t do in Java (real generics, anonymous methods, yielding, nullable value types, consistent types), but nothing that I really couldn&#x27;t live without. I&#x27;m certain that there are things that Java does that .Net doesn&#x27;t (and I like the syntax of anontations more than attributes).     I&#x27;m very surprised to hear such a dismisal from Josling. If he thinks that Java&#x27;s biggest advantage is its cross platform capabilties, something is wrong. As a developer, I don&#x27;t care where my code is running (unless the environment will affect my code, of course). That is the job for the integration stage. I do care about productivity, richness of the langauge, ability to mess around with stuff, etc. If I don&#x27;t like the environment that a platform is giving me, I&#x27;m highly unlikely to use it.</p>
+        <a href="https://ayende.com/blog/1135/my-daily-wtf" target="_blank"><h1 class="title mb-6">My Daily WTF</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 10, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The term &quot;churning code&quot; has no direct equivalent in Hebrew, sadly. I did a code churn of ~12,000 Lines of code a couple of weeks ago, and I got some... peculiar results. I recently got a call from a co-worker about a piece of code that I wrote during this churn. The code was something like:             SELECT                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; OrderId,                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Avg(Price)                        FROM Orders                        GROUP BY OrderId, Price            For some reason, this code produced the wrong results. I was gently asked what I was thinking when I wrote this piece, and I really couldn&#x27;t provide a decent explanantion. At least fixing this mistake was easy, if I weren&#x27;t doing much the same thing in four other spots, in big queries.    *Sigh* I heard somewhere that the output of the average programmer is ~20 lines of debugged code a day. It&#x27;s not really surprising, actually. I knew it during the churn, now i need to find out just how much more such WTF are awaiting me.     By the way, if you work in a code base long enough, you learn to read the patterns of the code well enought that you no longer need to read the code. From the structure of the code you can figure out what is it trying to do (if not why, or the sepsific of the how). Do it long enough and you can &quot;restructure*&quot; the code to be much nicer, without reading the code.&#xA0; The problem with this method is the result above.    Boy, is legacy programming fun or what?     * It is not refactoring unless I have tests in place.</p>
+        <a href="https://ayende.com/blog/1134/work-environments" target="_blank"><h1 class="title mb-6">Work Environments</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 10, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I routinely work on several machines, and this mean that while I can&#x27;t really get used to my specialized environment, since then my ability to do stuff on other machine is damaged. And there is nothing quite as frustrating as the computer not responding to a command. Because of this, I started to learn a lot more about the default settings in Windows and VS.Net.    Here is a simple example. I know of almost no-body that uses the Alt&#x2B;Space shortcut. But it&#x27;s so nice. I no longer close windows with Alt&#x2B;F4, since that require me to stretch my hand. Instead, I close them by Alt&#x2B;Space - C. This is slightly longer, but I can do it in one hand, and it doesn&#x27;t require me to move my hand from its customary position. Alt&#x2B;Space - X is useful as well, for maximizing application.</p>
+        <a href="https://ardalis.com/installing-tfs-rc/" target="_blank"><h1 class="title mb-6">Installing TFS RC</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -264,9 +264,9 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: January 29, 2006
+            posted on: March 09, 2006
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Can somebody tell me how to alter Outlook so that the default calendar month view shows me a useful time period (e.g. the future, not the&#x2026;Keep Reading &#x2192;</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I had to buy a new box to install Team Foundation Server &#x2014; apparently it just won&#x2019;t work on my old Dell Inspiron laptop from around 2001 (P&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="809.html"><span class="back arrow"></span></a>
 

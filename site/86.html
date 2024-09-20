@@ -147,8 +147,8 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
-        <a href="https://ayende.com/blog/190305-C/ravendb-5-0-optimizing-date-range-queries" target="_blank"><h1 class="title mb-6">RavenDB 5.0</h1></a>
-        <p class="mb-2">by Oren Eini</p>
+        <a href="https://ardalis.com/adapter-design-pattern/" target="_blank"><h1 class="title mb-6">Adapter Design Pattern</h1></a>
+        <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -156,22 +156,10 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: March 20, 2020
+            posted on: April 01, 2020
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I can a lot about the performance of RavenDB, a you might have noticed from this blog. A few years ago we had a major architecture shift that increased our performance by a factor of ten, which was awesome. But with the meal, you get appetite, and we are always looking for better performance.One of the things we did with RavenDB is build things so we&#x2019;ll have the seams in place to change the internal behavior without users noticing how things are working behind the scenes. We have used this capability a bunch of time to improve the performance of RavenDB. This post if about one such scenario that we recently implemented and will go into RavenDB 5.0.Consider the following query:As you can see, we are doing a range based query on a date field. Now, the source collection in this case has just over 5.9 million entries and there are a lot of unique elements in the specified range. Let&#x2019;s consider how RavenDB will handle this query in version 4.2:First, find all the unique CreatedAt values between those ranges (there can be tens to hundreds of thousands).Then, for each one of those unique values, find all the match documents (usually, only one).This is expensive and the problem almost always shows up when doing date range queries over non trivial ranges because that combine the two elements of many unique terms and very few results per term. The general recommendation was to avoid running the query above and instead use:This allows RavenDB to use a different method for range query, based on numeric values, not distinct string values. The performance different is huge. But the second query is ugly and far less readable. I don&#x2019;t like such a solution, even if it can serve as a temporary workaround. Because of that, we implemented a better system in RavenDB 5.0. Behind the scenes, RavenDB now translate the first query into the second one. You don&#x2019;t have to do anything to make it happen (when migrating from 4.2 instances, you&#x2019;ll need to reset the index to get this behavior). You just use dates as you would normally expect them to be used and RavenDB will do the right thing and optimize it for you.To give you a sense of the different in performance, the query above on a data set of 5.9 million records will have the following performance:RavenDB 4.2 - 7,523 msRavenDB 5.0 &#x2013;&#xA0;&#xA0;&#xA0; 134 msAs you can imagine, I&#x2019;m really happy about this kind of performance boost.</p>
-        <a href="https://ayende.com/blog/190276-C/investigating-query-performance-issue-in-ravendb" target="_blank"><h1 class="title mb-6">Investigating query performance issue in RavenDB</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 19, 2020
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We got a query perf issue from a user. Given a large set of documents, we run the following queries:Query time: 1 &#x2013; 2 msAnd:Query time: 60 &#x2013; 90 msLooking into the details, I run the following query:Which gives us the following details (I was running this particular result under a profiler, which is why we get this result):That was strange, so I decided to look deeper and look into a profiler. I run five queries, and then look into where the costs are:This is really strange. What is going on there?Looking into the reasons, it seems that the core of the issue is here:What is going on here? The rough it is that we have: For each term inside the IN, find all documents and set the relevant bit in the bit set.We have roughly 100,000 documents that match the query, so we have to do 100,000 index entry lookups. But how does this work when using an OR? It is much faster, but I really couldn&#x2019;t see how that could be, to be frank.Here is the profiler output of running the OR query, note that we call the same thing, SegmentTermDocs.Read as well here. In fact, the IN clause has been specifically optimized in order to make such things extremely efficient, what is going on here?The key here is in the number of calls that we have. Note that in the OR case, we call it only 16 times? This is because of a very interesting dynamic very deep inside Lucene. The query we have return no results. This is because there is no &#x201C;customers/100&#x201D; in the data set. That, in turn, means that the OR query that match between the two clauses need to do a lazy scan. There are no results, so the OR needs to only access evaluate very little of the potential space we have there. On the other hand, the way we implemented the IN clause, we select all the matches upfront, but then they are all filtered out by the query.In other words, the OR query is lazy, and the IN is eager, which cause the difference. When we have data for the query, we see much closer behavior. The OR query is still about 20ms faster, but now that we understand what is going on, this is something that can be fixed.</p>
-        <a href="https://www.stevejgordon.co.uk/asp-net-core-5-features-introducing-httpprotocol" target="_blank"><h1 class="title mb-6">ASP.NET Core 5 Features &#x2013; Introducing HttpProtocol</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A couple of months ago I published a new, revised course called C# Design Patterns: Adapter on Pluralsight. It&#x27;s one of my favorite patterns&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://www.stevejgordon.co.uk/sending-and-receiving-json-using-httpclient-with-system-net-http-json" target="_blank"><h1 class="title mb-6">Sending and Receiving JSON using HttpClient with System.Net.Http.Json</h1></a>
         <p class="mb-2">by Steve Gordon</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -180,22 +168,10 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: March 18, 2020
+            posted on: March 31, 2020
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this blog post, which will be a quick read, I&#x2019;m going to begin what I expect to be a long-running endeavour, to dig into new APIs available in .NET 5 and ASP.NET Core 5.0. This time, I&#x2019;m going to look at a new helper for HTTP protocol versions. What are HTTP Protocol Versions? Through [&#x2026;]</p>
-        <a href="https://ayende.com/blog/190274-C/ravendb-vs-cosmosdb-article" target="_blank"><h1 class="title mb-6">RavenDB vs. CosmosDB article</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 18, 2020
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I wanted to point you to this article by Alex Klaus that discusses the differences between RavenDB and CosmosDB. It is a thorough writeup and cover quite a bit of ground.And as a small hint, Hibernating Rhinos will have an announcement shortly about exciting news with regards to CosmosDB.</p>
-        <a href="https://www.stevejgordon.co.uk/upgrading-from-asp-net-core-3-1-to-5-0-preview-1" target="_blank"><h1 class="title mb-6">Upgrading from ASP.NET Core 3.1 to 5.0 (Preview 1)</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I will introduce a new library, called System.Net.Http.Json, which has been added to .NET in the last few days. We&#x2019;ll look at the problem which this library helps to solve. We&#x2019;ll then explore some examples of how to use it in your code today. WARNING:&#xA0;This library is currently available as a pre-release [&#x2026;]</p>
+        <a href="https://www.stevejgordon.co.uk/what-are-dotnet-worker-services" target="_blank"><h1 class="title mb-6">What Are .NET Worker Services?</h1></a>
         <p class="mb-2">by Steve Gordon</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -204,10 +180,10 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: March 17, 2020
+            posted on: March 30, 2020
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I want to take a look at the steps required to upgrade some projects to the first preview of .NET 5 and ASP.NET Core 5.0. Both were released yesterday (16th March 2020) and are the first public previews we have available for these future versions. The .NET 5 roadmap has these scheduled [&#x2026;]</p>
-        <a href="https://ayende.com/blog/190306-C/ravendb-5-0-beta-is-now-available-on-ravendb-cloud" target="_blank"><h1 class="title mb-6">RavenDB 5.0 beta is now available on RavenDB Cloud</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">With the release of .NET Core 3.0, the ASP.NET team introduced a new &#x201C;Worker Service&#x201D; project template, which is available as part of the SDK. In this post, I&#x2019;ll introduce the new template, along with some practical examples of the kinds of services which I develop using it. If you find the information in this [&#x2026;]</p>
+        <a href="https://ayende.com/blog/190433-A/coronavirus-update-hibernating-rhinos-is-offering-2-months-of-free-ravendb-support" target="_blank"><h1 class="title mb-6">Coronavirus update: Hibernating Rhinos is offering 2 months of FREE RavenDB support</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -216,10 +192,34 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: March 17, 2020
+            posted on: March 30, 2020
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB 5.0 release train is gathering steam as we speak. The most recent change to talk about is the fact that you can now deploy RavenDB 5.0 beta in RavenDB Cloud:This allows you to start experimenting with the newest features of RavenDB, including the time series capabilities. Please take a look, the RavenDB 5.0 option is available at the free tier as well, so I would encourage you to give it a run. As always, your feedback is desired and welcome.</p>
-        <a href="https://ayende.com/blog/190337-A/march-18-meetup-update-is-going-online-building-a-grown-up-database" target="_blank"><h1 class="title mb-6">March 18 Meetup update is going online: Building a Grown Up Database</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The coronavirus is a global epidemic and has had impact on the entire world. It has shaken the foundations of our society and has made things that would seem like bad science fiction a reality. The fact that most of the world is now under some form of quarantine is something that I would expect to see in a disaster movie, not in real life. And if we are in a disaster movie, I would like to jump over to the next scene please, and to formally submit a protest to the writers&#x2019; union.&#xA;Like everyone else, we have had to adjust to a very different mode of operations. Hibernating Rhinos is a distributed company, in the sense that we have teams working in different countries and continents. However, the majority of our people work in one of two offices (in Israel and in Poland). We have recently moved to a brand new office space which I&#x2019;m incredibly proud of, which now sits empty. Given the needs of the current times, we have shifts to fully remote work across the board. Beyond the upheaval of normal life, we see that many customers and users are facing the same challenges as we do.&#xA;For that purpose, I have decided to offer all RavenDB customers two months of free support, to help navigate the challenges ahead. A lot of organizations are scrambling, because the usual workflow is interrupted and things aren&#x2019;t as they used to. In these trying time, we want to make it as simple as possible for you to make use of RavenDB.&#xA0;&#xA;This offer applies to support for RavenDB on your own machines as well as RavenDB Cloud.&#xA;With the hope that we would look back at this as we now look at Y2K, I would like to close by urging you to be safe.</p>
+        <a href="https://www.stevejgordon.co.uk/a-lesson-learnt-test-explorer-processor-architecture-settings" target="_blank"><h1 class="title mb-6">A Lesson Learnt: Test Explorer Processor Architecture Settings</h1></a>
+        <p class="mb-2">by Steve Gordon</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 27, 2020
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently posted about the process to upgrade from ASP.NET Core 3.1 to ASP.NET Core 5.0 (preview 1) and mentioned that I had an issue with running my unit tests from Visual Studio 16.6 (preview 1).&#xA0; In this short post, I want to explain what caused my issue and how to resolve it. Symptoms of [&#x2026;]</p>
+        <a href="https://ardalis.com/streaming-checklist/" target="_blank"><h1 class="title mb-6">Streaming Checklist</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 27, 2020
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m a fan of checklists &#x2013; they&#x27;re an intermediate step before automating a process to ensure it&#x27;s done correctly and consistently. You&#x27;ll&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://ayende.com/blog/190401-A/investigating-a-query-sort-issue-in-ravendb" target="_blank"><h1 class="title mb-6">Investigating a query sort issue in RavenDB</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -228,10 +228,22 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: March 16, 2020
+            posted on: March 26, 2020
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Due to the Coronavirus issue that has been going around, my March 18 session has been moved to be online only.You can register to the event here, we&#x2019;ll also be sharing it live in the RavenDB facebook page.As a reminder, the talk is: Building a Grown Up DatabaseA database is a complex, often fussy beast. For years, Oren Eini has made his living by fixing performance issues of various kinds. After seeing the same mistakes happen again and again, Oren decided to build his own database where these problems will never arise.In this Webinar he will talk about the kind of features that make RavenDB a grown up database:-- It doesn&#x27;t need a full-time babysitter-- Uses AI automatic indexing and self optimizing engines-- Understands the operational environment and adjusts to it without the need for a human in the loop-- High Availability-- Secured development</p>
-        <a href="https://ayende.com/blog/190273-C/podcast-wave-of-change-15" target="_blank"><h1 class="title mb-6">Podcast</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A user reported that a particular query returned the results in an unexpected order. The query in question looked something like the following:Note that we first search by score(), and then by the amount of sales. The problem was that documents that should have had the same score were sorted in different locations. Running the query, we would get:But all the documents have the same data (so they should have the same score), and when sorting by descending sales, 2.4 million should be higher than 62 thousands. What is going on?We looked at the score, here are the values for the part where we see the difference:1.7029538154602051.7029536962509155Okay&#x2026; that is interesting. You might notice that the query above has include explanations(), which will give you the details of why we have sorted the data as we did. The problem? Here is what we see:I&#x2019;m only showing a small piece, but the values are identical on both documents. We managed to reduce the issue to a smaller data set (few dozen documents, instead of tens of thousands), but the actual issue was a mystery. We had to dig into Lucene to figure out how the score is computed. In the land of indirectness and virtual method calls, we ended up tracing the score computation for those two documents and figure out the following, here is how Lucene is computing the score:They sum the various scoring to get the right value (highly simplified). But I checked, the data is the same for all of the documents. Why do we get different values? Let&#x2019;s see things in more details, shall we?Here is the deal, if we add all of those together in calculator, we&#x2019;ll get: 1.702953756This is close, but not quite what we get from the score. This is probably because calculator does arbitrary precision numbers, and we use floats. The problem is, all of the documents in the query has the exact same numbers, why do we get different values.I then tried to figure out what was going on there. The way Lucene handle the values, each subsection of the scoring (part of the graph above) is computed on its own and them summed. Still doesn&#x2019;t explain what is going on, then I realized that Lucene is using a heap of mutable values to store the scorers at it was scoring the values. So whenever we scored a document, we will mark the scorer as a match and then put it in the end of the heap. But the order of the items in the heap is not guaranteed. Usually, this doesn&#x2019;t matter, but please look at the above values and consider the following fact:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          float a = 0.281642526f;&#xA;        &#xA;        &#xA;          &#xA;          float b = 0.844927669f;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          float c = a &#x2B; a &#x2B; b;&#xA;        &#xA;        &#xA;          &#xA;          float d = a &#x2B; b &#x2B; a;&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          float.annoying.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;What do you think are the values of C and D in the code above? c = 1.4082127d = 1.4082128Yes, the order of operations for addition matters a lot for floats. This is expected, because of the way floating points are represented in memory, but unexpected. The fact that the order of operations on the Lucene scorer is not consistent means that you may get some very subtle bugs. In order to avoid reproducing this bug, you can do pretty much anything and it will go away. It requires very careful setup and is incredibly delicate. And yet it tripped me hard enough to make me lose most of a day trying to figure out exactly where we did wrong. Really annoying.</p>
+        <a href="https://www.stevejgordon.co.uk/using-httpcompletionoption-responseheadersread-to-improve-httpclient-performance-dotnet" target="_blank"><h1 class="title mb-6">Using HttpCompletionOption to Improve HttpClient Performance in .NET</h1></a>
+        <p class="mb-2">by Steve Gordon</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 25, 2020
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this blog post, I want to get back to an area I genuinely enjoy, exploring the use of HttpClient within your .NET applications. I&#x2019;ll explain how you can optimise the performance of HttpClient when handling data such as JSON payloads on the HttpResponseMessage. Making HTTP Requests Using HttpClient By default, in the majority of [&#x2026;]</p>
+        <a href="https://ayende.com/blog/190369-C/start-playing-with-ravendb-5-0-today" target="_blank"><h1 class="title mb-6">Start playing with RavenDB 5.0, today</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -240,11 +252,11 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: March 13, 2020
+            posted on: March 25, 2020
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was on the Wave of Change podcast and had a really good conversation with Tony that range from 8&#x201D; floppies to the usability of blockchain to distributed system design and architecture. I&#x2019;m really looking forward to hearing your feedback. Listen to it here.</p>
-        <a href="https://ayende.com/blog/190243-C/webinar-recording-migrating-from-a-relational-database-to-ravendb" target="_blank"><h1 class="title mb-6">Webinar recording</h1></a>
-        <p class="mb-2">by Oren Eini</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I announced the beta availability of RavenDB 5.0 last week, but I missed up on some of the details on how to enable that. In this post, I&#x2019;ll give you detailed guide on how to setup RavenDB 5.0 for your use right now.For the client libraries, you can use the MyGet link, at this time, you can run:Install-Package RavenDB.Client -Version 5.0.0-nightly-20200321-0645 -Source https://www.myget.org/F/ravendb/api/v3/index.jsonIf you want to run RavenDB on your machine, you can download from the downloads page, click on the Nightly tab and select the 5.0 version:And on the cloud, you can register a (free) account and then, add a product:Create a free instance:Select the 5.0 release channel:And then create the RavenDB instance.Wait a few minutes, and then you can connect to your RavenDB 5.0 instance and start working with the new features.You can also run it with Docker using:docker pull ravendb/ravendb-nightly:5.0-ubuntu-latest</p>
+        <a href="https://ardalis.com/github-draft-pull-requests/" target="_blank"><h1 class="title mb-6">GitHub Draft Pull Requests</h1></a>
+        <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -252,21 +264,9 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: March 12, 2020
+            posted on: March 25, 2020
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The recording of my webinar couple of weeks is available. I think it was a great session and would love your feedback.</p>
-        <a href="https://ayende.com/blog/190212-C/the-non-expiring-documents-and-the-funky-clock" target="_blank"><h1 class="title mb-6">The non expiring documents and the funky clock</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 11, 2020
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently the time.gov site had a complete makeover, which I love. I don&#x2019;t really have much to do with time in the US in the normal course of things, but this site has a really interesting feature that I love.Here is what this shows on my machine: I love this feature because it showcase a real world problem very easily. Time is hard. The concept we have in our head about time is completely wrong in many cases. And that leads to interesting bugs. In this case, the second machine will be adjusted on midnight from the network and the clock drift will be fixed (hopefully). What will happen to any code that runs when this happens? As far as it is concerned, time will move back. RavenDB has a feature, document expiration. You can set a time for a document to go away. We had a bug which caused us to read the entries to be deleted at time T and then delete the documents that are older than T. Expect that in this case, the T wasn&#x2019;t the same. We travelled back in time (and the log was confusing) and go an earlier result. That meant that we removed the expiration entries but not their related documents. When the time moved forward enough again to have those documents expire, the expiration record was already gone. As far as RavenDB was concerned, the documents were updated to expire in the future, so the expiration records were no longer relevant. And the documents never expired, ouch.We fixed that by remembering the original time we read the expiration records. I&#x2019;m comforted with knowing that we aren&#x2019;t the only one having to deal with it.</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A feature introduced last month by the GitHub team is called draft pull requests. When you create a Draft Pull Request, it cannot be merged&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="85.html"><span class="back arrow"></span></a>
 
