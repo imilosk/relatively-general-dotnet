@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/172005/production-postmortem-the-case-of-the-unicode-poo" target="_blank"><h1 class="title mb-6">Production postmortem</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: September 22, 2015
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We got an error report from a customer about migration issue from 2.5 to 3.0. A particular document appear to have been corrupted, and caused issues.&#xA;We have an explicit endpoint to expose the database raw bytes to the client, so we can troubleshoot exactly those kind of errors. For fun, this is a compressed database, so the error was hiding beneath two level of indirection, but that is beside the point.&#xA;When looking at the raw document&#x2019;s byte, we saw:&#xA;&#xA;Which was&#x2026; suspicious. It took a while to track down, but the end result was that this error would occur when you have:&#xA;&#xA;A large string (over 1KB), and it is the first large string in the document.&#xA;At the 1023 position of the string (bytewise), you have a multi byte and multiple character value.&#xA;&#xA;In those cases, we wouldn&#x2019;t be able to read the document.&#xA;The underlying reason was an optimization we made in 3.0 to reduce buffer allocations during deserialization of documents. In order to properly handle that, we used an Encoding Decoder directly, without any intermediate buffers. This works great, except in this scenario, and the way JSON.Net calls us.&#xA;When JSON.Net find a large string, it will repeatedly read characters from the stream until it reached the end of the stream, and only then it will process it. If the string size is more than the buffer size, it will increase the buffer.&#xA;Let us imagine the following string:&#xA;&#xA;ABC&#xA;&#xA;When we serialize it, it looks like this:&#xA;&#xA;var bytes = new byte[] { 65, 66, 67, 0xF0, 0x9F, 0x92, 0xA9 };&#xA;&#xA;And let us say that we want to read that in a buffer of 4 characters. We&#x2019;ll use it like so:&#xA;&#xA; int bytesPos = 0;&#xA; int charsPos = 0;&#xA; var chars = new char[4];&#xA; while (bytesPos &lt; bytes.Length) // read whole buffer&#xA; {&#xA;    while (charsPos &lt; chars.Length) // process chars in chunks&#xA;     {&#xA;         int bytesUsed;&#xA;         int charsUsed;&#xA;         bool completed;&#xA;         decoder.Convert(bytes, bytesPos, bytes.Length - bytesPos, chars, charsPos, chars.Length - charsPos, false,&#xA;             out bytesUsed, out charsUsed, out completed);&#xA;         bytesPos &#x2B;= bytesUsed;&#xA;         charsPos &#x2B;= charsUsed;&#xA;     }&#xA;     Console.WriteLine(new string(chars));&#xA; }&#xA;&#xA;&#xA;On the first call, the Convert will convert the first three bytes into three characters, and stop. The JSON.Net code will then ask it to fill to the end of the buffer (simulated by the inner loop), but at that point, the Convert method will throw, because it has just one character available in the buffer to write to, but it can&#x2019;t write that character.&#xA;Why is that? Look at the poo string above. How many character does it take?&#xA;If you answered four, you are correct visually, and wrong in buffer sense. This string actually takes 5 characters to represent. As I mentioned, in order to hit this error, we have to had a particular set of things align just right (or wrong). Even a single space difference would align things so no multi byte character would span the 1KB boundary.&#xA;The solution, by the way, was to drop the optimization, sadly, we&#x2019;ll revisit this at a later time, probably, but now we&#x2019;ll have a way to confirm that this scenario is also covered.</p>
+        <a href="https://enterprisecraftsmanship.com/posts/automating-ui-tests-wpf-applications-pluralsight-course/" target="_blank"><h1 class="title mb-6">Automating UI Tests for WPF Applications Pluralsight course</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: September 21, 2015
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My first course&#xA0;for Pluralsight went live!&#xA; In it, I talk about techniques and best practices for building a UI test suite for WPF applications.&#xA; During the course, I go through such topics as:&#xA;   Why we should invest our time into UI tests in the first place.&#xA;  Different types of manual tests and which of them we can automate.&#xA;  The comparison of Coded UI from Microsoft and open source White from TestStack.</p>
         <a href="https://ayende.com/blog/172006/speaking-architecture-tower-of-babel-in-foocafe-oct-5th" target="_blank"><h1 class="title mb-6">Speaking</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: September 11, 2015
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Another principle we should follow when building a software project is the DRY principle. The abbreviation stands for Don&#x2019;t Repeat Yourself. While it seems pretty straightforward and intuitive, this principle is more than meets the eye. Let&#x2019;s see how it is so.</p>
-        <a href="https://ayende.com/blog/171906/find-the-bug-the-concurrent-memory-buster" target="_blank"><h1 class="title mb-6">Find the bug</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 11, 2015
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is test code, to check something out, and it blew up in my face after consuming all the memory on the machine.  Can you see why?  Parallel.For(0, 10, i =&gt;&#xA;{&#xA;    var list = new List&lt;int&gt;();&#xA;    int c = 0;&#xA;    int sum = 0;&#xA;    for (int x = 0; x &lt; 10000; i&#x2B;&#x2B;)&#xA;    {&#xA;        if (c != list.Capacity)&#xA;        {&#xA;            c = list.Capacity;&#xA;            sum &#x2B;= c;&#xA;        }&#xA;        list.Add(sum);&#xA;    }&#xA;});</p>
-        <a href="https://ayende.com/blog/171937/the-useless-text-book-algorithms" target="_blank"><h1 class="title mb-6">The useless text book algorithms</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 10, 2015
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was listening to the Programming Touchdown podcast, and on Episode 43, around the 13:00 minute mark, there was the following quote:  I can count on one, maybe two hands, the number of times in my entire career where I need to use&#x2026; like the algorithm I used made an impactful difference. Most of the time, it doesn&#x2019;t matter, architecture can matter, sometimes. Like, true, textbook algorithms. This is roughly what it felt like to hear this&#x2026;  I mean, seriously! Okay, I write database engines for a living. Part of my job is to look at academic literature to see if there are good ways to improve what we are doing. But you know what, let us say that building database engines is something special, and that your regular web developer doesn&#x2019;t need any of it. Let us see how right that is, shall we? I&#x2019;m going to use The Art of Computer Programming by Donald E. Knuth as an example here, because that certain match the definition of a text book. Reading just the table of contents:  Data structure - Stack, Queues, Linked Lists, Arrays, Binary Trees. Concepts: Co-routines (async in C#, promises in JS, etc), Random Numbers, how floating points number actually work. Sorting algorithms, searching sorted &amp; unsorted data. Saying that algorithms don&#x2019;t matter is about taking decades of research and throwing it down the tube, because the machine is powerful enough for me to not notice that I&#x2019;m brute forcing a solution at O(N**2)</p>
         <div class="button flex justify-between">
             <a href="232.html"><span class="back arrow"></span></a>
 

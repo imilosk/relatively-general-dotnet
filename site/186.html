@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/177025/low-level-voron-optimizations-recyclers-do-it-over-and-over-again" target="_blank"><h1 class="title mb-6">Low level Voron optimizations</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: February 20, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the key rules in optimization work is that you want to avoid work as much as possible. In fact, any time that you can avoid doing work that is a great help to the entire system. You can do that with caching, buffering, pooling or many other such common patterns.  With Voron, one of our most common costs is related to writing to files. We are doing quite a lot of work around optimizing that, but in the end, this is file I/O and it is costly. A big reduction in the cost of doing such I/O is to pre-allocate the journal files. That means that instead of each write extending the file, we ask the operation system to allocate it to its full expected size upfront. This saves time and also ensures that the OS has a chance to allocate the entire file in as few fragments as it possible can. However, &#x643;&#x644; &#x643;&#x644;&#x628; &#x644;&#x647; &#x64A;&#x648;&#x645;&#x647; (every dog has its day), and eventually a journal has outlived its usefulness, which means that it is time to make a hotdog. Or, as the case may be, delete the now useless journal file. Of course, eventually the current journal file will be full, and we&#x2019;ll need a new journal file, in which case we&#x2019;ll ask the OS to allocate us a new one, and pay the cost of doing all of this I/O and the cost of file allocations. Hm&#x2026; that seems pretty stupid, isn&#x2019;t it, when you think about the whole system like that&#x2026; Instead we now reuse those journals. We rely on the fact that file rename is atomic in both Windows and Posix, and so we can avoid expensive allocation calls and reuse the buffers. Here is what this looks like, when doing heavy writes benchmark:   It is important to note that we also have to do some management here (to only keep pending journals for a period of time if they aren&#x2019;t being used) but also need to handle a very strange case. Because we are now reusing a valid journal file, we now have a case where we might read valid transactions, but ones that are obsolete. This means that we need to be aware that beyond just garbage, we might have to encounter some valid data that is actually invalid. That made us tighten our journal validation routine by quite a bit.&#xA0;  There is also another advantage of this approach is that this also plays very well with the underlying hardware. The reuse of the already allocated files means that the disk has to do a lot less work, it reduces fragmentation and it allows much faster responses overall. According to research papers, the difference can be a factor of 4 difference on modern SSD drives. This is a really good thing, since this means that this approach has wide applicability across mass storage devices (SSD, HDD, etc). I actually had a meeting with a storage company to better understand the low level details of how a disk manages the bits, and some of this behavior is influenced by those discussions.  I&#x2019;m ignoring a lot of previous work that we have done around that (aligned writes, fixed sizes, pre-allocation, etc) of course, and just focusing on the new stuff. Some of that only applies to that particular manufacturer disks, but a lot of that has broader applicability. In short, the idea is that if we can keep the amount of writes we do to a few hot spots, the disk can recognize that and organize things so this would be optimized. You can read a bit more about this here, where it discusses the notion of multiple internal storage tiers inside a disk. The idea is that we provide the disk with an easily recognizable pattern of work that it can optimize. We looked at using the disk low level options to tell it directly what we expect from it, but that is both hard to do and will only work in specific brand of disks. In particular, with cloud storage, it is very common to just lose all such notions of being able to pass hints to the disk itself, even while the underlying storage could handle it. (In the previous presentation, this is call I/O tagging and latency / priority hints). Instead, by intentionally formatting our I/O in easily recognizable pattern, we have much higher applicability and ensure that the Right Thing will happen. Sequential writes, in particular (the exact case for journals) will typically hit a non volatile buffer and stay there for a while, letting the disk optimize its I/O behavior even further. Another good read on this is here, where it talks about StableBuffer (you can ignore all the other stuff about decomposing and reoredering I/O), just the metrics about how much a focused write like that can help is very good. Other resource also indicate that this is an optimal data access pattern, preserving the most juice from the drive and giving us the best possible performance.</p>
+        <a href="https://www.stevejgordon.co.uk/things-ive-learnt-this-week-19-february" target="_blank"><h1 class="title mb-6">Things I&#x2019;ve Learnt This Week (19th February)</h1></a>
+        <p class="mb-2">by Steve Gordon</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: February 19, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Week 4 of my series, sharing things I&#x2019;ve learnt, read, watched and listened to, in the pursuit of expanding my knowledge&#xA0;about software development. A slightly shorter set of links this week, things have been fairly busy so I&#x2019;ve had less time to keep up with all of the fantastic content. Things I&#x2019;ve Learned That I [&#x2026;]</p>
         <a href="https://ayende.com/blog/176875/ravendb-conference-videos-should-i-use-a-document-database" target="_blank"><h1 class="title mb-6">RavenDB Conference videos</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: February 13, 2017
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this talk from the RavenDB conference, Dan Bishop is talking about lessons learned from running RavenDB in production for a very long time. It&#x27;s easy, fun, and simple to get a prototype application built with RavenDB, but what happens when you get to the point of shipping v1.0 into Production? Many of the subtle decisions made during development can have undesirable consequences in Production. In this session, Dan Bishop will explore some of the pain points that arise when building, deploying, and supporting enterprise-grade applications with RavenDB.</p>
-        <a href="https://www.stevejgordon.co.uk/things-ive-learnt-this-week-12th-february" target="_blank"><h1 class="title mb-6">Things I&#x2019;ve Learnt This Week (12th February)</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 12, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Week 3 of my series, sharing things I&#x2019;ve learnt, read, watched and listened to, in the pursuit of expanding my knowledge&#xA0;about software development. Things I&#x2019;ve Learned Dependency Injection in Middleware An important thing to consider when building custom Middleware in ASP.NET Core &#x2013; If you are injecting a dependency into the constructor of your Middleware [&#x2026;]</p>
-        <a href="https://www.stevejgordon.co.uk/migrating-full-net-framework-net-core" target="_blank"><h1 class="title mb-6">Migrating from .NET Framework to .NET Core</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 11, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">What better way to start the new year than with some coding? In my case I&#x2019;d found a bit of time during the end of my Christmas vacation to tackle an issue on allReady&#xA0;I&#x2019;d been wanting to work on for a while. Before getting into the issue, if you want to read more about what [&#x2026;]</p>
         <div class="button flex justify-between">
             <a href="185.html"><span class="back arrow"></span></a>
 

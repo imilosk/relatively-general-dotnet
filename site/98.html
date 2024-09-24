@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/188801-A/vorons-roaring-set-part-i" target="_blank"><h1 class="title mb-6">Voron&#x2019;s Roaring Set: Part I</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 29, 2019
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Following my posts about search, I wanted to narrow my focus a bit and look into the details of implementing a persistent data structure inside Voron.Voron is RavenDB&#x2019;s storage engine and forms the lowest layers of RavenDB. It is responsible for speed, safety, transactions and much more. It is also a very low level piece of code, which has a lot of impact on the design and implementation.Some of the things that we worry about when worrying Voron code are:Performance &#x2013; reduce computation / allocations (ideally to zero) for writes.Zero copies &#x2013; no cost for reads.Safety &#x2013; concurrent transactions can operate without interfering with one another.Applicability &#x2013; we tend to implement low level features that enable us to do a lot more on the higher tiers of the code.Scale &#x2013; handling data that may be very large, millions and billions of results.In this case, I want to look into what it would take to implement a persistent set. If I was working in memory, I would be using Set&lt;Int64&gt;, but when using a persistent data structure, things are more interesting. The set we use will simply record Int64 values. This is important for a bunch of reasons. First, Int64 is big, such values are used as file pointers, artificial ids, etc. Even though it seems limiting, we can get a lot more functionality than expected. Second, if we are using a set of Int64, we can implement that using a bitmap. A set value indicate that the value is in the set, which allows us to do set union, intersection and exclusion cheaply. The only problem here is that a bitmap with Int64 values is&#x2026; a problem. Imagine that I have the following code:set.Add(82_100_447_308);We would need to use 76GB(!) of memory to hold a bitmap for this set. That is obviously not going to be a workable solution for us. Luckily, there are other alternatives. Roaring Bitmaps are efficient in both time and space, so that is great. We just need to have an implementation that can work with a persistent model.In order to understand how I&#x2019;m going to go about implementing this feature, you need to understand how Voron is built. Voron is composed of several layers, the paging layer, which managed transactions and ACID and the data structure layer, which managed B&#x2B;Trees, tables, etc.In this case, we are implementing something at the data structure layer. And the first hurdle to jump through is decide how the data should look like. On the fact of it, this is a fairly simple decision, most of the decisions has already been made and outline in the previous post. We are going to have a sorted array of segment metadata, which will host individual segments with the set bits. This works if we have a single set, but in our case, we expect lots.If we are going to use this for storing the posting lists, we have to deal with the following scenarios (talking about the specific documents matching the terms in the index):Many such lists that have a single item (unique id, date, etc)Lots of lists that have just a few values (Customer&#x2019;s field in an order, for example)Few lists that have many values ( OrderCompleted: true, for example, can be safely expected to be about 99% of the total results) Many lists that have moderate amount of values (Each of the Tags options , for example)That means that we have to think very carefully about each scenario. The third and forth options are relatively similar and can probably be best served by the roaring bitmap that we discussed. But what about the first two?To answer that, we need to compute the metadata required to maintain the roaring set. At a minimum, we are going to have one SegmentMetadata involved, but we&#x2019;ll also need an offset for that segment&#x2019;s data, so that means that the minimum size involved has got to be 16 bytes (SegmentMetadata is 8 bytes, and a file offset is the same). There is also some overhead to store these values, which is 4 bytes each. So to store a single value using roaring set we&#x2019;ll need:16 bytes for the segment metadata and actual segment&#x2019;s offset4 bytes storage metadata for the previous line&#x2019;s data2 bytes (single short value) to mark the single flipped bit4 bytes storage metadata for the segment itselfIn short, we are getting to 26 bytes overhead if we just stored everything as a roaring set. Instead of doing that, we are going to try to do better and optimize as much as possible the first two options (unique id and very few matches). We&#x2019;ll set a limit of 28 bytes (which, together with the 4 bytes storage metadata will round up to nice 32 bytes). Up to that limit, we&#x2019;ll simple store the document ids we have as delta encoded varint.Let&#x2019;s say that we need to store the following document id lists:&#xA;&#xA;&#xA;List&#xA;Encoding&#xA;&#xA;&#xA;[12394]&#xA;[234, 96]&#xA;[319333, 340981,342812][229, 190, 19, 144, 169, 1, 167, 14]&#xA;&#xA;&#xA; You can see that the first list, which is 8 bytes in size, we encoded using merely 2 bytes. The second list, composed of three 8 bytes values (24 bytes) was encoded to merely 8 bytes. Without delta encoding, that value would be decoded to: [229, 190, 19, 245, 231, 20, 156, 246, 20], an additional byte. This is because we substract from each number the previous one, hopefully allowing to pack the value in a much more compact manner.With a size limit of 28 bytes, we can pack quite a few ids in the list. In my experiments, I could pack up to 20 document ids (so 160 bytes, without encoding) into that space with realistic scenario. Of course, we may get a bad pattern, but that would simply mean that we have to build the roaring set itself. I&#x2019;m going to go ahead and do just that, and then write a post about the interesting tidbits of the code that I&#x2019;ll encounter along the way.</p>
+        <a href="https://enterprisecraftsmanship.com/posts/ddd-bulk-operations/" target="_blank"><h1 class="title mb-6">DDD and bulk operations</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 28, 2019
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Combining bulk operations with Domain-Driven Design is a tough problem. In this article, we&#x2019;ll look at why that is so and discuss ways to marry the two.</p>
         <a href="https://ayende.com/blog/188833-B/using-data-modeling-to-deal-with-shady-clients" target="_blank"><h1 class="title mb-6">Using data modeling to deal with shady clients</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: October 16, 2019
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last updated: 13 October 2023 A pain point for some organizations is figuring out how to run tests that involve databases. These are not&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://www.stevejgordon.co.uk/health-checks-with-grpc-and-asp-net-core-3" target="_blank"><h1 class="title mb-6">Health Checks with gRPC and ASP.NET Core 3.0</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 15, 2019
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, we will explore a couple of options to apply health checks to your gRPC server running on ASP.NET Core 3.0. Health checks are a common requirement. In particular, in containerised environments, they are required so that the container orchestrator and load balancers know which services are actually functioning. This post is part [&#x2026;]</p>
-        <a href="https://enterprisecraftsmanship.com/posts/combining-asp-net-core-attributes-with-value-objects/" target="_blank"><h1 class="title mb-6">Combining ASP.NET Core validation attributes with Value Objects</h1></a>
-        <p class="mb-2">by Vladimir Khorikov</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 15, 2019
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a continuation of the article series about some more advanced error handling techniques.</p>
         <div class="button flex justify-between">
             <a href="97.html"><span class="back arrow"></span></a>
 

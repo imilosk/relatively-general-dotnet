@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4704/the-smallest-bugs-the-biggest-problems-part-ii" target="_blank"><h1 class="title mb-6">The smallest bugs, the biggest problems &#x2013; Part II</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 26, 2010
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 11/22/2010In a previous post, I talked about how I found the following (really nasty) bug in RavenDB&#x2019;s managed storage (which is still considered unstable, btw):     When deleting documents in a database that contains more than 2 documents, and&#xA0; the document(s) deleted are deleted in a certain order, RavenDB would go into 100% CPU. The server would still function, but it would always think that it had work to do, even if it didn&#x2019;t have any.   Now, I want to talk about the actual bug.     What I did wrong here is to reuse the removed and value parameters in the second call to TryRemove. That call is internal, and is only needed to properly balance the tree, but what it ended up doing is always return the removed/value from the right side of the tree.  Compounding the problem is that I only actually used the TryRemove value in a single location, and even then, it is a mistake. Take a look:    That meant that I actually looked for the problem in the secondary indexes for a while, before realizing that the actual problem was elsewhere.</p>
+        <a href="https://ayende.com/blog/4703/find-the-bug-a-broken-tree" target="_blank"><h1 class="title mb-6">Find the bug</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 25, 2010
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 11/22/2010This method has a bug, a very subtle one. Can you figure it out?     public IBinarySearchTree&lt;TKey, TValue&gt; TryRemove(TKey key, out bool removed, out TValue value)&#xA;{&#xA;    IBinarySearchTree&lt;TKey, TValue&gt; result;&#xA;    int compare = comparer.Compare(key, theKey);&#xA;    if (compare == 0)&#xA;    {&#xA;        removed = true;&#xA;        value = theValue;&#xA;        // We have a match. If this is a leaf, just remove it &#xA;        // by returning Empty.  If we have only one child,&#xA;        // replace the node with the child.&#xA;        if (Right.IsEmpty &amp;&amp; Left.IsEmpty)&#xA;            result = new EmptyAVLTree&lt;TKey, TValue&gt;(comparer, deepCopyKey, deepCopyValue);&#xA;        else if (Right.IsEmpty &amp;&amp; !Left.IsEmpty)&#xA;            result = Left;&#xA;        else if (!Right.IsEmpty &amp;&amp; Left.IsEmpty)&#xA;            result = Right;&#xA;        else&#xA;        {&#xA;            // We have two children. Remove the next-highest node and replace&#xA;            // this node with it.&#xA;            IBinarySearchTree&lt;TKey, TValue&gt; successor = Right;&#xA;            while (!successor.Left.IsEmpty)&#xA;                successor = successor.Left;&#xA;            result = new AVLTree&lt;TKey, TValue&gt;(comparer, deepCopyKey, deepCopyValue, successor.Key, &#xA;                successor.Value, Left, Right.TryRemove(successor.Key, out removed, out value));&#xA;        }&#xA;    }&#xA;    else if (compare &lt; 0)&#xA;        result = new AVLTree&lt;TKey, TValue&gt;(comparer, deepCopyKey, deepCopyValue, &#xA;            theKey, theValue, Left.TryRemove(key, out removed, out value), Right);&#xA;    else&#xA;        result = new AVLTree&lt;TKey, TValue&gt;(comparer, deepCopyKey, deepCopyValue,&#xA;            theKey, theValue, Left, Right.TryRemove(key, out removed, out value));&#xA;    return MakeBalanced(result);&#xA;}</p>
         <a href="https://ayende.com/blog/4702/dallas-days-of-net-march-4-5" target="_blank"><h1 class="title mb-6">Dallas Days of .NET &#x2013; March 4-5</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: November 20, 2010
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 11/18/2010 Since RavenDB&#x2019;s indexing is based on Lucene, we get a lot of advantages. One of them is supporting suggestions.   What is the Raven Suggest feature?&#xA0; Let us say that we give the user the option to perform some query, but the query that they sent us isn&#x2019;t returning enough results (or non at all).  We can ask RavenDB to figure out what the user meant. Here is the code:      var q = from user in session.Query&lt;User&gt;(&quot;Users/ByName&quot;)&#xA;         where user.Name == name&#xA;         select user;&#xA;  &#xA;&#xA;Now, we can call q.FirstOrDefault() on this query, and see if we got any results. If we didn&#x2019;t get a result, we can now ask RavenDB for help:&#xA;&#xA;&#xA;   var suggestionQueryResult = q.Suggest();&#xA; Console.WriteLine(&quot;Did you mean?&quot;);&#xA; foreach (var suggestion in suggestionQueryResult.Suggestions)&#xA; {&#xA;     Console.WriteLine(&quot;\t{0}&quot;, suggestion);&#xA; }&#xA;  &#xA;&#xA;This will produce the following output:&#xA;&#xA;&#xA;  Enter user name: oren&#xA;Found user: users/1&#xA;Enter user name: ore&#xA;Did you mean?&#xA;        oren&#xA;Enter user name: onre&#xA;Did you mean?&#xA;        oren&#xA;  &#xA;&#xA;&#xA;&#xA;This is a nice little feature, which can really make a difference in terms of your application&#x2019;s user experience.</p>
-        <a href="https://ardalis.com/software-craftsmanship-2011-calendar/" target="_blank"><h1 class="title mb-6">Software Craftsmanship 2011 Calendar</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: November 19, 2010
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The folks at NimblePros have put together a pretty sweet 2011 calendar showcasing principles of software craftsmanship and agile software&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/4695/nhibernate-complex-relationships" target="_blank"><h1 class="title mb-6">NHibernate</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: November 19, 2010
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 11/18/2010I got an interesting question today (I am teaching my NHibernate course now).   The tabular structure is similar to this:     But the desired object structure is:     That is quite different than the tabular model, but it is actually very easy to handle this with NHibernate.  Here are the mapping for the Address entity. We use the &lt;join/&gt; tag to have an entity that spans more than a single table:     &lt;class name=&quot;Address&quot;&#xA;       table=&quot;Addresses&quot;&gt;&#xA;  &lt;id name=&quot;Id&quot;&gt;&#xA;    &lt;generator class=&quot;identity&quot;/&gt;&#xA;  &lt;/id&gt;&#xA;  &lt;property name=&quot;City&quot; /&gt;&#xA;&#xA;  &lt;join table=&quot;PeopleAddresses&quot; &gt;&#xA;    &lt;key column=&quot;AddressId&quot;/&gt;&#xA;    &lt;property name=&quot;IsDefault&quot;/&gt;&#xA;    &lt;property name=&quot;ValidFrom&quot;/&gt;&#xA;    &lt;property name=&quot;ValidTo&quot;/&gt;&#xA;  &lt;/join&gt;&#xA;&#xA;&lt;/class&gt;&#xA;  &#xA;&#xA;We then map the Person, using standard many-to-many mapping for the addresses:&#xA;&#xA;&#xA;   &lt;class name=&quot;Person&quot;&#xA;             table=&quot;People&quot;&gt;&#xA;&#xA;   &lt;id name=&quot;Id&quot;&gt;&#xA;     &lt;generator class=&quot;identity&quot;/&gt;&#xA;   &lt;/id&gt;&#xA;   &lt;property name=&quot;Name&quot; /&gt;&#xA;&#xA;   &lt;bag name=&quot;Addresses&quot; table=&quot;PeopleAddresses&quot; inverse=&quot;true&quot;&gt;&#xA;     &lt;key column=&quot;PersonId&quot;/&gt;&#xA;     &lt;many-to-many class=&quot;Address&quot; column=&quot;AddressId&quot;/&gt;&#xA;   &lt;/bag&gt;&#xA;   &#xA; &lt;/class&gt;&#xA;  &#xA;&#xA;There is just one thing thing to be aware of, you can&#x2019;t add new addresses via the Person.Addresses collection, because the PeopleAddresses table has more data in it than just the keys. Presumably, you are handling this in some other fashion already.&#xA;&#xA;All in all, this is a pretty elegant solution.</p>
         <div class="button flex justify-between">
             <a href="391.html"><span class="back arrow"></span></a>
 

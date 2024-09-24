@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4806/refactoring-toward-frictionless-odorless-code-a-broken-home-controller" target="_blank"><h1 class="title mb-6">Refactoring toward frictionless &amp; odorless code</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 09, 2011
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 3/30/2011Previous, our HomeController looked like this:     public class HomeController : SessionController&#xA;{&#xA;    public ActionResult Blog(int id)&#xA;    {&#xA;        var blog = Session.Get&lt;Blog&gt;(id);&#xA;&#xA;        return Json(blog, JsonRequestBehavior.AllowGet);&#xA;    }&#xA;}&#xA;  &#xA;&#xA;My model is defined as:&#xA;&#xA;&#xA;  &#xA;&#xA;&#xA;Remember that the previous post we have changed the session management from the request scope to the action scope?&#xA;&#xA;Well, that meant that we have just broken this code&#x2026;&#xA;&#xA;But can you see how?</p>
+        <a href="https://ayende.com/blog/4805/refactoring-toward-frictionless-odorless-code-limiting-session-scope" target="_blank"><h1 class="title mb-6">Refactoring toward frictionless &amp; odorless code</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 08, 2011
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 3/30/2011In the previous posts, we have looked at how we are going to setup an application using NHibernate. We set it up using:         public MvcApplication()&#xA;    {&#xA;        BeginRequest &#x2B;= (sender, args) =&gt;&#xA;        {&#xA;            CurrentSession = sessionFactory.OpenSession();&#xA;        };&#xA;        EndRequest &#x2B;= (o, eventArgs) =&gt;&#xA;        {&#xA;            var session = CurrentSession;&#xA;            if (session != null)&#xA;            {&#xA;                session.Dispose();&#xA;            }&#xA;        };&#xA;    }&#xA;  &#xA;&#xA;But this code is problematic. It is problematic because the session is open for the lifetime of the request. That is a problem, but probably not because of what you think. The #1 reason for issues like Select N&#x2B;1 is people accessing lazy loaded properties in the views.&#xA;&#xA;One good way of avoiding that is limiting the session scope only to the action, so when rendering the view, the session is not available. Therefor, every attempt to lazy load, will immediately throw. With ASP.Net MVC, this is very easy:&#xA;&#xA;&#xA;  public class NHibernateActionFilter : ActionFilterAttribute&#xA;{&#xA;    private static readonly ISessionFactory sessionFactory = BuildSessionFactory();&#xA;&#xA;    public static ISession CurrentSession&#xA;    {&#xA;        get { return HttpContext.Current.Items[&quot;NHibernateSession&quot;] as ISession; }&#xA;        set { HttpContext.Current.Items[&quot;NHibernateSession&quot;] = value; }&#xA;    }&#xA;&#xA;    private static ISessionFactory BuildSessionFactory()&#xA;    {&#xA;        return new Configuration()&#xA;            .Configure()&#xA;            .BuildSessionFactory();&#xA;    }&#xA;&#xA;    public override void OnActionExecuting(ActionExecutingContext filterContext)&#xA;    {&#xA;        CurrentSession = sessionFactory.OpenSession();&#xA;    }&#xA;&#xA;    public override void OnActionExecuted(ActionExecutedContext filterContext)&#xA;    {&#xA;&#xA;        var session = CurrentSession;&#xA;        if (session != null)&#xA;        {&#xA;            session.Dispose();&#xA;        }&#xA;    }&#xA;}&#xA;  &#xA;&#xA;We need to modify the SessionController as well, so it would now be:&#xA;&#xA;&#xA;  public class SessionController : Controller&#xA;{&#xA;     public HttpSessionStateBase HttpSession&#xA;     {&#xA;          get { return base.Session; }&#xA;     }&#xA;&#xA;     public new ISession Session { get { return NHibernateActionFilter.CurrentSession; } }&#xA;}&#xA;  &#xA;&#xA;Of course, we have broken the HomeController now, but we will discuss how in the next post.</p>
         <a href="https://ayende.com/blog/4804/refactoring-toward-frictionless-odorless-code-hiding-global-state" target="_blank"><h1 class="title mb-6">Refactoring toward frictionless &amp; odorless code</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: March 31, 2011
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Carl and Richard talk to Oren Eini, aka Ayende Rahein, about RavenDB. RavenDB is a NoSQL JSON document database. Oren explains how he came to the realization that he needed to build his own data store, and the advantages of document databases over relational databases. Is SQL dead? Not hardly, but RavenDB is an interesting addition to your data solution!   You can listen to it here.</p>
-        <a href="https://ardalis.com/introducing-pair-programming-at-cinci-day-of-agile/" target="_blank"><h1 class="title mb-6">Introducing Pair Programming at Cinci Day Of Agile</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 30, 2011
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last weekend I presented at the Cincinnati Day of Agile event on Introducing Pair Programming (see on slideshare).&#xA0; The event was nearly&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/4796/the-nhibernate-course-is-arrived-to-paris" target="_blank"><h1 class="title mb-6">The NHibernate Course is arrived to Paris</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 30, 2011
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My NHibernate Course (4 days of digging into the heart &amp; core of NHibernate) is arriving to Paris.   On the 18th April Sebastien Lambla will be teaching this course (in French).  During the course we build a practical application together, that demonstrates all important data management patterns in Nhibernate. You will learn how to use this O/R mapping tool efficiently in your applications to save time and effort on communicating with database storage.   Click here to register.</p>
         <div class="button flex justify-between">
             <a href="377.html"><span class="back arrow"></span></a>
 

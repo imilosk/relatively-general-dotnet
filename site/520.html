@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ardalis.com/reducing-sql-lookup-tables-and-function-properties-in-nhibernate/" target="_blank"><h1 class="title mb-6">Reducing SQL Lookup Tables and Function Properties in NHibernate</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 05, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the points made in Jeffrey&#x2019;sagile development boot camp last week that struck a chord with me was that many database-centric designs&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://ayende.com/blog/3634/windsor-imodelinterceptersselector" target="_blank"><h1 class="title mb-6">Windsor - IModelInterceptersSelector</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 05, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my previous post I introduced the basis of context as an architectural pattern. Now I want to talk about how we can implement that using Windsor and a new extensibility point: IModelInterceptersSelector. The interface is defined as: /// &lt;summary&gt;&#xA;/// Select the appropriate interecptors based on the application specific&#xA;/// business logic&#xA;/// &lt;/summary&gt;&#xA;public interface IModelInterceptorsSelector&#xA;{&#xA;    /// &lt;summary&gt;&#xA;    /// Select the appropriate intereceptor references.&#xA;    /// The intereceptor references aren&#x27;t neccessarily registered in the model.Intereceptors&#xA;    /// &lt;/summary&gt;&#xA;    /// &lt;param name=&quot;model&quot;&gt;The model to select the interceptors for&lt;/param&gt;&#xA;    /// &lt;returns&gt;The intereceptors for this model (in the current context) or a null reference&lt;/returns&gt;&#xA;    /// &lt;remarks&gt;&#xA;    /// If the selector is not interested in modifying the interceptors for this model, it &#xA;    /// should return a null reference and the next selector in line would be executed (or the default&#xA;    /// model.Interceptors).&#xA;    /// If the selector return a non null value, this is the value that is used, and the model.Interectors are ignored, if this&#xA;    /// is not the desirable behavior, you need to merge your interceptors with the ones in model.Interecptors yourself.&#xA;    /// &lt;/remarks&gt;&#xA;    InterceptorReference[] SelectInterceptors(ComponentModel model);&#xA;&#xA;    /// &lt;summary&gt;&#xA;    /// Determain whatever the specified has interecptors.&#xA;    /// The selector should only return true from this method if it has determained that is&#xA;    /// a model that it would likely add interceptors to.&#xA;    /// &lt;/summary&gt;&#xA;    /// &lt;param name=&quot;model&quot;&gt;The model&lt;/param&gt;&#xA;    /// &lt;returns&gt;Whatever this selector is likely to add intereceptors to the specified model&lt;/returns&gt;&#xA;    bool HasInterceptors(ComponentModel model);&#xA;}&#xA;And registering it in the container is simply:&#xA;&#xA;container.Kernel.ProxyFactory.AddInterceptorSelector(selector);&#xA;Interceptors are the basis of AOP, but traditionally, you didn&#x27;t get a lot of choices in how you compose your interceptors at runtime. Using IModelInterceptersSelector make it extremely easy to modify the selection of interceptors based on relevant business logic. &#xA;Let us take the following example. We have a warehouse service that we want to add caching to. However, we can&#x27;t use the cache in the request comes from the fulfillment service. First, we define the caching interceptor, then, we define the logic that controls adding or removing it.&#xA;public class WarehouseCachingInterceptorSelector : IModelInterceptorsSelector&#xA;{&#xA;    public InterceptorReference[] SelectInterceptors(ComponentModel model)&#xA;    {&#xA;        if(model.Service!=typeof(IWarehouse))&#xA;            return null;&#xA;        if(Origin.IsFromFulfillment)&#xA;            return null;&#xA;        return new InterceptorReference[]{new InterceptorReference(typeof(WarehouseCachingInterceptor)), };&#xA;    }&#xA;&#xA;    public bool HasInterceptors(ComponentModel model)&#xA;    {&#xA;        return model.Service == typeof (IWarehouse);&#xA;    }&#xA;}&#xA;And now we get caching for everything except for fulfillment. And we get this in a clean and very easy to understand way. :-D</p>
         <a href="https://ayende.com/blog/3633/windsor-ihandlerselector" target="_blank"><h1 class="title mb-6">Windsor - IHandlerSelector</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: October 02, 2008
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Wrapping up HeadSpring&#x27;s Agile Boot Camp class this week, we&#x27;re installing VisualSVN Server locally. Running the setup is just a matter of&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/3626/new-version-of-the-book-is-out" target="_blank"><h1 class="title mb-6">New version of the book is out</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 02, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You can head to the Book Site and get a new version, because Chapters 1 - 11 (and appendix B) are available.&#xA;The only remaining chapters are #12 (DSL implementation patterns) and #13 Implementing a Real World DSL. Chapter 12 goes really well, so far, and I hope to have it ready by the end of the weekend.</p>
-        <a href="https://ayende.com/blog/3625/rambling-2nd-october" target="_blank"><h1 class="title mb-6">Rambling, 2nd October</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 02, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a post that I am going to post just to clear my head. &#xA;&#xA;&#xA;The Mac sucks. There is no good blog client for the Mac. The blog client situation on the Mac is about as bad as the difference between Lotus 1-2-3 circa 1990 and Excel 2007. I am writing this post in MarsEdit, and I have to do HTML by hand. Yuck! &#xA;&#xA;&#xA;I also used Blogo and Ecto, and none of them really come close to what I need. I don&#x27;t think that I am too demanding. I need to ability to write the posts using WYSIWYG, being able to paste images to the post and the ability to post code and have the tool do the highlighting for me.&#xA;&#xA;&#xA;I used to use WBEditor, before WLW caught my eye. Those are real blog clients. I have yet to find anything on the mac that come close. Yes, this is intentionally inflammatory in order to get more responses so I wouldn&#x27;t have to leave the Mac to post to the blog.&#xA;&#xA;&#xA;Next topic, Amazon came out with Windows on EC2, which is amazing. It means a much easier time to anyone who wants to handle cloud computing based on Windows. Yes, there are alternative, but Amazon seems to be the main one.&#xA;&#xA;&#xA;Oh, I was chosen as MVP for 2009 as well, yeah :-)&#xA;&#xA;&#xA;I would have posted the MVP logo here, but I can&#x27;t be bothered to write down the HTML code for that, because this blog client is so annoying.&#xA;&#xA;People actually notice that I am not answering to email for a period of 24 hours or less. Amazing.</p>
         <div class="button flex justify-between">
             <a href="519.html"><span class="back arrow"></span></a>
 
