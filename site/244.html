@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://enterprisecraftsmanship.com/posts/dto-vs-value-object-vs-poco/" target="_blank"><h1 class="title mb-6">DTO vs Value Object vs POCO</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 13, 2015
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this article, I&#x2019;d like to clarify the differences in DTO vs Value Object vs POCO where DTO stands for Data Transfer Object, and POCO is Plain Old CLR Object, also known as POJO in Java environment.</p>
         <a href="https://ayende.com/blog/170561/project-tamar" target="_blank"><h1 class="title mb-6">Project Tamar</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: March 27, 2015
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you use Resharper, you must have been using some (or maybe most) of its features already. But what I see a lot is that some really useful features are left unattended. I want to describe those lesser known yet very useful features that can help you in your day-to-day work.</p>
-        <a href="https://ayende.com/blog/170401/timeouts-tcp-and-streaming-operations" target="_blank"><h1 class="title mb-6">Timeouts, TCP and streaming operations</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 27, 2015
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We got a bug report in the RavenDB mailing list that was interesting to figure out.&#xA0; The code in question was: foreach(var product in GetAllProducts(session)) // GetAllProducts is implemented using streaming&#xA;{&#xA;  &#x2B;&#x2B;i;&#xA;  if (i &gt; 1000)&#xA;  {&#xA;    i = 0;&#xA;    Thread.Sleep(1000);&#xA;  }&#xA;}&#xA;&#xA;&#xA;&#xA;This code would cause a timeout error to occur after a while. The question is why? We can assume that this code is running in a console application, and it can take as long as it wants to process things.&#xA;And the server is not impacted from what the client is doing, so why do we have a timeout error here? The quick answer is that we are filling in the buffers.&#xA;GetAllProducts is using the RavenDB streaming API, which push the results of the query to the client as soon as we have anything. That lets us parallelize work on both server and client, and avoid having to hold everything in memory.&#xA;However, if the client isn&#x2019;t processing things fast enough, we run into an interesting problem. The server is sending the data to the client over TCP. The client machine will get the results, buffer them and send them to the client. The client will read them from the TCP buffers, then do some work (in this case, just sleeping). Because the rate in which the client is processing items is much smaller than the rate in which we are sending them, the TCP buffers become full.&#xA;At this point, the client machine is going to start dropping TCP packets. It doesn&#x2019;t have any more room to put the data in, and the server will send it again, anyway. And that is what the server is doing, assuming that we have a packet loss over the network. However, that will only hold up for a while, because if the client isn&#x2019;t going to recover quickly, the server will decide that it is down, and close the TCP connection.&#xA;At this point, there isn&#x2019;t any more data from the server, so the client will catch up with the buffered data, and then wait for the server to send more data. That isn&#x2019;t going to happen, because the server already consider the connection lost. And eventually the client will time out with an error. &#xA;A streaming operation require us to process the results quickly enough to not jam the network.&#xA;RavenDB also have the notion of subscriptions. With those, we require explicit client confirmation from the client to send the next batch, so a a slow client isn&#x2019;t going to cause issues.</p>
         <div class="button flex justify-between">
             <a href="243.html"><span class="back arrow"></span></a>
 

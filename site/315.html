@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/160513/ravendb-feature-of-the-year-indexing-related-documents" target="_blank"><h1 class="title mb-6">RavenDB Feature of the Year: Indexing related documents</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 24, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am pretty sure that this feature is going to be at the very top of the chart when people talk about 2.0 features that they love. This is a feature that we didn&#x2019;t plan for in 2.0. But we got held up by the memory issues, and I really needed to do something awesome rather than trolling through GBs of dump files. So I decided to give myself a little gift and do a big cool feature as a reward. Let us imagine the following scenario:   We want to search for invoices based on the customer name. That one is easily enough to do, because you can use the approach outlined here. First do a search on the customer name, then do a search based on the customer id. In most cases, this actually result in better UX, because you have the chance to do more stuff to find the right customer. That said, a common requirement that also pops up is the need to sort based on the customer name. And that is were things gets complex. You need to do things like multi map reduce, and it get hairy (or get bald, depending if you tear at your hair often or not). Let us look at another example:   I want to looks for courses that have students named Oren.&#xA0; There are solutions for that, but they aren&#x2019;t nice.  Here is where we have the awesome feature, indexing related documents:   And now we can query things like this:   And obviously, we can do all the rest, such as sort by it, do full text searching, etc. What about the more complex example? Students &amp; Courses? This is just as easy:   And then we can query it on:   But wait! Yes, I know what you are thinking. What about updates? RavenDB will take care of all of that for you behind the scenes. When the referenced document change, the value will be reindexed automatically, meaning that you will get the updated value easily.      This feature is going to deal with a lot of pain points that people are currently getting, and I am so excited I can barely sit.</p>
         <a href="https://ayende.com/blog/160417/ravendb-memory-issue-the-process" target="_blank"><h1 class="title mb-6">RavenDB Memory Issue, The Process</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: December 14, 2012
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Coming back a bit, before prefetching, we actually had something like this:  &#xA0;  With the new prefetching, we can parallelize the indexing &amp; the I/O fetching. That is good, but the obvious optimization is actually not going to the disk at all. We already have the documents we want in memory, why no send them directly to the pre fetched queue?  As you can see, we didn&#x2019;t need to even touch the disk to get this working properly. This gives us a really big boost in terms of how fast we can index things. Also note that because we already have those docs in memory, we can still merge separate writes into a single indexing batch, reducing the cost of indexing even further.</p>
-        <a href="https://ayende.com/blog/160290/ravendb-indexing-optimizations-step-ii-pre-fetching" target="_blank"><h1 class="title mb-6">RavenDB indexing optimizations, Step II&#x2013;Pre Fetching</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 13, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Getting deeper into our indexing optimization routines, when we last left it, we had the following system:  This was good because it was able to predictively decide when to increase the batch size and smooth over spikes easily. But note where we have the costs?  The next step was this:  Pre fetching, basically. What we noticed is that we were spending a lot of time just loading the data from the disk, and we changed our behavior to allow us to load things while we are indexing. So on the next indexing batch, we will usually find all of the data we needed already in memory and ready to rock. This gave us a pretty big boost in how fast we can index things , but we aren&#x2019;t done yet. In order to make this feature viable, we had to do a lot of work there. For starter, we had to make sure we would take too much memory, and we wouldn&#x2019;t impact other aspects of the database, etc. Interesting work, all around, even if I am just focusing on the high level optimizations. There is still a fairly obvious optimization waiting for us, but I&#x2019;ll discuss that in the next post.</p>
         <div class="button flex justify-between">
             <a href="314.html"><span class="back arrow"></span></a>
 

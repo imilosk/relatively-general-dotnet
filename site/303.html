@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/161890/ravendb-map-reduce-optimizations" target="_blank"><h1 class="title mb-6">RavenDB Map/Reduce optimizations</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 09, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So I was diagnosing a customer problem, which required me to write the following:  This is working on a data set of about half a million records. I took a peek at the stats and I saw this:   You can ignore everything before 03:23, this is the previous index run. I reset it to make sure that I have a clean test. What you can see is that we start out with a mapping &amp; reducing values. And you can see that initially this is quite expensive. But very quickly we recognize that we are reducing a single value, and we switch strategies to a more efficient method, and we suddenly have very little cost involved in here. In fact, you can see that the entire process took about 3 minutes from start to finish, and very quickly we got to the point where are bottle neck was actually the maps pushing data our way. That is pretty cool.</p>
         <a href="https://ayende.com/blog/161826/the-state-of-rhino-mocks" target="_blank"><h1 class="title mb-6">The state of Rhino Mocks</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: April 29, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am updating the RavenDB Course for 2.5. It is now a 3 days affair that include quite a lot of stuff. It was quite cramp at 2 days, so moving to 3 days will allow us to do a lot more and do more interesting stuff. I&#x2019;ll be giving the first 3 days RavenDB Course in about two weeks in London. Currently this is what I have:  Can you think of additional stuff that you&#x2019;ll like me to cover?</p>
-        <a href="https://ayende.com/blog/161729/ravens-storage-building-a-sorted-string-table" target="_blank"><h1 class="title mb-6">Raven&#x2019;s Storage: Building a Sorted String Table</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 29, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Applying the lessons from the leveldb codebase isn&#x2019;t going to be a straightforward task. I already&#xA0; discussed why we can&#x2019;t just use leveldb directly, so I won&#x2019;t go into that. I decided to see if I can implement a leveldb inspired storage for RavenDB. And the first thing that I wanted to try is to build an SST. That seems like an easy first step. SST are just sorted data in a file, and it require nothing much to write to them. As mentioned, we can&#x2019;t just do a line by line port of the code. As easy as that would be. The way leveldb manages memory is&#x2026; not really suitable for what we can / should do in .NET.  I want this to be an efficient .NET implementation. It is inspired, but not intended to be compatible with leveldb. The leveldb API deals with byte arrays all over the place. This makes sense for a C&#x2B;&#x2B; codebase, but it is horrible for a .NET application, especially when we expect a lot of our values to be large enough to hit the LOH. That means fragmentation, and pain down the road. Instead, our API uses ArraySegment&lt;byte&gt; for keys, and Stream for values. Since keys are expected to be relatively small, I don&#x2019;t foresee this being a problem. And the values are streams, so they are easily handled without introducing any cost from the API. Another thing that leveldb does quite a lot is batch things in memory for a while. It may be the current block, it may be the current data block, it may be the index block, but it does so quite often. That works nicely for C&#x2B;&#x2B; apps with expected small values, but not so much for our expected use case. So I want to avoid as much as possible holding items in managed memory. Here is the API for creating an SST:      1: var options = new StorageOptions();   2: using (var file = File.Create(&quot;test.sst&quot;))   3: using(var temp = new FileStream(Path.GetTempFileName(),FileMode.CreateNew,FileAccess.ReadWrite,    4:                     FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan))   5: {   6:     var tblBuilder = new TableBuilder(options, file, temp);   7:&#xA0;    8:     for (int i = 0; i &lt; 100; i&#x2B;&#x2B;)   9:     {  10:         var key = &quot;tests/&quot; &#x2B; i.ToString(&quot;0000&quot;);  11:         tblBuilder.Add(key, new MemoryStream(Encoding.UTF8.GetBytes(key)));  12:     }  13:&#xA0;   14:     tblBuilder.Finish();  15: }&#xA;As you can see, we uses two streams here, one to actually write to the table, the second is a temporary stream that we use to write the index block while we are working, then we merged it back to the actual sst file. Note that after building the table, the temp file can be deleted (indeed, we marked is as delete on close, so that would automatically happen).&#xA;That part was easy, all it required was simple I/O for generating the file. The more interesting part is going to be reading the values out.</p>
         <div class="button flex justify-between">
             <a href="302.html"><span class="back arrow"></span></a>
 

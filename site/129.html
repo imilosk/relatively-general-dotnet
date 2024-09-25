@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/184289-A/reviewing-faster-lets-check-these-numbers" target="_blank"><h1 class="title mb-6">Reviewing FASTER</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: August 29, 2018
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Before heading to the C&#x2B;&#x2B; implementation, I thought I would take the time to just walk through the FASTER codebase as it is performing a simple operation. The access violation error that I previously run into has been fixed, so I could run the benchmark. Here is my configuration:I got the following results, when running on a single thread.Total 142,603,719 ops done&#xA0; in 30 secs.This is about 4.7 million operations per second, which is certainly nice. I then decided to compare this to ConcurrentDictionary to see what kind of performance that would give me. I made the following changes, which I&#x2019;ll admit are pretty brute force way to go about it. But note that this is probably significantly less efficient then I could probably write it. Nevertheless, using ConcurrentDictionary with a single thread in the same benchmark gives me:Total 84,729,062 ops done&#xA0; in 30 secs.There isn&#x2019;t much call for using this on a single thread, though. My machine has 20 cores, so let&#x2019;s see what happens when I give FASTER its head, shall we?2,330,054,219 ops done&#xA0; in 30.021 secs.That is impressive, with about 77,668,473 operations per second. On the other hand, this is what happened when I run with 20 threads and ConcurrentDictionary:671,071,685 ops done&#xA0; in 30.024 secs.This gives us &#x201C;only&#x201D; 22,369,056 operations per second. It is clear that FASTER is much better, right? The problem is that it isn&#x2019;t much faster enough. What do I mean by this? I used idiomatic C# for the ConcurrentDictionary usage and got with 1/4 of FASTER&#x2019;s perf. The FATER codebase is doing native calls and unsafe manipulation, dedicated allocation, etc. I expect to get better perf at that point, but &#x201C;merely&#x201D; 400% improvement isn&#x2019;t enough for the kind of effort that was put into this. I run the concurrent dictionary in a sampling profiler, with 20 threads, and I got the following results. On the other hand, using FASTER for the same scenario gives:This is really interesting. You can see that the FASTER option spends all its time in either: InternalUpsert or inside the RunYcsb method (which is actually the store.Read() method that was inlined). What is more interesting is that there are no additional calls there. The InternalUpsert call is 219 lines of code, and the code uses [MethodImpl(MethodImplOptions.AggressiveInlining)] quite aggressively (pun intended). On the other hand, the ConcurrentDictionary implementation has to make virtual method calls on each call. There are several ways to handle this, including using generic struct that can eliminate most of the virtual calls. This is effectively what FASTER is doing, without the generics. FASTER also benefits from pre-allocating everything upfront. If you&#x2019;ll look at the profiler results, you can see that these are the major source of &#x201C;slowness&#x201D; in the benchmark.Given the nature of the benchmark, I feel that it is unfair to compare FASTER to persistent data stores and it should be compared more closely to a concurrent hash map. Given that this is effectively what FASTER is doing in this showcase benchmark, that seems a lot more fair. I checked the literature and we have this paper talking about concurrent hash maps where we see (Figure 2.a) numbers that near to 300 millions ops/sec for pure writes and 600 millions ops/sec for reads.</p>
         <a href="https://ayende.com/blog/184257-A/reviewing-faster-lets-start-with-managed-code" target="_blank"><h1 class="title mb-6">Reviewing FASTER</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: August 19, 2018
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My latest MSDN Magazine feature article covering What&#x27;s New in ASP.NET Core 2.1 was published a few days ago: Microsoft recently released&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://www.stevejgordon.co.uk/asp-net-core-first-look-at-global-routing-dispatcher" target="_blank"><h1 class="title mb-6">ASP.NET Core 2.2 First Look &#x2013; Endpoint Routing (aka Dispatcher)</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: August 17, 2018
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The first preview of ASP.NET Core 2.2 is due (very) soon and it will be our first chance to test the changes and new features which are expected to be released by the end of this year. ASP.NET Core 2.2 marks the next minor release of the ASP.NET Core framework, following on from the ASP.NET [&#x2026;]</p>
         <div class="button flex justify-between">
             <a href="128.html"><span class="back arrow"></span></a>
 

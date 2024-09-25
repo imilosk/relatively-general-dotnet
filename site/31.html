@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/198561-C/managing-delays-in-distributed-systems-with-ravendb" target="_blank"><h1 class="title mb-6">Managing delays in distributed systems with RavenDB</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 28, 2022
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A user came to us with an interesting scenario. They have a RavenDB cluster, which is running in a distributed manner. At some point, we have a user that creates a document inside of RavenDB as well as posts a message using SQS (Amazon queuing system) to be picked up by a separate process.&#xA;The flow of the system is shown below:&#xA;&#xA;The problem they run into is that there is an inherent race condition in the way they work. The backend worker that picks up the messages may use a different node to read the data than the one that it was written to.&#xA;RavenDB uses asynchronous replication model, which means that if the queue and the backend workers are fast enough, they may try to load the relevant document from the server before it was replicated to it. Amusingly enough, that typically happens on light load (not a mistake, mind). On high load, the message processing time usually is sufficient to delay things for replication to happen. In light load, the message is picked up immediately, exposing the race condition.&#xA;The question is, how do you deal with this scenario? If this was just a missing document, that was one thing, but we also need to handle another scenario. While the message is waiting to be processed in the queue, it may be updated by the user.&#xA;So the question now is, how do we handle distributed concurrency in a good manner using RavenDB.&#xA;The answer to this question is the usage of change vectors.&#xA0; A change vector is a string that represents the version of a document in a distributed environment. The change vector is used by RavenDB to manage optimistic concurrency.&#xA;This is typically used to detect changes in a document behind our backs, but we can use that in this scenario as well. The idea is that when we put the message on the queue, we&#x2019;ll include the change vector that we got from persisting the document. That way, when the backend worker picks up the message and starts using it, the worker can compare the change vectors.&#xA;If the document doesn&#x2019;t exist, we can assume that there is a replication delay and try later. If the document exists and the change vector is different, we know the document was modified, and we may need to use different logic to handle the message in question.</p>
         <a href="https://ayende.com/blog/198529-C/ravendb-index-cleanup-feature" target="_blank"><h1 class="title mb-6">RavenDB Index Cleanup feature</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: October 20, 2022
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When you search for some text in RavenDB, you&#x2019;ll use case insensitive search by default. This means that when you run this query:&#xA;&#xA;&#xA;&#xA;You&#x2019;ll get users with any capitalization of &#x201C;Oren&#x201D;. You can ask RavenDB to do a case sensitive search, like so:&#xA;&#xA;&#xA;&#xA;In this case, you&#x2019;ll find only exact matches, including casing.&#xA0; So far, that isn&#x2019;t really surprising, right?&#xA;Under what conditions will you need to do searches like that? Well, it is usually when the data itself is case sensitive. User names on Unix are a good example of that, but you may also have Base64 data (where case matters), product keys, etc.&#xA;What is interesting is that this is a property of the field, usually.&#xA;Now, how does RavenDB handles this scenario? One option would be to index the data as is and compare it using a case insensitive comparator. That ends up being quite expensive, usually. It&#x2019;s cheaper by far to normalize the text and compare it using ordinals.&#xA;The exact() method tells us how the field is supposed to be treated. This is done at indexing time. If we want to be able to query using both case-sensitive and case-insensitive manner, we need to have two fields. Here is what this looks like:&#xA;&#xA;We indexed the name field twice, marking it as case sensitive for the second index field.&#xA;Here is what actually happens behind the scenes because of this configuration:&#xA;&#xA;&#xA0;&#xA;The analyzer used determines the terms that are generated per index field. The first index field (Name) is using the default&#xA0;LowerCaseKeywordAnalyzer&#xA0;analyzer, while the second index field (ExactName) is using the default exact&#xA0;KeywordAnalyzer&#xA0;analyzer.</p>
-        <a href="https://ardalis.com/introducing-spectre-console/" target="_blank"><h1 class="title mb-6">Introducing Spectre.Console</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 19, 2022
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Spectre.Console is a dotnet library for making beautiful, more useful console applications. Here&#x27;s a quick introduction to getting started&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="30.html"><span class="back arrow"></span></a>
 

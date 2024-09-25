@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/167331/map-reduce-visualizer-take-ii" target="_blank"><h1 class="title mb-6">Map/Reduce visualizer, take II</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 21, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yes, I talked about this already, but we made some additional improvements that make it even cooler. Here is a document:  And here is the index:  Now, let us look at what happens when we go to the map/reduce visualizer:  This is a highly zoomed out picture, let us zoom a little (click it for higher zoom):   As you can see, we can see all the documents that have any reduce keys shared with the reduce keys from the document we started from. That is going to make explaining, and debugging, map/reduce so much easier. For that matter, here is an example of the visualizer showing us a multi step reduce. Which is an optimization that happens when we have a lot of entries for the same reduce key. Now we can actually show you how this works:  Pretty cool!</p>
         <a href="https://ardalis.com/javascript-date-tips/" target="_blank"><h1 class="title mb-6">JavaScript Date Tips</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: July 11, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m designing a new component, and I want to reduce the amount of complexity involved in dealing with it. This is a networked component, and after designing several such, I wanted to remove one area of complexity, which is the use of explicitly concurrent code. Because of that, I decided to go with the following architecture:  &#xA0; The network code is just reading messages from the network, and putting them in an in memory queue. Then we have a single threaded event loop that simply goes over the queue and process those messages. All of the code that is actually processing messages is single threaded, which make it oh so much easier to work with. Now, I can do this quite easily with a&#xA0; BlockingCollection&lt;T&gt;, which is how I usually did those sort of things so far. It is simple, robust and easy to understand. It also tie down a full thread for the event loop, which can be a shame if you don&#x2019;t get a lot of messages. So I decided to experiment with async approaches. In particular, using the BufferBlock&lt;T&gt; from the DataFlow assemblies. I came up with the following code:  var q = new BufferBlock&lt;int&gt;(new DataflowBlockOptions{    CancellationToken = cts.Token,});&#xA;This just create the buffer block, but the nice thing here is that I can setup a &#x201C;global&#x201D; cancellation token for all operations on this. The problem is that this actually generate bad exceptions (InvalidOperationException, instead of TaskCancelledException). Well, I&#x2019;m not sure if bad is the right term, but it isn&#x2019;t the one I would expect here, at least. If you pass a cancellation token directly to the method, you get the behavior I expected.&#xA;At any rate, the code for the event loop now looks like this:&#xA;&#xA;private static async Task EventLoop(BufferBlock&lt;object&gt; bufferBlock, CancellationToken cancellationToken){    while (true)    {        object msg;        try        {            msg = await bufferBlock.ReceiveAsync(TimeSpan.FromSeconds(3), cancellationToken);        }        catch (TimeoutException)        {            NoMessagesInTimeout();            continue;        }        catch (Exception e)        {            break;        }        ProcessMessage(msg);    }}&#xA;And that is pretty much it. We have a good way to handle timeouts, and processing messages, and we don&#x2019;t take up a thread. We can also be easily cancelled. I still need to run this through a lot more testing, in particular, to verify that this doesn&#x2019;t cause issues when we need to debug this sort of system, but it looks promising.</p>
-        <a href="https://ardalis.com/free-stock-photos-for-presentations/" target="_blank"><h1 class="title mb-6">Free Stock Photos for Presentations</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 10, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">6812132167_e26473b22c_mIf you&#x2019;ve graduated from basic death-by-bullet-point presentations to something that will keep your audience&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="264.html"><span class="back arrow"></span></a>
 
