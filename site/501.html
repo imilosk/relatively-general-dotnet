@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3776/nh-prof-alerts-unbounded-result-set" target="_blank"><h1 class="title mb-6">NH Prof Alerts</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 29, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a bit from the docs for NH Prof, which I am sharing in order to get some peer review. Unbounded result set is perform a query without explicitly limiting the number of returned result (using SetMaxResults() with NHibernate, or using TOP or LIMIT clauses in the SQL). Usually, this means that the application is assuming that a query will only return a few records. That works well in development and testing, but it is a time bomb in production.  The query suddenly starts returning thousands upon thousands of rows and in some cases, it is returning millions of rows. This leads to more load on the database server, the application server and the network. In many cases, it can grind the entire system to a halt, usually ending with the application servers crashing with out of memory errors.  Here is one example of a query that will trigger unbounded result set warning:  session.CreateQuery(&quot;from OrderLines lines where lines.Order.Id = :id&quot;)&#xA;       .SetParameter(&quot;id&quot;, orderId)&#xA;       .List();&#xA;&#xA;If the order have many line items, we are going to load all of them, which is probably not what we intended. A very easy fix for this issue is to add pagination: &#xA;session.CreateQuery(&quot;from OrderLines lines where lines.Order.Id = :id&quot;)&#xA;&#x9;.SetParameter(&quot;id&quot;, orderId)&#xA;&#x9;.SetFirstResult(0)&#xA;&#x9;.SetMaxResult(25)&#xA;&#x9;.List();&#xA;&#xA;Now we are assured that we need to only handle a predictable number, and if we need to work with all of them, we can page through the records as needed. But there is another common occurrence of unbounded result set, directly traversing the object graph, as in this example: &#xA;var order = session.Get&lt;Order&gt;(orderId);&#xA;DoSomethingWithOrderLines(order.OrderLines); &#xA;Here, again, we are loading the entire set (in fact, it is identical to the query we issued before) without regard to how big it is. NHibernate does provide robust handling of this scenario, using filters. &#xA;var order = session.Get&lt;Order&gt;(orderId);&#xA;var orderLines = session.CreateFilter(order.OrderLines, &quot;&quot;)&#xA;&#x9;.SetFirstResult(0)&#xA;&#x9;.SetMaxResults(25)&#xA;&#x9;.List();&#xA;DoSomethingWithOrderLines(orderLines);&#xA;This allow us to page through a collection very easily, and save us from having to deal with unbounded result sets and their consequences.</p>
         <a href="https://ayende.com/blog/3775/nh-prof-alerts-use-of-implicit-transactions-is-discouraged" target="_blank"><h1 class="title mb-6">NH Prof Alerts</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: December 23, 2008
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Rhino Security is an awesome little framework that provide security infrastructure for applications. I created that after having to rebuild a security infrastructure five times, due to changing requirements. It is implemented on top of NHibernate.  I would like to challenge you to implement Rhino Security in your data access strategy of choice. Here is the design, intro and implementation notes. And of course that the code itself is accessible here. If you think that your data access strategy is awesome, show me the code. Rhino Security is a non trivial example, but it is still quite small, about 1,700 lines of code. So that is quite doable.  Oh, and I would love to see implementations on non RDBMS platforms.  I don&#x27;t expect anyone to step up and do this, by the way. For the simple reason that I don&#x27;t think that this is possible. And yes, that is said in the vain hope that someone will actually show me one.</p>
-        <a href="https://ayende.com/blog/3766/when-your-extensibility-strategy-is-ood" target="_blank"><h1 class="title mb-6">When your extensibility strategy is OOD...</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 23, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You get to have really simple solutions. One of the reasons that I like NHibernate so much is that is allow me to use Object Oriented solutions to my problems. Case in point, we have the Rhino Security library, which provide a facility for asking security questions about your domain. Bart had an issue with Rhino Security, he wanted to extend the library to also contain a type. The original idea was to add a int field called AppSpecific, which will let each app define additional information on top of the existing domain model. That made me feel so Win32 that I had to go and sleep for a while. I suggested the following OO solution: public class BartOperation : Operation&#xA;{&#xA;      OperationType OperationIsStronglyTyped {get;set;}&#xA;&#xA;} &#xA;I mean, if you want to extend Operation, why not... extend operation?&#xA;The problem is, I think, that most people have been so brain washed by the impendence mismatch that this wouldn&#x27;t occur to them. Bart went away and implemented that suggestion, the whole exchange took less than a day.&#xA;Chose your tools carefully, and use them well, for they will reward you aplenty.</p>
         <div class="button flex justify-between">
             <a href="500.html"><span class="back arrow"></span></a>
 

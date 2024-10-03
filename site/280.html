@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/165154/big-data-search-sorting-optimizations" target="_blank"><h1 class="title mb-6">Big Data Search</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 23, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned several times that the entire point of the exercise was to just see how this works, not to actually do anything production worthy. But it is interesting to see how we could do better here. In no particular order, I think that there are at least several things that we could do to significantly improve the time it takes to sort. Right now we defined 2 indexes on top of a 1GB file, and it took under 1 minute to complete. That gives us a runtime of about 10 days over a 15TB file. Well, one of the reason for this performance is that we execute this in a serial fashion, that is, one after another. But we have to completely isolated indexes, there is no reason why we can&#x2019;t parallelize the work between them. For that matter, we are buffering in memory up to a certain point, then we sort, then we buffer some more, etc. That is pretty inefficient. We can push the actual sorting to a different thread, and continue parsing and adding to a buffer while we are adding to the buffer. We wrote to intermediary files, but we wrote to those using plain file I/O. But it is usually a lot more costly to write to disk than to compress and then write to disk.&#xA0; We are writing sorted data, so it is probably going to compress pretty well. Those are the things that pop to mind. Can you think of additional options?</p>
         <a href="https://ayende.com/blog/165153/big-data-search-the-index-format-is-horrible" target="_blank"><h1 class="title mb-6">Big Data Search</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: January 11, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;ve ever struggled to configure custom error pages in ASP.NET MVC then this post is for you.</p>
-        <a href="https://ayende.com/blog/165090/early-lock-release-transactions-and-errors" target="_blank"><h1 class="title mb-6">Early lock release, transactions and errors</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 10, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There has been quite a lot of research on the notion of early lock release as a way to improve database concurrency. For a while, Voron actually supported that, mostly because I thought that this is a good idea. Lately, however, I decided that it is anything but for modern databases. In short, this is how transactions behave:    Standard transaction Early Lock Release Transaction    Take locks Perform work Commit transaction in memory Flush transaction to log file Release locks Notify user that the transaction successfully completed   Take locks  Perform work  Commit transaction in memory  Flush transaction to log file async Release locks  Notify user that the transaction successfully completed when the log flush competes As you note, the major difference is when we release the locks. In the case of ELR, we release the locks immediately when start flushing the transaction state to log. The idea is that we don&#x2019;t need to wait for potentially length I/O to allow the next transaction to start running. However, we don&#x2019;t report the transaction as completed before we flushed the transaction. There is a tiny complication in there, the next transaction cannot start doing the async flushing to log before our transaction is also over, but that is fine and expected, anyway. However, what about error conditions? What happens if we&#x2019;ve started to flush the transaction to disk in an async manner, then we got an error. Well, the obvious thing to do here (and as called out in the paper) is to abort the transaction, and then abort any transaction that has started after the failed transaction released its locks. This is usually okay, because in general, that is no big deal at all. Aside from something like out of disk space errors (which can be resolved by pre-allocating the data), there aren&#x2019;t really any non catastrophic disk errors. So usually if the disk give you a hard time, it pretty much time to give up and go home. However, with the use of cloud computing, it is actually pretty common (however much it is a bad idea) to have a &#x201C;networked disk&#x201D;. This means that it can certainly be the case that a I/O request you made to the disk can get lost, delayed and just appear to fail (but actually go through). It is the last scenario in particular that worries me. If you actually wrote to the log, but you think that you didn&#x2019;t, what is your state now? And while I can handle that in a case where I can fail the transaction and rollback all the previous state, it is much harder to do that if I&#x2019;ve already committed the transaction in memory, since we might need to do a memory only rollback, and that isn&#x2019;t something that we are actually setup to do. In short, we&#x2019;ll be rolling back early lock release in Voron, it isn&#x2019;t worth the complexity involved, especially since we already have better ways to handle concurrency.</p>
         <div class="button flex justify-between">
             <a href="279.html"><span class="back arrow"></span></a>
 

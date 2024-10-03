@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/173667/code-through-the-looking-glass-im-the-god-of-all-oop" target="_blank"><h1 class="title mb-6">Code through the looking glass</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 16, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We typically don&#x27;t look too deeply into the overall design on a candidate&#x27;s code. Most coding tasks just aren&#x27;t big enough to warrant it.  When we do, it is typically because the candidate has done something&#x2026; peculiar. For example, we have had a candidate that send a submission with no less than 17 classes to manager reading a CSV file and populating a dictionary. At some point we knew that this candidate wasn&#x27;t going to move forward, but it became a challenge, to try to outline how the data actually traveled through that particular maze. But as much as we love Mr. Goldberg, I&#x27;m afraid that dear Rubbie isn&#x27;t going to be remembered for much longer.  Here is how this candidate code started:  static void Main(string[] args)&#xA;{&#xA;    //Call for parsing method&#xA;    HelperClass cr = new HelperClass();&#xA;    cr.CsvParser();&#xA;    cr.ToArray();&#xA;    cr.Sort();&#xA;    cr.UnifyIdLists();&#xA;    //ask the user to enter input&#xA;    string input = cr.InputReader();&#xA;&#xA;&#xA;I actually started explaining the issues in this code, but I run out of&#x2026; pretty much everything. &#xA;I have a challenge for you, can you think of a single OOP principle that isn&#x27;t being broken here?&#xA;For&#x2026; fun, I guess, you can also look at the following code, which come just after the one above:&#xA;&#xA;Start:&#xA;    //check input type&#xA;    switch (cr.InputTester(input))&#xA;    {&#xA;        case 0:&#xA;            //valid email structure, but the input is not found in the file&#xA;            List&lt;int&gt; emails = new List&lt;int&gt;();&#xA;            emails = cr.EmailSearcher(input);&#xA;            if (emails.Count == 0)&#xA;            {&#xA;                Console.WriteLine(&quot;The input you have entered has not been found in the file. \nPlease try again.&quot;);&#xA;                input = cr.InputReader();&#xA;                goto Start;&#xA;            }&#xA;&#xA;I guess someone heard that loops are a performance bottleneck in most applications and decided to do away with them.</p>
         <a href="https://ayende.com/blog/173666/code-through-the-looking-glass-all-you-need-is-a-dictionary-and-o-n" target="_blank"><h1 class="title mb-6">Code through the looking glass</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: March 03, 2016
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was talking with a few of the guys at work, and the concept of rate limiting came up. In particular, being able to limit the number of operations a particular user can do against the system. The actual scenario isn&#x27;t really important, but the idea kept bouncing in my head, so I sat down and wrote a quick test case.  Nitpicker corner: This is scratchpad code, it isn&#x27;t production worthy, tested or validated. The idea is probably best explained in code, like so:  private SemaphoreSlim _rateLimit = new SemaphoreSlim(10);&#xA;&#xA;public async Task HandlePath(HttpContext context, string method, string path)&#xA;{&#xA;    if (await _rateLimit.WaitAsync(3000) == false)&#xA;    {&#xA;        context.Response.StatusCode = 429; // Too many requests&#xA;        return;&#xA;    }&#xA;&#xA;    // actually process requests&#xA;&#xA;}&#xA;&#xA;Basically, we define a semaphore, with the maximum number of operations that we want to allow, and we wait on the semaphore when we are starting the operation.&#xA;However, there is nothing that actually releases the semaphore. Here we get into design choices.&#xA;We can release the semaphore when the request is over, which effectively gives us rate limiting in terms of concurrent requests. &#xA;The more interesting approach from my perspective was to use this:&#xA;&#xA; _timer = new Timer(state =&gt;&#xA; {&#xA;     var currentCount = 10 - _rateLimit.CurrentCount;&#xA;     if (currentCount == 0)&#xA;         return;&#xA;     _rateLimit.Release(currentCount);&#xA; }, null, 1000, 1000);&#xA;&#xA;&#xA;Using this approach, we are actually limited to 10 requests a second.&#xA;And yes, this actually allows more concurrent requests than the previous option, because if a request takes more than one second, we&#x27;ll reset its count on the timer&#x27;s tick.&#xA;I actually tested this using gobench, and it confirmed that this is actually serving exactly 10 requests / second.</p>
-        <a href="https://benfoster.io/blog/aspnet-core-multi-tenant-middleware-pipelines/" target="_blank"><h1 class="title mb-6">Multi-tenant middleware pipelines in ASP.NET Core</h1></a>
-        <p class="mb-2">by Ben Foster</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 03, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This article looks at how to create forked request pipelines so that ASP.NET Core Authentication Middleware can be used in multi-tenant applications.</p>
         <div class="button flex justify-between">
             <a href="219.html"><span class="back arrow"></span></a>
 

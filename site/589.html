@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3086/i-yield-i-yield" target="_blank"><h1 class="title mb-6">I Yield, I Yield</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 07, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am going over the ParallelFX code at the moment, and I run into this interesting method. Platform.Yield(), which turn out to be a call to SwitchToThread(), which is a method I really should have known about. Turn out that this is a way to explicitly give up the current time-slice that the thread is executing (for the current CPU only). This lead me to do some more discovery, and I found this, managed fibers implementations (I can&#x27;t find the source for this, however, and I have the SDK). This is all part of my quest to get Erlang-like support for concurrency. By that I mean that I can do things like: public void Process()&#xA;{&#xA;   var dbFuture = Spawn( AquireDataFromDB );&#xA;   var wsFuture = Spawn( AquureDataFromWS );&#xA;&#xA;   YieldUntil(dbFuture, wsFuture);&#xA;&#xA;   // do real processing here.&#xA;}&#xA;The key point is that the call to YieldUntil does not block the current thread, instead, it frees it to do start executing additional processing.&#xA;We can keep abusing the yield return approach, but that is starting to get old.</p>
         <a href="https://ayende.com/blog/3085/fluent-pipelines" target="_blank"><h1 class="title mb-6">Fluent Pipelines</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: January 04, 2008
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There is a point where a project goes beyond the pale, where the complexity goes so far out of line that it is simply ludicrous. I had such a point today. I had enough with SSIS and decided that I want to replace it with something better. I wrote an ETL tool to handle that in a few hours.  Why is this relevant? Because I have already build an ETL tool. Rhino ETL. It is quite telling when the author of a tool decide that he doesn&#x27;t want to use it. I was decidedly proud of Rhino ETL for a while, then the problems started to creep in. The problems were not in the code per se, the entire architecture of the code was overly complex. In order to handle this complexity, I had resorted to throwing code at the problem, and then more code, and more code yet again.  At the moment, the current code base has two &quot;minor&quot; problems, exception handling and threading. The bigger problem is that I don&#x27;t want to have to wade into this stinking pile and try to figure out what is going on there. I tried to be clever, and it is clever, in a horrible sort of way. I don&#x27;t have the time or patience to decipher code at the best of time, and at this point, it has gotten simply too complex. The project right now is at ~9,000 lines of code, so it is not that it is big, it is simply complex.  From the architecture perspective, I have made one huge mistake, I exposed the threading model to the application code. You can say that this stand in the root of my problems. I actually re-wrote this once already, moving from a home grown threading solution to using Retlang for threading. I made the same mistake and exposed the threading model to the application itself. Can you say: Big mistake! From the point of view of the project itself, I started by defining the DSL syntax, and then built the project around that. It turns out that this has the usual &quot;let us build the whole layer at a time&quot;. It also meant that a lot of the code had deep assumptions about the way it is called, making it unusable for using in other ways. This is excusable if we are talking about the DSL mapping layer, but not for the core code base itself. Anyway, I am ranting and I should stop. I spend six to eight hours today rewriting it from scratch.&#xA0; It doesn&#x27;t do threading, and it doesn&#x27;t have a DSL interface yet, but it does pretty much everything that the old project did, in a quarter of the lines of code, and in a way that is much safer and easier to handle than what we are using currently.</p>
-        <a href="https://ardalis.com/fall-devconnections-session-comments/" target="_blank"><h1 class="title mb-6">Fall DevConnections Session Comments</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 03, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ve been speaking at the DevConnections conferences since Fall of 2001 and have really enjoyed the experience. The speakers are a great&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="588.html"><span class="back arrow"></span></a>
 

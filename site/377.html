@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4815/when-unit-testing-a-server-why-not-use-the-server" target="_blank"><h1 class="title mb-6">When unit testing a server, why not USE the server?</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 18, 2011
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the interesting aspects of build RavenDB was that it opened up my mind to the way we can use the very nature of the server to open up additional information about the server operations.  One thing that I noticed recently is that if I need to debug a test for RavenDB, I often need to stop the current thread (the Test thread) and then literally go to the server test instance and look at what is actually going on in there.  The fun part is that this is really nice, because I can go an inspect the running test instance, see what is going on, modify things to see how they affect the behavior, etc. The only problem is that this is actually quite complex to setup manually (stop on debugger, freeze the appropriate thread, resume run, inspect server &#x2013; modify stuff there, stop on debugger, thaw thread, continue run, etc).  What occurred to me, however, is that I can codify this behavior, and end up with this:    This method will only operate while a debugger is attached, but it is going to save me a long time.&#xA0; Once I am done, I need to delete the marker document:    This is especially important if you are running in and in memory mode, since the moment the test is over, the database is completely wiped out.</p>
         <a href="https://ayende.com/blog/4814/ravendb-safe-by-default-design-it-works" target="_blank"><h1 class="title mb-6">RavenDB</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: April 11, 2011
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 3/30/2011While I don&#x2019;t really mind having global state, it tends to bite you on the ass eventually, so let us try to deal with this guy, shall we?     public class NHibernateActionFilter : ActionFilterAttribute&#xA;{&#xA;    private static readonly ISessionFactory sessionFactory = BuildSessionFactory();&#xA;&#xA;    public static ISession CurrentSession&#xA;    {&#xA;        get { return HttpContext.Current.Items[&quot;NHibernateSession&quot;] as ISession; }&#xA;        set { HttpContext.Current.Items[&quot;NHibernateSession&quot;] = value; }&#xA;    }&#xA;&#xA;    private static ISessionFactory BuildSessionFactory()&#xA;    {&#xA;        return new Configuration()&#xA;            .Configure()&#xA;            .BuildSessionFactory();&#xA;    }&#xA;&#xA;    public override void OnActionExecuting(ActionExecutingContext filterContext)&#xA;    {&#xA;        CurrentSession = sessionFactory.OpenSession();&#xA;    }&#xA;&#xA;    public override void OnActionExecuted(ActionExecutedContext filterContext)&#xA;    {&#xA;&#xA;        var session = CurrentSession;&#xA;        if (session != null)&#xA;        {&#xA;            session.Dispose();&#xA;        }&#xA;    }&#xA;}&#xA;  &#xA;&#xA;One easy way to do so would be to put the session directly where we want it to be, in the controller. We already have an extension point for that, the SessionController. Instead of referencing the global session, it can just hold its own:&#xA;&#xA;&#xA;  public class SessionController : Controller&#xA;{&#xA;    public HttpSessionStateBase HttpSession&#xA;    {&#xA;        get { return base.Session; }&#xA;    }&#xA;&#xA;    public new ISession Session { get; set; }&#xA;}&#xA;  &#xA;&#xA;Which leads us to:&#xA;&#xA;&#xA;  public class NHibernateActionFilter : ActionFilterAttribute&#xA;{&#xA;    private static readonly ISessionFactory sessionFactory = BuildSessionFactory();&#xA;&#xA;    private static ISessionFactory BuildSessionFactory()&#xA;    {&#xA;        return new Configuration()&#xA;            .Configure()&#xA;            .BuildSessionFactory();&#xA;    }&#xA;&#xA;    public override void OnActionExecuting(ActionExecutingContext filterContext)&#xA;    {&#xA;        var sessionController = filterContext.Controller as SessionController;&#xA;&#xA;        if (sessionController == null)&#xA;            return;&#xA;&#xA;        sessionController.Session = sessionFactory.OpenSession();&#xA;    }&#xA;&#xA;    public override void OnActionExecuted(ActionExecutedContext filterContext)&#xA;    {&#xA;        var sessionController = filterContext.Controller as SessionController;&#xA;&#xA;        if (sessionController == null)&#xA;            return;&#xA;        &#xA;        var session = sessionController.Session;&#xA;        if (session == null) &#xA;            return;&#xA;&#xA;        session.Dispose();&#xA;    }&#xA;}&#xA;  &#xA;&#xA;Now we have absolutely no global state, and yet we have a very easy access to the current session.&#xA;&#xA;There are still a few things missing, can you see them?</p>
-        <a href="https://ardalis.com/real-world-performance-and-the-stir-trek-web-site/" target="_blank"><h1 class="title mb-6">Real World Performance and the Stir Trek Web Site</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 10, 2011
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently joined the board responsible for organizing the Stir Trek conference in Columbus, Ohio. This is a great conference I&#x2019;ve spoken at&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="376.html"><span class="back arrow"></span></a>
 

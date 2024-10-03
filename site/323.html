@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/158881/things-we-learned-from-production-part-iv-is-your-paperwork-in-order" target="_blank"><h1 class="title mb-6">Things we learned from production, part IV&#x2013;is your paperwork in order?</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: September 28, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the major points that we worked on in the 1.2 release was making the ops team work easier. That included additional logging, like we have previously discussed, making RavenDB plays nicer with other parts of the system, adding performance counters, etc. But those are the obvious things, and this series isn&#x2019;t about the obvious things. One of the problems that we run into is that we already had a moderately good porthole into how RavenDB works.  The problem was that this porthole gave you access to the state of a single database ,which was great&#x2026; Except that in order to get a database statistics, you had to actually load that database. Imagine a system under load, and the admin need to check what is causing the load. The act of checking a database statistics will actually force that database to load, generating even more load. This is especially dangerous when we are talking about automated health monitoring tools, the fact that we monitor the health of our software shouldn&#x2019;t cause it to do additional work. In RavenDB 1.2 we have taken steps to make sure that we can report on all the active database without having to guess which ones are active and which aren&#x2019;t. We have also taken additional steps to make sure that we give the admin even more information about what is going on. You can see this pattern pretty much everywhere, in indexes, in operations, in database and server stats. There are a lot more places where we explicitly built the hooks to make it possible for the admin to figure out what is going on. The lesson from that is that you have to provide a lot of information for the administrators, so they can figure out what is going on (and that administrator may very well be you, at 2 AM, trying to diagnose a problem). At the same time, you have to be sure to provide those hooks in a way that have minimal impact on the system. Having admin hooks in place that will put undue burden on the application is seriously not a cool thing to do.</p>
         <a href="https://benfoster.io/blog/atompub-aspnet-web-api-part1/" target="_blank"><h1 class="title mb-6">Publishing content with AtomPub and ASP.NET Web API - Part 1</h1></a>
         <p class="mb-2">by Ben Foster</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: September 18, 2012
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am using db transaction isolation levels for a reason here, they make it easier to reason about what is going on.  In short, RavenDB currently supports two storage engine options, Esent and Munin. Esent is what we usually use for production, and Munin is usually used for testing. We wrote Munin as a transactional, fully managed, storage engine a while ago. And it has mostly served us well, but Esent is what we usually aim for. That is the production use case. We recently made a few changes that resulted in test failures on Munin, only in one run out of two dozens or so, but always worked with Esent. Naturally, because of the random nature of the problem, I suspected the issue being a race condition in Munin. That happened in the past ,and obviously they are very hard to root out completely. But after finally isolating everything down to a simple test case (writing to two &#x201C;tables&#x201D; with associated information), I finally figured it out. Munin is working just fine, it hasn&#x2019;t got a spec of a problem. It is just that, when we built it, I built it to support Read Commited Isolation Level. While Esent is providing Snapshot isolation level. The code assumes snapshot isolation level at some pretty level. Obviously, this sort of thing shows up as a race condition, and it is extremely hard to debug, as anyone who ever dealt with those issues in RDBMS can testify. So my task now is not to fix a bug in Munin, but to actually implement snapshot isolation. As it turned out, actually moving Munin from read committed isolation to snapshot isolation was a lot easier than finding the problem. I am torn between being pleased that I found the issue, happy that Munin doesn&#x2019;t have a bug and pissed that it took me that long.</p>
-        <a href="https://ayende.com/blog/158625/nuget-perf-the-final-part-load-testing-source-code" target="_blank"><h1 class="title mb-6">NuGet Perf, The Final Part &#x2013; Load Testing &#x2013; Source Code</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 17, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is just some logistical cleanups.&#xA;&#xA;&#x9;The code for the entire series can be found here: https://github.com/ayende/nuget.perf&#xA;&#xA;&#x9;No, I&#x2019;ll not do a similar SQL version, if you want to, I would be very interested in seeing one, but that isn&#x2019;t something that I intend to do.&#xA;&#xA;&#x9;Yes, it is a simple and trivial implementation, but that was pretty much the whole point. Being able to get to that scale without actually doing anything special is what we strive for in RavenDB.</p>
         <div class="button flex justify-between">
             <a href="322.html"><span class="back arrow"></span></a>
 

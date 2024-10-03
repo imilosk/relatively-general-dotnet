@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/162369/raven-storage-that-aint-proper-logging-for-our-kind-of-environment" target="_blank"><h1 class="title mb-6">Raven.Storage &#x2013; that ain&#x2019;t proper logging for our kind of environment</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 31, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Continuing with my work on porting leveldb to .NET, we run into another problem. The log file. The log file is pretty important, this is how you ensure durability, so any problems there are a big cause of concern. You can read a bit about the format used by leveldb here, but basically, it uses the following:      1: block := record* trailer?   2: record :=   3:  checksum: uint32    // crc32c of type and data[] ; little-endian   4:  length: uint16        // little-endian   5:  type: uint8        // One of FULL, FIRST, MIDDLE, LAST   6:  data: uint8[length]&#xA;Block is of size 32Kb. &#xA;The type can be First, Middle, End or Full. Since it is legit to split a record across multiple blocks. The reasoning behind this format are outlined in the link above.&#xA;It is also a format that assumes that you know, upfront, the entire size of your record, so you can split it accordingly. That makes a lot of sense, when working in C&#x2B;&#x2B; and passing buffers around.&#xA;&#xA0;&#xA;This is straightforward in C&#x2B;&#x2B;, where the API is basically:&#xA;&#xA;Status Writer::AddRecord(const Slice&amp; slice) &#xA;(Slice is basically just a byte array).&#xA;In .NET, we do not want to be passing buffers around, mostly because of the impact on the LOH. So we had to be a bit smarter about things, in particular, we had an interesting issue with streaming the results. If I want to write a document with a size of 100K, how do I handle that? &#xA;Instead, I wanted this to look like this:&#xA;&#xA;&#xA;   1: var buffer = BitConverter.GetBytes(seq);   2: await state.LogWriter.WriteAsync(buffer, 0, buffer.Length);   3: buffer = BitConverter.GetBytes(opCount);   4: await state.LogWriter.WriteAsync(buffer, 0, buffer.Length);   5:&#xA0;    6: foreach (var operation in writes.SelectMany(writeBatch =&gt; writeBatch._operations))   7: {   8:     buffer[0] = (byte) operation.Op;   9:     await state.LogWriter.WriteAsync(buffer, 0, 1);  10:     await state.LogWriter.Write7BitEncodedIntAsync(operation.Key.Count);  11:     await state.LogWriter.WriteAsync(operation.Key.Array, operation.Key.Offset, operation.Key.Count);  12:     if (operation.Op != Operations.Put)  13:         continue;  14:     using(var stream = state.MemTable.Read(operation.Handle))  15:         await stream.CopyToAsync(stream);  16: }&#xA;The problem with this approach is that we don&#x2019;t know, upfront, what is the size that we are going to have. This means that we don&#x2019;t know how to split the record, because we don&#x2019;t have the record until it is over. And we don&#x2019;t want (can&#x2019;t actually) to go back in the log and change things to set the record straight (pun intended).&#xA;What we ended up doing is this:&#xA;&#xA;Note that we explicitly mark the start / end of the record, and in the meantime, we can push however many bytes we want. Internally, we buffer up to 32Kb in size (a bit less, actually, but good enough for now) and based on the next call, we decide whatever the current block should be marked as good or bad.&#xA;The reason this is important is that this allows us to actually keep the same format as leveldb, with all of the benefits for dealing with corrupted data, if we need to. I also really like the idea of being able to have parallel readers on the log file, because we know that we can just skip at block boundaries.</p>
         <a href="https://ayende.com/blog/162340/ravens-scripted-index-results" target="_blank"><h1 class="title mb-6">Raven&#x2019;s Scripted Index Results</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: May 22, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, it seems like Rhino Mocks has a new daddy . In particular, Mike Meisinger has kindly agreed to take the project as the project lead.&#xA;&#xA;&#x9;You can discuss all about this in the mailing list for Rhino Mocks, or hear more about Mike&#x2019;s plans, visit his blog.</p>
-        <a href="https://ardalis.com/moving-a-site-to-windows-azure-in-5-easy-steps/" target="_blank"><h1 class="title mb-6">Moving a Site to Windows Azure in 5 Easy Steps</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 21, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of my sites is currently having issues where it&#x2019;s currently hosted. They&#x2019;re resolved by restarting the application, but that&#x2019;s gotten&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="300.html"><span class="back arrow"></span></a>
 

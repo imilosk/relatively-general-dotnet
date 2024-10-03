@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://enterprisecraftsmanship.com/posts/oop-fp-and-object-relational-impedance-mismatch/" target="_blank"><h1 class="title mb-6">OOP, FP, and object-relational impedance mismatch</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 03, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today&#x2019;s topic is gonna be about OOP, FP, and object-relational impedance mismatch. The goal of this article is to show how object-oriented and functional paradigms deal with relational data stores.</p>
         <a href="https://ayende.com/blog/176002/high-performance-field-clobbering" target="_blank"><h1 class="title mb-6">High performance field clobbering</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: October 25, 2016
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As an aside, I wonder how much stuff will break because the title of this post has  in it. The topic of this post is the following profiler output. GetSliceFromKey takes over 6% of our performance, or about 24.5 seconds out of the total run. That kinda sucks.  What is the purpose of this function? Well, RavenDB&#x2019;s document ids are case insensitive, so we need to convert the key to lower case and then do a search on our internal index. That has quite a big cost associated with it. And yes, we are aware of the pain. Luckily, we are already working with highly optimized codebase, so we aren&#x2019;t seeing this function dominate our costs, but still&#x2026; Here is the breakdown of this code:   As you can see, over 60% of this function is spent in just converting to lower case, which sucks. Now, we have some additional knowledge about this function. For the vast majority of cases, we know that this function will handle only ASCII characters, and that Unicode document ids are possible, but relatively rare. We can utilize this knowledge to optimize this method. Here is what this will look like, in code:  Basically, we scan through the string, and if there is a character whose value is over 127 we fall to the slower method (slower being relative, that is still a string conversion in less than 25 &#x3BC;s). Then we just find if a character is in the upper case range and convert it to lower case (ASCII bit analysis is funny, it was intentionally designed to be used with bit masking, and all sort of tricks are possible there) and store it in the buffer, or just store the original value.  The result?  This method went from taking 5.89% to taking just 0.6%, and we saved over 22 seconds(!) in the run. Again, this is under the profiler, and the code is heavily multi threaded. In practice, this means that the run took 3 seconds less.  Either way, we are still doing pretty good, and we don&#x2019;t have that pile of poo, so I  we&#x2019;re good.</p>
-        <a href="https://ayende.com/blog/175873/optimizing-read-transaction-startup-time-dont-ignore-the-context" target="_blank"><h1 class="title mb-6">Optimizing read transaction startup time</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 24, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We focused on opening the transaction, but we also have the context management to deal with, in this case, we have: And you can see that it cost us over 11.5% of the total request time. When we started this optimization phase, by the way, it took about 14% of the request time, so along the way our previous optimizations has also helped us to reduce it from 42 &#x3BC;s to just 35 &#x3BC;s.  Drilling into this, it become clear what is going on:   The problem is that on each context release we will dispose the ByteStringContext, and on each operation allocation we&#x2019;ll create a new one. That was done as part of performance work aimed at reducing memory utilization, and it looks like we were too aggressive there. We do want to keep those ByteStringContext around if we are going to immediately use them, after all. I changed it so the actual disposal will only happen when the context is using fragmented memory, and the results were nice.   This is a much nicer profiler output to look at, to be frank. Overall, we took the random reads scenario and moved it from million reads in 342 seconds (under the profiler) to 264 seconds (under the profiler). Note that those times are cumulative, since we run that in multiple threads, the actual clock time for this (in the profiler) is just over a minute. And that just leave us with the big silent doozy of GetDocumentsById, which now takes a whooping 77% of the request time.</p>
         <div class="button flex justify-between">
             <a href="196.html"><span class="back arrow"></span></a>
 

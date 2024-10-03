@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/1062/piping-primary-keys-and-three-hours-ill-not-get-back" target="_blank"><h1 class="title mb-6">Piping, Primary Keys and Three Hours I&#x27;ll not get back</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: February 19, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Okay, so I mentioned that I&#x27;d a query that violated a primary key constraint, and I couldn&#x27;t figure out why. Well, I finally got a hold of what was going on. It&#x27;s simple and non-obvious at the same time. Let&#x27;s start with a code example that shows the problem and then I&#x27;ll put in a couple of words about the reasons behind it. First, let&#x27;s create a table with a unique constraint (easier than a primary key):&#xA;CREATE TABLE Foo&#xA;(&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Bar INT UNIQUE&#xA;)&#xA;Now, let&#x27;s insert some data into the table:&#xA;INSERT INTO Foo&#xA;SELECT 1 UNION ALL &#xA;SELECT 2 UNION ALL&#xA;SELECT 3&#xA;So far, everything is nice and cozy, but now I want to add more numbers, so I want to make sure that I won&#x27;t break the code, so now I&#x27;ll add a guard clause to the next inserts:&#xA;INSERT INTO Foo&#xA;SELECT Kabum FROM&#xA;(&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT 4 as Kabum UNION ALL &#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT 5 as Kabum UNION ALL &#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT 5 as Kabum&#xA;) Bang&#xA;WHERE NOT EXISTS &#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; (SELECT 1 FROM Foo where Bang.Kabum = Bar)&#xA;Running the above result in this error:&#xA;Violation of UNIQUE KEY constraint &#x27;UQ__Foo__5832119F&#x27;. Cannot insert duplicate key in object &#x27;dbo.Foo&#x27;.&#xA;Do you realize what happened here? We failed because when we checked it was just fine to put 5 into Foo, but when we actually did put the second 5 into Foo, that caused a constraint violation. Go figure that when you&#x27;re dealing with sixteen million records.&#xA;The solution to this problem is to add a distinct to the select statement, that would make sure that your own query isn&#x27;t causing the very same query to fail.&#xA;On that note, I wonder if I can call it a concurrency bug.</p>
         <a href="https://ayende.com/blog/1061/best-practice" target="_blank"><h1 class="title mb-6">Best Practice</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: February 17, 2006
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I posted before on the dangers of being overly dynamic&#xA0;in code. The end result of such things is that it&#x27;s very hard to find what exactly is going on in the code. But there is a high value of using sloppy code to manage tasks you need to do one time only.    For instance, recently I began to use a combination of SQL statements and&#xA0;Regular Expressions to generate batch files / sql scripts that does any number of&#xA0;one-off&#xA0;tasks. It&#x27;s much faster than do those things by hand, and they are not worth writing something robust to hanle them.    This include cleaning a set of tables from known values, running a spesific set of scripts, etc. It&#x27;s much easier when you&#x27;ve a certain convention (all files for this table are prefixed with the table name, for example). It make working with the environment much easier, but I found that that while it&#x27;s fast to do this, it&#x27;s also very hard for other people to keep track of what I&#x27;m doing.    Much worse, it&#x27;s not easy for me to repeat the same action twice, since usually I&#x27;m changing the state that I&#x27;m working with. I guess that what I&#x27;m saying is that it is a useful technqiue, and it saves a ton of time, but I still don&#x27;t like it.</p>
-        <a href="https://ayende.com/blog/1052/batches" target="_blank"><h1 class="title mb-6">Batches</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 17, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Oren Ellenbogen has a post about IDataReader.NextResult(); I saw that method in intellisense, but I never really understood what is it.    It is used to send a batch of statements to the server (seperated by &#x27;;&#x27;, apperantly) and then gets sets of results. One thing that interests me is how this is done on Oracle, since it throws exceptions on &#x27;;&#x27;.</p>
         <div class="button flex justify-between">
             <a href="818.html"><span class="back arrow"></span></a>
 

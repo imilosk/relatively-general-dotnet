@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4783/reviewing-oss-project-whiteboard-chat-the-select-n-1-issue" target="_blank"><h1 class="title mb-6">Reviewing OSS Project</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 15, 2011
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As a reminder, I am reviewing the problems that I found while reviewing the Whiteboard Chat project during one of my NHibernate&#x2019;s Courses. Here is the method:     [Transaction]&#xA;[Authorize]&#xA;[HttpPost]&#xA;public ActionResult GetLatestPost(int boardId, string lastPost)&#xA;{&#xA;    DateTime lastPostDateTime = DateTime.Parse(lastPost);&#xA;    &#xA;    IList&lt;Post&gt; posts = &#xA;        _postRepository&#xA;        .FindAll(new GetPostLastestForBoardById(lastPostDateTime, boardId))&#xA;        .OrderBy(x=&gt;x.Id).ToList();&#xA;&#xA;    //update the latest known post&#xA;    string lastKnownPost = posts.Count &gt; 0 ? &#xA;        posts.Max(x =&gt; x.Time).ToString()&#xA;        : lastPost; //no updates&#xA;    &#xA;    Mapper.CreateMap&lt;Post, PostViewModel&gt;()&#xA;        .ForMember(dest =&gt; dest.Time, opt =&gt; opt.MapFrom(src =&gt; src.Time.ToString()))&#xA;        .ForMember(dest =&gt; dest.Owner, opt =&gt; opt.MapFrom(src =&gt; src.Owner.Name));&#xA;&#xA;    UpdatePostViewModel update = new UpdatePostViewModel();&#xA;    update.Time = lastKnownPost; &#xA;    Mapper.Map(posts, update.Posts);&#xA;&#xA;    return Json(update);&#xA;}&#xA;  &#xA;&#xA;In this post, I am going to discuss the SELECT N&#x2B;1 issue that exists in this method. &#xA;&#xA;Can you see the issue? It is actually hard to figure out.&#xA;&#xA;Yep, it is in the Mapper.Map call, for each post that we return, we are going to load the post&#x2019;s owner, so we can provide its name.&#xA;&#xA;So far, I have had exactly 100% success rate in finding SELECT N&#x2B;1 issues in any application that I reviewed. To be fair, that also include applications that I wrote.&#xA;&#xA;And now we get to the real point of this blog post. How do you fix this?&#xA;&#xA;Well, if you were using plain NHibernate, that would have been as easy as adding a Fetch call. But since this application has gone overboard with adopting repository and query objects mode, it is actually not an issue of just fixing this.&#xA;&#xA;Welcome to the re-architecting phase of the project, because your code cannot be fixed to work efficiently.&#xA;&#xA;I&#x2019;ll discuss this in more details in my next post&#x2026;</p>
         <a href="https://ayende.com/blog/4781/reviewing-oss-project-whiteboard-chat-unbounded-result-sets-and-denial-of-service-attacks" target="_blank"><h1 class="title mb-6">Reviewing OSS Project</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: March 01, 2011
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last summer at the Software Engineering 101 event put on by NimblePros in Cleveland, I saw Kevin Kuebler do a demo using git or Mercurial to&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/4775/new-profiler-feature-avoid-writes-from-multiple-sessions-in-the-same-request" target="_blank"><h1 class="title mb-6">New Profiler Feature: Avoid Writes from Multiple Sessions In The Same Request</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 01, 2011
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Because I keep getting asked, this feature is available for the following profilers:     NHibernate Profiler    Entity Framework Profiler    Linq to SQL Profiler    LLBLGen Profiler    Hibernate Profiler   This new feature detects a very interesting bad practice, write to the database from multiple session in the same web request.  For example, consider the following code:     public void SaveAccount(Account account)&#xA;{&#xA;    using(var session = sessionFactory.OpenSession())&#xA;    using(session.BeginTransaction())&#xA;    {&#xA;           session.SaveOrUpdate(account);&#xA;           session.Transaction.Commit();    &#xA;    }&#xA;}&#xA;&#xA;  public Account GetAccount(int id)&#xA;{&#xA;    using(var session = sessionFactory.OpenSession())&#xA;    {&#xA;        return session.Get&lt;Account&gt;(id);&#xA;    }&#xA;}&#xA;  &#xA;&#xA;It is bad for several reasons, micro managing the session is just one of them, but the worst part is yet to come&#x2026;&#xA;&#xA;&#xA;  public void MakePayment(int fromAccount, int toAccount, decimal ammount)&#xA;{&#xA;    var from = Dao.GetAccount(fromAccount);&#xA;    var to = Dao.GetAccount(toAccount);&#xA;    from.Total -= amount;&#xA;    to.Total &#x2B;= amount;&#xA;    Dao.SaveAccount(from);&#xA;    Dao.SaveAccount(to);&#xA;}&#xA;  &#xA;&#xA;Do you see the error here? There are actually several, let me count them:&#xA;&#xA;&#xA;  We are using 4 different connections to the database in a single method.&#xA;&#xA;  We don&#x2019;t have transactional safety!!!!&#xA;&#xA;&#xA;Think about it, if the server crashed between the fifth and sixth lines of this method, where would we be? &#xA;&#xA;We would be in that wonderful land where money disappear into thin air and we stare at that lovely lawsuit folder and then jump from a high window to a stormy sea.&#xA;&#xA;Or, of course, you could use the profiler, which will tell you that you are doing something which should be avoided:&#xA;&#xA;&#xA;&#xA;Isn&#x2019;t that better than swimming with the sharks?</p>
         <div class="button flex justify-between">
             <a href="380.html"><span class="back arrow"></span></a>
 
