@@ -147,8 +147,8 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
-        <a href="https://www.stevejgordon.co.uk/dotnet-on-aws-pushing-a-dotnet-docker-image-to-amazon-ecr" target="_blank"><h1 class="title mb-6">.NET on AWS: Pushing a .NET Docker Image to Amazon ECR</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
+        <a href="https://ayende.com/blog/193697-A/disk-space-management-inside-voron" target="_blank"><h1 class="title mb-6">Disk space management inside Voron</h1></a>
+        <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -156,10 +156,10 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: July 16, 2020
+            posted on: April 15, 2021
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I&#x2019;ll introduce Amazon ECR and explain how to use it as a registry of Docker images, ready to run your .NET applications in the cloud. In future posts, we&#x2019;ll learn more about the options for running your .NET applications containers on AWS. This post serves as an update and continuation of an [&#x2026;]</p>
-        <a href="https://ardalis.com/design-no-duplicates-rule-in-domain-model/" target="_blank"><h1 class="title mb-6">Design a No Duplicates Rule in your Domain Model?</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Voron is RavenDB&#x2019;s storage engine. It is how we store data, keep transactions and in generally get a lot of our abilities. In this post, I want to talk about the way RavenDB manages disk space internally.&#xA0; Voron uses a single data file to do its work, the data file is divided into 8KB pages, like so:Voron uses eager disk allocations to reserve disk space from the operating system. Each time the space inside the file runs out, Voron will double the size of the file. That last until the file size reaches 2GB, after which RavenDB will grow by 1GB at a time. This behavior ensures that Voron gives the underlying file system enough information to provide the database with a continuous range of disk space. In other words, we grab disk space in large chunks to avoid fragmentation of the data file.&#xA0;&#xA0; What happens when you delete data, however? Voron mark the free space in its free list and will use that space before it will allocate more disk space from the operating system.Why aren&#x2019;t we releasing the disk space back to the operating system? The simplest reason is that it isn&#x2019;t an just the data at the end of the file that is freed. In fact, like in the image above, free and busy segments are interwoven in the file. We can&#x2019;t just truncate the file.Internal references inside of RavenDB make use of the position data inside the file, so just moving the data won&#x2019;t help. Instead, you have to compact the data. That forces us to re-write the entire database layout from scratch and fixes those references.&#xA0; That is an offline operation, however. For the most part, it doesn&#x2019;t actually matter. RavenDB will use the internal free space as needed, so it isn&#x2019;t like it is actually lost. One feature that we are considering for version 6.0 of RavenDB is hole punching. That means that we&#x2019;ll make use of advanced file system API to free the disk space allocated to RavenDB even mid file.On Linux, that means using FALLOC_FL_PUNCH_HOLE. On Windows, that means using FSCTL_SET_ZERO_DATA.That will have the advantage of freeing disk space back to the operating system without needing user intervention. In particular, that is going to make it so a user that delete data to free disk space see the free space reflected in the OS metrics.There are problems with this approach, however. First, the size of the file remains the same, which leads to interesting questions. Consider:Second, this defeats the purpose of wanting to optimize disk allocations. If we free disk space in this manner, when we get it back, it may no longer be continuous on the disk. That said, it is not that big a problem in the days of SSDs and NVMes as it was at the time of the rotational hard disk. Then, you may get into a very bad situation in which Voron tries to use disk space that it had allocated mid file (but was already freed) but it can&#x2019;t, because the disk is full. Right now, this is simply an impossible error, with hole punching, we need to consider how to deal with this.</p>
+        <a href="https://ardalis.com/testing-exceptions-with-xunit-and-actions/" target="_blank"><h1 class="title mb-6">Testing Exceptions with xUnit and Actions</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -168,11 +168,11 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: July 16, 2020
+            posted on: April 14, 2021
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Update 17 May 2023 I haven&#x27;t been streaming on Twitch for a while (as noted in the original article) but I have continued to use this sample&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://www.stevejgordon.co.uk/how-is-the-asp-net-core-middleware-pipeline-built" target="_blank"><h1 class="title mb-6">Deep Dive: How is the ASP.NET Core Middleware Pipeline Built?</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When you&#x27;re writing unit tests for a method, it&#x27;s a good idea to test various failure conditions (&quot;sad paths&quot;) in addition to testing the&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://andrewlock.net/viewing-overriden-configuration-values-in-aspnetcore/" target="_blank"><h1 class="title mb-6">Viewing overwritten configuration values in ASP.NET Core</h1></a>
+        <p class="mb-2">by Andrew Lock</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -180,22 +180,10 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: July 14, 2020
+            posted on: April 13, 2021
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;ve ever used ASP.NET Core, then you&#x2019;ll likely be familiar with the Startup class. This class, by convention, includes at least one method named Configure. Often, a ConfigureServices method is also included and used to register services with the Microsoft dependency injection container, but this isn&#x2019;t an absolute requirement. The configure method is where [&#x2026;]</p>
-        <a href="https://enterprisecraftsmanship.com/posts/is-equality-comparison-code-pollution/" target="_blank"><h1 class="title mb-6">Is Equality Comparison a Code Pollution?</h1></a>
-        <p class="mb-2">by Vladimir Khorikov</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 13, 2020
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is about where to put the equality comparison logic: under the test or production code.</p>
-        <a href="https://ayende.com/blog/191425-B/webinar-recording-multi-tenancy-with-ravendb" target="_blank"><h1 class="title mb-6">Webinar recording</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I show how you can view the overridden values from configuration for debugging purposes.&#x2026;</p>
+        <a href="https://ayende.com/blog/193665-A/aws-roles-aws-lambda-and-eventual-consistency" target="_blank"><h1 class="title mb-6">AWS Roles, AWS Lambda and eventual consistency</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -204,10 +192,22 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: July 10, 2020
+            posted on: April 12, 2021
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The recording is now available&#x2026;</p>
-        <a href="https://ayende.com/blog/191393-B/writing-production-systems-the-wrong-way-on-purpose" target="_blank"><h1 class="title mb-6">Writing production systems the wrong way, on purpose</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m doing some cloud work, and I am working based off the official documentation, trying to automate the creation of an AWS Lambda. In order to allow me to quickly iterate, I&#x2019;m basically creating the entire thing from scratch each time.&#xA;I have the following code:&#xA;&#xA;aws iam create-role --role-name $AWS_ROLE --assume-role-policy-document file://trust-policy.json&#xA;aws iam attach-role-policy --role-name $AWS_ROLE&#xA0; --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole&#xA;aws lambda create-function --function-name $FUNC_NAME --zip-file fileb://lambda.zip --handler lambda_function.lambda_handler&#xA0; --runtime python3.8 --role $ARN_ROLE&#xA;&#xA;So far, so good, and exactly like it shows in the docs. But if you&#x2019;ll run it as a script, it will fail with:&#xA;&#xA;An error occurred (InvalidParameterValueException) when calling the CreateFunction operation: The role defined for the function cannot be assumed by Lambda.&#xA;&#xA;If I re-run the exact same command, however, it works properly.&#xA;There is this interesting command, which indicates that roles are using eventual consistency:&#xA;&#xA;aws iam wait role-exists --role-name $AWS_ROLE&#xA;&#xA;Except&#x2026; that this doesn&#x2019;t work. It looks like there is some additional delay between creating the role, validating that it was created and when it is actually available for Lambda to be used.&#xA;After looking around and feeling like a fool, I added a sleep for 10 seconds to the script, and the problem went away.&#xA;I&#x2019;m posting this for posterity sake and in the hope that someone can tell me that there is a better way. For now, I think I need a shower.</p>
+        <a href="https://benfoster.io/blog/customize-authorization-response-aspnet-core/" target="_blank"><h1 class="title mb-6">Customizing Authorization Responses in .NET 5.0</h1></a>
+        <p class="mb-2">by Ben Foster</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 10, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post we explore the new IAuthorizationMiddlewareResultHandler interface in .NET 5 that enables you to customize the HTTP response when authorization fails.</p>
+        <a href="https://ayende.com/blog/193633-A/whitepaper-couchbase-vs-ravendb-performance-at-rakuten-kobo" target="_blank"><h1 class="title mb-6">Whitepaper: Couchbase vs RavenDB Performance at Rakuten Kobo</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -216,10 +216,34 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: July 09, 2020
+            posted on: April 09, 2021
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It should come as no surprise that our entire internal infrastructure is running on RavenDB. I wholly believe in the concept of dog fooding and it has serve us very well over the years.I was speaking to a colleague just now and it occurred to me that it is surprising that we do certain things wrong, intentionally. It is fair to say that we know what the best practices for using RavenDB are, the things that you can do to get the most out of it.In some of our internal systems, we are doing things in exactly the wrong way. We are doing things that are inefficient in RavenDB. We take the expedient route to implement things.&#xA0; A good example of that is that we have a set of documents that can grow to be multiple MB in size. They are also some of the most common changed documents in the system. Properly design would call to break them apart to make things easier for RavenDB. We intentionally modeled things this way. Well, I gave the modeling task to an intern with no knowledge of RavenDB and then I made things worse for RavenDB in a few cases where he didn&#x2019;t get it out of shape enough for my needs. Huh?! I can hear you thinking. Why on earth would we do something like that?We do this because if serves as an excellent proving ground for misuse of RavenDB. It show us how the system behave under non ideal situations. Not just when the user is able to match everything to the way RavenDB would like things to be, but how they are likely to build their system. Unaware of what is going on behind the scenes and what the optimal solution would be. We want RavenDB to be able to handle that scenario well. An example that pops to mind was having all the uploads on the system be attachments on a single document. That surfaced that we had a O(N^2) algorithm very deep in the bowels of RavenDB for placing a new attachment. It would be completely invisible under normal case, because it was fast enough under any normal or abnormal situation that we could think of. But when we started getting high latency from uploads, we realized that adding the 100,002th attachment to a document required us to scan through the whole list&#x2026; it was obvious that we needed a fix. (And please, don&#x2019;t put hundreds of thousands of attachments on a document, it will work (and it is fast now), but it isn&#x2019;t nice).Doing the wrong thing on purpose means that we can be sure that when users are doing the wrong thing accidently, they get good behavior.</p>
-        <a href="https://ardalis.com/immediate-domain-event-salvation-with-mediatr/" target="_blank"><h1 class="title mb-6">Immediate Domain Event Salvation with MediatR</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We just published a white paper on RavenDB performance vs. Couchbase performance in a real customer scenario.I had to check the results three times before I believed them. RavenDB is pretty awesome, but I had no idea it was that awesome. The data set was reasonably big, 1.35 billion docs and the scenario we present is a real world one based on production load. Some of the interesting details:RavenDB uses 1/3 of the disk space that Couchbase uses, but stores 3 times as much data.Operationally, RavenDB just worked, Couchbase needed 6 times the hardware to just scrape by. A single failure in Couchbase meant at least 15 &#x2013; 45 minutes for the node to recover. Inducing failures in RavenDB brought the node back up in a few seconds. For queries, we pitted a Couchbase cluster with 96 cores and 384 GB RAM against single RavenDB node running on a Raspberry PI. RavenDB on the Pi was able to sustain better latencies at the 99 percentile handling twice as much load as Couchbase is able.There are all sort of other goodies in the white paper and we went pretty deep into the overall architecture and impact of the difference design decisions.As usual, we welcome your feedback.</p>
+        <a href="https://ayende.com/blog/193601-A/talking-about-ravendb-in-the-angular-show" target="_blank"><h1 class="title mb-6">Talking about RavenDB in the Angular Show</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 08, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You can hear me speaking at the Angular Show about using document database from the point of view of full stack or front end developers.In this episode, panelists Brian Love, Jennifer Wadella, and Aaron Frost welcome Oren Eini, founder of RavenDB, to the Angular Show. Oren teaches us about some of the key decisions around structured vs unstructured databases (or SQL vs NoSQL in hipster developer parlance). With the boom of document-driven unstructured databases, we wanted to learn why you might choose this technology, the pitfalls and benefits, and what are the options out there. Of course, Oren has a bit of a bias for RavenDB, so we&#x27;ll learn what RavenDB is all about and why it might be a good solution for your Angular application.</p>
+        <a href="https://ayende.com/blog/193569-A/optimizing-non-obvious-costs" target="_blank"><h1 class="title mb-6">Optimizing non obvious costs</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 07, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the &#x201C;fun&#x201D; aspects of running in the cloud is the fact that certain assumptions that you take for granted are broken, sometimes seriously so. Today post is about an issue a customer run into in the cloud. They were seeing some cases of high latency of operations from RavenDB. In the cloud, the usual answer is to provision more resources, but we generally recommend that only when we can show that the load is much higher than expected to be handled on the hardware.The customer was running on a cluster with disk that were provisioned with 1,000 IOPS and 120 MB /sec, that isn&#x2019;t a huge amount, but it is certainly respectable. Looking at the load, we can see fairly constant writes and the number of indexes is around 30. Looking at the disk, we can see that we are stalling there, the queue length is very high and the disk latency has a user visible impact. All told, we would expect to see a significant amount of I/O operations as a result of that, but the fact that we hit the limits of the provisioned IOPS was worth a second look. We started pulling at the details and it became clear that there was something that we could do about it. During indexing, we create some temporary files to store the Lucene segments before we commit them to the index. Each indexing run can create between four and six such files. When we create them, we do that with the flag DeleteOnClose, this is a flag that exists on Windows, but not on Linux. On Linux, we are running on ext4 with journaling enabled, which means that each file system metadata modification requires a journal write at the file system level. Those temporary files live for a very short amount of time, however. We delete them on close, after all, and the indexing run is very short.6 files per index times 30 indexes means 180 files. Each one of those will be created and destroyed (generating a journal event each time) and there is a constant low volume of writes. That means that there are 360 IOPS at the file system level just because of this issue. The fix for that was two folds. First, for small files, under 128KB, we never hit the disk. We can keep them completely in memory. For larger file, we want to avoid using too much memory, so we spill them to disk, but instead of creating new files each time, we&#x2019;ll reuse them between indexing run.The end result is that we are issuing fewer I/O operations, reducing the amount of trivial IOPS we consume and can get a lot more done with the same hardware. The actual fix is fairly small and targeted, but the impact is felt across the entire system.</p>
+        <a href="https://ardalis.com/speed-up-docker-compose-with-parallel-builds/" target="_blank"><h1 class="title mb-6">Speed Up Docker Compose with Parallel Builds</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -228,11 +252,11 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: July 08, 2020
+            posted on: April 07, 2021
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Domain events are one of my favorite patterns and one Julie Lerman and I cover in our DDD Fundamentals course, on Pluralsight. I&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/191363-C/ann-cosmos-db-profiler-1-0-release" target="_blank"><h1 class="title mb-6">ANN: Cosmos DB Profiler 1.0 Release</h1></a>
-        <p class="mb-2">by Oren Eini</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve been using docker-compose quite a bit lately for a distributed app that includes 3 front end apps, 2 databases, RabbitMQ, and PaperCut&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://andrewlock.net/my-new-book-aspnetcore-in-action-2e-is-available-now/" target="_blank"><h1 class="title mb-6">ASP.NET Core in Action, Second Edition is available now!</h1></a>
+        <p class="mb-2">by Andrew Lock</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -240,33 +264,9 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: July 03, 2020
+            posted on: April 06, 2021
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We have released version 1.0 of the Cosmos DB Profiler. You can now use it from inside Azure Function and profiler production systems remotely. I have wrote an article about the uses of the profiler and the benefits it brings. And here is the 30 seconds video:You can watch the full demo in the Cosmos DB webinar.</p>
-        <a href="https://ayende.com/blog/191362-C/webinar-recording-practical-indexing-with-ravendb" target="_blank"><h1 class="title mb-6">Webinar recording</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 02, 2020
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The recording is now available here:</p>
-        <a href="https://ayende.com/blog/191361-C/feature-rejection-sending-an-email-alert-from-ravendb" target="_blank"><h1 class="title mb-6">Feature Rejection: sending an email alert from RavenDB</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 01, 2020
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We got a feature request that we don&#x2019;t intend to implement, but I thought the reasoning is interesting enough for a blog post. The feature request:If there is a critical error or major issue with the current state of the database, for instance when the data is not replicated from Node C to Node A due to some errors in the database or network it should send out mail to the administrator to investigate on&#xA0; the issue. Another example is, if the database not active due to some errors then it should send out mail as well.On its face, the request is very reasonable. If there is an error, we want to let the administrator know about it, not hide it in some log file. Indeed, RavenDB has the concept of alerts just for that reason, to surface any issues directly to the admin ahead of time. We also have a mechanism in place to allow for alerts for the admin without checking in with the RavenDB Studio manually: SNMP. The Simple Network Monitoring Protocol is designed specifically to enable this kind of monitoring and RavenDB expose a lot of state via that which you can act upon in your monitoring system.Inside your monitoring system, you can define rules that will alert you. Send an SMS if the disk space is low, or email on an alert from RavenDB, etc. The idea of actively alerting the administrator is something that you absolutely want to have. Having RavenDB send those emails, not so much. RavenDB expose monitoring endpoint and alerts, it doesn&#x2019;t act or report on them. That is the role of your actual monitoring system. You can setup Zabbix or talk to your Ops team which likely already have one installed.Let&#x2019;s talk about the reason that RavenDB isn&#x2019;t a monitoring system. Sending email is actually really hard. What sort of email provider do you use? What options are required to set it up a connection? Do you need X509 certificate or user/pass combo? What happens if we can&#x2019;t send the email? That is leaving aside the fact that actually getting the email delivered is hard enough. Spam, SPF, DKIM and DMARC is where things start. In short, that is a lot of complications that we&#x2019;ll have to deal with. For that matter, what about SMS integration? Surely that would also help. But no one uses SMS today, we want WhatsApp integration, and Telegram, and &#x2026; You go the point.Then there are social issues. How will we decide if we need to send an email or not? There should be some policy, and ways to configure that. If we won&#x2019;t have that, we&#x2019;ll end up sending either too many emails (which will get flagged / ignored) or too few (why aren&#x2019;t you telling me about XYZ issue?).A monitoring system is built to handle those sort of issues, it is able to aggregate reports and give you a single email with the current status, open issues for you to fix and do a whole lot more that is simply outside the purview or RavenDB. There is also the most critical alert of all, if RavenDB is down, it will not be able report that it is down because it is down.The proper way to handle this is to setup integration with a monitoring system, so we&#x2019;ll not be implementing this feature request.</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My new book, ASP.NET Core in Action, Second Edition is available now. In this post I describe what&#x27;s changed since the first version and why.&#x2026;</p>
         <div class="button flex justify-between">
             <a href="77.html"><span class="back arrow"></span></a>
 
