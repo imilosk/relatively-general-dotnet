@@ -147,7 +147,19 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
-        <a href="https://ardalis.com/1898/" target="_blank"><h1 class="title mb-6">More Official Names Announced</h1></a>
+        <a href="https://ayende.com/blog/1013/performance-tidbits" target="_blank"><h1 class="title mb-6">Performance tidbits</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 26, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently had to write a lazy loaded property that picked what its value will be based on the environment it run on. Basically, I had the same old problem of keeping data for the current context only. This usually means the current thread, but in ASP.Net, it is the current request.    My solution for it was simple:&#xA0;    .    &#xA0;    So I can store/retrieve data without caring in what environment I&#x2019;m running on by simply using:    &#xA0;                CurrentData.Items[&quot;current-db-connection&quot;] = new SqlConnection();                I need this ability to store data that is important for the current logical execution thread (be that an ASP.Net request or a real thread). The usual method of implemention the Items property on the CurrentData class would be something like:                                public static ICurrentDataStore Items                        {                        &#xA0;&#xA0;&#xA0; get                                 &#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; if (items == null)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; items = CreateCurrentDataStoreForEnviornment();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; return items;                                 &#xA0;&#xA0;&#xA0; }                        }                &#xA0;    But I thought that I could get rid of the null check, this should allow the JIT to view the property as a simple accessor, so it would be just as fast as accessing a field directly. I could&#x2019;ve simply instasitated the items field to the proper value based on the environment, but I wanted to mimic a real lazy loaded property. I ended up with this class:    &#xA0;            public class DataStoreSwitcher : ICurrentDataStore                        {                        &#xA0;&#xA0;&#xA0; private Action&lt;ICurrentDataStore&gt; set;                                &#xA0;                        &#xA0;&#xA0;&#xA0; public DataStoreSwitcher(Action&lt;ICurrentDataStore&gt; set)                        &#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; this.set = set;                        &#xA0;&#xA0;&#xA0; }                                &#xA0;                        &#xA0;&#xA0;&#xA0; #region ICurrentDataStore Members                                &#xA0;                        &#xA0;&#xA0;&#xA0; public object this[object key]                        &#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; get                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ICurrentDataStore real = EnsureCorrectDataStoreForEnvironment();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; return real[key];                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; set                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ICurrentDataStore real = EnsureCorrectDataStoreForEnvironment();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; real[key] = value;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0; }                                &#xA0;                        &#xA0;&#xA0;&#xA0; private ICurrentDataStore EnsureCorrectDataStoreForEnvironment()                        &#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ICurrentDataStore real;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; if (HttpContext.Current == null)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; real = new CurrentThreadDataStore();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; else                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA0;&#xA0;real = new CurrentRequestDataStore();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; set(real);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; return real;                        &#xA0;&#xA0;&#xA0; }                                &#xA0;                        &#xA0;&#xA0;&#xA0; #endregion                        }                &#xA0;    I initialize the variable like this:    &#xA0;            private static ICurrentDataStore items =                        &#xA0;&#xA0;&#xA0; new DataStoreSwitcher(                        &#xA0;&#xA0;&#xA0; delegate(ICurrentDataStore real)                                 &#xA0;&#xA0;&#xA0; {                                 &#xA0; &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;items = real;                                 &#xA0;&#xA0;&#xA0; });                        &#xA0;    In this particular point, there is very little to be gain from this technqiue, and if the case was a hefty resource (choosing database connection, for instance), it can certainly be useful. Beside, I like using delegate J, and it&#x2019;s a cool thing to do.</p>
+        <a href="https://ardalis.com/ms-teched-europe-2006-in-amsterdam-cancelled/" target="_blank"><h1 class="title mb-6">MS TechEd Europe 2006 in Amsterdam Cancelled</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -156,10 +168,10 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: July 28, 2005
+            posted on: January 25, 2006
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today, in addition to launching Windows Vista Beta 1, Microsoft also has announced the final names for several key technologies which they&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/1899/" target="_blank"><h1 class="title mb-6">Sending Emails with aspNetEmail and RapidMailer</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">According to Bink.nu (and confirmed by my secret sources), Microsoft TechEd Europe 2006 has been rescheduled into two separate events. From&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://ardalis.com/spring-devconnections-sessions/" target="_blank"><h1 class="title mb-6">Spring DevConnections Sessions</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -168,10 +180,58 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: July 28, 2005
+            posted on: January 25, 2006
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I had to send out a bunch of emails to some partners I work with and the easiest way for me to generate the list was via an SQL query of my&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/1895/" target="_blank"><h1 class="title mb-6">Upgrading and Migrating to ASP.NET 2.0</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The next DevConnections conference will be held April 2-5, 2006 in Orlando, Florida at the Hyatt Regency Grand Cypress Resort (where it has&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://ayende.com/blog/1012/performance-tuning-mystery" target="_blank"><h1 class="title mb-6">Performance tuning mystery</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 25, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I got a stored procedure that was taking an undue amount of time to run, in was about half an hour, and that was really bad. I tried looking at the execution plan and add an index to make it faster, but it wasn&#x27;t that effective.&#xA;The query was an update from a nested select (which contained a rather complex condition and a couple of joins), and I couldn&#x27;t really figure out how to make it better. I tried running the pieces individually, and they run reasonably fast, so it was the interactions between them that killed the performance. The execution plan showed that the joins were costing very much in terms of performance.&#xA;During my attempts to figure it out, I moved the select into a temporary table, and then updated from it, like this:&#xA;SELECT To, SUM(p.Amount) TotalAmountINTO #TempPaymetsAmountsFROM Payments&#xA0;p, Payments p2, Orders oWHERE ComplexConditionGROUP BY [To]&#xA;UPDATE PaymentsTotalSET Total = TotalAmountFROM #TempPaymetsAmountsWHERE SimplerCondition&#xA;That query run in less than 10 seconds.&#xA;The only thing that I did was move the select into a temporary table, but I&#x27;m not sure why this should have such a profound effect on the performance of the query.</p>
+        <a href="https://ayende.com/blog/1011/code-reuse-cursors-and-nih-oh-my" target="_blank"><h1 class="title mb-6">Code reuse, cursors and NIH, oh my!</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 25, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently discovered that a certain class of programmers has a really bad case of Not Invented here. It got so bad that they decided to implement JOIN and GROUP BY by using cursors. Of course, due to the nature of the problem, they were so excited by their new discovery that they immediately rushed to propogate it thorughout the code base, using none else than the tried and true method of copy-paste-change-one-charater-and-then-move-on-never-looking-back.&#xA;I won&#x27;t speak of the performance of this method, but I think that you can guess that there are orders of magnitude difference between this new way of dealing with the database and the standard method of operation in the industry.</p>
+        <a href="https://ayende.com/blog/1010/sql-frustrations" target="_blank"><h1 class="title mb-6">SQL Frustrations</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 24, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I knew that it was bound to happen.&#xA;I started running into highly mysterious errors in SQL Server. The strangest among them is the Missing Columns Mystery.&#xA;When I run a stored procedure that calls to other SPs, and so on, I get an error about invalid columns somewhere deep in the stack. But when I run the SP directly, it passes perfectly.&#xA;Of course that when I check it, the table has the supposedly missing columns. It drives me crazy, and I can&#x27;t really get the error consistently, if I run it for a couple of time, it seems to fix itself, but I&#x27;ve no idea how.</p>
+        <a href="https://ayende.com/blog/1009/hierarchical-queries-with-common-table-expressions" target="_blank"><h1 class="title mb-6">Hierarchical queries with Common Table Expressions</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 21, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">[Via Mitch Denny&#x27;s Blog ] [Via Sql Down Under]    It&#x27;s usualy hard to efficently get hierarchical data using SQL. But apperantely SQL Server can do that easily. The key to this is to create common table expression that recursively points to itself, like this:            WITH AllEmployeesOf([EmployeeId], [Name], [ManagerName])                        AS                                 (                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT m.[EmployeeId], m.[Name], convert(nvarchar(50),null) as ManagerName                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; FROM [Employees] m WHERE @employee_id = m.[EmployeeId]                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; UNION ALL                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT e.[EmployeeId], e.[Name], AllEmployeesOf.[Name] as ManagerName                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; FROM [Employees] e JOIN AllEmployeesOf ON                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; e.[ManagerId] = AllEmployeesOf.[EmployeeId]                        )                        SELECT * FROM AllEmployeesOf        Before this I would resort to either getting all of the rows or issuing several queries. Nice.</p>
+        <a href="https://ardalis.com/enterprise-library-2-available-for-download/" target="_blank"><h1 class="title mb-6">Enterprise Library 2 Available For Download</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -180,10 +240,10 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: July 27, 2005
+            posted on: January 20, 2006
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There is an Upgrade Center available on MSDNnow for customers seeking to move from ASP.NET 1.x to ASP.NET 2.0. It includes a white paper&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/1896/" target="_blank"><h1 class="title mb-6">Escape Yesterworld!</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Enterprise Library for .NET Framework 2.0 is now available. It includes the Caching Application Block, Cryptography Application Block, Data&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://ardalis.com/go-live-licenses-for-windows-communication-foundation-and-windows-workflow-foundation/" target="_blank"><h1 class="title mb-6">Go Live Licenses for Windows Communication Foundation and Windows Workflow Foundation</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -192,10 +252,10 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: July 27, 2005
+            posted on: January 19, 2006
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here&#x2019;s a fun site to check out if you have a few minutes. Basically a look back at how software development used to be, before we had all&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/538/rename-booonrails-to-brail" target="_blank"><h1 class="title mb-6">rename BooOnRails to Brail</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday Microsoft announced the availability of Go Live licenses for Beta 2 of Windows Communication Foundation (formerly Indigo) and&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://ayende.com/blog/1008/put-down-that-cursor-and-step-away-from-the-database-mister" target="_blank"><h1 class="title mb-6">Put down that cursor and step away from the database, Mister!</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -204,69 +264,9 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: July 27, 2005
+            posted on: January 19, 2006
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve renamed BooOnRails to Brail, the web site has been updated, so the old adress doesn&#x27;t work, here is the new one:    http://www.ayende.com/projects/brail.aspx</p>
-        <a href="https://ayende.com/blog/537/need-a-new-name-for-boo-on-rails" target="_blank"><h1 class="title mb-6">Need a new name for Boo On Rails</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 25, 2005
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Apperantely        David Heinemeier Hansson doesn&#x27;t like people using the &quot;X On Rails&quot;, saying that the name is a spesific to a framework and not to the general philosophy. This is a reasonable approach but this means that I need to find a new name.    Ideas?</p>
-        <a href="https://ayende.com/blog/536/knife-of-dreams-prologue-is-out" target="_blank"><h1 class="title mb-6">Knife of Dreams prologue is out!</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 25, 2005
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The prologue to the Wheel of Time 11th book is out!!!     You can get it here:&#xA0;Embers Falling on Dry Grass    I&#x27;m not that I&#x27;m going to read it, for the simple reason that my brain is on reading overload right now :-)</p>
-        <a href="https://ayende.com/blog/535/book-review-harry-potter-and-the-half-blood-prince" target="_blank"><h1 class="title mb-6">Book Review</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 25, 2005
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Harry Potter and the Half-Blood Prince    I finished reading it today, and I was... not quite disappointed, but it didn&#x27;t hook me quite as much as the other books. It may be that the part of my brain that deals with books merely shut itself down from overload. It is a good book, and it continue to move both the plot and the maturity of the characters onwards. It&#x27;s a more mature book then the others, but somehow the ending didn&#x27;t affect me as much as the ending of the 5th book.</p>
-        <a href="https://ayende.com/blog/534/more-website-goodies" target="_blank"><h1 class="title mb-6">More website goodies</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 24, 2005
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I upgraded to Cuyahoga 0.8.2, which means that you&#x27;ll get a better experiance with the main site menu.    I also played a little with the bug tracking&#xA0;and now I get an email for new bugs, (Sorry, Bruno, didn&#x27;t get it until today).    I also made some modifications to the CSS, which should result in a much better view for the unregistered users (meaning everyone but me :-)).    3 days, 18 hours and counting.</p>
-        <a href="https://ayende.com/blog/533/back-in-bussiness" target="_blank"><h1 class="title mb-6">Back in Bussiness</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 24, 2005
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It seems that my hardware problems&#xA0;were related to a badly seated display adapter, once I hit it several times, everythings works. (And I&#x27;m likely to get a blackout during this post, since Murphy is listening :-) ).    I&#x27;ve an operating computer again, and it&#x27;s a pleasure to use. I&#x27;ve been working very hard on Boo On Rails&#xA0;for the last week or so, and it&#x27;s great to be done with it. I&#x27;m quite pleased with the way it turned out in the end.    4 more days&#xA0;until the big day, it&#x27;s 5:51AM here and I worked through the night again so I&#x27;m bubbling. I&#x27;ll shut up, good day.</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m seeing too much cursors around right now. Way too many. I also keep seeing the same code over &amp; over again. I know that I&#x27;m in trouble because to work with this code base I need to:constantly use grep (and deriatives, like AstroGrep, which is cool);get a diff program that support drag &amp; drop from the shell as well as quickly changing only one of the files. (Found WinMerge, which looks cool);pronounce variable names out loud in order to understand their meaning*;watch ingenious workarounds to all sorts of limitations in the number of concurrent nested corsurs in the database;cut code by 70% by deciding that I don&#x27;t need to verify stuff over &amp; over again.Argh! Excuse me while I go bang my head against the wall.* (Hebrew words in English characters)</p>
         <div class="button flex justify-between">
             <a href="928.html"><span class="back arrow"></span></a>
 
