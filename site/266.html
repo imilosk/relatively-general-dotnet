@@ -147,79 +147,7 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
-        <a href="https://ayende.com/blog/173601/the-case-of-the-queue-in-the-pool" target="_blank"><h1 class="title mb-6">The case of the queue in the pool</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 04, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today we found a bug in the way our connection pool.&#xA0; The code in question?   public HttpClient GetClient(TimeSpan timeout, OperationCredentials credentials, Func&lt;HttpMessageHandler&gt; handlerFactory)&#xA;{&#xA;    var key = new HttpClientCacheKey(timeout, credentials);&#xA;    var queue = cache.GetOrAdd(key, i =&gt; new ConcurrentQueue&lt;Tuple&lt;long, HttpClient&gt;&gt;());&#xA;&#xA;    Tuple&lt;long, HttpClient&gt; client;&#xA;    while (queue.TryDequeue(out client))&#xA;    {&#xA;        if (Stopwatch.GetTimestamp() - client.Item1 &gt;= _maxIdleTimeInStopwatchTicks)&#xA;        {&#xA;            client.Item2.Dispose();&#xA;            continue;&#xA;        }&#xA;        client.Item2.CancelPendingRequests();&#xA;        client.Item2.DefaultRequestHeaders.Clear();&#xA;        return client.Item2;&#xA;    }&#xA;&#xA;    return new HttpClient(handlerFactory())&#xA;    {&#xA;        Timeout = timeout&#xA;    };&#xA;}&#xA;public void ReleaseClient(HttpClient client, OperationCredentials credentials)&#xA;{&#xA;    var key = new HttpClientCacheKey(client.Timeout, credentials);&#xA;    var queue = cache.GetOrAdd(key, i =&gt; new ConcurrentQueue&lt;Tuple&lt;long, HttpClient&gt;&gt;());&#xA;    queue.Enqueue(Tuple.Create(Stopwatch.GetTimestamp(), client));&#xA;}&#xA;&#xA;Can you see the bug?&#xA;I&#x27;ll let you think about it for a while.&#xA;&#xA0;&#xA;&#xA0;&#xA;&#xA0;&#xA;&#xA0;&#xA;Done?&#xA;Okay, here we go!&#xA;The basic idea is that we&#x27;ll keep a bunch of client connected, and free them if they are too old.&#xA;The issue is with the use of the concurrent queue. Consider the case of having a sudden spike in traffic, and we suddenly need 100 connections. This code will generate them, and then put them back in the pool.&#xA;We then go back to normal level, only handle 20 concurrent requests, but because we are using a queue, we&#x27;ll actually cycle all the 100 requests we have through the queue all the time, keeping all of them opened.</p>
-        <a href="https://ayende.com/blog/173570/rate-limiting-fun" target="_blank"><h1 class="title mb-6">Rate limiting fun</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 03, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was talking with a few of the guys at work, and the concept of rate limiting came up. In particular, being able to limit the number of operations a particular user can do against the system. The actual scenario isn&#x27;t really important, but the idea kept bouncing in my head, so I sat down and wrote a quick test case.  Nitpicker corner: This is scratchpad code, it isn&#x27;t production worthy, tested or validated. The idea is probably best explained in code, like so:  private SemaphoreSlim _rateLimit = new SemaphoreSlim(10);&#xA;&#xA;public async Task HandlePath(HttpContext context, string method, string path)&#xA;{&#xA;    if (await _rateLimit.WaitAsync(3000) == false)&#xA;    {&#xA;        context.Response.StatusCode = 429; // Too many requests&#xA;        return;&#xA;    }&#xA;&#xA;    // actually process requests&#xA;&#xA;}&#xA;&#xA;Basically, we define a semaphore, with the maximum number of operations that we want to allow, and we wait on the semaphore when we are starting the operation.&#xA;However, there is nothing that actually releases the semaphore. Here we get into design choices.&#xA;We can release the semaphore when the request is over, which effectively gives us rate limiting in terms of concurrent requests. &#xA;The more interesting approach from my perspective was to use this:&#xA;&#xA; _timer = new Timer(state =&gt;&#xA; {&#xA;     var currentCount = 10 - _rateLimit.CurrentCount;&#xA;     if (currentCount == 0)&#xA;         return;&#xA;     _rateLimit.Release(currentCount);&#xA; }, null, 1000, 1000);&#xA;&#xA;&#xA;Using this approach, we are actually limited to 10 requests a second.&#xA;And yes, this actually allows more concurrent requests than the previous option, because if a request takes more than one second, we&#x27;ll reset its count on the timer&#x27;s tick.&#xA;I actually tested this using gobench, and it confirmed that this is actually serving exactly 10 requests / second.</p>
-        <a href="https://benfoster.io/blog/aspnet-core-multi-tenant-middleware-pipelines/" target="_blank"><h1 class="title mb-6">Multi-tenant middleware pipelines in ASP.NET Core</h1></a>
-        <p class="mb-2">by Ben Foster</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 03, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This article looks at how to create forked request pipelines so that ASP.NET Core Authentication Middleware can be used in multi-tenant applications.</p>
-        <a href="https://ayende.com/blog/173569/ravendb-at-the-basta-conference" target="_blank"><h1 class="title mb-6">RavenDB at the Basta Conference</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 02, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is from today, at the RavenDB booth in the Basta conference.</p>
-        <a href="https://ayende.com/blog/173537/the-cost-of-dog-fooding" target="_blank"><h1 class="title mb-6">The cost of dog fooding</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 01, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You might have noticed that there we a few errors on the blog recently.  That is related to a testing strategy that we employ for RavenDB. In particular, part of our test scenario is to shove a RavenDB build to our own production system, to see how it works in a live production system with real workloads. Our production systems are entirely running on RavenDB, and we have been playing with all sort of configuration and deployment options recently. The general idea is to give us good indication about the performance of RavenDB and make sure that we don&#x2019;t have any performance regression. Here is an example taken from our tracking system, for this blog:  You can see that we had a few periods with longer than usual response times. The actual reason for that was that we had some code that was throwing tremendous amount of work to RavenDB, and this is actually exhibiting noisy neighbor syndrome in this case (that is, the blog is behaving fine, but the machine it is on is very busy). That gave us indication about a possible optimization and some better internal metrics. At any rate, the downside of living on the bleeding edge in production is that we sometimes get a lemon build. That is the cost of dog fooding, something you need to clean up the results.</p>
-        <a href="https://www.stevejgordon.co.uk/contributing-to-allready" target="_blank"><h1 class="title mb-6">Contributing to allReady</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 29, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I want to discuss a fantastic open source project called allReady that I highly encourage all ASP.NET developers to check out. I want to share my early experience with allReady and how I got started with contributing to an open source project for the first time. What is allReady? allReady is project [&#x2026;]</p>
-        <a href="https://enterprisecraftsmanship.com/posts/mechanical-approach-to-domain-modeling/" target="_blank"><h1 class="title mb-6">Mechanical approach to domain modeling</h1></a>
+        <a href="https://enterprisecraftsmanship.com/posts/applying-functional-principles-in-c-pluralsight-course/" target="_blank"><h1 class="title mb-6">Applying Functional Principles in C# Pluralsight course</h1></a>
         <p class="mb-2">by Vladimir Khorikov</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -228,10 +156,10 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 29, 2016
+            posted on: April 11, 2016
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I&#x2019;d like to talk about a mechanical approach to domain modeling. It sometimes arises when teams start applying Domain-Driven Design (DDD) principles to their projects and when they don&#x2019;t have enough experience with it yet.</p>
-        <a href="https://ayende.com/blog/173505/find-the-bug-when-you-cant-rely-on-your-own-identity" target="_blank"><h1 class="title mb-6">Find the bug</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My new course Applying Functional Principles in C#&#xA0;for Pluralsight went live.&#xA; Applying Functional Principles in C# What interesting about functional programming is that it allows you to adhere to the most important&#xA0;software development principles, just as the DDD practices do. It helps reduce the cognitive load when you deal with your code base and thus keep your software maintainable in a long term.&#xA; This course is based on the article series&#xA0;I posted awhile back.</p>
+        <a href="https://ayende.com/blog/173793/the-deadlock-in-the-fairness-assumption" target="_blank"><h1 class="title mb-6">The deadlock in the fairness assumption</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -240,10 +168,22 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 29, 2016
+            posted on: April 11, 2016
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We had a need to generate unique ids for connections in our db. We used the following code:  public class NotificationsClientConnection : IDisposable&#xA;{&#xA;    private static int _counter = 0;&#xA;&#xA;    private readonly WebSocket _webSocket;&#xA;    private readonly DocumentDatabase _documentDatabase;&#xA;    private readonly DateTime _startedAt;&#xA;&#xA;&#xA;    public NotificationsClientConnection(WebSocket webSocket, DocumentDatabase documentDatabase)&#xA;    {&#xA;        _webSocket = webSocket;&#xA;        _documentDatabase = documentDatabase;&#xA;        _startedAt = SystemTime.UtcNow;&#xA;    }&#xA;&#xA;    public int Id =&gt; Interlocked.Increment(ref _counter);&#xA;&#xA;    public TimeSpan Age =&gt; SystemTime.UtcNow - _startedAt;&#xA;}&#xA;&#xA;Do you see the bug? It is a subtle one.&#xA;When you are ready, peek below.&#xA;&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;The issue is in the following line:&#xA;&#xA;    public int Id =&gt; Interlocked.Increment(ref _counter);&#xA;&#xA;&#xA;The intent was to create a field that would be initialized on startup. Unfortunately, the usage of the lambda symbol &quot;=&gt;&quot; instead of assignment &quot;=&quot; turned that into a computed property, which will return a new value on every call.</p>
-        <a href="https://ardalis.com/custom-software-craftsmanship-workshop/" target="_blank"><h1 class="title mb-6">Custom Software Craftsmanship Workshop</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Looking into some benchmark code, I noticed that the developer has put some stuff there that shouldn&#x27;t be there (and is likely slowing down the benchmark). When I commented on that, the answer was: &quot;If I don&#x27;t do that, this breaks&quot;. Indeed, he was able to show me that this will actually break. And that was very bad news. Because that was a pretty sensitive spot. In fact, afterward he actually filed several bugs, including scary looking deadlock detected one. The problem is that this code works. In fact, it has been deployed, in production, for years, and I have very high confidence that it works. But eventually I was able to reproduce this locally, and then track it down to the actual root cause. First, let me show you the reproduction. First, the sample code:   public class Program&#xA;{&#xA;    public static void Main(string[] args)&#xA;    {&#xA;        var fair = new FairPractice();&#xA;        var thread = new Thread(fair.OtherWork);&#xA;        thread.Start();&#xA;&#xA;        while (thread.IsAlive)&#xA;        {&#xA;            fair.DoMainWork();&#xA;        }&#xA;    }&#xA;}&#xA;&#xA;public class FairPractice&#xA;{&#xA;    SemaphoreSlim _s = new SemaphoreSlim(1);&#xA;&#xA;    public void OtherWork()&#xA;    {&#xA;        while (true)&#xA;        {&#xA;            Thread.Sleep(100);&#xA;            if (_s.Wait(1000) == false)&#xA;            {&#xA;                Console.WriteLine(&quot;\r\nCan&#x27;t get it!&quot;);&#xA;                return;&#xA;            }&#xA;            Console.WriteLine(&quot;\r\nGot IT!!!!&quot;);            _s.Release();&#xA;        }&#xA;    }&#xA;&#xA;    private int _work;&#xA;    public void DoMainWork()&#xA;    {&#xA;        if (_s.Wait(500) == false)&#xA;            throw new TimeoutException(&quot;Can&#x27;t get semaphore&quot;);&#xA;&#xA;        Console.Write(&quot;\r{0}&quot;, &#x2B;&#x2B;_work);&#xA;        Thread.Sleep(30);&#xA;        _s.Release();&#xA;    }&#xA;}&#xA;&#xA;&#xA;&#xA;Now, this code seems pretty simple. We have a bunch of work that happens in the main loop. Taking the semaphore and holding it, then doing a small amount of work, then releasing the semaphore. &#xA;On the other thread, we have a (long) wait for this semaphore, and that is it. Now, the interesting thing here is that we would expect the 2nd thread to register a wait on the semaphore so when it is released, the 2nd thread wakes up, and get the semaphore. In practice, it looks like the main thread is the one having all the fun, and it is fast enough to re-acquire the semaphore before the 2nd thread can catch it. Looking into the code of SemaphoreSlim seems to confirm it. There are actually a bunch of stuff going on there, and this particular scenario (very short wait, just a single entry in the semaphore, a second waiter with a high threshold) seems to hit it very hard, and violate all fairness assumptions.&#xA;The good thing is that in order to hit this issue, you need to have very high speed. The reason this is good is that we are benchmarking, and that means that our code (which actually also does disk I/O) is now fast enough to his this issue.</p>
+        <a href="https://benfoster.io/blog/aspnet-core-json-patch-partial-api-updates/" target="_blank"><h1 class="title mb-6">How to perform partial resource updates with JSON Patch and ASP.NET Core</h1></a>
+        <p class="mb-2">by Ben Foster</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 11, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How to perform partial resource updates in APIs using JSON Patch and ASP.NET Core.</p>
+        <a href="https://ardalis.com/how-to-find-all-objects-in-a-sql-server-schema/" target="_blank"><h1 class="title mb-6">How to find all objects in a SQL Server Schema</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -252,10 +192,70 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 26, 2016
+            posted on: April 07, 2016
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last month I was invited to put on a customized workshop for one of my mentoring clients. The group included developers, testers, and&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/173474/optimal-compression-rate" target="_blank"><h1 class="title mb-6">Optimal compression rate</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today I&#x2019;m migrating some databases from one server to another. Some of these applications are quite old, and user accounts that were created&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://benfoster.io/blog/aspnet-core-customising-model-binding-conventions/" target="_blank"><h1 class="title mb-6">Customising model-binding conventions in ASP.NET Core</h1></a>
+        <p class="mb-2">by Ben Foster</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 06, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How to customise the model-binding behaviour in ASP.NET Core MVC to bind complex types from the request body (how it should be).</p>
+        <a href="https://enterprisecraftsmanship.com/posts/having-the-domain-model-separate-from-the-persistence-model/" target="_blank"><h1 class="title mb-6">Having the domain model separated from the persistence model</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 05, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I&#x2019;d like to write about a pretty common discussion in DDD circles: should one have the domain model separated from the persistence model? In other words, should you map your domain objects to the DB tables directly using an ORM or would it be better to use a separate set of Data Access Objects (DAOs) instead?</p>
+        <a href="https://ardalis.com/logging-method-counts-and-durations/" target="_blank"><h1 class="title mb-6">Logging Method Counts and Durations</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 31, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Remember the rules of optimization: Don&#x2019;t do it! Don&#x2019;t do it, yet. Avoid premature optmization. Profile before optimizing So, assuming you&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://enterprisecraftsmanship.com/posts/trying-to-impress-people-with-your-code/" target="_blank"><h1 class="title mb-6">Trying to impress people with your code</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 24, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I&#x2019;d like to write about the personal traits we all possess. Namely, I want to talk about being proud of your code and trying to impress people with it.</p>
+        <a href="https://benfoster.io/blog/asp-net-identity-role-claims/" target="_blank"><h1 class="title mb-6">Using Role Claims in ASP.NET Identity Core</h1></a>
+        <p class="mb-2">by Ben Foster</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 24, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">What are Role Claims in ASP.NET Identity Core and how can you use them?</p>
+        <a href="https://ayende.com/blog/173761/the-role-of-logs" target="_blank"><h1 class="title mb-6">The role of logs</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -264,9 +264,9 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 26, 2016
+            posted on: March 23, 2016
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the new blittable format we use in RavenDB, we make heavy use of compression to reduce the size of documents.  Compression has an unfortunate problem, though. It doesn&#x27;t work for all inputs. The proof of that is a very neat one:  We have a set of compression / decompression function: compress(plainText) &#x2013;&gt; compressedText and decompress(compressedText) &#x2013;&gt; plainText.  Those are lossless functions, that is, for any input decompress( compress(X) ) == X Let us assume that for any input, size(plainText) &gt; size(compressedText) But that causes a problem. Let us assume that our plain text size is N, and that the compression algorithm reduce that size by just one bit, so the size of the compressedText is N-1. We&#x27;ll compress all possible permutations of N bits using this algorithm. Given that the compression results in at least N-1&#xA0; bits, there must now be two different values of the plainText that result in the same compressedText. That breaks the ability to decompress them successfully. Because there isn&#x27;t a one to one mapping between them. Common compression algorithms rely on the source data to either have repetitions (LZ derivatives) or are based on shared dictionaries that match a particular set of data.  In practice, this has real world implications when you are designing a data format. For example, the blittable format compress strings using two different algorithms. For large strings, we use LZ4, because it has much higher compression rate and doesn&#x27;t require any special knowledge of the data. For small strings, we use a Smaz variants, which is a shared dictionary of common terms. Because the dictionary is small, we can&#x27;t put a lot of data into it, so we concentrated on common Latin character sequences. That means that if you are trying to compress a Unicode string like:   &#x5E8;&#x5D5;&#x5D7; &#x5E6;&#x5E4;&#x5D5;&#x5E0;&#x5D9;&#x5EA; You are going to use up more bytes than the original plain text. This is easy to experiment with using Smaz variant, because it is very simple. But it also happens using LZ4 for certain inputs.  That causes a problem for the blittable format, because we want to compress the data, but for certain inputs, that means that we are going to get more data. We solved that by doing conditional compression. We designate a buffer that is smaller than the plain text that we are compressing (this reflect the maximum amount of compression that is valuable for us), and compress to that buffer. If the compression routine was unable to compress to that buffer (because it needed more space), we fail the compression, and just store the plain text. Now we have an optimal compression rate, this is going to always be equal to or (hopefully usually) smaller than the original text.</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You are probably familiar with logging, and log levels. In particular, the following scheme is very popular.  I have been using this scheme for pretty much every software project I had in over a decade. And it works. Which is good. But I found that there are actually not really useful for our scenarios. In particular, we found that there are many cases where a component that logged something as a warn or error would generate a support ticket by eagle eyed admin, while it was just a valid part of the software behavior. The other side of that is that when we need to use the logs to find a problem, we never use fine grained logs, we just need it all. This lead me to believe that we only actually need two and a half levels.  Informative &#x2013; we are reporting so one of our support engineers or a team member can look at that and understand what the software is doing. Operational &#x2013; something deserves attention from the customer&#x2019;s operations team. There isn&#x2019;t really anything in between those. Either this is something that we fully expect an operation team at the customer to look at, or this is something that the development and/or support engineers need to see. But I mentioned two and a half, what is that half? Well, above operational, there is another half a level, which I like to call Pay Attention Now. This isn&#x2019;t actually a log level, it is a way to attract someone&#x2019;s attention to the log, or to some sort of operational alert. This is an SMS sent, or an email, etc. But beyond the &#x201C;something need attention now&#x201D;, there is nothing else that is needed. The production logs are either for routine operations monitoring (in which case they should be relatively succinct and written with an eye to a reader who isn&#x2019;t familiar with the internal working of RavenDB) or &#x201C;what is going on here&#x201D; mode, which is typically done by a team member who needs the most information possible.</p>
         <div class="button flex justify-between">
             <a href="265.html"><span class="back arrow"></span></a>
 

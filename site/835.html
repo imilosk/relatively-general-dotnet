@@ -147,7 +147,7 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
-        <a href="https://ayende.com/blog/1324/great-advice-on-screws" target="_blank"><h1 class="title mb-6">Great Advice On Screws</h1></a>
+        <a href="https://ayende.com/blog/1351/firefox-parade" target="_blank"><h1 class="title mb-6">FireFox Parade</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -156,10 +156,94 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: May 02, 2006
+            posted on: May 13, 2006
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Jeff has a great post about screws, and why we need so many.Go read it, it worth your time, and will provide you with some insight you can use later.</p>
-        <a href="https://ardalis.com/update-to-cs-2-0/" target="_blank"><h1 class="title mb-6">Update to CS 2.0</h1></a>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#xA;took the following image when I opened about ~50 tabs. Three lines of tabs on&#xA;1280x1024 was not enough, so FireFox added a scroll bar to handle this.&#xA;&#xA;Sweat.</p>
+        <a href="https://ayende.com/blog/1350/writing-maintainable-code" target="_blank"><h1 class="title mb-6">Writing Maintainable Code</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 13, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Brian Kernighan said:Debugging is twice as hard as writing code in the first place. Therefore, if you write the code as cleverly as possible, you are, by definition, not smart enough to debug it.    Quite often I find myself rewriting parts of code that I written to make them reasable to a future me (that is without even starting to talk about other developers who may have to maintain my code). Consider the following code, what does it do?            foreach (Order order in approvedOrders)                        {                        &#xA0;&#xA0;&#xA0; Order current = order;                        &#xA0;&#xA0;&#xA0; ((Proc)delegate {                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Context.OrdersDispatcher.DispatchOrder(current);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SafeInvoke(delegate                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Context.View.OrderDispatched(current);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; });                        &#xA0;&#xA0;&#xA0; }).BeginInvoke(delegate(IAsyncResult ar) {                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ((Proc)ar.AsyncState).EndInvoke(ar);                                 &#xA0;&#xA0;&#xA0; },null);                        }                        It simply dispatch orders asynchronously and update the UI when an order&#x27;s dispatching is completed. Of course, in this piece of code there are N &#x2B; 3 threads involved (current thread, UI thread, end invoke thread?, how ever many threads may be needed to process the dispatching). I really don&#x27;t want to debug something like this.    I may start out by writing similar code, enjoy the shear incomprehensibleness* elegance of the code, and then refactor it so it would end up looking like this.             foreach (Order order in approvedOrders)                        {                        &#xA0;&#xA0;&#xA0; ThreadPool.QueueUserWorkItem(DispatchOrder,order);                        }                                &#xA0;                        public void DispatchOrder(object order)                        {                        &#xA0;&#xA0;&#xA0; Order current = (Order)state;                        &#xA0;&#xA0;&#xA0; Context.OrdersDispatcher.DispatchOrder(current);                                 &#xA0;&#xA0;&#xA0; SafeInvoke(delegate {                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Context.View.OrderDispatched(current);                                 &#xA0;&#xA0;&#xA0; });                        }        The functionality is the same, and I didn&#x27;t refuce the burden of multi threading on the code, but just splitting it up to seperate method makes it simpler to look at the code and see in a glance what it is supposed to do. The scary part is that this is not even the least debuggable / comprehensible code that I have written.    *I actually got the spelling right in the first go, Wow!</p>
+        <a href="https://ayende.com/blog/1349/im-1337" target="_blank"><h1 class="title mb-6">I&#x27;m 1337 !!!</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 13, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">1&#x27;m 50 c00|. 1 607 1337 p0575 1n my b|065.    700k 4 |0n6 71m3 70 d0 17, bu7 1 607 50m3 f4ncy 57uff 601n6 0n.    H0p3 7h47 1&#x27;|| b3 4b|3 70 c4rry 17 f0rw4rd.    F0r 7h3 b0r1n6 p30p|3 0u7 7h3r3.    7r4n5|4710n 15 h3r3.</p>
+        <a href="https://ayende.com/blog/1348/power-shell" target="_blank"><h1 class="title mb-6">Power Shell</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 13, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Monad is out, it has a new name, it sounds like a poster from the fifties, but whatever.    Cool things so far:            UNC Paths are supported! I never understood why cmd.exe didn&#x27;t support them, but they are finally welcomed to the cli world.            You can download a 230 pages user guide            I got to play with it a bit, trying to do some stuff, it has very interesting capabilities.            Don&#x27;t try to do reflection using it, it suffers from the same problem all other .Net assemblies has, load context issues. For some reason I expected it to be solved there, but you can&#x27;t just load any old assembly and get the correct load context. Pity.</p>
+        <a href="https://ayende.com/blog/1347/visual-studio-2005-web-application-projects-rtmed" target="_blank"><h1 class="title mb-6">Visual Studio 2005 Web Application Projects RTMed!</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 13, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Visual Studio 2005 Web Application Projects are out. I had a lot of problems with the ASP.Net Web Site projects, so this is really great news to hear.    It should speed up development by quite a bit, just by taking out the loong compile times.</p>
+        <a href="https://ayende.com/blog/1346/linq-update" target="_blank"><h1 class="title mb-6">Linq Update</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 13, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yes, there is a new Linq CTP, but this isn&#x27;t exciting. What is exciting is this post. The exciting thing about it is that I can now intermingle code &amp; data freely. This is going to have some major reprecussions, I think. I can do it now, using LCG, but I don&#x27;t know a lot of people that would like to do that on a day to day basis. This puts us in a whole different level.     One simple thing that this may mean is that I can build a smart cache that will take an expression tree, compile it to runnable code, check its in-memory objects using this code and if it is not found will use the expression tree to query a database. This is powerful.    The next bit of news that I would like to hear is a ship date, to tell you the truth.</p>
+        <a href="https://ayende.com/blog/1345/tech-ed-cows" target="_blank"><h1 class="title mb-6">Tech Ed Cows</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 13, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Although&#xA;not usually the thing one learn in Tech Ed, I learned one thing during this one.&#xA;Don&#x27;t stand too close to a cow&#x27;s behind. At least not if you like what you are&#xA;wearing. Fortunately I didn&#x27;t have personal experience with this issue,&#xA;although there was an accident near me.&#xA;&#xA;&#xA0;&#xA;&#xA;&#xA;&#xA;&#xA0;&#xA;&#xA;Oh,&#xA;and the best warning sign ever is&#xA;this one:</p>
+        <a href="https://ayende.com/blog/1344/me-orignami" target="_blank"><h1 class="title mb-6">Me &amp; Orignami</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 13, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">During&#xA;Tech Ed, I got a chance to lay my hands on an Origami, among other fascinating toys.&#xA;It is small, light weight, hot (the model that I had is a testing one).&#xA;&#xA;I&#xA;got big hands, and I couldn&#x27;t quite type in the thumb keyboard successfully,&#xA;and I&#x27;m proud to say that the hand writing recognition assumes that I&#x27;m writing&#xA;in Klingon. The experience of&#xA;using it is very good, though. Everything can be handled without moving your&#xA;hands unnecessarily.&#xA;&#xA;&#xA0;&#xA;&#xA;&#xA;&#xA;&#xA0;&#xA;&#xA;I&#xA;still wants one, but now that I got my paws on one, I think that I&#x27;ll be able&#xA;to wait a while and not pay a 1000$ for the first model in the market.</p>
+        <a href="https://ardalis.com/code-query-language/" target="_blank"><h1 class="title mb-6">Code Query Language</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
@@ -168,11 +252,11 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: May 01, 2006
+            posted on: May 12, 2006
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday we updated ASPAdvice.com to Community Server 2.0. So far it seems to be a lot nicer. Please let me know if you have any problems&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/1323/active-record-internals" target="_blank"><h1 class="title mb-6">Active Record Internals</h1></a>
-        <p class="mb-2">by Oren Eini</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">http://www.practicaldot.net/en2/main.htm Have you ever wanted to run some metrics on your code base, to try and gauge its quality or to try&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://ardalis.com/17729/" target="_blank"><h1 class="title mb-6">Practical .NET2 and C#2</h1></a>
+        <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -180,93 +264,9 @@
                                             xmlns="http://www.w3.org/2000/svg"
                                             d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: May 01, 2006
+            posted on: May 12, 2006
         </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Hammett is publishing a set of article about how Active Record is working internally. They are very detailed, without boring you with thousands of lines of code.Article #1 - Introcuding Active RecordArticle #2 - Active Record Initialization.</p>
-        <a href="https://ayende.com/blog/1322/replacing-o-rm-is-hard" target="_blank"><h1 class="title mb-6">Replacing O/RM Is Hard</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 30, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">No, I&#x27;m not abandoning NHibernate to greener pastors, I&#x27;m talking about this post.I&#x27;m not sure what the point of the author was, but on first reading, it read like FUD to me. Maybe it is the general tone of the post, or that there are a lot of numbers without any clue how the author got them, but that was my first feeling. A lot of the points that are raised are valid, but I just don&#x27;t understand where the numbers came from.I had a math teacher that used to look at a student excersize and say: &quot;And suddenly there is a QED.&quot; when we did something stupid. I fill like saying it here.Take for instance the part about entities and methods. I present you my most common method of dealing with O/RM:public interface IRepository&lt;T&gt;{&#xA0;&#xA0;&#xA0; void Save(T item);&#xA0;&#xA0;&#xA0; void Delete(T item);&#xA0;&#xA0;&#xA0; ICollection&lt;T&gt; Find(params Predicate[] preds);&#xA0;&#xA0;&#xA0; T Load(int id);&#xA0;&#xA0;&#xA0; T TryLoad(int id);}That is it. The implementation is generic as well, so I go five methods, not matter how many entities I have. In theory I can switch from O/RM to DAO to SOA to AOM (Acronym Of Month) with very little effort. I would replace the implementation of the IRepository&lt;T&gt;, and I&#x27;m done. Five methods, about 2.5 hours if I understand the math correctly, we&#x27;ll add a couple of days to be safe, but we are still under 20 hours.&#xA0; I don&#x27;t even need to touch the UI since it works against the interface, and not the implementation.The problem is that this math is that it is based on nothing in particular. I recently had to evaluate moving from one O/RM to another, and I had to survey the number of places where I was dependant on the O/RM. I counted 23 major features that I had to have if I didn&#x27;t want to basically re-write my application from scratch.Those ranged from lazy loading to cascades to reference equality for same entities in the same session, etc.Replacing the O/RM would&#x27;ve have been hard at best, impossible at worst, and painful whatever I would have done. And I used a very similar interface to isolate myself from the O/RM (even though I never had any intention of replacing it).Frankly, the issue is not the support of interface, but far smaller interactions. From knowing that you can map the same fields in a class to different properties in a hierarchy (an integer in one case, an object in the other, etc) is very powerful tool that will cause quite a bit of pain if you need to stop using it. That is where the cost of switching O/RM will come into play.If you are doing anything at all interesting with your O/RM of choice (or hand written DAL), then you are going to get into some serious trouble if you think about switching.For instance, I&#x27;m using NHibernate&#x27;s Table Hierarchy to save strategies to the database, so when I load the object later, I&#x27;ll get all its saved strategies with their parameters. It is making my life so much easier, but I don&#x27;t want to even think what I would have to do if I had to write it all on my own.To conclude, I agree with the first two observations, and disagree with the third. You can certainly optimize a good O/RM as much as you like. Usually you don&#x27;t even need to see the O/RM code for this.I really don&#x27;t agree with his conclustions, though.</p>
-        <a href="https://ayende.com/blog/1321/training-by-the-ear" target="_blank"><h1 class="title mb-6">Training By The Ear</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 30, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of my tasks when I was in the army was to train people. It was often new guys that arrived, but also refreshing the knowledge and the skill of our existing staff. One Wendsday afternoon I got an urgent call from headquarters, I was to drop everything and go to another base, to train several cadets in the final stages of their training.I was literally yanked away in a matter of a few hours. The course that I needed to pass was supposed to be two to three weeks long, and existed mainly as a set of power point presentations that were written by someone who never worked in the field.I took a brief look at the material that I had and flat out refused to pass the course this way. It was, in fact, the same material that I was taught, and it hasn&#x27;t changed a bit in over two years (and a lot has changed since). So I just played the course by the ear, without much sleep, but with a real devotion to make sure that the officer that I will train will go into the field as prepared as I can make them in a class room and in field trips.I remember several times when I had to tell the cadets to wait for several minutes while I was finishing writing their next lesson, and then immediately giving it to them. Needless to say, in the breaks between lessons, I kept writing the next lessons. It was also one of the times that I had the most fun in the army (sadly, it wasn&#x27;t even close to one of the times that I had least sleep).I had a similar experiance today, writing a presentation and the lesson&#x27;s plan in the morning, doing a short trial run on some co-workers, and then passing it later that day. In fact, I wrote the lesson for tomorrow while the students were doing excersizes.Oh, and one point that I am particuallry proud of, the presentations and lessons that I created for the out of the blue course were used in the army for several years afterward (actually, to my knowledge, they are still in use today).</p>
-        <a href="https://ayende.com/blog/1320/nhibernate-generics-1-0-6-release" target="_blank"><h1 class="title mb-6">NHibernate Generics 1.0.6 Release</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 30, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This release fixes a very annoying bug with NHibernate Generics and lazy load exception when the entity ref is set. A huge thanks for Daniel for giving me a much better solution than the workaround that I found.You can find source and binaries here</p>
-        <a href="https://ayende.com/blog/1319/runas-mystery" target="_blank"><h1 class="title mb-6">Runas Mystery</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 30, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I can&#x27;t seem to use Runas on files that or a network share. I&#x27;m not sure why, but I&#x27;m getting invalid user name or password for combinations that are valids.Anyone knows anything about this?</p>
-        <a href="https://ayende.com/blog/1318/nhibernate-net-2-0-nullable-types" target="_blank"><h1 class="title mb-6">NHibernate &amp; .Net 2.0 Nullable Types</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 30, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you want to use NHibernate with .Net 2.0 Nullable Types (int?, DateTime?, etc), all you need to do is to specify full type name of the (non nullable) property.So, if you&#x27;ve something like &quot;DateTime? DueDate { get; set; }&quot;, the mapping will looks something like this: &quot;&lt;propery name=&#x27;DueDate&#x27; type=&#x27;System.DateTime&#x27;/&gt;&quot;You don&#x27;t need to do anything else.</p>
-        <a href="https://ayende.com/blog/1317/mini-seria-review-the-witch-the-lion-and-the-wardrobe" target="_blank"><h1 class="title mb-6">Mini Seria Review: The Witch, The Lion and the Wardrobe</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 29, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just watched The Witch, The Lion and The Wardrobe, the mini seria from the 80s.It is far more primitive, but it has a certain charm.The children actually looks like real children. When they needed to show a pegasus, they actually used animation.The England that is shown is more in line with my excpectations of the time (a map of the war&#x27;s progress on the wall, for instance), and the English accent is a delight.I think I may have seen this as a child, there are some things that rings a bell, visually. but it is hard to know since I seen the new movie and read the books several times.The White Witch looks far more like I thought it would be from the description in the book, and not like something out of a Muscle Woman magazine.I really liked the proffesor&#x27;s attidute in this movie.The annimation is not on the level of Who Killed Roger Rabbit, but it leaves enough for imagination to fill, so I don&#x27;t have a problem with this.I just saw a unicorn in this movie that looked more real than any other. Aslan itself is both a surprise and a disappointment. It looks more or less like I imagines, a big lion, but his roar is not something that would frighten a kitten.The White Witch is really a caricature, I think. Considerring the way she is portrayed in the book, I&#x27;m not surprised by how she is acting. It&#x27;s all in line with the character, the problem is that the character is not believable.First time I have ever seen a flying lion anywhere, but it is in this movie. Doesn&#x27;t look very real, but it gives them a chance to show some country side, I guess. The battle scene, which I really like in the recent movie, is the part that really can&#x27;t compare, it is laughably bad in all regards.The end was better, I think.</p>
-        <a href="https://ayende.com/blog/1316/comments-on-dnrtv-16" target="_blank"><h1 class="title mb-6">Comments on DNRTV #16</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 29, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just finished watching DNR TV #16, in which Carl is talking about async programming.Some of the best DotNetRocks episode was with Carl and the host of the moment just goofing around and talking tech, so I had high expectations of this.I&#x27;m not a VB programmer, and it&#x27;s interesting to see how a VB guy works, and it even includes commentry.One thing that I don&#x27;t understand is this construct:Try&#xA0;&#xA0; &#xA0;&#x27; do something that can throwCatch&#xA0;&#xA0; &#xA0;ThrowEnd TryIsn&#x27;t this a no op? This video reminds me of a Joel On Software article about how hard it is to write a function that copies a file.There is a lot of commentry on some ancient VB stuff along the way, since Carl often compare the way it was done right now and in VB6 and previous versions.It is a nice show.</p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently had the opportunity to skim-read Practical .NET2 and C#2 by Microsoft MVP Patrick Smacchia. You&#x2019;ll find the book&#x2019;s table of&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="834.html"><span class="back arrow"></span></a>
 
