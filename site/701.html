@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/2493/performance-and-explicit-domain-models" target="_blank"><h1 class="title mb-6">Performance and Explicit Domain Models</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 05, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Udi talks about limitations for DDD as a result of performance constraints. He says:  Ayende and I had an email conversation that started with me asking what would happen if I added an Order to a Customer&#x2019;s &#x201C;Orders&#x201D; collection, when that collection was lazy loaded. My question was whether the addition of an element would result in NHibernate hitting the database to fill that collection. His answer was a simple &#x201C;yes&#x201D;. In the case where a customer can have many (millions) of Orders, that&#x2019;s just not a feasible solution. He then goes on to describe several solutions for the issue, including [ThreadStatic] events, something I have never consider but has some interesting possibilities. I wanted to add another option to the mix. You can extend NHibernate so calling customer.Orders.Add( new Order() ) will not force a load of the collection if the collection is not loaded, but would still add the new order to the unit of work. What is the caveat? It violates the principal of least surprise. My NHibernate.Generics collection used to do just that, I did it on the belief that it would save performance in un-needed trips to the database. I paid for that performance in grief when I found bugs where this failed:       1:  customer.Orders.Add(new Order())   2:  // sometime later, still in the same Unit of Work   3:  if(customer.Orders.Contains(theOrder)==false)   4:  {   5:    //do something bad   6:  }&#xA0;&#xA;Basically, the&#xA0;order was not persisted yet, and when the collection was loaded from the database, it&#xA0;didn&#x27;t include the newly added instance, which&#xA0;caused quite a bit of confusion. We have run into it several times, and&#xA0;it convinced me that I really shouldn&#x27;t do things that would surprise the naive developer, since&#xA0;that&#xA0;tends to be me.&#xA;&#xA0;&#xA;I wanted to mention this, since it is&#xA0;a viable alternative for this scenario, since you aren&#x27;t likely to load the Orders collection any time soon anyway.</p>
+        <a href="https://ayende.com/blog/2492/debugging-nhibernate" target="_blank"><h1 class="title mb-6">Debugging NHibernate</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 04, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today we had a problem with an NHibernate query that was failing which had quite stumped. Pulling the usual tricks didn&#x27;t work, debugging NHibernate was problematic, since the failing query was damn complex, and I had no clear idea why this was failing. After a while, I decided that trying the top down approach will not work, and that I need more structure in finding out the issue.    Did I mentioned that the query was complex? The object model is big as well, and the query managed to touch just about all of it. Getting it slimmed down to a reproducable version was hard, because I wasn&#x27;t sure what caused the issue, but eventually I managed to get it to fail the way I wanted it. (In the process I walked through parts of NHibernate that I haven&#x27;t met before, interesting.    The end result are these tests (there is a reason that I know that C# has a 512 characters limits on identifiers):            CanMakeCriteriaQueryAcrossBothAssociationsWhenBothAssoicationsHasSameColumnKeyNameAndUsingPagingInSqlServer2005            CanLoadCollectionUsingLeftOuterJoinWhenBothCollectionsHasTheSameColumnKeyNameAndOneIsNull    I still don&#x27;t have an answer, but now I have much harder questions...This post is dedicated to Rinat, who says that she doesn&#x27;t knows NHibernate, but can make queries so complex both NHibernate and SQL Server begs for mercy.</p>
         <a href="https://ayende.com/blog/2491/resharper-wishlist" target="_blank"><h1 class="title mb-6">ReSharper Wishlist</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: June 03, 2007
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here are the goodies:  Breaking change: I modified the way that NHQG accepts parameters, I am not using a non-hacky approach for this, but this means that you would need to modify any scripts that you have. Instead of positional parameters, you have to specify what the name of the parameters are, I think that it would be easier this way. Added AddOrder(), SetProjection() to QueryBuilder -&#xA0;patch from Ramon Kania Support for nested components - patch from Craig Neuwirt Stateless root for the query in case you want to really build it from scratch - that one is actually from me Added a way to override the &quot;Query&quot; namespace, using /ns:MyQuery syntax. - requested by Marcello Palmitessa As usual, you can get it here.</p>
-        <a href="https://ayende.com/blog/2484/nhibernate-query-analyzer-for-nhibernate-1-2-ga" target="_blank"><h1 class="title mb-6">NHibernate Query Analyzer for NHibernate 1.2 GA</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 02, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am a bit late with this one, but here is a new version for NHibernate 1.2 GA.&#xA0;This also supports Castle Active Record, hopefully in a version neutral way. You can get it here, or admire the UI here:   As an aside, I am thinking about adding Criteria Query functionality, since this is something that I use a lot. I am not sure yet what form this would take, at any rate it would involve runtime code generation, so that is complex (and sort of fun/pain). I am opened to ideas. Have fun...</p>
-        <a href="https://ayende.com/blog/2483/arrest-that-man-he-had-built-workaround-a-technical-limitaion" target="_blank"><h1 class="title mb-6">Arrest that man! He had built workaround a technical limitaion!</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 02, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Alex* has posted a piece of code that will solve my issue with Window Live Writer and spell checking. The problem is that this is clearly working around a technical limitation in the software, as a non English speaker, I am obviously required to use Windows Live Writer Team Edition, which will (in the next version only, mind you) support English spell checking for non-English speakers. I am expecting the Cease &amp; Desist to come at any moment, and Alex is currently expecting an attack from the Tean Ninja Lawyers teams. Nice hack Alex, now off to prison with you. * Sorry to pick on you, but that was too good an example not to use.</p>
         <div class="button flex justify-between">
             <a href="700.html"><span class="back arrow"></span></a>
 

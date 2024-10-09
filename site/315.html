@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/166785/compression-memory-sizing-in-ravendb" target="_blank"><h1 class="title mb-6">Compression &amp; Memory Sizing in RavenDB</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 20, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We had an interesting issue at a customer recently, and it took a while to resolve, so it is interesting. The underlying problem as stated by the customer was that they tried to reset an index, and RavenDB took all the memory on the machine. That is kinda rude, and we have taken steps to ensure that this wouldn&#x2019;t happen, so that was surprising. So we settled down to figure out what was going on, and we were able to reproduce this locally. That was strange, and quite annoying. We finally narrowed things down to very large documents. There was a collection on this database where most documents were several MB in size. We do a lot of rate limiting, to avoid overloading, but we do usually do that on the count of documents, not the size of them. Except, that we actually do limit the size where it matter. When we load documents to be indexed, we specify a maximum size (usually 128MB) per batch. However&#x2026; what actually happens is that we go to the storage and ask it, give us X amount of documents, up to Y amount in size. The question is, what size. And in this case, we are using the size on disk, which has a close correlation to the actual size taken when loading into a JSON object. Except&#x2026; when we use compression. When we have compression, what actually happens is that we limited to the maximum size of the compressed data, which can be 10% &#x2013; 15% of the actual data size when we decompress it in memory. That was a large part of the problem. Another issue was what happened when we had prefetching enabled. We routinely prefetch data to memory so we won&#x2019;t have to wait for I/O. The prefetcher only considered documents count, but when each document is multiple MB, we really needed to consider both count and size.  Both issues were fixed, and there are no longer any issues with this dataset. Interestingly enough, the customer had no issue when creating the database, because it only had to deal with whatever changed, and not the entire data set.</p>
+        <a href="https://ayende.com/blog/166657/c-async-programming-pitfall" target="_blank"><h1 class="title mb-6">C# Async programming pitfall</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 19, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I really like the TPL, and I really like the async/await syntax. It is drastically better than any other attempt I&#x2019;ve seen to handle concurrency. But it also has a really major issue. There is no way to properly debug things. Imagine that I have the following code:  public Task DoSomething(){    return new TaskCompletionSource&lt;object&gt;().Task;}&#xA;And now imagine that I have some code that is going to do an await DoSomething();&#xA;What is going to happen? This is a never ending task, so we&#x2019;ll never return. And that is fine, except that there is absolutely no way to see that. I have no way of seeing which task didn&#x2019;t return, and I have no way of seeing all the pending tasks, and what they are all waiting for, etc. I&#x2019;ve run into something like that (obviously a lot harder to figure out) too many times.&#xA;If I was using non async code, it would be obvious that there is this thread that is stopped on this thing, and I could figure it out. For us, this make it a lot harder to work with.</p>
         <a href="https://ayende.com/blog/166658/a-map-to-reviewing-ravendb" target="_blank"><h1 class="title mb-6">A map to Reviewing RavenDB</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: May 06, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Matt Jonson talks about date &amp; time in general and in RavenDB in particular. And if you ever want to hear an expert talking about his pet topic, that is Matt.</p>
-        <a href="https://ayende.com/blog/166594/ravendb-conf-videos-abstracting-ravendb-dont-do-it" target="_blank"><h1 class="title mb-6">RavenDB Conf Videos</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 05, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Kijana Woodard&#x2019;s 1st talk ever, and he picked a really good topic, and delivered a masterful performance.</p>
-        <a href="https://benfoster.io/blog/angularjs-recursive-templates/" target="_blank"><h1 class="title mb-6">AngularJS recursive templates</h1></a>
-        <p class="mb-2">by Ben Foster</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 04, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How to render tree data structures (such as a hierarchical list of product categories) with AngularJS using recursive templates.</p>
         <div class="button flex justify-between">
             <a href="314.html"><span class="back arrow"></span></a>
 

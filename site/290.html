@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/170433/fixing-the-index-solutions" target="_blank"><h1 class="title mb-6">Fixing the index, solutions</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 31, 2015
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my previous post, I showed a pretty trivial index and asked how to efficiently update it. Efficient being time &amp; memory wise. The easiest approach to do that is by using a reverse lookup option. Of course, that means that we actually need to store about twice as much data as before. Given the following documents:  users/21 &#x2013; Oren Eini users/42 &#x2013; Hibernating Rhinos users/13 &#x2013; Arava Eini Previously, we had:    Term Documents  Oren users/21,  Eini users/21, users/13   Hibernating users/42,  Rhinos users/42,  Arava users/13 And with the reverse lookup, we have:    Term Documents  Document Terms  Oren users/21, &#xA0; users/21 Oren, Eini  Eini users/21, users/13 &#xA0; users/42 Hibernating, Rhinos  Hibernating users/42 &#xA0; users/13 Arava, Eini  Rhinos users/42 &#xA0; &#xA0; &#xA0;  Arava users/13 &#xA0; &#xA0; &#xA0; And each update to the index would first do a lookup for the document id, then remove the document id from all the matching terms. The downside of that is that we take about twice as much room. The upside is that all the work is done during indexing time, and space is pretty cheap.  It isn&#x2019;t that cheap, though. So we want to try something better. Another alternative is to introduce a level of indirection, like so:    Term Documents &#xA0; Num Id  Oren 1, &#xA0; 1 users/21  Eini 1,3 &#xA0; 2 users/42  Hibernating 2 &#xA0; 3 users/13  Rhinos 2 &#xA0; &#xA0; &#xA0;  Arava 3 &#xA0; &#xA0; &#xA0; Now, let us say that we want to update users/13 to be Phoebe Eini, we will end up with:    Term Documents &#xA0; Num Id  Oren 1, &#xA0; 1 users/21  Eini 1,3,4 &#xA0; 2 users/42  Hibernating 2 &#xA0; 4 users/13  Rhinos 2 &#xA0; &#xA0; &#xA0;  Arava 3 &#xA0; &#xA0; &#xA0;  Phoebe 4 &#xA0; &#xA0; &#xA0; We removed the 3rd document, and didn&#x2019;t touch the terms except to add to them. That gives us a very fast way to add to the system, and if someone will search for Arava, we will see that&#xA0; the number no longer exists, so we&#x2019;ll return no results for the query. Of course, this means that we have to deal with garbage in the index, and have some way to clean it up periodically. It also means that we don&#x2019;t have a way to really support Update, instead we have just Add and Delete operations.</p>
+        <a href="https://ayende.com/blog/170402/interview-question-fix-the-index" target="_blank"><h1 class="title mb-6">Interview question</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 30, 2015
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is something that goes into the &#x201C;what to ask a candidate&#x201D;. Given the following class: public class Indexer&#xA;{&#xA;    private Dictionary&lt;string, List&lt;string&gt;&gt; terms = &#xA;        new Dictionary&lt;string, List&lt;string&gt;&gt;(StringComparer.OrdinalIgnoreCase);&#xA;&#xA;    public void Index(string docId, string text)&#xA;    {&#xA;        var words = text.Split();&#xA;        foreach (var term in words)&#xA;        {&#xA;            List&lt;string&gt; val;&#xA;            if (terms.TryGetValue(term, out val) == false)&#xA;            {&#xA;                val = new List&lt;string&gt;();&#xA;                terms[term] = val;&#xA;            }&#xA;            val.Add(docId);&#xA;        }&#xA;    }&#xA;&#xA;    public List&lt;string&gt; Query(string term)&#xA;    {&#xA;        List&lt;string&gt; val;&#xA;        terms.TryGetValue(term, out val);&#xA;        return val ?? new List&lt;string&gt;();&#xA;    }&#xA;}&#xA;&#xA;&#xA;This class have the following tests:&#xA;public class IndexTests&#xA;{&#xA;    [Fact]&#xA;    public void CanIndexAndQuery()&#xA;    {&#xA;        var index = new Indexer();&#xA;        index.Index(&quot;users/1&quot;, &quot;Oren Eini&quot;);&#xA;        index.Index(&quot;users/2&quot;, &quot;Hibernating Rhinos&quot;);&#xA;&#xA;        Assert.Contains(&quot;users/1&quot;, index.Query(&quot;eini&quot;));&#xA;        Assert.Contains(&quot;users/2&quot;, index.Query(&quot;rhinos&quot;));&#xA;    }&#xA;&#xA;    [Fact]&#xA;    public void CanUpdate()&#xA;    {&#xA;        var index = new Indexer();&#xA;        index.Index(&quot;users/1&quot;, &quot;Oren Eini&quot;);&#xA;        //updating&#xA;        index.Index(&quot;users/1&quot;, &quot;Ayende Rahien&quot;);&#xA;&#xA;        Assert.Contains(&quot;users/1&quot;, index.Query(&quot;Rahien&quot;));&#xA;        Assert.Empty(index.Query(&quot;eini&quot;));&#xA;    }&#xA;}&#xA;&#xA;&#xA;The first test passes, but the second fails. &#xA;The task is to get the CanUpdate test to pass, while keeping memory utilization and CPU costs as small as possible. You can change the internal implementation of the Indexer as you see fit.&#xA;After CanUpdate is passing, implement a Delete(string docId) method.</p>
         <a href="https://enterprisecraftsmanship.com/posts/8-resharper-shortcuts-everyone-should-know/" target="_blank"><h1 class="title mb-6">8 Resharper shortcuts everyone should know</h1></a>
         <p class="mb-2">by Vladimir Khorikov</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: March 11, 2015
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;re using an Azure Cloud Service as the origin server for the Azure CDN and need to use HTTPS, this post is for you.</p>
-        <a href="https://enterprisecraftsmanship.com/posts/functional-c-primitive-obsession/" target="_blank"><h1 class="title mb-6">Functional C#: Primitive obsession</h1></a>
-        <p class="mb-2">by Vladimir Khorikov</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 07, 2015
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The topic described in this article is a part of my Applying Functional Principles in C#&#xA0;Pluralsight course.&#xA; This is the second article in my Functional C# blog post series.&#xA;   Functional C#: Immutability&#xA;  Functional C#: Primitive obsession&#xA;  Functional C#: Non-nullable reference types&#xA;  Functional C#:&#xA0;Handling failures and input errors&#xA;   What is primitive obsession? Primitive obsession stands for using primitive types to model domain.</p>
-        <a href="https://ayende.com/blog/170305/qcon-london-and-in-the-brain-talk-performance-optimizations-in-the-wild" target="_blank"><h1 class="title mb-6">QCon London and In The Brain talk &#x2013; Performance Optimizations in the wild</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 03, 2015
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The RavenDB Core Team is going to be in the QCon London conference this week, so if you are there, stop by our booth, we got a lot of cool swag to give out and some really cool demos. In addition to that, on Thursday I&#x2019;m going to be giving an In The Brain talk about Performance Optimizations in the Wild, talking about the kind of performance work we have been doing recently. The results of this work can be shown on the following graph:   Come to the talk to hear all about the details and what we did to get things working.</p>
         <div class="button flex justify-between">
             <a href="289.html"><span class="back arrow"></span></a>
 

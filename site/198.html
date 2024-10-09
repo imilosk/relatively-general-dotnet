@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/179746/fractal-release-process" target="_blank"><h1 class="title mb-6">Fractal release process</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: September 12, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As part of the release process for RavenDB RC, we have different team members doing strange things. Here is what one of them sent me. This is a RavenDB cluster composed of 30&#x2B; nodes, with a single database that spans 27 nodes with full master/master replication between them.</p>
+        <a href="https://ardalis.com/tracking-tasks-in-visual-studio/" target="_blank"><h1 class="title mb-6">Tracking Tasks in Visual Studio</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: September 12, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was recently mentoring a client remotely who was using Visual Studio. They were demonstrating some of the work they had done and design&#x2026;Keep Reading &#x2192;</p>
         <a href="https://andrewlock.net/how-to-include-scopes-when-logging-exceptions-in-asp-net-core/" target="_blank"><h1 class="title mb-6">How to include scopes when logging exceptions in ASP.NET Core</h1></a>
         <p class="mb-2">by Andrew Lock</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: September 05, 2017
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A few months ago I wrote about the etag simplification in RavenDB 4.0, but ironically, very shortly after that post, we had to retire the etag almost entirely. It is now relegated to semi retirement within the scope of a single node. Instead, we have the notion of a change vector. Those of you familiar with distributed system design may also know that by the term vector clock.The basic problem is that an etag is not sufficient for change tracking in a distributed environment, and it doesn&#x2019;t provide enough details to know whatever a particular version is the parent of another version or a divergent conflict. One of the core scenarios that we wanted to enable in 4.0 is the ability to just move roles around between servers, and relying on etags for many things make it much harder. For example, concurrency control, caching and conflict detection all benefit greatly from a change vector.But what is it?Let us take a simple example of a database with three nodes. Here is the change vector of one such document.You can see that this document has entries for all three nodes in the cluster. We can tell at what point in history it relates to each of the nodes. The change vector reflect the cluster wide point in time where something happened. We establish this change vector by gossiping about the state of the nodes in the cluster and incrementing our own counter whenever a document is changed locally. In this case, this document was changed on node A, but this node knows that nodes B and C&#x2019;s etag at this point are 1060, so it can include their etag in the timeline as well. This gives us the ability to roughly sort changes in a timeline in a distributed fashion, without relying on synchronized clocks. This also means that when looking at a change vector, I can unambiguously say that this change is after &#x201C;A:1022, B: 391, C: 1060&#x201D; and &#x201C;A:1040, B:819, C: 1007&#x201D;. You might also note that I can also tell that this later two changes are in conflict with one another (since the first contains a higher etag value for C and the second contains a higher change value for A) but that the document that I have in the picture is more up to date then they are and subsumed both updates.Actually, the representation above is a lie, here is what this actually looks like:This is the full change vector, include the unique database id, not just the node identifier. This means that change vectors are also available when you are working with multiple clusters and serve much the same function there. With this, I can go to a server and give it a change vector and see if a document has changed (for caching or cluster wide optimistic concurrency check). This make a lot of things much simpler. Although I probably should note that with regards to optimistic concurrency, we are just checking in this node didn&#x2019;t have any updates on top of the last version the client has seen. RavenDB don&#x2019;t attempt to do any form of cross cluster concurrency, favoring multi master design and merging conflicts if needed. This mode allow us to remain up and functioning even with network splits / major failure, at the cost of having to deal with potentially merging conflicts down the road.</p>
-        <a href="https://andrewlock.net/creating-a-rolling-file-logging-provider-for-asp-net-core-2-0/" target="_blank"><h1 class="title mb-6">Creating a rolling file logging provider for ASP.NET Core 2.0</h1></a>
-        <p class="mb-2">by Andrew Lock</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 05, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I&#x27;ll show how to create an ILoggingProvider for ASP.NET Core that writes logs to the file system, based on the Azure App Service provider.&#x2026;</p>
-        <a href="https://ayende.com/blog/179652/when-you-forget-to-turn-off-the-benchmark-when-you-leave-the-office" target="_blank"><h1 class="title mb-6">When you forget to turn off the benchmark when you leave the office&#x2026;</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 04, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">On our Slack channel, I just got this:This is testing high write load on slow I/O device (a network drive). We didn&#x2019;t actually forget to turn off the benchmark when we left the office, this is part of our longevity / performance test suite, but it makes for a much better post title, I think you&#x2019;ll agree.By the way, this translate to over 16K writes per second sustained for hours on end. And this is testing our behavior on a network drive, because that is the only drive we had off hand with enough capacity for running such a test for long enough.And then we just left it under load way over the weekend:</p>
         <div class="button flex justify-between">
             <a href="197.html"><span class="back arrow"></span></a>
 

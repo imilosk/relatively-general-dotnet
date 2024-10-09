@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://andrewlock.net/exploring-dotnet-6-part-9-source-generator-updates-incremental-generators/" target="_blank"><h1 class="title mb-6">Source generator updates: incremental generators</h1></a>
+        <p class="mb-2">by Andrew Lock</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 09, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Exploring .NET 6 - Part 9</p>
+        <a href="https://ayende.com/blog/195204-A/finding-and-tracking-a-race-condition-in-memorycache" target="_blank"><h1 class="title mb-6">Finding and tracking a race condition in MemoryCache</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 05, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Following my previous posts, about the use after free bug that was found in a pull request, I put a lot of effort into testing the validity of the fix. As it turned out, my code was right and the fix worked properly. However, I uncovered a race condition in the .NET MemoryCache implementation. Here is what I got when I put the system under load:Unhandled exception. System.ArgumentException: Unable to sort because the IComparer.Compare() method returns inconsistent results. Either a value does not compare equal to itself, or one value repeatedly compared to another value yields different results. IComparer: &#x27;System.Comparison`1[Microsoft.Extensions.Caching.Memory.CacheEntry]&#x27;.&#xA;   at System.Collections.Generic.ArraySortHelper`1.Sort(Span`1 keys, Comparison`1 comparer) in System.Private.CoreLib.dll:token 0x60066cd&#x2B;0x1d&#xA;   at System.Collections.Generic.List`1.Sort(Comparison`1 comparison) in System.Private.CoreLib.dll:token 0x600688b&#x2B;0x3&#xA;   at Microsoft.Extensions.Caching.Memory.MemoryCache.g__ExpirePriorityBucket|27_0(Int64&amp; removedSize, Int64 removalSizeTarget, Func`2 computeEntrySize, List`1 entriesToRemove, List`1 priorityEntries) in Microsoft.Extensions.Caching.Memory.dll:token 0x6000061&#x2B;0x21&#xA;   at Microsoft.Extensions.Caching.Memory.MemoryCache.Compact(Int64 removalSizeTarget, Func`2 computeEntrySize) in Microsoft.Extensions.Caching.Memory.dll:token 0x600005b&#x2B;0xff&#xA;   at Microsoft.Extensions.Caching.Memory.MemoryCache.OvercapacityCompaction(MemoryCache cache) in Microsoft.Extensions.Caching.Memory.dll:token 0x6000059&#x2B;0xad&#xA;   at System.Threading.ThreadPoolWorkQueue.Dispatch() in System.Private.CoreLib.dll:token 0x6002b7c&#x2B;0x110&#xA;   at System.Threading.PortableThreadPool.WorkerThread.WorkerThreadStart() in System.Private.CoreLib.dll:token 0x6002c66&#x2B;0x190There are a few interesting things here. First, we can see that this killed the process, this isn&#x2019;t just an error, this is an error from a background thread that ended up unhandled and killed everything. That is a nope, for server applications. The second issue is that the error is strange. What exactly is going on here?Here is the relevant piece of code that throw the error, inside the MemoryCache:priorityEntries.Sort((e1, e2) =&gt; e1.LastAccessed.CompareTo(e2.LastAccessed));This is a really interesting line, because of what it does. The priorityEntries is a local list of cache entries, which we need to sort by the last access, to figure out what we can evict. What can go wrong here?Well, the MemoryCache is a naturally concurrent instance, of course. What happens when we have an access to the entry in question? We&#x2019;ll update the LastAccessed value. And if we do this just right, we may give the sort function different values for the same cache entry, leading to this problem. The bug in question was in place for as long as I can track the MemoryCache codebase. In the best case scenario, it will cause evictions of data that shouldn&#x2019;t be evicted. Not a major issue, and unlikely to be noticed. But if it fail in this manner, it will kill the process, so very likely to be noticed.My test scenario had a lot of concurrency and a very small cache (leading to a lot of evictions / compactions), I&#x2019;m guessing that is why I&#x2019;m able to trigger this so easily.</p>
         <a href="https://ayende.com/blog/195233-C/caching-hostility-usage-patterns-that-breaks-your-system" target="_blank"><h1 class="title mb-6">Caching hostility&#x2013;usage patterns that breaks your system</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: October 28, 2021
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Another code review comment, this time this is an error message being raised:The comment I made here is that this error message lacks a very important detail. How do I fix this? In this case, the maximum number of connections is controlled by a configuration setting, so telling that to the user as well as what is the actual configuration entry to use is paramount.If we give them all the information, we save the support call that would follow. If the user don&#x2019;t read the error message, the support engineer likely would, and be able to close the ticket within moment.</p>
-        <a href="https://ayende.com/blog/195137-B/exception-message-property-considered-harmful" target="_blank"><h1 class="title mb-6">Exception.Message property considered harmful</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 27, 2021
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just went over the following pull request, where I found this nugget:I have an admittedly very firm views on the subject of error handling. The difference between good error handling and the merely mediocre can be ten times more lines of code, but also hundred times less troubleshooting in production.And a flat out rule that I have is that whenever you have a usage of the Exception.Message property, that means that you are discarding valuable information aside. This is a pretty horrible thing to do. You should never use the Message property, always use the ToString(), so you&#x2019;ll get the full details. Yes, that is relevant even if you are showing to the user. Because if you are showing an exception message to the user, you have let it bubbled up all the way, so you might as well give full details.</p>
-        <a href="https://ardalis.com/dotnet-format-and-file-scoped-namespaces/" target="_blank"><h1 class="title mb-6">Dotnet Format and File Scoped Namespaces</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 26, 2021
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The dotnet format tool is now a part of the dotnet CLI with .NET 6, and you can use it to easily adopt the new file scoped namespace feature&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="63.html"><span class="back arrow"></span></a>
 

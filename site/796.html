@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/1656/handling-nullable-datetime-in-nhibernate-the-interceptor" target="_blank"><h1 class="title mb-6">Handling nullable datetime in NHibernate : The Interceptor</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: August 31, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">System.DateTime is a value type, and as such, cannot be null. The default value for DateTime in .Net is DateTime.MinValue, which equals to 01/01/001 00:00. The problem is that SQL Server&#x27;s dates start at 1753, or there about.    This is usualy solved in .Net 2.0 using Nullable&lt;DateTime&gt; (or DateTime? in C#), but my &quot;entities&quot; are messages to web services, and are generated from WSDL, so they lacked this nice feature. I also didn&#x27;t realize that some of the DateTime values were nullable until pretty late into the game.    After a lot of head scratching, I came up with this solution, which utilizes NHibernate&#x27;s IInterceptor capabilities. The interceptor allows to get the raw data before it is loaded and after it is saved, and interfer with it. Using that, I got this DefaultDateToNullInterceptor:            public bool OnFlushDirty(                        &#xA0;&#xA0;&#xA0; object entity, object id, object[] currentState, object[] previousState, string[] propertyNames,                        &#xA0;&#xA0;&#xA0; IType[] types)                        {                        &#xA0;&#xA0;&#xA0; MinValueToNull(currentState, types);                        &#xA0;&#xA0;&#xA0; return true;                        }                                            &#xA0;                                public bool OnSave(object entity, object id, object[] state, string[] propertyNames, IType[] types)                        {                        &#xA0;&#xA0;&#xA0; MinValueToNull(state, types);                        &#xA0;&#xA0;&#xA0; return true;                        }        The OnSave() and OnFlushDirty()&#xA0;methods are called before the values are saved or updated (respectively). The MinValueToNull() method is very simple, it replace all instances of DateTime.MinValue with null, like this:            private static void MinValueToNull(object[] state, IType[] types)                        {                        &#xA0;&#xA0;&#xA0; int index = 0;                        &#xA0;&#xA0;&#xA0; foreach (IType type in types)                        &#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; if(type.ReturnedClass == typeof(DateTime) &amp;&amp;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; DateTime.MinValue .Equals(state[index] ))                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; state[index] = null;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; index&#x2B;=1 ;                        &#xA0;&#xA0;&#xA0; }                        }                        All that was left was openning the session with the interceptor, and I was set.</p>
+        <a href="https://ayende.com/blog/1655/spot-the-wtf" target="_blank"><h1 class="title mb-6">Spot the WTF</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: August 31, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Thankfully, I haven&#x27;t run into this one yet, but can you spot the WTF here?</p>
         <a href="https://ayende.com/blog/1654/distributed-applications-failure-points" target="_blank"><h1 class="title mb-6">Distributed Applications Failure Points</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: August 29, 2006
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just spent four minutes configuring AdBlock to remove annoying ads from this page, I don&#x27;t have an issue with normal advertising, but naything that blinks, jumps, etc is annoying.    I am not going to pay positive attention to stuff that annoys me. The end result that I don&#x27;t know what the ad was about (it was big and black and green, that is all), but just about any ad server from this page is forever blocked on my browser.</p>
-        <a href="https://ayende.com/blog/1648/hanselman-saves-the-day" target="_blank"><h1 class="title mb-6">Hanselman Saves the Day</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: August 29, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Scott Hanselman&#x27;s 2006 Ultimate Developer and Power Users Tool List for Windows&#xA0;was just published, and a mere cursory look revealed this gem:    Query Express&#xA0;- Useful SQL Client with no installation and only 100Kb of size. Perfect for putting on a server where you can&#x27;t instal Management Studio, and perfect for my current situation.</p>
-        <a href="https://ayende.com/blog/1647/c-riddle-5" target="_blank"><h1 class="title mb-6">C# Riddle #5</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: August 29, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Following Alex&#x27;s post about traps in interviews, I thought about posting bits of code that I won&#x27;t use in interviews. Mostly because I don&#x27;t think that it is fair to the interviewee. I can think about crazy usages to langauge features, and not in a good way.    Consider the following peice of code (which is valid C# 2.0):public&#xA0;IEnumerable&lt;Predicate&lt;Customer&gt;&gt;&#xA0;ValidationPipeline()    {    &#xA0;yield&#xA0;return&#xA0;delegate(Customer&#xA0;c)    &#xA0;{    &#xA0;&#xA0;return&#xA0;c.Name&#xA0;!=&#xA0;&quot;&quot;;    &#xA0;};    &#xA0;    &#xA0;yield&#xA0;return&#xA0;delegate(Customer&#xA0;c)    &#xA0;{    &#xA0;&#xA0;return&#xA0;EmailService.IsValid(c.Email);    &#xA0;};    }    How would you use this method, and what is wrong with it?</p>
         <div class="button flex justify-between">
             <a href="795.html"><span class="back arrow"></span></a>
 
