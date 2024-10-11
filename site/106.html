@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/192865-B/production-postmortem-the-file-system-limitation" target="_blank"><h1 class="title mb-6">Production postmortem</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 07, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">On an otherwise uneventful morning, the life of the operations guy got&#x2026; interesting. What were supposed to be a routine morning got hectic because the database refused to operate normally. To be more exact, the database refused to load a file. RavenDB is generally polite when it run into issues, but this time, it wasn&#x2019;t playing around. Here is the error it served:---&gt; System.IO.IOException: Could not set the size of file&#xA0; D:\RavenData\Databases\Purple\Raven.voron to 820 GBytes---&gt; System.ComponentModel.Win32Exception (665): The requested operation could not be completed due to a file system limitationGood old ERROR_FILE_SYSTEM_LIMITATION, I never knew you, because we have never run into an error with this in the past. The underlying reason was simple, we had a large file (820GB) that was too fragmented. At some point, the number of fragments of the file bypassed the maximum size of the file system.  The KB article about this issue is here. You might be able to move forward more quickly by using the contig.exe tool to defrag a single file.The root cause here was probably backing up to the same drive as the database, which forced the file system to break the database file into fragements. Just a reminder that there are always more layers into the system and that we need to understand them all when they break.</p>
         <a href="https://ayende.com/blog/192834-B/reviewing-code-isnt-a-binary-operation" target="_blank"><h1 class="title mb-6">Reviewing code isn&#x2019;t a binary operation</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -184,7 +196,7 @@
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My talk to the Azure Israel about Cosmos DB is up (in Hebrew)&#x2026;</p>
         <a href="https://www.meziantou.net/defining-nuget-sources-in-the-csproj.htm" target="_blank"><h1 class="title mb-6">Defining NuGet restore sources in the csproj</h1></a>
-        <p class="mb-2">by </p>
+        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -208,7 +220,7 @@
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We got an interesting question a few times in recent weeks. How can I manually create a document revision with RavenDB? The answer for that is that you can use the ForceRevisionCreationFor() method to do so. Here is how you&#x2019;ll typically use this API:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          using (var session = store.OpenSession())&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              var company = new Company { Name = &quot;HR&quot; };&#xA;        &#xA;        &#xA;          &#xA;              session.Store(company);&#xA;        &#xA;        &#xA;          &#xA;              session.Advanced.Revisions.ForceRevisionCreationFor(company);&#xA;        &#xA;        &#xA;          &#xA;              session.SaveChanges();&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          force-revisions.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;This is the typical expected usage for the API. We intended this to make it so users can manually triggers revisions, for example, when moving a document from draft mode to public and the like.It turns out that there is another reason to want to use this API, when you migrate data to RavenDB and want to create historical revisions. The API we envisioned isn&#x2019;t suitable for this, but the layered API in RavenDB means that we can still get the desired behavior. Here is how we can achieve this:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          using (var session = store.OpenSession())&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              session.Advanced.Defer(new PutCommandData(&quot;users/1&quot;, null, new DynamicJsonValue&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  [&quot;Name&quot;] = &quot;Oren&quot;&#xA;        &#xA;        &#xA;          &#xA;              }));&#xA;        &#xA;        &#xA;          &#xA;              session.Advanced.Defer(new ForceRevisionCommandData(&quot;users/1&quot;));&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              session.Advanced.Defer(new PutCommandData(&quot;users/1&quot;, null, new DynamicJsonValue&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  [&quot;Name&quot;] = &quot;Ayende&quot;&#xA;        &#xA;        &#xA;          &#xA;              }));&#xA;        &#xA;        &#xA;          &#xA;              session.Advanced.Defer(new ForceRevisionCommandData(&quot;users/1&quot;));&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              session.SaveChanges();&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          force-multi-revisions.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;Basically, we manually create the transaction steps that will run on the server, and we can apply the command to the same document multiple times. Note that RavenDB requires a document to create a revision from it, so we set the document, create a revision and overwrite the document again, as many times as we need to. Another issue that was brought up is that the @last-modified property on the document is set to the date of the revision creation. In some cases, they want to do this to get the revision to be created at the right time it was originally created during the migration period. That is not supported by RavenDB, because the @last-modified is tracking the time that RavenDB modified the document or revision. If you need to track the time a document was modified in the domain, you need to keep that as part of your actual domain model.</p>
         <a href="https://www.meziantou.net/how-not-to-create-paywall.htm" target="_blank"><h1 class="title mb-6">How not to create paywall</h1></a>
-        <p class="mb-2">by </p>
+        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -255,18 +267,6 @@
             posted on: December 21, 2020
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I wrote an article on DZone that explores some of the new possibilities that RavenDB 5.1 enables.&#xA;You can read it here, and as usual, I would love to hear your feedback.</p>
-        <a href="https://www.meziantou.net/caching-an-ienumerable-t-instance.htm" target="_blank"><h1 class="title mb-6">Caching an IEnumerable&lt;T&gt; instance</h1></a>
-        <p class="mb-2">by </p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 21, 2020
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">An IEnumerable&lt;T&gt; can be costly to enumerate. If you need to do it twice or more, you&#x27;ll pay the cost each time you enumerate it. For instance, if you use Directory.EnumerateFiles(), it will enumerate the file system each time you start enumerating the results. You can use ToList or ToArray t</p>
         <div class="button flex justify-between">
             <a href="105.html"><span class="back arrow"></span></a>
 

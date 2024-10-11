@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/174209/ravendb-4-0-on-dotnetcore-rc2" target="_blank"><h1 class="title mb-6">RavenDB 4.0 on DotNetCore RC2</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 16, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We have got pretty much everything working, and all tests are passing on Windows. We&#x2019;ll test it tomorrow on Linux, but it is looking good. I&#x2019;m really excited about this. To start with, just moving to RC2 looks like it dropped about 20% of our test suite runtime. But it also removed a blocking issue that prevented us from getting a core feature up and running (dynamic code generation, which is required for user defined indexes). Now we can get started on that .</p>
         <a href="https://ayende.com/blog/174051/the-design-of-ravendb-4-0-you-cant-see-the-map-reduce-from-all-the-trees" target="_blank"><h1 class="title mb-6">The design of RavenDB 4.0</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: May 11, 2016
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So far I talked mostly about the visible parts of the stuff that we did in RavenDB 3.5, stuff that has a user interface and is actually easy to talk about. In this post, I&#x27;m going to dive a bit into the stuff that goes in the core, which no one usually notices except us, except when it breaks. RavenDB Lucene Parser A frequent cause for complaint with RavenDB is the fact that the Lucene Query Parser is relying on exceptions for control flow. That means that if you are debugging a test that is using RavenDB, you are likely to be stopped by LookAheadSuccessException during debugging. This is handled internally, but the default VS configuration will stop on all exception, which caused more than a single person to assume that there is actually some error and post a question to the mailing list. But the reason we decided to implement our own parser wasn&#x27;t the issue of exceptions. It was performance and stability. RavenDB doesn&#x27;t actually use Lucene syntax for queries, we have extended in in several ways (for example, the @in&lt;Group&gt;: (Relatives ,Friends) syntax). Those extensions to the syntax were implemented primarily as pre and post processing over the raw query string using regular expressions. And you know the saying about that. Under profiling, it turned out that significant amount of time was spent in these processing, and in particular, in those regexes.  All of which gives us an extremely efficient parser, no exceptions during the parsing and a formal grammer that we can stick to. If you care, you can read the full grammar here.  Explicit thread management for indexing In RavenDB 3.0, we rely on the standard .NET ThreadPool for index execution, this has led to some interesting issues related to thread starvation, especially when you have many concurrent requests that take up threads. The fact that the .NET ThreadPool has a staggered growth pattern also have an impact here, in terms of how much we are actually scale out there. By creating our own thread pool, decided for our own stuff, we are able to do things that you can&#x27;t do in the global thread pool. For example, we can respond to CPU pressure by reducing the priority of the indexing thread pool threads, so we&#x27;ll prefer to process request than do background work. We also have a more predictable behavior around indexing batches and abandon an index midway through an index to ensure liveliness for the entire indexing process. And what is almost as important, the fact that we have our own thread pool for indexing means that we can now much more easily report and monitor it. Which make our lives much easier in production.  As a reminder, we have the RavenDB Conference in Texas in a few months, which would be an excellent opportunity to see RavenDB 3.5 in all its glory.</p>
-        <a href="https://andrewlock.net/understanding-net-core-netstandard-and-asp-net-core/" target="_blank"><h1 class="title mb-6">Understanding .NET Core, NETStandard, .NET Core applications and ASP.NET Core</h1></a>
-        <p class="mb-2">by Andrew Lock</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 11, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I try to clarify some of the naming and terminology surrounding the evolution of the .NET framework, .NET Core, and .NET Standard&#x2026;</p>
         <div class="button flex justify-between">
             <a href="305.html"><span class="back arrow"></span></a>
 

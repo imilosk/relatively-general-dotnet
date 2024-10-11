@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/180769/production-postmortem-the-random-high-cpu" target="_blank"><h1 class="title mb-6">Production postmortem</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 01, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A customer complained that every now and then RavenDB is hitting 100% CPU and stays there. They were kind enough to provide a minidump, and I started the investigation.I loaded the minidump to WinDB and started debugging. The first thing you do with high CPU is rung the &#x201C;!runaway&#x201D; command, which sorts the threads by how busy they are:I switched to the first thread (39) and asked for its stack, I highlighted the interesting parts:This is enough to have a strong suspicion on what is going on. I checked some of the other high CPU threads and my suspicion was confirmed, but even from this single stack trace it is enough.Pretty much whenever you see a thread doing high CPU within the Dictionary class it means that you are accessing it in a concurrent manner. This is unsafe, and may lead to strange effects. One of them being an infinite loop.In this case, several threads were caught in this infinite loop. The stack trace also told us where in RavenDB we are doing this, and from there we could confirm that indeed, there is a rare set of circumstances that can cause a timer to fire fast enough that the previous timer didn&#x2019;t have a chance to complete, and both of these timers will modify the same dictionary, causing the issue.</p>
         <a href="https://www.stevejgordon.co.uk/microsoft-mvp-journey" target="_blank"><h1 class="title mb-6">My Microsoft MVP Journey</h1></a>
         <p class="mb-2">by Steve Gordon</p>
         <p class="mb-6 flex gap-1.5">
@@ -244,7 +256,7 @@
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">dollars and money I&#x27;ve written a while back about what a good idea it is for companies to incentivize both parties with their referral&#x2026;Keep Reading &#x2192;</p>
         <a href="https://www.meziantou.net/colorize-the-log-in-the-google-chrome-console.htm" target="_blank"><h1 class="title mb-6">Colorize the log in the Google Chrome console</h1></a>
-        <p class="mb-2">by </p>
+        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -255,18 +267,6 @@
             posted on: November 27, 2017
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It&#x27;s very usual to log some data using the console API. When your application grows, the console may become unreadable. Thus, you may miss an important message. In Chromium-based browsers (and maybe other browsers), you can add style to your logs. This means you can change the color, background, fo</p>
-        <a href="https://ayende.com/blog/180836/nhibernate-profiler-5-0-alpha-has-been-released" target="_blank"><h1 class="title mb-6">NHibernate Profiler 5.0 Alpha has been released</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: November 24, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The next generation of our profiler is starting to shift into higher gear, with today&#x2019;s release of the NHibernate Profiler 5.0 Alpha.&#xA;&#xA;The new bits are available directly from NuGet.&#xA;&#xA;The new release brings:&#xA;&#xA;Support for NHibernate 5.0.0 and NHibernate 5.0.1&#xA;The profiler appender now require .NET Standard 2.0 (older appenders, supporting older runtimes will still work with the new release).&#xA;Fixes for various bugs, aches and pains.&#xA;Faster serialization format over the wire.&#xA;Reduce the cost of profiling your application significantly by reducing contention.&#xA;Better stack trace and profiling support for .NET standard 2.0 apps.&#xA;&#xA;This is just the beginning, getting the major stuff that need to be there for the next release before we get down and start implementing the cool features. But these changes (and especially the support for NHibernate 5.x)&#xA0; are major enough that we would like to have users test them out in the field.&#xA;Licensing wise, for the alpha period any 4.x license for the profiler will work on the 5.0 alpha.&#xA;You can download it here.</p>
         <div class="button flex justify-between">
             <a href="226.html"><span class="back arrow"></span></a>
 

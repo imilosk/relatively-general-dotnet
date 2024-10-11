@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/160292/optimizations-gone-wild-o-n-memory-leaks" target="_blank"><h1 class="title mb-6">Optimizations gone wild, O(N!) memory leaks</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 17, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So, after doing so much work on the indexing optimization, it turned out that we had a bug. I assume that you remember this optimization, right?  In which we were able to pre fetch data from the disk and not have to wait for data at all. This all worked beautifully when running on data sets that included simple indexes. But the moment we had map/reduce indexes, something bad happened. That something bad was that we kept missing the batch that we loaded (this relates to how we load &amp; find the appropriate batches).  We do all the lookups by etag, and map/reduce add gaps in the etags. Which meant that we kept missing the etag, and had to start loading things up again. And because whenever we load something we also start loading the next batch&#x2026; Here is what the memory looked like:   Yup, for every batch we loaded the next 5 batches, for a total of O(N!) items in memory for everything. Now, we had some cleanup routines, but we did NOT expect to have that much, so we would recover, eventually, but usually not before we consumed all the memory. Opps!</p>
         <a href="https://benfoster.io/blog/web-api-multipart-file-upload-additional-form-data/" target="_blank"><h1 class="title mb-6">Sending additional form data in multipart uploads with ASP.NET Web API</h1></a>
         <p class="mb-2">by Ben Foster</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: December 03, 2012
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The RavenDB&#x2019;s document store is your main access point to the database. It is strongly recommended that you&#x2019;ll have just a single instance of the document store per each server you are accessing. That usually means that you have to implement a singleton, with all the double checked locking nonsense that is involved in that. I was giving a course in RavenDB last week and I stumbled upon a very nice coding pattern: public static class Global&#xA;{&#xA;    private static readonly Lazy&lt;IDocumentStore&gt; theDocStore = new Lazy&lt;IDocumentStore&gt;(()=&gt;&#xA;        {&#xA;            var docStore = new DocumentStore&#xA;                {&#xA;                    ConnectionStringName = &quot;RavenDB&quot;&#xA;                };&#xA;            docStore.Initialize();&#xA;&#xA;            //OPTIONAL:&#xA;            //IndexCreation.CreateIndexes(typeof(Global).Assembly, docStore);&#xA;&#xA;            return docStore;&#xA;        });&#xA;&#xA;    public static IDocumentStore DocumentStore&#xA;    {&#xA;        get { return theDocStore.Value; }&#xA;    }&#xA;}&#xA;&#xA;&#xA;&#xA;This is a very readable code, and it handles pretty much all of the treading stuff for you, without obscuring what you really want to do.&#xA;And what about when you have multiple servers? How do you handle it then? Same idea, taken one step further:&#xA;public static class Global&#xA;{&#xA;    private readonly static ConcurrentDictionary&lt;string, Lazy&lt;IDocumentStore&gt;&gt; stores = &#xA;        new ConcurrentDictionary&lt;string, Lazy&lt;IDocumentStore&gt;&gt;();&#xA;    &#xA;    public static IDocumentStore GetDocumentStoreFor(string url)&#xA;    {&#xA;        return stores.GetOrAdd(url, CreateDocumentStore).Value;&#xA;    }&#xA;&#xA;    private static Lazy&lt;IDocumentStore&gt; CreateDocumentStore(string url)&#xA;    {&#xA;        return new Lazy&lt;IDocumentStore&gt;(() =&gt;&#xA;            {&#xA;                var docStore = new DocumentStore&#xA;                    {&#xA;                        ConnectionStringName = url&#xA;                    };&#xA;                docStore.Initialize();&#xA;&#xA;                //OPTIONAL:&#xA;                //IndexCreation.CreateIndexes(typeof(Global).Assembly, docStore);&#xA;&#xA;                return docStore;&#xA;            });&#xA;    }&#xA;}&#xA;&#xA;&#xA;This is nice, easy and the correct way to handle things.</p>
-        <a href="https://benfoster.io/blog/adding-less-support-to-the-aspnet-optimization-framework/" target="_blank"><h1 class="title mb-6">Adding LESS support to the ASP.NET Optimization Framework</h1></a>
-        <p class="mb-2">by Ben Foster</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: November 30, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I explain how to configure the asset optimization features introduced in ASP.NET MVC 4 to handle LESS.</p>
         <div class="button flex justify-between">
             <a href="413.html"><span class="back arrow"></span></a>
 

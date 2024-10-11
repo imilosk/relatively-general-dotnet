@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/158530/nuget-perf-the-final-part-load-testing-the-tests" target="_blank"><h1 class="title mb-6">NuGet Perf, The Final Part &#x2013; Load Testing &#x2013; The Tests</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: September 17, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For the tests, we used VS 2012 load testing tool.&#xA;&#xA;&#x9;We defined the following tests:&#xA;&#xA;&#x9;Just browsing through the packages listing:&#xA;&#xA;&#x9;&#xA;&#xA;&#x9;Browsing a bit then searching, and then narrowing the search:&#xA;&#xA;&#x9;&#xA;&#xA;&#x9;And finally, searching a few packages by their id, tags, etc:&#xA;&#xA;&#x9;&#xA;&#xA;&#x9;I then defined the following load test:&#xA;&#xA;&#x9;&#xA;&#xA;&#x9;With the following distribution:&#xA;&#xA;&#x9;&#xA;&#xA;&#x9;Finally, we have the way we actually run the test:&#xA;&#xA;&#x9;&#xA;&#xA;&#x9;We get 20 seconds of warm up, then 5 minutes of tough load.&#xA;&#xA;&#x9;On my next post, we will see how we did.</p>
         <a href="https://ayende.com/blog/158529/nuget-perf-the-final-part-load-testing-setup" target="_blank"><h1 class="title mb-6">NuGet Perf, The Final Part &#x2013; Load Testing &#x2013; Setup</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: September 10, 2012
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So, I sent a simple repro to the client and he reproduced the problem, and I was happy, because it ain&#x2019;t my problem. The good thing about sending a simple repro app to the client is that he can play with that easily, and that is how he discovered that it is my fault. In particular, it is all about the actual buffer size that we use. If we try to send a large dataset using 4KB buffer, it would take much longer than it would take using 128KB buffer. But only when using a real network, not when running locally. After looking at the matter for a while I figure it out. When using the default RavenDB builtin server, (based on the .NET HttpListener), it is actually flushing everything to the network card every time that you make a write. And there appears to be a non insubstantial cost of just doing that .I suspect that most of the cost is actually moving from user land to http.sys to do the work, but the problem was fairly clear. When you have an expensive resource like that, there is a solution for it, buffering. And luckily for us, the .NET framework comes with a BufferedStream.&#xA0; Sadly, it uses a single buffer, and we don&#x2019;t know ahead of time how much data we are going to write. Even more important, it creates its own buffers, about the only thing you can customize there is the buffer size. So sure, we can just wrap it in a Buffered Stream and set the buffer size to 128Kb and be done with it, right? Not quite so. The reason this is problematic is that this would allocate a buffer of 128Kb for every request, and buffers of that size goes to the Large Object Heap. Never mind that just allocating that much memory have its own performance issues. So, here is the problem. And the question is how we deal with in. There is a good solution for allocating a lot of memory and filling up the Large Object Heap, and that is to use the BufferManager that comes with the framework. I discussed this in this post. Next, we wrote a Buffer Pool Stream, which uses a buffer taken from a buffer manager. This resolve the problem of filling up the Large Object Heap, but it created another problem if for every request, we would use up a 128Kb buffer, that would means that we would use up a lot of memory that we probably don&#x2019;t need. Admittedly, even if we had a thousand concurrent requests, it would still amount to less than 130 MB, but that still bothers me. Instead, we took a different path. We use multiple buffers of fixed sizes (4Kb, 8Kb, 16Kb, 32Kb, 64Kb, 128Kb) to buffer the response, and we switch between them on demand. Here is how it works now:     Size  Buffers   &lt;= 8 Kb  4 Kb   &lt;= 28 Kb  8 Kb   &lt;=60 Kb  16 Kb   &lt;=124 Kb  32 Kb   &lt;= 252 Kb  64 Kb   &gt; 252 Kb  128 Kb For the first 8 Kb, we will use a 4 Kb buffer, then switch to an 8 Kb buffer until we get to 28 Kb, then 16 Kb buffer all the way to 60 Kb, etc. In our tests ,this strategy showed the best usage of time vs memory on both large and small requests. And we make sure to use big buffers only when we absolutely have to. The moral of the story, once you get your repro and see what is actually happening, dig a bit deeper. You might find some gold there. In our case, we optimize network traffic significantly when you are running in service / debug mode. This is very relevant for a very common scenario, downloading the silverlight xap for the management studio, which should improve quite a bit now .</p>
-        <a href="https://ayende.com/blog/158689/ravendb-rpg-with-me-recording" target="_blank"><h1 class="title mb-6">RavenDB &amp; RPG With Me: Recording</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 07, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20"></p>
         <div class="button flex justify-between">
             <a href="422.html"><span class="back arrow"></span></a>
 

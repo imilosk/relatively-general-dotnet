@@ -147,8 +147,20 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/143361/rhino-service-bus-ravendb-integration" target="_blank"><h1 class="title mb-6">Rhino Service Bus &amp; RavenDB integration</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 07, 2011
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the interesting things about Rhino Service Bus is that I explicitly designed it to work nicely with Unit of Work style data access libraries. When I did that, I worked mainly with NHibernate, but it turns out that this is really easy to integrate RavenDB as well, all you need is the following message module: public class RavenDbMessageModule : IMessageModule&#xA;{&#xA;    private readonly IDocumentStore documentStore;&#xA;&#xA;    [ThreadStatic]&#xA;    private static IDocumentSession currentSession;&#xA;&#xA;    public static IDocumentSession CurrentSession&#xA;    {&#xA;        get { return currentSession; }&#xA;    }&#xA;&#xA;    public RavenDbMessageModule(IDocumentStore documentStore)&#xA;    {&#xA;        this.documentStore = documentStore;&#xA;    }&#xA;&#xA;    public void Init(ITransport transport, IServiceBus serviceBus)&#xA;    {&#xA;        transport.MessageArrived &#x2B;= TransportOnMessageArrived;&#xA;        transport.MessageProcessingCompleted &#x2B;= TransportOnMessageProcessingCompleted;&#xA;    }&#xA;&#xA;    public void Stop(ITransport transport, IServiceBus serviceBus)&#xA;    {&#xA;        transport.MessageArrived -= TransportOnMessageArrived;&#xA;        transport.MessageProcessingCompleted -= TransportOnMessageProcessingCompleted;&#xA;    }&#xA;&#xA;    private static void TransportOnMessageProcessingCompleted(CurrentMessageInformation currentMessageInformation, Exception exception)&#xA;    {&#xA;        if (currentSession != null)&#xA;        {&#xA;            if (exception == null)&#xA;                currentSession.SaveChanges();&#xA;            currentSession.Dispose();&#xA;        }&#xA;        currentSession = null;&#xA;    }&#xA;&#xA;    private bool TransportOnMessageArrived(CurrentMessageInformation currentMessageInformation)&#xA;    {&#xA;        if (currentSession == null)&#xA;            currentSession = documentStore.OpenSession();&#xA;        return false;&#xA;    }&#xA;}&#xA;&#xA;&#xA;This is fairly simple. Register to the message arrive and message processing completed events. When a message arrive, create a new session for the consumers. When the message processing is completed, and there hasn&#x2019;t been any error, we call SaveChanges, and then dispose.&#xA;The rest of it is pretty simple as well, we need to provide a BootStrapper:&#xA;public class BootStrapper : CastleBootStrapper&#xA;{&#xA;    IDocumentStore store;&#xA;&#xA;    protected override void ConfigureContainer()&#xA;    {&#xA;        store = new DocumentStore&#xA;        {&#xA;            ConnectionStringName = &quot;RavenDB&quot;&#xA;        }.Initialize();&#xA;&#xA;        IndexCreation.CreateIndexes(typeof(BootStrapper).Assembly, store);&#xA;&#xA;        Container.Register(&#xA;            Component.For&lt;IDocumentStore&gt;()&#xA;                .Instance(store),&#xA;            Component.For&lt;IMessageModule&gt;()&#xA;                .ImplementedBy&lt;RavenDbMessageModule&gt;(),&#xA;            Component.For&lt;IDocumentSession&gt;()&#xA;                .UsingFactoryMethod(() =&gt; RavenDbMessageModule.CurrentSession)&#xA;            );&#xA;&#xA;        base.ConfigureContainer();&#xA;    }&#xA;}&#xA;&#xA;&#xA;&#xA;Which basically simply need to create the document store and expose it to the container. We get the document session from the current one (the one managed by the module).&#xA;All in all, it is quite a thing, and it takes very little time / complexity to setup.</p>
         <a href="https://www.meziantou.net/unit-tests-with-a-wpf-window.htm" target="_blank"><h1 class="title mb-6">Unit tests with a WPF window</h1></a>
-        <p class="mb-2">by </p>
+        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -196,7 +208,7 @@
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One really nice feature of Rhino Service Bus is the notion of the one way bus. What is that? It is a miniature implementation of the bus that supports only sending messages, not receiving them. In what world is this useful? It turn out, it quite a few. One way bus is usually used for web apps that just send commands / events to another system, and have no need to interact with the bus other than that, or for command line tools that just send a message, etc. The advantage of the one way bus is that you don&#x2019;t need your own endpoint to use it, you can just start it, send some messages, and go away.  Here is how you set it up. As usual, we start from the configuration (this assumes you have the Raven.ServiceBus.Castle nuget package): &lt;?xml version=&quot;1.0&quot;?&gt;&#xA;&lt;configuration&gt;&#xA;  &lt;configSections&gt;&#xA;    &lt;section name=&quot;rhino.esb&quot; type=&quot;Rhino.ServiceBus.Config.BusConfigurationSection, Rhino.ServiceBus&quot;/&gt;&#xA;  &lt;/configSections&gt;&#xA;  &lt;rhino.esb&gt;&#xA;    &lt;messages&gt;&#xA;      &lt;add name=&quot;HibernatingRhinos.Orders.Backend.Messages&quot;&#xA;           endpoint=&quot;msmq://localhost/Orders.Backend&quot;/&gt;&#xA;    &lt;/messages&gt;&#xA;  &lt;/rhino.esb&gt;&#xA;&lt;/configuration&gt;&#xA;&#xA;&#xA;&#xA;You might note that we don&#x2019;t have any bus/endpoint configuration, only the list of message owners.&#xA;Now, the next step is just to create the actual one way bus:&#xA;var container = new WindsorContainer();&#xA;new OnewayRhinoServiceBusConfiguration()&#xA;    .UseCastleWindsor(container)&#xA;    .Configure();&#xA;&#xA;var onewayBus = container.Resolve&lt;IOnewayBus&gt;();&#xA;onewayBus.Send(new TestMsg&#xA;{&#xA;    Name = &#x201C;ayende&#x201D;&#xA;});&#xA;&#xA;&#xA;&#xA;And that is all&#x2026;</p>
         <a href="https://www.meziantou.net/is-the-code-coverage-a-sufficient-metric.htm" target="_blank"><h1 class="title mb-6">Is the code coverage a sufficient metric</h1></a>
-        <p class="mb-2">by </p>
+        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
         <p class="mb-6 flex gap-1.5">
                     <span>
                                     <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -255,18 +267,6 @@
             posted on: November 28, 2011
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Take a look at the following screen shot. It shows the results of querying an index:  Did you note the marked icon? This allows you to open the following:  Which means that you can get to:   And that is a whole different way of looking at the data.</p>
-        <a href="https://www.meziantou.net/excludefromcodecoverage-attribute.htm" target="_blank"><h1 class="title mb-6">ExcludeFromCodeCoverage Attribute</h1></a>
-        <p class="mb-2">by Recent posts</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: November 28, 2011
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Sometimes it happens that code coverage results are quite low because you use code generated (and therefore not tested or very little in your application), or code made by other developers, etc. Unfortunately the result of code coverage does not really match what it should be. To overcome this prob</p>
         <div class="button flex justify-between">
             <a href="453.html"><span class="back arrow"></span></a>
 

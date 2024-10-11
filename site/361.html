@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/167521/small-touches-complex-text-in-ravendb" target="_blank"><h1 class="title mb-6">Small touches: Complex text in RavenDB</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 28, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is what we call a &#x201C;mini feature&#x201D;, something that you&#x2019;ll probably not notice unless pointed out to you. Often, we want to store documents that contain multi line strings properties. JSON has a very simple way to handle that:  And it works, and if the text is small, it is even readable. But it isn&#x2019;t really working on anything even remotely complex or long. So we have worked to fix that:  Now you can actually read this much more easily. We run into this when we look at stack trace information, where without line breaks, it is nearly impossible to see what is going on.</p>
         <a href="https://ayende.com/blog/167489/monitoring-ravendb-with-pandora-fms" target="_blank"><h1 class="title mb-6">Monitoring RavenDB with Pandora FMS</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: July 16, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Both JavaScript and C# belong to the C family of languages. They share curly braces and semi-colons, and in fact there are many cases where&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/167425/when-a-race-condition-is-what-you-want" target="_blank"><h1 class="title mb-6">When a race condition is what you want&#x2026;</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 16, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have an interesting situation that I am not sure how to resolve. We need to record the last request time for a RavenDB database. Now, this last request time is mostly used to show the user, and to decide when a database is idle, and can be shut down. As such, it doesn&#x2019;t have to be really accurate ( a skew of even a few seconds is just fine ). However, under load, there are many requests coming in (in the case presented to us, 4,000 concurrent requests), and they all need to update the last request. Obviously, in such a scenario, we don&#x2019;t really care about the actual value. But the question is, how do we deal with that? In particular, I want to avoid a situation where we do a lot of writes to the same value in an unprotected manner, mostly because it is likely to cause contentions between cores. Any ideas?  It is actually fine for us to go slightly back (so thread A at time T&#x2B;1 and thread B at time T&#x2B;2 running concurrently, and the end result is T&#x2B;1), which is why I said that a race is fine for us. But what I want to avoid is any form of locking / contention. I wrote the following test code: class Program&#xA;{&#xA;    static void Main(string[] args)&#xA;    {&#xA;        var threads = new List&lt;Thread&gt;();&#xA;&#xA;        var holder = new Holder();&#xA;&#xA;        var mre = new ManualResetEvent(false);&#xA;&#xA;        for (int i = 0; i &lt; 2500; i&#x2B;&#x2B;)&#xA;        {&#xA;            var thread = new Thread(delegate()&#xA;            {&#xA;                mre.WaitOne();&#xA;                for (long j = 0; j &lt; 500*1000; j&#x2B;&#x2B;)&#xA;                {&#xA;                    holder.Now = j;&#xA;                }&#xA;            });&#xA;            thread.Start();&#xA;            threads.Add(thread);&#xA;        }&#xA;&#xA;        mre.Set();&#xA;&#xA;        threads.ForEach(t =&gt; t.Join());&#xA;&#xA;&#xA;        Console.WriteLine(holder.Now);&#xA;    }&#xA;}&#xA;&#xA;public class Holder&#xA;{&#xA;    public long Now;&#xA;}&#xA;&#xA;&#xA;&#xA;And it looks like it is doing what I want it to. This creates a lot of contention on the same value, but it is also giving me the right value. And again, the value of right here is very approximate. The problem is that I know how to write thread safe code, I&#x2019;m not sure if this is a good way to go about doing this.&#xA;Note that this code (yes, even with 2,500 threads) runs quite fast, in under a second. Trying to use Interlocked.Exchange is drastically more expensive, and Interlocked.CompareExchange is even worse.&#xA;But it is just not sitting well with me.</p>
         <div class="button flex justify-between">
             <a href="360.html"><span class="back arrow"></span></a>
 
