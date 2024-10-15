@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://www.meziantou.net/dotnet-regex-d-is-different-from-0-9.htm" target="_blank"><h1 class="title mb-6">.NET Regex: \d is different from [0-9]</h1></a>
+        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 29, 2019
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">From the .NET documentation of Regex, \d matches any decimal digit. The signification of a &quot;decimal digit&quot; depends on the options of the regex:Without RegexOptions.ECMAScript (default): \d means \p{Nd}, e.g. any character from the Unicode category &quot;Decimal digit&quot;With RegexOptions.ECMAScript: \d mea</p>
+        <a href="https://ayende.com/blog/187137-C/memory-corruption-investigation" target="_blank"><h1 class="title mb-6">Memory corruption investigation</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 25, 2019
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Our test process occasionally crashed with an access violation exception. We consider these to be Priority 0 bugs, so we had one of the most experience developers in the office sit on this problem.Access violation errors are nasty, because they give you very little information about what is going on, and there is typically no real way to recover from them. We have a process to deal with them, though. We know how to setup things so we&#x2019;ll get a memory dump on error, so the very first thing that we work toward is to reproduce this error.After a fair bit of effort, we managed to get to a point where we can semi-reliably reproduce this error. This means, if you wanna know, that do &#x201C;stuff&#x201D; and get the error in under 15 minutes. That&#x2019;s the reason we need the best people on those kind of investigations. Actually getting to the point where this fails is the most complex part of the process.The goal here is to get to two really important pieces of information:A few memory dumps of the actual crash &#x2013; these are important to be able to figure out what is going on.A way to actually generate the crash &#x2013; in a reasonable time frame, mostly because we need to verify that we actually fixed the issue.After a bunch of work, we were able to look at the dump file and found that the crash originated from Voron&#x2019;s code. The developer in charge then faulted, because they&#xA0; tried to increase the priority of an issue with Priority 0 already, and P-2147483648 didn&#x2019;t quite work out.We also figured out that this can only occur on 32 bits, which is really interesting. 32 bits is a constrained address space, so it is a great way to run into memory bugs. We started to look even more closely at this. The problem happened while running memcpy(), and looking at the addresses that were passed to the function, one of them was Voron allocated memory, whose state was just fine. The second value pointed to a MEM_RESERVE portion of memory, which didn&#x2019;t make sense at all.Up the call stack we went, to try to figure out what we were doing. Here is where we ended up in (hint: The crash happened deep inside the Insert() call).This is test code, mind you, exercising some really obscure part of Voron&#x2019;s storage behavior. And once we actually looked at the code, it was obvious what the problem was.We were capturing the addresses of an array in memory, using the fixed statement.But then we used them outside the fixed. If there happened to be a GC between these two lines, and if it happened to move the memory and free the segment, we would access memory that is no longer valid. This would result in an access violation, naturally. I think we were only able to reproduce this in 32 bits because of the tiny address space. In 64 bits, there is a lot less pressure to move the memory, so it remains valid.Luckily, this is an error only in our tests, so we reduce our DEFCON level to more reasonable value. The fix was trivial (move the Insert calls to the fixed scope), and we were able to test that this fixed the issue.</p>
         <a href="https://ayende.com/blog/187106-C/challenges-in-writing-our-ravendb-client-in-c" target="_blank"><h1 class="title mb-6">Challenges in writing our RavenDB client in C&#x2B;&#x2B;</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: April 16, 2019
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In a previous post about authorization in a microservice environment, I wrote that one option is to generate an authorization token and have it hold the relevant claims for the application. I was asked how I would handle a scenario in which the security claim is over individual categories of orders and a user may have too many categories to fit the token.This is a great question, because it showcase a really important part of such a design. An inherent limit to complexity.&#xA0; The fact that having a user with a thousand individual security claims is hard isn&#x2019;t a bug in the system, it is a feature.For many such cases, it really doesn&#x2019;t make sense to setup security in such a manner. How can you ever audit or reason about such a system? It just doesn&#x2019;t work this way in the real world. An agent may be authorized to a dozen customers, and her manager will be allowed access to them as well. But attaching each individual customer to the manager doesn&#x2019;t work. Instead, you would create a group and attach the customers to the group, then allow the manager to access the group. Such a system is much easier to work with and review. It also match a lot more closely how the real world works.Some of the problems here are derived from the fact that it seems like, when we use a computer, we can build such a system. But in most cases, this is a false premise. Not because of actual technical limitations, but because of management overhead. Building the system upfront so the things that should be hard are actually hard is going to be a lot better in the long run.</p>
-        <a href="https://andrewlock.net/using-strongly-typed-entity-ids-to-avoid-primitive-obsession-part-3/" target="_blank"><h1 class="title mb-6">Using strongly-typed entity IDs with EF Core</h1></a>
-        <p class="mb-2">by Andrew Lock</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 16, 2019
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Using strongly-typed entity IDs to avoid primitive obsession - Part 3</p>
-        <a href="https://enterprisecraftsmanship.com/posts/cqrs-exception-handling/" target="_blank"><h1 class="title mb-6">CQRS and exception handling</h1></a>
-        <p class="mb-2">by Vladimir Khorikov</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 15, 2019
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this article, I&#x2019;d like to discuss one particular aspect of exception handling relevant to CQRS and the decorator pattern.</p>
         <div class="button flex justify-between">
             <a href="169.html"><span class="back arrow"></span></a>
 

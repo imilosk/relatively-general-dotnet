@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ardalis.com/the-javascript-npm-event-stream-vulnerability/" target="_blank"><h1 class="title mb-6">The JavaScript npm event-stream Vulnerability</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 28, 2018
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A few months ago a clever attack was introduced in the event-stream npm package. It&#x27;s been explained in detail here, but let me sum it up in&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://ayende.com/blog/185250-C/refactoring-c-code-error-handling-is-hard-error-reporting-is-much-harder" target="_blank"><h1 class="title mb-6">Refactoring C code</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 27, 2018
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As part of my usual routine, I&#x2019;m trying out writing some code in C, to get a feeling for a different environment. I wanted to build something that is both small enough to complete in a reasonable time and complex enough that it would allow to really explore how to use things. I decided to use C (not C&#x2B;&#x2B;) because it is both familiar and drastically different from what I usually do. The project in question? Implementing the network protocol I wrote about here.&#xA0; Another part of the challenge that I set out to myself, this should be as production quality code as I could make it, which means paying all the usual taxes you would expect. The first thing that I had to do was to figure out how to actually networking and SLL working in C. Something that would take me 5 minutes in C# took me a several hours of exploring and figuring things out. Eventually, I settled down on the obvious choice for SSL with OpenSSL. That is portable, reasonably well documented and seems fairly easy to get started with.Here is some code from the sample TCP server from the OpenSSL documentation:This is interesting, it show what needs to be done and does it quite clearly. Unfortunately, this isn&#x2019;t production quality code, there are a lot of stuff here that can go wrong that we need to handle. Let&#x2019;s wrap things in proper functions. The first thing to do is to capture the state of the connection (both its socket and the SSL context associated with it). I created a simple structure to hold that, and here is how I close it. So far, pretty simple. However, take a look on the code that creates the connection:As you can see, quite a lot of this function is error handling and cleanup. This code looks like it does the right thing and cleanup after itself in all cases. So far, so good, but we are still missing a very important component. We handled the error, but we haven&#x2019;t reported it. In other words, from the outside, any failure will look exactly the same to the caller. That is not a good thing if you want to create software that is expressive and will tell you what is wrong so you can fix it.If this was C#, I would be throwing an exception with the right message. As this is C, we run into some interesting issues. As part of your error handling, you might run into an error, after all&#x2026; In particular, good error handling usually requires string formatting, and that can cause issues (for example, being unable to allocate memory).&#xA0; There is also the issue of who frees the memory allocated for errors, of course. Typically, you&#x2019;ll see code that either prints to the console or to a log file and it is usually a major PITA. OpenSSL uses a thread local error queue for this purpose, which gives you the ability to hold a context, but it requires an awful lot of ceremony to use and doesn&#x2019;t seem to be useful for generic error handling. I decided to see if I can do a quick and dirty approach to the same problem, with something that is slightly more generic.The purpose was to get reasonable error handling strategy without too much hassle. Here is what I came up with. This is a bit much, but I&#x2019;ll explain it all in a bit.Whenever we get an error, we can call push_error. Note that I included an error code there as well, in addition to the string. This is if there will be a need to do programtic error handling, for example, to handle a missing file that is reported &#x201C;upstairs&#x201D;.I also included how we get errors out, which is pretty simple. You can figure out from here how you would handle error handling in code, I&#x2019;m going to assume.Here is how this is used:And the output that this will print to the console would be:consoleapplication4.cpp:211 - main() - 1065 can&#x27;t open db: northwind&#xA;consoleapplication4.cpp:210 - main() - 2 cannot open file: raven.dbAnd yay, I invented exceptions!Also, I have a memory leak there, can you find it?</p>
         <a href="https://andrewlock.net/caching-docker-layers-on-serverless-build-hosts-with-multi-stage-builds---target,-and---cache-from/" target="_blank"><h1 class="title mb-6">Caching Docker layers on serverless build hosts with multi-stage builds, --target, and --cache-from</h1></a>
         <p class="mb-2">by Andrew Lock</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: November 19, 2018
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When working with an http service, you have to do lots of http requests to the server. This may slow down your tests/debugging experience. There are multiple ways to handle that issue. The first one is to mock the calls and work with fake data. You can easily mock the HttpClient class in C# (see Mo</p>
-        <a href="https://ardalis.com/add-pins-and-create-custom-google-maps/" target="_blank"><h1 class="title mb-6">Add Pins and Create Custom Google Maps</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: November 15, 2018
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I really like Google Maps. I&#x27;ve been a fan since it first came out. Being able to zoom into almost any location on Earth is amazing. And yet&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/clean-architecture-with-aspnet-core/" target="_blank"><h1 class="title mb-6">Clean Architecture with ASP.NET Core</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: November 15, 2018
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve been doing workshops showing teams how to properly architect ASP.NET Core applications using Clean Architecture for the last couple of&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="185.html"><span class="back arrow"></span></a>
 

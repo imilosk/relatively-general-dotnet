@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/191841-B/understanding-query-processing-and-wildcards-in-ravendb" target="_blank"><h1 class="title mb-6">Understanding query processing and wildcards in RavenDB</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: September 04, 2020
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently got an interesting question about how RavenDB is processing certain types of queries. The customer in question had a document with a custom analyzer and couldn&#x2019;t figure out why certain queries didn&#x2019;t work.For the purpose of the discussion, let&#x2019;s consider the following analyzer:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          public IEnumerable&lt;string&gt; Analyzer(string text)&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;            foreach(var term in text.Split())&#xA;        &#xA;        &#xA;          &#xA;            {&#xA;        &#xA;        &#xA;          &#xA;              yield return term.ToLower().TrimEnd(&quot;ing&quot;);&#xA;        &#xA;        &#xA;          &#xA;            }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          analyzer.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;In other words, when using this analyzer, we&#x2019;ll have the following transformations:&#x201C;Singing avocadoes&#x201D; &#x2013; will be: &#x201C;sing&#x201D;, &#x201C;avocadoes&#x201D;&#x201C;Sterling silver&#x201D; &#x2013; will be: &#x201C;ster&#x201D;, &#x201C;silver&#x201D;&#x201C;Singularity Trailer&#x201D; &#x2013; will be &#x201C;singularity&#x201D;, &#x201C;trailer&#x201D;As a reminder, this is used in a reverse index, which gives us the ability to lookup a term and find all the documents containing that term.An analyzer is applied on the text that is being indexed, but also on the queries. In other words, because during indexing I changed &#x201C;singing&#x201D; to &#x201C;sing&#x201D;, I also need to do the same for the query. Otherwise a query for &#x201C;singing voice&#x201D; will have no results, even if the &#x201C;singing&#x201D; term was in the original data.The rules change when we do a prefix search, though. Consider the following query:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          from Movies&#xA;        &#xA;        &#xA;          &#xA;          where search(Name, &quot;sing*&quot;)&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          query.sql&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;What should we be searching on here? Remember, this is using an analyzer, but we are also doing a prefix search. Lets consider our options. If we pass this through an analyzer, the query will change its meaning. Instead of searching for terms starting with &#x201C;sing&#x201D;, we&#x2019;ll search for terms starting with &#x201C;s&#x201D;. That will give us results for &#x201C;Sterling Silver&#x201D;, which is probably not expected. In this case, by the way, I&#x2019;m actually looking for the term &#x201C;singularity&#x201D;, and processing the term further would prevent that. For that reason, RavenDB assumes that queries using wildcard searches are not subject to an analyzer and will not process them using one. The reasoning is simple, by using a wildcard you are quite explicitly stating that this is not a real term.</p>
+        <a href="https://www.meziantou.net/how-to-use-event-preventdefault-in-blazor.htm" target="_blank"><h1 class="title mb-6">How to use event.PreventDefault in Blazor</h1></a>
+        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: September 04, 2020
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Sometimes, you&#x27;ll come across a situation where you want to prevent an event from doing what it does by default. For instance, you may want to prevent the click on an anchor to navigate to the url set in the href attribute. Instead, you want to handle the event in a custom manner and suppress the d</p>
         <a href="https://ayende.com/blog/191809-B/ravendb-now-supports-running-on-arm64-machines" target="_blank"><h1 class="title mb-6">RavenDB now supports running on ARM64 machines</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: August 27, 2020
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">NoteHierarchyId is supported natively by Entity Framework Core 8 and later: EF Core 8 Preview 2The HierarchyId data type was introduced with SQL Server 2008. This type is used to represent and manipulate hierarchical data. Hierarchical data contain the notion of parent/child but also the notion of</p>
-        <a href="https://ardalis.com/conways-law-ddd-and-microservices/" target="_blank"><h1 class="title mb-6">Conway&#x27;s Law, DDD, and Microservices</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: August 26, 2020
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Conway&#x27;s Law states that &quot;any organization that designs a system will produce a design whose structure is a copy of the organization&#x27;s&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://www.meziantou.net/showing-a-confirm-dialog-before-doing-an-action-in-blazor.htm" target="_blank"><h1 class="title mb-6">Showing a confirm dialog before doing an action in Blazor</h1></a>
-        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: August 26, 2020
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It&#x27;s common to show a confirm box before doing some dangerous actions such as deleting some data. Web browsers provide a way to show a confirmation dialog using confirm(message). This function shows a modal dialog with a message and two buttons (Ok, Cancel) and returns a Boolean.In Blazor, you can</p>
         <div class="button flex justify-between">
             <a href="118.html"><span class="back arrow"></span></a>
 

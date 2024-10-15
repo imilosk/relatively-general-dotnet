@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/198977-B/the-cost-of-timing-out" target="_blank"><h1 class="title mb-6">The cost of timing out</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: February 07, 2023
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let&#x2019;s assume that you want to make a remote call to another server. Your code looks something like this:&#xA;var response = await httpClient.GetAsync(&quot;https://api.myservice.app/v1/create-snap&quot;, cancellationTokenSource.Token);&#xA;This is simple, and it works, until you realize that you have a problem. By default, this request will time out in 100 seconds. You can set it to a shorter timeout using HttpClient.Timeout property, but that will lead to other problems.&#xA;The problem is that internally, inside HttpClient, if you are using a Timeout, it will call CancellationTokenSource.CancelAfter(). That is... what we want to do, no?&#xA;Well, in theory, but there is a problem with this approach. Let&#x27;s sa look at how this actually works, shall we?&#xA;It ends up setting up a&#xA0;Timer instance, as you can see in the code. The problem is that this will modify a global value (well, one of them, there are by default N timers in the process, where N is the number of CPUs that you have on the machine.&#xA;What&#xA0;that&#xA0;means is that in order to register a timeout, you need to take a look. If you have a high concurrency situation, setting up the timeouts may be&#xA0;incredibly expensive.&#xA;Given that the timeout is usually a fixed value, within RavenDB we solved that using a different manner. We set up a set of timers that will go off periodically and then use this instead. We can request a task that will be completed on the next timeout duration. This way, we&#x27;ll not be contending on the global locks, and we&#x27;ll have a single value to set when the timeout happens.&#xA;The code we use ends up being somewhat more complex:&#xA;var sendTask = httpClient.GetAsync(&quot;https://api.myservice.app/v1/create-snap&quot;, cancellationTokenSource.Token);&#xA;var waitTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(15), cancellationTokenSource.Token);&#xA;&#xA;if (Task.WaitAny(sendTask, waitTask) == 1)&#xA;{&#xA;        throw new TimeoutException(&quot;The request to the service timed out.&quot;);&#xA;}&#xA;Because we aren&#x27;t spending a lot of time doing setup for a (rare) event, we can complete things a lot faster.&#xA;I don&#x27;t&#xA0;like this approach, to be honest. I would rather have a better system in place, but it is a good workaround for a serious problem when you are dealing with high-performance systems.&#xA;You can see how we implemented the TimeoutManager&#xA0;inside RavenDB, the goal was to get&#xA0;roughly the same time frame, but we are absolutely fine with doing&#xA0;roughly the right thing, rather than pay the full cost of doing this exactly as needed. For our scenario, roughly is more than accurate enough.</p>
+        <a href="https://andrewlock.net/behind-the-scenes-of-minimal-apis-6-generating-the-response-writing-expression/" target="_blank"><h1 class="title mb-6">Generating the response writing expression for RequestDelegate</h1></a>
+        <p class="mb-2">by Andrew Lock</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: February 07, 2023
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Behind the scenes of minimal APIs - Part 6</p>
         <a href="https://www.meziantou.net/using-source-generated-regex-in-asp-net-core-routing.htm" target="_blank"><h1 class="title mb-6">Using source-generated regex in ASP.NET Core route constraints</h1></a>
         <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: January 23, 2023
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A user of ours called us, quite frantic. They are running a lot of systems on RavenDB, and have been for quite some time.&#xA;However, very recently they started to run into severe issues. RavenDB would complain that there isn&#x2019;t sufficient memory to run.&#xA;The system metrics, however, said that there are still gobs of GBs available (I believe that this is the appropriate technical term).&#xA;After verifying the situation, the on-call engineer escalated the issue. The problem was weird. There was enough memory, for sure, but for some reason RavenDB would be unable to run properly.&#xA;An important aspect is that this user is running a multi-tenant system, with each tenant being served by its own database. Each database has a few indexes as well.&#xA;Once we figured that out, it was actually easy to understand what is going on.&#xA;There are actually quite a few limits that you have to take into account. I talked about them here. In that post, the issue was the maximum number of tasks defined by the system. After which, you can no longer create new threads.&#xA;In this case, the suspect was: vm.max_map_count.&#xA;Beyond just total memory, Linux has a limit on the number of memory mappings that a process may have. And RavenDB uses Voron, which is based on mmap(), and each database and each index typically have multiple maps going on.&#xA;Given the number of databases involved&#x2026;&#xA;The solution was to increase the max_map_count and add a task for us, to give a warning to the user ahead of time when they are approaching the system&#x27;s limits.</p>
-        <a href="https://ardalis.com/chrome-browser-tabs-to-links/" target="_blank"><h1 class="title mb-6">Chrome Browser Tabs to Links</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 23, 2023
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It often happens when you&#x27;re looking for a solution to a problem that you end up with a bunch of browser tabs open. Some were dead ends&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://www.meziantou.net/using-dotnet-code-from-javascript-using-webassembly.htm" target="_blank"><h1 class="title mb-6">Using .NET code from JavaScript using WebAssembly</h1></a>
-        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 23, 2023
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Blazor WebAssembly allows running a .NET web application in a browser. Starting with .NET 7, you can easily run any .NET method from JavaScript without needing the whole Blazor framework. Let&#x27;s see how to run a .NET method from JavaScript!First, you need to install the WASM workload, so you can pub</p>
         <div class="button flex justify-between">
             <a href="46.html"><span class="back arrow"></span></a>
 

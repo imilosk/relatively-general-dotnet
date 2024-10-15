@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4030/waiting-it-isnt-as-simple-as-twiddling-your-thumbs" target="_blank"><h1 class="title mb-6">Waiting, it isn&#x2019;t as simple as twiddling your thumbs</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 22, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Just thought that it would be interesting post to talk about the evolution of a single method. This is used solely for the integration tests, by the way.          public void WaitForAllMessages()&#xA;{ &#xA;  while (mailBox.IsEmpty == false)&#xA;  {&#xA;    Thread.Sleep(100);&#xA;  }&#xA;}&#xA;  &#xA;&#xA;&#xA;&#xA;&#xA;It started its life very simply, as just a method that waited until the mailbox was empty. But then we run into a problem, sometimes the method returned while a message was being processed, and that caused the tests to fail.&#xA;&#xA;Then we had this:&#xA;&#xA;&#xA;  &#xA;    public void WaitForAllMessages()&#xA;{ &#xA;  while (mailBox.IsEmpty == false  || currentlyProcessingMessages &gt; 0)&#xA;  {&#xA;    Thread.Sleep(100);&#xA;  }&#xA;}&#xA;  &#xA;&#xA;&#xA;There are other pieces of the code, that update the currentlyProcessingMessages piece, but it isn&#x2019;t really interesting. Some time passed, and we run into additional issues, which led to this beast:&#xA;&#xA;&#xA;  &#xA;    public void WaitForAllMessages()&#xA;{&#xA;    // we wait in case there are additional messages that have not yet arrived&#xA;    // to the listner. We arbitrarily define that if we wait for 5 consecutive &#xA;    // times with no new messages, there are no more messages&#xA;    int countOfTimesTriesToWaitAndThereWereNoMessages = 0;&#xA;    while(countOfTimesTriesToWaitAndThereWereNoMessages &lt; 5)&#xA;    {&#xA;          if (WaitForAllMessagesInMemoryQueueOrProcessing())&#xA;            countOfTimesTriesToWaitAndThereWereNoMessages = 0;&#xA;        else&#xA;              countOfTimesTriesToWaitAndThereWereNoMessages &#x2B;= 1;&#xA;          Thread.Sleep(100);&#xA;    }&#xA;}&#xA;&#xA;private bool WaitForAllMessagesInMemoryQueueOrProcessing()&#xA;{&#xA;    bool waited = false;&#xA;    while (mailBox.IsEmpty == false ||&#xA;           currentlyProcessingMessages &gt; 0)&#xA;    {&#xA;        waited = true;&#xA;        Thread.Sleep(100);&#xA;    }&#xA;    return waited;&#xA;}&#xA;  &#xA;&#xA;&#xA;And that is where we are now.</p>
+        <a href="https://ayende.com/blog/4029/nh-prof-new-feature-detecting-2nd-cache-collection-loads" target="_blank"><h1 class="title mb-6">NH Prof New Feature</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 22, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I noticed the lack when I was teaching the Core NHibernate course. While NH Prof was able to detect loading of an entity from the second level cache and the loading of query from the query cache, it wouldn&#x2019;t show when we were loading a collection from the collection cache.  That was actually quite easy to fix :-)  Take a look:     This feature is now available on Build 277 and up.  Have fun, and happy cache tracing :-)</p>
         <a href="https://ayende.com/blog/4028/nhibernate-help-us-see-who-is-using-it" target="_blank"><h1 class="title mb-6">NHibernate &#x2013; Help us see who is using it</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: May 18, 2009
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The relevant code from the live coding exercise can be found here, and it is probably going to be the basis of most of the demos that I am going to do.  Have fun playing with it&#x2026;</p>
-        <a href="https://ayende.com/blog/4021/who-is-the-responsible-party" target="_blank"><h1 class="title mb-6">Who is the responsible party?</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 18, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Object Oriented design is all about placing behavior and data together, of making the object responsible for its own operations. The problem then becomes identifying which object is responsible for what. This is usually pretty easy, since the natural owner of an operation is usually clear. Note that I don&#x2019;t much care for the choice people make between things like parent.AddChild(child) vs. child.AddTo(parent). Both are equally good from my point of view. What I don&#x2019;t want to see is this:     parent.Children.Add(child);     child.Parent = parent;   The reason for that is quite simple. This is a serious violation of the Tell, Don&#x2019;t Ask protocol, and it means that someone is missing the pointing between the ownership of a particular operation and the instigator of that operation. The instigator is usually the UI, requesting that something will happen. Bad code will usually put a lot of the logic in the instigator side, rather than on the owner side.   Then we move into issues of cohesiveness and coupling, which guides us further in understanding how to place the appropriate responsibilities. All logic related to a particular aspect of the application should reside in the same location, so it is easy to work with, modify and change.  But by far the most common error I see people make is placing responsibilities on the instigator rather than on other parts of the system. There should be a very clear distinction between the two. Other than that, there is a lot of stuff that is just experience and understanding of the actual system.  In the end, all systems are refactorable, so you shouldn&#x2019;t be afraid to make mistakes.</p>
-        <a href="https://ayende.com/blog/4020/nh-prof-release-candidate-is-out" target="_blank"><h1 class="title mb-6">NH Prof</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 17, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well,  After quite a while of developing on a private branch, it is time to make NH Prof RC public. We have worked on several new features, but chief among them was performance. As I outlined in the past, we have to rip apart the internal communication mechanisms inside NH Prof, to allow it to react well under high load.  There are some things that you need to know first, though:     Session factory stats is currently disabled, there is no reason except that some things had to be cut in order to release the RC. It will be back soon.    The RC bits are not compatible with the beta bits. If you want to use RC UI with your application (and you should), you need to use the RC appender.   As usual, you can find it here, build 260 or up.  Have fun, and tell us what you think.</p>
         <div class="button flex justify-between">
             <a href="576.html"><span class="back arrow"></span></a>
 

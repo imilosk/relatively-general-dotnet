@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/155521/non-overlapping-time-periods-because-i-like-the-pain-of-2-am-wakeup-calls" target="_blank"><h1 class="title mb-6">Non overlapping time periods&#x2013;because I like the pain of 2 AM wakeup calls</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 15, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is partly in response for this post, discussing the Azure problem with leap year. But it is actually a bit more general than that.&#xA;&#xA;&#x9;In my code, here is how I define &#x201C;one year from now&#x201D;:&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;DateTime.Today.AddYears(1).AddDays(3);&#xA;&#xA;&#xA;&#x9;As it turned out, this tend to have a lot of implications on your business, most of them are actually pretty good ones.&#xA;&#xA;&#x9;For a start, you will never get hit with a leap year bug, but more importantly, you are never going to have to deal with an immediate cutoff. This is important because it gives you time. Mostly, it gives you time to screw up, but having the time to do so without having an egg all of your face is a really nice thing.&#xA;&#xA;&#x9;For example, all of our subscriptions are using a similar method of calculation, and this is why we can take the ordering system down for a few hours or even a day or two and no one will actually notice. We have a big grace period in which we can work things out.&#xA;&#xA;&#x9;Sure, a user gets 3 &#x201C;extra&#x201D; days for free out of this, but frankly, I don&#x2019;t give a damn. It is more important that I get the buffer, and most users like it much better when you don&#x2019;t slam the doors in their faces on the first chance.&#xA;&#xA;&#x9;One of the things that is important is style, and giving a grace period for those sort of things is crucial.</p>
+        <a href="https://ayende.com/blog/155489/rotten-scheduling-dont-roll-your-own" target="_blank"><h1 class="title mb-6">Rotten Scheduling: Don&#x2019;t roll your own</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 14, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">&#x201C;We need to run a specific task every 72 hours, I thought about this approach&#x2026;&#x201D; public class TimedTask&#xA;{&#xA;  public static Timer Timer;&#xA;  &#xA;  public static void Init()&#xA;  {&#xA;    Timer = new Timer(ExecuteEvery72Hours, null, TimeSpan.FromHours(72), TimeSpan.FromHours(72));&#xA;  }&#xA;  &#xA;  public static void ExecuteEvery72Hours()&#xA;  {&#xA;    // do something important&#xA;  }&#xA;}&#xA;&#xA;&#xA;This is a bloody rotten idea, let us see why&#x2026;&#xA;&#xA;What happens if your application is recycled every 29 hours?&#xA;What happens if your application is always on, but during that 72 hour call, it was offline?&#xA;What happens if your task actually takes more than 72 hours to run?&#xA;What happens if the task fails? &#xA;How do you report errors, warnings, etc?&#xA;Scheduling is a hard problem. There are a lot of things that you actually need to consider. And the code above is really considering none of them. I would be very surprised if something like that ever run. in production. It most certainly can&#x2019;t be made to run reliably.&#xA; Things that run every X time, where X is a long time (hours / days) tend to be pretty important. In some of the systems that we wrote, that include doing things like updating VAT and interest rates, pulling from external source, generating the weekly report, etc.&#xA;You do not want this to be messed up.&#xA;If you need to do anything like that, make use of the builtin scheduling features of the OS you are running on (Windows Task Scheduler is an amazingly full featured, and cron isn&#x2019;t bad if you are running on Linux). If you still insist on doing this in code, at the very least do something like this:&#xA;public class TimedTask&#xA;{&#xA;  public static Timer Timer;&#xA;  &#xA;  public static void Init()&#xA;  {&#xA;    Timer = new Timer(()=&gt;&#xA;    {&#xA;      if( (DateTime.UtcNow - GetLastExecutedTime()) &gt; 72)&#xA;        ExecuteEvery72Hours();&#xA;    }, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));&#xA;  }&#xA;  &#xA;  public static void ExecuteEvery72Hours()&#xA;  {&#xA;    // do something important&#xA;  }&#xA;}&#xA;&#xA;&#xA;This still has a lot of problems, but at least it it solving some crucial problems for you (note that GetLastExecutedTime has to be a persisted value).&#xA;Of course, if you need something like this in your code, you have better use something like Quartz, instead. Don&#x2019;t roll your own. Sure, this is ten lines of code to do so, but as I said, this is the very basics, and it gets complex really fast.</p>
         <a href="https://ayende.com/blog/155457/rotten-scheduling" target="_blank"><h1 class="title mb-6">Rotten Scheduling</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: May 03, 2012
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I really hate this code, it is so stupid it makes my head hurt, and it have so much important factors in it. In particular, there is a lot of logic in here.  You might not see it as such, but a lot of this is actually quite important, default values, config parsing, decisions.  This is important. And it is all handled in a a few methods that goes on forever and hide important details in the tediousness of parameter unpacking. This approach works if you have 5 parameters, not when you have 50.</p>
-        <a href="https://www.meziantou.net/hyper-v-difference-between-save-and-pause.htm" target="_blank"><h1 class="title mb-6">Hyper-V - difference between Save and Pause</h1></a>
-        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 03, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The Save and Pause functions appear to have the same behavior: suspend the virtual machine. The difference is in the RAM. The Save function writes the contents of the VM&#x27;s RAM to the hard disk. The released RAM can therefore be used by other VMs. With the Pause function only the CPU is paused, so t</p>
-        <a href="https://ayende.com/blog/154977/thou-shall-not-delete" target="_blank"><h1 class="title mb-6">Thou shall not delete</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 02, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Ouch!public ActionResult DeleteComment(int id)&#xA;{&#xA;  var userComment = RavenSession.Load&lt;UserComment&gt;(id);&#xA;&#xA;  if (userComment == null)&#xA;    return new HttpStatusCodeResult(204);&#xA;&#xA;  var user = RavenSession.GetUser(User.Identity.Name);&#xA;  if(user == null || (user.Role != UserRole.Moderator &amp;&amp; user.Role != UserRole.Admin))&#xA;    return new HttpStatusCodeResult(403, &quot;You must be logged in as moderator or admin to be able to delete comments&quot;);&#xA;&#xA;  RavenSession.Delete(user);&#xA;&#xA;  return new HttpStatusCodeResult(204);&#xA;}</p>
         <div class="button flex justify-between">
             <a href="438.html"><span class="back arrow"></span></a>
 

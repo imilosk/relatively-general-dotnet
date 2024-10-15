@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3825/more-information-of-gc-issue" target="_blank"><h1 class="title mb-6">More information of GC issue</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 22, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After a lot more study, it looks like there are two separate issues that are causing the problem here.      During AppDomain unload, it is permissible for the GC to collect reachable objects. I am fine with that and I certainly agree that this makes sense.    Application_End occurs concurrently with the AppDomain unload.   Looking at the docs (and there are surprisingly few about this), it seems like 1 is expected, but 2 is a bug. The docs state:     Application_End&#xA0; - Called once per lifetime of the application before the application is unloaded.    It may be my English, but to me before doesn&#x2019;t suggest at the same time as.  So I do believe it is a bug in the framework, but not in the GC, it is in the shutdown code for ASP.Net. This is still a very nasty problem.</p>
+        <a href="https://ayende.com/blog/3824/i-am-being-stalked-by-clr-bugs" target="_blank"><h1 class="title mb-6">I am being stalked by CLR bugs</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 21, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just spent several hours tracking down a crashing but in my current project.   The&#xA0; issue was, quite clearly, a problem with releasing unmanaged resources. So I tightened my control over resources and made absolutely sure that I am releasing everything properly.  I simply could not believe what was going on. I knew what they code is doing, and I knew that what I was getting was flat out impossible.       Yes, I know that we keep saying that, but this bug really is not possible!  The situation is quite clear, during the shutdown process of the application, an unmanaged resource&#x2019;s finalizer would throw an exception because it wasn&#x2019;t properly disposed.  The problem? It is most assuredly should be disposed. When debugging through the problem, I found out something extremely strange and worrying. The managed object&#x2019;s finalizer was running while there were strong references to the object.  You can see that in the attached screenshot (click the image see it in full size).  That is, by the way, when you have the root in a static field, so it cannot be that the whole graph is free.  This is somehow related to threading, because debugging this would often change the way this works, but running without a debugger consistently fails.  The CLR semantics for finalizers clearly state that they can only be run after there are no more strong references to the instance. Cleary, this is not what is going on here.  The only thing that I can think of that can affect this is that there is something really strange going on with app domain unloads.  Now, I can&#x2019;t figure if this is me being extremely stupid or if this is a real problem. I did manage to create a reproduction of the issue, however, which you can download here.  This is on VMWare Fusion, running Windows 2008 x64, with .Net 3.5 SP1.  To reproduce, start the application in WebDev.WebServer, wait for the page to load, and the close the WebDev.WebServer. If it crashes, you have successfully reproduced the problem.  Update &#x2013; This is really interesting. both stack traces are operating on the same object, by the way.     Adding locking around the finalizer and dispose seems to have made the problem go away.</p>
         <a href="https://ayende.com/blog/3823/rhino-service-bus-concurrency-violations-are-business-logic" target="_blank"><h1 class="title mb-6">Rhino Service Bus</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: January 18, 2009
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Now that is what I call a hard to build feature. Well, it wasn&#x2019;t hard, it was just tedious to do. This feature required me to modify 66 files(!). Since I pride myself on the mostly frictionless nature of NH Prof, that was annoying. The real issue was that this required that I would change all layers in the application to start tracking the URL from which the event was generated. Since we have a rigid separation between the different parts, and since we track so many things, it was mainly an annoying task to go and add a URL to all of them.  Anyway, you probably don&#x2019;t really care about my trouble in implementing this feature, let us talk about the actual feature.  We can track which URL opened a session:       And even which URL is responsible for each session:    This is the first of the last three features that I have left. I&#x2019;ll discuss the other two shortly.</p>
-        <a href="https://ardalis.com/devreach-dvds/" target="_blank"><h1 class="title mb-6">DevReach DVDs</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 17, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Earlier this week, I received a package of DVDs from the DevReach conferenceI was invited to speak at last October. I&#x2019;ve already written&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/3816/did-i-miss-something-since-when-can-you-do-it" target="_blank"><h1 class="title mb-6">Did I miss something? Since when can you do it?</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 17, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It works :-)</p>
         <div class="button flex justify-between">
             <a href="600.html"><span class="back arrow"></span></a>
 

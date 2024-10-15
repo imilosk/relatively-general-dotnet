@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ardalis.com/a-review-of-the-clean-coder/" target="_blank"><h1 class="title mb-6">A Review of The Clean Coder</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 10, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m generally a fan of Robert C. &#x201C;Uncle Bob&#x201D; Martin&#x2019;s books, so realize I&#x2019;m going into this book with something of a positive bias. While is&#x2026;Keep Reading &#x2192;</p>
+        <a href="https://ayende.com/blog/159042/handling-entities-validations-in-ravendb" target="_blank"><h1 class="title mb-6">Handling entities validations in RavenDB</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 10, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post came out of a stack overflow question. The user had the following code:      1: public void StoreUser(User user)   2: {   3:     //Some validation logic   4:     if(string.IsNullOrWhiteSpace(user.Name))   5:         throw new Exception(&quot;User name can not be empty&quot;);   6:&#xA0;    7:     Session.Store(user);   8: }&#xA;But he noted that this will not work for other approaches, such as this:&#xA;&#xA;&#xA;   1: var u1 = Sesion.Load&lt;User&gt;(1);   2: u1.Name = null; //change is tracked and will persist on the next save changes   3: Session.SaveChanges();&#xA;This is because RavenDB tracks the entity and will persist it if there has been any changes when SaveChanges is called.&#xA;The question was:&#xA;&#xA;Is there someway to get RavenDB to store only a snapshot of the item that was stored and not track further changes?&#xA;The answer is, as is often the case if you run into hardship with RavenDB, you are doing something wrong. In this particular case, that wrongness is the fact that you are trying to do validation manually. This means that you always have to remember to call it, and that you can&#x2019;t use a lot of the good stuff that RavenDB gives you, like change tracking. Instead, RavenDB contains the hooks to do it once, and do it well.&#xA;&#xA;&#xA;   1: public class ValidationListener : IDocumentStoreListener   2: {   3:     readonly Dictionary&lt;Type, List&lt;Action&lt;object&gt;&gt;&gt; validations = new Dictionary&lt;Type, List&lt;Action&lt;object&gt;&gt;&gt;();   4:&#xA0;    5:     public void Register&lt;T&gt;(Action&lt;T&gt; validate)   6:     {   7:         List&lt;Action&lt;object&gt;&gt; list;   8:         if(validations.TryGetValue(typeof(T),out list) == false)   9:             validations[typeof (T)] = list = new List&lt;Action&lt;object&gt;&gt;();  10:&#xA0;   11:         list.Add(o =&gt; validate((T) o));  12:     }  13:&#xA0;   14:     public bool BeforeStore(string key, object entityInstance, RavenJObject metadata, RavenJObject original)  15:     {  16:         List&lt;Action&lt;object&gt;&gt; list;  17:         if (validations.TryGetValue(entityInstance.GetType(), out list))  18:         {  19:             foreach (var validation in list)  20:             {  21:                 validation(entityInstance);  22:             }  23:         }  24:         return false;  25:     }  26:&#xA0;   27:     public void AfterStore(string key, object entityInstance, RavenJObject metadata)  28:     {  29:     }  30: }&#xA;This will be called by RavenDB whenever we save to the database. We can now write the validation / registration code like this:&#xA;&#xA;&#xA;   1: var validationListener = new ValidationListener();   2: validationListener.Register&lt;User&gt;(user=&gt;   3:     {   4:         if (string.IsNullOrWhiteSpace(user.Name))   5:             throw new Exception(&quot;User name can not be empty&quot;);   6:     });   7: store.RegisterListener(validationListener);&#xA;And that is all that she wrote.</p>
         <a href="https://ayende.com/blog/159041/listofparams-and-other-horrible-things-that-you-shouldnt-bring-to-ravendb" target="_blank"><h1 class="title mb-6">ListOfParams and other horrible things that you shouldn&#x2019;t bring to RavenDB</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: October 03, 2012
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So, after I finished telling you how much I don&#x2019;t like the lucene.net codebase, what is this post about? Well, I don&#x2019;t like the code, but then again, I generally don&#x2019;t like to read low level code. The ideas behind Lucene are actually quite amazingly powerful in their simplicity. At its core, Lucene is just a set of sorted dictionaries on disk (greatly simplified, I know). Everything else is build on top of that, and if you grok what is going on there, you would be quite amazed at the number of things that this has made possible. Indexing in Lucene is done by a pipeline of documents and fields and analyzers, which all participate together to generate those dictionaries. Searching in lucene is done by traversing those dictionaries in various ways, and combining the results in interesting ways. I am not going to go into details about how it works, you can read all about that here. The important thing is that once you have grasped the essential structure inside lucene, the rest are just details. The concept and the way the implementation fell out are quite beautiful.</p>
-        <a href="https://ayende.com/blog/158914/lucene-net-is-ugly" target="_blank"><h1 class="title mb-6">Lucene.NET is UGLY</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 02, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you ever had to go through the Lucene.NET code base, I am sure that you&#x2019;ll agree that the code base is quite ugly. It does a lot&#xA0; of low level stuff, which is almost always nasty, it is a port of a code from another language and framework, which means that it isn&#x2019;t idiomatic code, and it has a lot of&#x2026; strange things going on there.  Exceptions are used far too often. There is a strong tendency to delegate things in such a way that make it hard to figure out where things are actually happening. The big stick approach to thread safety (slap a lock on it). Some really horrible things with regards to mutable shared state with IndexInputs. Here is a good example of many of the issues that I talk about: https://github.com/apache/lucene.net/blob/trunk/src/core/Search/FieldCacheImpl.cs#L207 Read this method, and I think you&#x2019;ll understand. Then again, you can see methods of similar or greater complexity in RavenDB, for example, see here: https://github.com/ayende/ravendb/blob/1.2/Raven.Database/Indexing/IndexingExecuter.cs#L60 My main problem with the Lucene.NET codebase is that it feels alien, it isn&#x2019;t .NET code, and it shows. Then again, Lucene is also quite beautiful, but I&#x2019;ll talk about this in my next post.</p>
-        <a href="https://ayende.com/blog/158913/things-we-learned-from-production-part-v-is-that-a-wrench-in-your-pocket-or-are-you-happy-to-see-me" target="_blank"><h1 class="title mb-6">Things we learned from production, part V&#x2013;Is that a wrench in your pocket or are you happy to see me?</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 01, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is actually going to be a short one, because it should have been pretty obvious.  An admin in production doesn&#x2019;t have the same toolset that developers have on their dev environment. The ability to break in and inspect the state of the system at any time is something that we developers usually take for granted, but it is something that is quite impossible to do in production. That means that we have to provide the admin with the ability to inspect our current state, we also need to give the admin the ability to make some changes. The most common example is to change system settings without taking the entire system down, but there are other things. Being able to force the system to do something, such as unload a database, force a full GC cycle or tweak the perf hints without getting seven people to sign off on taking the system down (and not having to do so at 3 AM) it a really good thing, as far as pretty much any admin is concerned.</p>
         <div class="button flex justify-between">
             <a href="421.html"><span class="back arrow"></span></a>
 

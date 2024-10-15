@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/155297/ravendb-sharding-blind-sharding" target="_blank"><h1 class="title mb-6">RavenDB Sharding &#x2013; Blind sharding</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 19, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">From the get go, RavenDB was designed with sharding in mind. We had a sharding client inside RavenDB when we shipped, and it made for some really cool demos. It also wasn&#x2019;t really popular, we didn&#x2019;t implement some things for sharding. We always intended to, but we had other things to do and no one was asking for it much. That was strange. I decided that we needed to do two major things.   First, to make sure that the experience for writing in a sharded environment was as close as we could get to the one you get with a non sharded environment.  Second, we had to make it simple to use sharding. Before our changes, in order to use sharding you had to do the following:  Setup multiple RavenDB server. Create a list of those servers urls. Implement IShardStrategy, which exposes  IShardAccesStrategy &#x2013; determine how we call to the servers. IShardSelectionStrategy &#x2013; determine how we select which server a new instance will go to, and what server an existing instance belongs on. IShardResolutionStrategy &#x2013; determine which servers we should query when we are querying for data (allow to optimize which servers we are actually hitting for particular queries) All in all, you would need to write a minimum of 3 classes, and have to write some sharding code that can be&#x2026; somewhat tricky. Oh, it works, and it is a great design. It is also complex, and it makes it harder to use sharding. Instead, we now have the following scenario:  As you can see, here we have three different servers, each running in a different port. Let us see what we need to do to get us working with this from the client code:  First, we need to define the servers (and their names), then we create a shard strategy and use that to create a sharded document store. Once that is done, we are home free, and can do pretty much whatever we want: string asianId, middleEasternId, americanId;&#xA;&#xA;using (var session = documentStore.OpenSession())&#xA;{&#xA;    var asian = new Company { Name = &quot;Company 1&quot;, Region = &quot;Asia&quot; };&#xA;    session.Store(asian);&#xA;    var middleEastern = new Company { Name = &quot;Company 2&quot;, Region = &quot;Middle-East&quot; };&#xA;    session.Store(middleEastern);&#xA;    var american = new Company { Name = &quot;Company 3&quot;, Region = &quot;America&quot; };&#xA;    session.Store(american);&#xA;&#xA;    asianId = asian.Id;&#xA;    americanId = american.Id;&#xA;    middleEasternId = middleEastern.Id;&#xA;&#xA;    session.Store(new Invoice { CompanyId = american.Id, Amount = 3 });&#xA;    session.Store(new Invoice { CompanyId = asian.Id, Amount = 5 });&#xA;    session.Store(new Invoice { CompanyId = middleEastern.Id, Amount = 12 });&#xA;    session.SaveChanges();&#xA;&#xA;}&#xA;&#xA;using (var session = documentStore.OpenSession())&#xA;{&#xA;    session.Query&lt;Company&gt;()&#xA;        .Where(x =&gt; x.Region == &quot;America&quot;)&#xA;        .ToList();&#xA;&#xA;    session.Load&lt;Company&gt;(middleEasternId);&#xA;&#xA;    session.Query&lt;Invoice&gt;()&#xA;        .Where(x =&gt; x.CompanyId == asianId)&#xA;        .ToList();&#xA;}&#xA;&#xA;&#xA;&#xA;What you see here is the code that saves both companies and invoices, and does this over multiple servers. Let us see the log output for this code:&#xA;&#xA;You can see a few interesting things here:&#xA;&#xA;The first four requests are to manage the document ids (hilos). By default, we use the first server as the one that will store all the hilo information.&#xA;Next (request #5) we are saving two documents, note that the shard id is now part of the document id.&#xA;Request 6 and 7 here are actually queries, we returned 1 results for the first query, and none for the second.&#xA;Let us look at another shard now:&#xA;&#xA;This is much shorter, since we don&#x2019;t have the hilo requests. The first request is there to store two documents, and then we see two queries, both of which return no results.&#xA;And the last shard:&#xA;&#xA;Here we again don&#x2019;t see the hilo requests (since they are all on the first server). We do see putting of the two docs, and request #2 is a query that returns no results.&#xA;Request #3 is interesting, because we did not see that anywhere else. Since we did a load by id, and since by default we store the shard id in the document id, we were able to optimize this operation and go directly to the relevant shard, bypassing the need to query anything other server.&#xA;The last request is a query, for which we have a result.&#xA;So what did we have so far?&#xA;We were able to easily configure RavenDB to use 3 ways sharding in a few lines of code. It automatically distributed writes and reads for us, and when it could, it optimized the data access so it would only access the relevant shards. Writes are distributed on a round robin basis, so it is pretty fair. And reads are optimized on whatever we can figure out a minimal number of shards to query. For example, when we do a load by id, we can figure out what the shard id is, and query that server directly, rather than all of them.&#xA;Pretty cool, if you ask me.&#xA;Now, you might have noticed that I called this post Blind Sharding. The reason this is called this name is that this is pretty much the lowest rung in the sharding ladder. It is good, it split your data and it tries to optimize things, but it isn&#x2019;t the best solution. I&#x2019;ll discuss a better solution in my next post.</p>
+        <a href="https://ardalis.com/getting-started-with-single-page-applications-in-asp-net/" target="_blank"><h1 class="title mb-6">Getting Started with Single Page Applications in ASP.NET</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 16, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the new features in ASP.NET MVC 4 (Beta) is a new project template for Single Page Applications (SPA). You can download the latest&#x2026;Keep Reading &#x2192;</p>
         <a href="https://ardalis.com/make-iis-express-the-default-for-vs2010-web-projects/" target="_blank"><h1 class="title mb-6">Make IIS Express the Default for VS2010 Web Projects</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: March 09, 2012
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Not long ago, while preparing my Kanban Fundamentals video training class for Pluralsight, I read Personal Kanban, by Jim Benson and&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/how-to-give-feedback-on-microsoft-developer-products/" target="_blank"><h1 class="title mb-6">How to Give Feedback on Microsoft Developer Products</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 09, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the last few years, a number of Microsoft dev teams have started using online tools to manage how the community can offer feedback. If&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://benfoster.io/blog/reference-lists-in-ravendb/" target="_blank"><h1 class="title mb-6">Reference lists in RavenDB</h1></a>
-        <p class="mb-2">by Ben Foster</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 08, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post we look at how to manage lists of reference data when using RavenDB.</p>
         <div class="button flex justify-between">
             <a href="444.html"><span class="back arrow"></span></a>
 

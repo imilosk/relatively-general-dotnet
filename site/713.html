@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/2928/runsharp-reflection-emit-for-mere-mortals" target="_blank"><h1 class="title mb-6">RunSharp: Reflection Emit for Mere Mortals</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 03, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have been dealing with IL generation using Reflection Emit for about two years. I believe that I have enough experience with it to get a feeling for how it goes, and it usually goes slowly and painfully. There are wrappers around it (Castle Dynamic Proxy has a AST for this), but they are fairly specialized, and anyone somehow I always find myself needing to fix the code that build the AST, mostly because I have users that throws weird curve balls at Rhino Mocks. Nevertheless, IL generation is a powerful technique, just very cumbersome to deal with. RunSharp&#xA0;is a OSS project that aims to solve this issue, it generate code on the fly, using high-level syntax. This means that you can write code like this: g.Assign(x, o.Invoke(&quot;MyMethod&quot;, arg1, arg2));&#xA;g.Assign(y, o.Property(&quot;MyProperty&quot;));&#xA;g.Assign(o.Property(&quot;MyProperty&quot;), z);&#xA;g.Assign(f, o.Field(&quot;myField&quot;));&#xA;And it will generate the appropriate:&#xA;x = o.MyMethod(arg1, arg2);&#xA;y = o.MyProperty;&#xA;o.MyProperty = z;&#xA;f = o.myField;&#xA;I am impressed, if this works, it can mean some very interesting possibilities. I took a very brief glance at the code, and it is using the ILGenerator from the framework, I would be very interested in getting this to work on (a) dynamic methods, (b) cecil.&#xA;The license is GPL, however, which means that it is a problem to use in any scenario. In my opinion, such a thing should be LGPL, which would allow its use in other projects, but that is a subject for another day.&#xA;Thanks Roy, for finding it.</p>
+        <a href="https://ayende.com/blog/2927/retlang-concurrency-library-for-c" target="_blank"><h1 class="title mb-6">Retlang - Concurrency Library for C#</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 01, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have been investigating Retlang&#xA0;as a way to handle concurrency in Rhino ETL. There are quite a few samples there, but no over all explanation, I am going to document what I find as I learn them. Retlang is based on the concept of message passing in C#, a typical pub/sub infrastructure, within a single a process. As such, you always need to know where you are publishing to, and where to reply. The message header serves as a way to decouple the two. So you can build loosely coupled components that talks to each other by message passing. Obviously, my first step when evaluating a library is checking how well it plays with my own semantics, and I have to say that on first glance, Retlang looks really nice. I am starting to explore it, and I am impressed. There is, for me, a sense of very well designed API. In fact, I have encountered several instances of thinking &quot;I would have done it like this&quot;, only to encounter exactly that thing within the code. The minimal example is this one: IProcessContextFactory factory = new ProcessContextFactory();&#xA;factory.Start();&#xA;IProcessContext publisher = factory.CreateAndStart();&#xA;IProcessContext consumer = factory.Create();&#xA;consumer.Subscribe&lt;int&gt;(new TopicEquals(&quot;test&quot;), delegate (IMessageHeader header, int id)&#xA;{&#xA;    Console.WriteLine(id);&#xA;});&#xA;consumer.Start();&#xA;for (int i = 0; i &lt; 50; i&#x2B;&#x2B;)&#xA;{&#xA;    publisher.Publish(&quot;test&quot;, i);&#xA;}&#xA;consumer.Stop();publisher.Stop();consumer.Join();publisher.Join();factory.Stop();&#xA;&#xA;This just publish a list of numbers and print them, but it demonstrate several imprtant factors in Retlang. First of which, we have the publish / subscribe mechanism, but we also have the topic select which we pass to the subscribe method. This implementation is a very good one for extensibility, and it mimics Erlang&#x27;s pattern matching capabilities to a high degree.&#xA;Threading concerns:&#xA;I am not an expert yet, but as far as I can tell, each IProcessContext is running in its own thread, and the IProcessContextFactory has another thread as well, the bus thread. All the contextes screated from a single factory share the same bus space. This means that you probably do not want&#xA0;to&#xA0;have too many&#xA0;Process Contextes around, but you can register as many subscribiers as you want, and they will be routed appropriately. &#xA;Again, those are just my observations on how it works, from an initial survery only, so it is entirely possible (and probable) that I am entirely mistaken.</p>
         <a href="https://ayende.com/blog/2926/seeking-individuals-and-interactions-over-processes-and-tools" target="_blank"><h1 class="title mb-6">Seeking: Individuals and interactions over processes and tools</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: October 29, 2007
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In case you haven&#x2019;t seen this news from last Friday, theTFS Beta 2 Virtual PC images have an operating system timebomb in them that is set&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/one-week-to-devconnections/" target="_blank"><h1 class="title mb-6">One Week to DevConnections</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 29, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The Fall 2007 DevConnections conference is next week in Las Vegas. This is definitely going to be the biggest conference in the United&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/varybycustom-caching-by-user/" target="_blank"><h1 class="title mb-6">VaryByCustom Caching By User</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 29, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Ran into an interesting bug today with one of my applications. A user control that provides messages based on a user&#x2019;s account was showing&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="712.html"><span class="back arrow"></span></a>
 

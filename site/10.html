@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://andrewlock.net/behind-the-scenes-of-collection-expressions-part-4-the-spread-element/" target="_blank"><h1 class="title mb-6">Exploring the generated code: the spread element</h1></a>
+        <p class="mb-2">by Andrew Lock</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 02, 2024
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Behind the scenes of collection expressions - Part 4</p>
+        <a href="https://ayende.com/blog/201281-B/challenge-efficient-snapshotable-state" target="_blank"><h1 class="title mb-6">Challenge</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 01, 2024
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">At the heart of RavenDB, there is a data structure that we call the Page Translation Table. It is one of the&#xA0;most important pieces inside RavenDB.The page translation table is basically a Dictionary&lt;long, Page&gt;, mapping between a page number and the actual page. The critical aspect of this data structure is that it is both concurrent and multi-version. That is, at a single point, there may be multiple versions of the table, representing different versions of the table at given points in time.The way it works, a transaction in RavenDB generates a page translation table as part of its execution and publishes the table on commit. However, each subsequent table builds upon the previous one, so things become more complex. Here is a usage example (in Python pseudo-code):table = {}&#xA;&#xA;&#xA;with wtx1 = write_tx(table):&#xA;  wtx1.put(2, &#x27;v1&#x27;)&#xA;  wtx1.put(3, &#x27;v1&#x27;)&#xA;  wtx1.publish(table)&#xA;&#xA;&#xA;# table has (2 =&gt; v1, 3 =&gt; v1)&#xA;&#xA;&#xA;with wtx2 = write_tx(table):&#xA;  wtx2.put(2, &#x27;v2&#x27;)&#xA;  wtx2.put(4, &#x27;v2&#x27;)&#xA;  wtx2.publish(table)&#xA;&#xA;&#xA;# table has (2 =&gt; v2, 3 =&gt; v1, 4 =&gt; v2)This is pretty easy to follow, I think. The table is a simple hash table at this point in time.The catch is when we mix read transactions as well, like so:# table has (2 =&gt; v2, 3 =&gt; v1, 4 =&gt; v2)&#xA;&#xA;&#xA;with rtx1 = read_tx(table):&#xA;&#xA;&#xA;        with wtx3 = write_tx(table):&#xA;                wtx3.put(2, &#x27;v3&#x27;)&#xA;                wtx3.put(3, &#x27;v3&#x27;)&#xA;                wtx3.put(5, &#x27;v3&#x27;)&#xA;&#xA;&#xA;                with rtx2 = read_tx(table):&#xA;                        rtx2.read(2) # =&gt; gives, v2&#xA;                        rtx2.read(3) # =&gt; gives, v1&#xA;                        rtx2.read(5) # =&gt; gives, None&#xA;&#xA;&#xA;                wtx3.publish(table)&#xA;&#xA;&#xA;# table has (2 =&gt; v3, 3 =&gt; v3, 4 =&gt; v2, 5 =&gt; v3)&#xA;# but rtx2 still observe the value as they were when&#xA;# rtx2 was created&#xA;&#xA;&#xA;        rtx2.read(2) # =&gt; gives, v2&#xA;        rtx2.read(3) # =&gt; gives, v1&#xA;        rtx2.read(5) # =&gt; gives, NoneIn other words, until we publish a transaction, its changes don&#x2019;t take effect. And any read&#xA0;translation that was already started isn&#x2019;t impacted. We also need this to be concurrent, so we can use the table in multiple threads (a single write transaction at a time, but potentially many&#xA0;read transactions). Each transaction may modify hundreds or thousands of pages, and we&#x2019;ll only clear the table of old values once in a while (so it isn&#x2019;t infinite&#xA0;growth, but may certainly reach respectable numbers of items).The implementation we have inside of RavenDB for this is complex! I tried drawing that on the whiteboard to explain what was going on, and I needed both the third and fourth dimensions to illustrate the concept. Given these requirements, how would you implement this sort of data structure?</p>
         <a href="https://www.meziantou.net/how-to-output-a-sarif-file-from-a-dotnet-project.htm" target="_blank"><h1 class="title mb-6">How to output a SARIF file from a .NET project</h1></a>
         <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: June 20, 2024
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Learn how to extend the .NET Upgrade Assistant by providing mappings for your own libraries and packages.</p>
-        <a href="https://ayende.com/blog/201217-A/recording-building-a-database-engine-in-c-net" target="_blank"><h1 class="title mb-6">Recording</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 19, 2024
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Watch Oren Eini, CEO of RavenDB, as he delves into the intricate process of constructing a database engine using C# and .NET. Uncover the unique features that make C# a robust system language for high-end system development. Learn how C# provides direct memory access and fine-grained control, enabling developers to seamlessly blend high-level concepts with intimate control over system operations within a single project. Embark on the journey of leveraging the power of C# and .NET to craft a potent and efficient database engine, unlocking new possibilities in system development.I&#x2019;m going deep into some of the cool stuff that you can do with C# and low level programming.</p>
-        <a href="https://ardalis.com/navigation-properties-between-aggregates-modules/" target="_blank"><h1 class="title mb-6">Modeling Navigation Properties Between Aggregates or Modules</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 19, 2024
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the key challenges in developing a modular monolith is managing the communication between different modules, especially when it comes&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="9.html"><span class="back arrow"></span></a>
 

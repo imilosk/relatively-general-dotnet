@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/1353/making-use-of-the-information-on-your-fingertips" target="_blank"><h1 class="title mb-6">Making use of the information on your fingertips</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 14, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Have you ever wondered how shops such as Amazon manage to give such highly&#xA;accurate guesses about what you may want to buy the next time you visit them? Those&#xA;self tuning services are a great source of income to those companies. I myself&#xA;have bought more than a few items based on those recommendations. It turned out&#xA;that it is not really hard to get some pretty amazing results, if you are&#xA;willing to consider the fact that people usually fall over themselves giving&#xA;you the data that you can use.&#xA;&#xA;Let us take this innovative schema for a spin, shall we?&#xA;&#xA;&#xA;&#xA;I want to display a list of suggest products whenever a customer submit&#xA;an order. But how do I do this? I don&#x27;t want to spend a lot of time analyzing&#xA;the products and matching them to customer preferences. A good point to start is&#xA;with noting that humans are generally predictable, so if I liked bought a&#xA;certain product, and you bought a certain product, it is likely that I&#x27;ll be&#xA;interested in something that you bought.&#xA;&#xA;This observation, along with the table structure above, leads me very&#xA;quickly to this query:&#xA;&#xA;SELECT TOP 15 [Id], [Name]&#xA;&#xA;FROM&#xA;Products suggested WHERE&#xA;suggested.Id IN (&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT ProductId FROM OrderLines WHERE OrderId IN (&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT other.Id FROM&#xA;Orders other&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; WHERE EXISTS (SELECT&#xA;1 FROM OrderLines line&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; WHERE line.OrderId = other.Id AND&#xA;line.ProductId &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; IN (SELECT&#xA;line2.ProductId FROM OrderLines line2 &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; WHERE line2.OrderId = @OrderId))))&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; AND suggested.Id NOT IN&#xA;(&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT line2.ProductId FROM OrderLines line2 &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; WHERE line2.OrderId = @OrderId)&#xA;GROUP BY Id, [Name]&#xA;ORDER BY COUNT(id)&#xA;&#xA;This query simply pulls all the products that were ordered by customers&#xA;that ordered a product that I just bought. It then returns the 15 most popular&#xA;products. This query even aims for relevance, since it will only pull out the&#xA;products that were bought on the same order as products in the order I just&#xA;purchased.</p>
+        <a href="https://ayende.com/blog/1352/sample-exam-questions" target="_blank"><h1 class="title mb-6">Sample Exam Questions</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 13, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Not those are good questions.</p>
         <a href="https://ayende.com/blog/1351/firefox-parade" target="_blank"><h1 class="title mb-6">FireFox Parade</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: May 13, 2006
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">During&#xA;Tech Ed, I got a chance to lay my hands on an Origami, among other fascinating toys.&#xA;It is small, light weight, hot (the model that I had is a testing one).&#xA;&#xA;I&#xA;got big hands, and I couldn&#x27;t quite type in the thumb keyboard successfully,&#xA;and I&#x27;m proud to say that the hand writing recognition assumes that I&#x27;m writing&#xA;in Klingon. The experience of&#xA;using it is very good, though. Everything can be handled without moving your&#xA;hands unnecessarily.&#xA;&#xA;&#xA0;&#xA;&#xA;&#xA;&#xA;&#xA0;&#xA;&#xA;I&#xA;still wants one, but now that I got my paws on one, I think that I&#x27;ll be able&#xA;to wait a while and not pay a 1000$ for the first model in the market.</p>
-        <a href="https://ardalis.com/code-query-language/" target="_blank"><h1 class="title mb-6">Code Query Language</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 12, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">http://www.practicaldot.net/en2/main.htm Have you ever wanted to run some metrics on your code base, to try and gauge its quality or to try&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/17729/" target="_blank"><h1 class="title mb-6">Practical .NET2 and C#2</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 12, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently had the opportunity to skim-read Practical .NET2 and C#2 by Microsoft MVP Patrick Smacchia. You&#x2019;ll find the book&#x2019;s table of&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="891.html"><span class="back arrow"></span></a>
 

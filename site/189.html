@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/184866-A/graphs-in-ravendb-i-didnt-mean-to-build-this-feature" target="_blank"><h1 class="title mb-6">Graphs in RavenDB</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 25, 2018
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was busy working on the implementation on filtering in graph queries, as discussed in my previous post. What I ended up implementing is a way for the user to tell us exactly how to handle the results. The actual query we ended up with is this:And the key part here is the where clause, were we state that a and c cannot be the same dog. This also matches the behavior of SQL, and for that reason allow (predictably), that&#x2019;s a good idea.However, I didn&#x2019;t just implement inequity, I implement full filtering capabilities, and you can access anything in the result. Which means that this query is now also possible:I&#x2019;ll let you a moment to analyze this query in peace. Try to de-chyper it (pun intended).What this&#xA0; query is doing is to compare the actual sale price and the regular price of product on a particular order, for products that match a particular set of categories. This is a significant query because, for the first time in RavenDB, you have the ability to perform such a query (previous, you would have had to define a specific index for this query). In other words, what graph query filtering brings to the table is joins. And I did not set out to build this feature and I&#x2019;m feeling very strange about it.</p>
+        <a href="https://ayende.com/blog/184865-A/stabilization-stories-slow-tcp-under-linux" target="_blank"><h1 class="title mb-6">Stabilization stories: Slow TCP under Linux</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 24, 2018
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB is pretty big, it is over 600,000 lines of C# code and over 220,000 lines of TypeScript code. In a codebase that large, there are unexpected interactions between different components (written by us, third parties and even the operating systems we use). Given how important the stability of RavenDB is, we spend quite a bit of time (as in, the majority of it) not writing new features, but ensuring that the system is stable, predictable and observable. One part of that is a large suite of tests, which are being run on a variety of machines and conditions.Some of these tests fail, in which case we fix them. A failing test is wonderful, because it tell us that something is wrong. A predictably failing test is a pleasure, because it states, in an unambiguous terms, what is going on and what the trouble is. I love getting a failing test, there is usually a pretty straightforward way to figure out what went wrong and then to actually fixing it. Then there are tests that fail occasionally, and I really hate them. They almost always relate to some sort of race condition. Sometimes, the race is in the test itself, but sometimes the problem is in the actual code. The problem is that tracking down such an issue is pretty hard and annoying. The more frequently can we induce the failure, the faster we can actually get to resolving it.We recently had a test that failed, very rarely, and only on Linux.The debugging landscape* on Linux is dramatically poorer compare to Windows, so that adds another hurdle.* Yes, we have JetBrains&#x2019; Rider, and it is great. But it is still quite far from the debugging capabilities of Visual Studio, especially for non trivial debugging. The test failed because of a timeout waiting for a cluster to fully disseminate changes between all the members in the cluster. That means that we had a test that would spin up three to five independent nodes, combine them into a cluster, create a database that is shared among all these nodes, write documents to one of the nodes and then validate that the document is indeed on all the nodes.&#xA0; A failure there, and a timeout failure in that aspect, means that we have to inspect pretty much the whole system.Luckily, we had some good people on this issue, and they manage to come up with a minimal reproduction of the issue. All it took was to spin up a TcpListener and TcpClient and have them talk to one another, then do the same using SSL. We got some really interesting results because of that.&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;Windows&#xA;Linux&#xA;Diff&#xA;&#xA;&#xA;Single Threaded &#x2013; Plain &#xA;192.8200.8104%&#xA;&#xA;&#xA;Single Threaded &#x2013; SSL&#xA;5,762.3667,549.811,584%&#xA;&#xA;&#xA;Concurrent (200) &#x2013; Plain&#xA;11,377.5932,487.98,195%&#xA;&#xA;&#xA;Concurrent (200) &#x2013; SSL&#xA;145,494.8 35,283,175.3 24,250%&#xA;&#xA;&#xA;&#xA;&#xA;As you can see, there is a minor discrepancy in the performance of TCP connection times. All the tests were run on the same machine, testing over localhost.We opened an issue for this problem, and for now we deal with it by accepting that the connection time can be very long and adjusted the timeout for the test.</p>
         <a href="https://ardalis.com/owasp-training-with-juice-shop-sample-application/" target="_blank"><h1 class="title mb-6">OWASP Training with Juice Shop Sample Application</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: October 18, 2018
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">At a client today I facilitated a retrospective for the dev team. I&#x27;ve done a few of these in the past, both for agile software teams and&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/184802-A/memory-management-goop-in-windows-linux" target="_blank"><h1 class="title mb-6">Memory management goop in Windows &amp; Linux</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 17, 2018
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Regardless of the operating system you use, you are going to get roughly the same services from each of them. In particular, process and memory isolation, managing the hardware, etc. It can sometimes be really interesting to see the difference between the operating systems approach to solving the same problem. Case in point, how both Windows and Linux manage memory. Both of them run on the same hardware and do roughly the same thing. But they have very different styles, this end up having profound implications on the application using them.Consider what appears to be a very simple question, what stuff do I have in my RAM? Linux keeps track of Resident Set Size on a per mapping basis, which means that we are able to figure out how much of a mmap file is actually in memory. Further more, we can figure out how of the mmap data is clean, which means that it is easily discardable and how much is dirty and needs to be written to disk. Linux exposes this information via the /proc/[pid]/smapsOn the other hand, Windows doesn&#x2019;t seem to bother to do this tracking. You can get this information, but you need to ask it for each page individually. This means that it isn&#x2019;t feasible to check what percentage of the system memory is clean (mmap pages that hasn&#x2019;t been modified and can be cheaply discarded). Windows expose this via the QueryWorkingSetEx method.As a result, we have to be more conservative on Windows when the system reports high memory usage. We know that our usage pattern means that high amount of memory in use (coming from mmap clean pages) is fine. It is a small detail, but it has caused us to have to jump through several hurdles when we are running under load. I guess that Windows doesn&#x2019;t need this information, so it isn&#x2019;t exposed, while on Linux it seems to be used by plenty of callers.</p>
-        <a href="https://www.stevejgordon.co.uk/passing-an-ilogger-to-polly-policies" target="_blank"><h1 class="title mb-6">Passing an ILogger to Polly Policies</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 16, 2018
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In a previous post, I looked at how we could use the Polly context to obtain a retry count after policy execution. In this post, I want to explore a similar requirement that can also be solved by using the Polly context; this time to pass in an ILogger to be used for logging messages [&#x2026;]</p>
         <div class="button flex justify-between">
             <a href="188.html"><span class="back arrow"></span></a>
 

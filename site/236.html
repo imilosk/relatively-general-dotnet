@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/180066/unique-constraints-didnt-make-the-cut-for-ravendb-4-0" target="_blank"><h1 class="title mb-6">Unique constraints didn&#x2019;t make the cut for RavenDB 4.0</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 11, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Unique Constraints is a bundle in RavenDB 3.x that was allowed you to&#x2026; well, define unique constraints.&#xA0; Here is the classic example:&#xA;&#xA;It was always somewhat awkward to use (you had to mess around with configuration on both the server and the client side, but it worked pretty well. As long as you were running on a single server.&#xA;With RavenDB 4.0, we put a lot more emphasis on running in a cluster, and when the time came to discuss how we are going to handle unique constraints in 4.0 it was very obvious that this is going to be neither easy nor performant.&#xA;The key here is that in a distributed database using multi masters, there is no real good way to provide a unique constraint. Imagine the following database topology:&#xA;&#xA;Now, what will happen if we&#x2019;ll create the two different User documents with the same username in node C? It is easy for node C to be able to detect and reject this, right?&#xA;But what happen if we create one document in node B and another in node A? This is now a much harder problem to deal with. And this is without even getting into the harder aspects of how to deal with failure conditions.&#xA;The main problem here is that it is very likely that at the point we&#x2019;ve discovered that we have a duplicate, there were already actions taken based on that information, which is generally not a good thing.&#xA;As a result, we were left in somewhat of a lurch. We didn&#x2019;t want to have&#xA0; feature that would work only on a single node, or contain a hidden broken invariant. The way to handle this properly in a distributed environment is to use some form of consensus algorithm. And what do you know, we actually have a consensus algorithm implementation at hand, the Raft protocol that is used to manage the RavenDB cluster.&#xA;That, however, led to a different problem. The process of using a unique constraint would now broken into two distinct parts. First, we would verify that the value is indeed unique, then we would save the document. This can lead to issues if there is a failure just between these two operations, and it puts a heavy burden on the system to always check the unique constraint across the cluster on every update.&#xA;The interesting thing about unique constraints is that they rarely change once created. And if they do, they are typically part of very explicit workflow. That isn&#x2019;t something that is easy to handle without a lot of context. Therefor, we decided that we can&#x2019;t reliably implement them and dropped the feature.&#xA;However&#x2026; reliable and atomic distributed operations are now on the table, and they allow you to achieve the same thing, and usually in a far better manner. The full details will be in the next post.</p>
+        <a href="https://ayende.com/blog/180065/re-entity-framework-core-performance-tuning-part-iii" target="_blank"><h1 class="title mb-6">re</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 10, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned in the previous post that I&#x2019;ll take the opportunity to show of some interesting queries. The application itself is here, and you can see how to UI look in the following screenshot:&#xA;&#xA;I decided to see what would be the best way to come up with the information we need for this kind of query. Here is what I got.&#xA;&#xA;This is using a select object style to get a complex projection back from the server. Here are the results:&#xA;&#xA;As you can see, we are able to get all the data we want, in a format that is well suited to just sending directly to the UI with very little work and with tremendous speed.</p>
         <a href="https://andrewlock.net/debugging-jwt-validation-problems-between-an-owin-app-and-identityserver4-2/" target="_blank"><h1 class="title mb-6">Debugging JWT validation problems between an OWIN app and IdentityServer4</h1></a>
         <p class="mb-2">by Andrew Lock</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: October 03, 2017
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today, I&#x2019;d like to write about a simple and reliable way to implement domain events.</p>
-        <a href="https://ayende.com/blog/179940/ravendb-4-0-unsung-heroes-the-indexing-threads" target="_blank"><h1 class="title mb-6">RavenDB 4.0 Unsung Heroes</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 03, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A major goal in RavenDB 4.0 is to eliminate as much as possible complexity from the codebase. One of the ways we did that is to simplify thread management. In RavenDB 3.0 we used the .NET thread pool and in RavenDB 3.5 we implemented our own thread pool to optimize indexing based on our understanding of how indexing are used. This works, is quite fast and handles things nicely as long as everything works. When things stop working, we get into a whole different story.A slow index can impact the entire system, for example, so we had to write code to handle that, and noisy indexing neighbors can impact overall indexing performance&#xA0; and tracking costs when the indexing work is interleaved is anything but trivial. And all the indexing code must be thread safe, of course.Because of that, we decided we are going to dramatically simplify our lives. An index is going to use a single dedicated thread, always. That means that each index gets their own thread and are only able to interfere with their own work. It also means that we can have much better tracking of what is going on in the system. Here are some stats from the live system.And here is another:What this means is that we have fantastically detailed view of what each index is doing, in terms of CPU, memory and even I/O utilization is needed. We can also now define fine grained priorities for each index:The indexing code itself can now assume that it single threaded, which free a lot of complications and in general make things easier to follow.There is the worry that a user might want to run 100 indexes per database and 100 databases on the same server, resulting in a thousand of indexing threads. But given that this is not a recommended configuration and given that we tested it and it works (not ideal and not fun, but works), I&#x2019;m fine with this, especially given the other alternative that we have today, that all these indexes will fight over the same limited number of threads and stall indexing globally. The end result is that thread per index allow us to have fine grained control over the indexing priorities, account for memory and CPU costs as well simplify the code and improve the overall performance significantly. A win all around, in my book.</p>
-        <a href="https://ardalis.com/your-api-and-view-models-should-not-reference-domain-models/" target="_blank"><h1 class="title mb-6">Your API and View Models Should Not Reference Domain Models</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 03, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;re organizing your application following Clean Architecture and Domain-Driven Design, with your Core domain model in one project that&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="235.html"><span class="back arrow"></span></a>
 

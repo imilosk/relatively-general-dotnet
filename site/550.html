@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4263/how-to-mis-configure-your-production-to-dead-crawl" target="_blank"><h1 class="title mb-6">How to mis-configure your production to dead crawl</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 24, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that I avidly subscribe to is that when you are building server applications, visibility into what the application is doing is key. If you don&#x2019;t have visibility into the application, you are left in the dark, stumbling and alone.&#xA;NH Prof is a good example of how you make things much more visible to developers, but I am doing this in many other places, Rhino Service Bus is another example of how important it is to have visibility into what your servers are doing. Being able to see what is actually going on in your apps is priceless! &#xA;However, that does come at a cost. And a pretty steep one at that.&#xA;Logging is expensive. It is expensive to gather the data to log, it is expensive to actually log the data, in order to produce coherent logs in multi threaded environment, you need to perform synchronization, etc.&#xA;One of the most common performance problems that people run into is when they push their debug logging configuration to production. If we will look into NHibernate as a good example, if you set the log level to debug, you are going to get tens of thousands of messages just for the startup! And you are going to get hundreds and thousands of log messages for routine operations.&#xA;That is going to slow things down, considerably.&#xA;Production configuration management is a big topic, and it deserves its own post, but the impact of setting the log level too low in production cannot be stressed strongly enough.&#xA;Pay attention to this, or it will make you pay attention to it. &#xA;In one notable case, several years ago, we re-implemented a whole module in the application (significantly optimizing it) to get exactly zero benefit (well, negative benefit, actually) from the exercise, since the actual problem was slow logging database.&#xA;In another, we improved performance by over 60% by simply raising the log level from DEBUG to ERROR.</p>
+        <a href="https://ayende.com/blog/4262/msmq-insufficient-resources-to-perform-operation" target="_blank"><h1 class="title mb-6">MSMQ: Insufficient resources to perform operation.</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 23, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I run into an annoyingly persistent error on a production server:&#xA;&#xA;&#xA;System.Messaging.MessageQueueException: Insufficient resources to perform operation.   at System.Messaging.MessageQueue.SendInternal(Object obj, MessageQueueTransaction internalTransaction, MessageQueueTransactionType transactionType)   at System.Messaging.MessageQueue.Send(Object obj)   at ConsoleApplication1.Program.Main(String[] args)&#xA;&#xA;&#xA;This was generated from the following code:&#xA;&#xA;&#xA;class Program{    static void Main(string[] args)    {        try        {            var queue = new MessageQueue(@&quot;.\private$\MyQueue&quot;);            queue.Send(&quot;test msg&quot;);            Console.WriteLine(&quot;success&quot;);         }        catch (Exception e)        {            Console.WriteLine(e);        }    }}&#xA;&#xA;&#xA;&#xA;The error was happening on all queues, and persisted even after rebooting the machine. I should mention that we had a runaway message generation, and we have queues with lots of messages currently.&#xA0; The queue that I was trying to send the message to was empty, however. And there was no reading/writing on the queues.&#xA;Nasty issue to figure out, I was pointed to this post, and indeed, suggestion #7 was it, we run over the machine quota for MSMQ, so it started rejecting messages.&#xA;No one really thought about it, because we never set the quota, but it seems that by default there is a 1GB quota for the entire machine. This is usually more than enough to handle things, I would assume, but when you run into a convoy situation, bad things will happen.</p>
         <a href="https://ayende.com/blog/4261/database-independence-with-nhibernate" target="_blank"><h1 class="title mb-6">Database independence with NHibernate</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: October 19, 2009
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is just something that really annoys me. There is a common misconception that compilers are mostly about parsing the code. This couldn&#x2019;t be further from the truth. About the easiest step in building a compiler is parsing the text into some form of machine readable format. There are great tools to help you there, and a lot of information.   It is the next stage that is complex, taking the machine readable format (AST) and turning that into executable. There is a lot less information about that, and that tends to be a pretty gnarly sort of a problem.  As the title says, this post is here just to make sure that people distinguish between the two.</p>
-        <a href="https://ayende.com/blog/4255/linqtosql-profiler-nhibernate-profiler-what-is-happening" target="_blank"><h1 class="title mb-6">LinqToSql Profiler &amp; NHibernate Profiler &#x2013; What is happening?</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 18, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">About two weeks ago I posted my spike results of porting NHProf to Linq to SQL, a few moments ago I posted screenshots of the code that is going to private beta.&#xA;I spent most of the last week working on the never-ending book, but that is a subject for a different post. Most of the time that I actually spent on the profiler wasn&#x2019;t spent on integrating with Linq to SQL. To be frank, it took me two hours to do basic integration to Linq to SQL. That is quite impressive, considering that is from the point of view of someone who never did anything more serious with it than the hello world demo, and it was years ago. The Linq to SQL codebase is really nice.&#xA;Most of the time went into refactoring the profiler. I know that I am going to want to add additional OR/Ms (and other stuff) there, so I spent the time to make the OR/M into a concept in the profiler. That was a big change, but it was mostly mechanical. All the backend changes are done, and plugging in a new OR/M should take about two hours, I guess.&#xA;For Linq to SQL, however, the work is far from over, while we are now capable of intercepting, displaying and analyzing Linq to SQL output, the current Linq to SQL profiler, as you can see in the screen shots, is using the NHibernate Profiler skin, we need to adapt the skin to match Linq to SQL (different names, different options, etc).&#xA;That is the next major piece of work that we have left to do before we can call the idea of OR/Ms as a concept done, and release Linq to SQL as a public beta.</p>
-        <a href="https://ayende.com/blog/4254/linqtosql-profiler-private-beta-the-screen-shot-gallery" target="_blank"><h1 class="title mb-6">LinqToSql Profiler private Beta &#x2013; the screen shot gallery</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 18, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is just to give you some ideas about what the new LinqToSql Profiler can do.&#xA;It can track statements and associate them to their data context, gives you properly formatted and highlighted SQL, including the parameters, in a way that you can just copy and execute in SQL Server: &#xA; &#xA;The profiler can tell you when you are hitting the database too often.&#xA; &#xA;All the usual reports, what methods caused what queries to be executed?&#xA; &#xA;Reports about unique queries across the entire profiling session:&#xA; &#xA;And overall usage reports:</p>
         <div class="button flex justify-between">
             <a href="549.html"><span class="back arrow"></span></a>
 

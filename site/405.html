@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/161666/ravendb-signs-of-maturity" target="_blank"><h1 class="title mb-6">RavenDB signs of maturity?</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 18, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are working on Excel Integration with RavenDB.  I just told a customer, that is a bug, but you can set this config value and it will fix this issue.</p>
+        <a href="https://ayende.com/blog/161665/what-is-making-us-slow-for-the-first-time-after-an-idle-period" target="_blank"><h1 class="title mb-6">What is making us slow (for the first time, after an idle period)?</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 17, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We recently covered this question in several iterations in the ravendb mailing list. The actual content of the discussion wasn&#x2019;t so interesting as the number of ways idle time can make you life&#x2026; interesting. In order to avoid having issues with idle time, you need to:  Disable IIS unloading for inactive websites. Disable RavenDB&#xA0; unloading for inactive databases. Make sure that the HD doesn&#x2019;t spin down during inactivity. You need to make sure that the system doesn&#x2019;t got to idle / hibenration. Check that the server hasn&#x2019;t been paged. Check that the CPU hasn&#x2019;t moved to low power mode. Check authentication timeouts. In the end, it was actually the last one that caused the problem. By default, Windows Auth token expire after 15 minutes, so you have to re-authenticate again, and that may make the first query after a while a little slower. Just for fun, by default, all of the above happen. And that is just when running on a physical machine. When running on VMs (or in the cloud), you need to do all of those checks for the VM and the host machines.</p>
         <a href="https://ayende.com/blog/161634/ravendb-books-update" target="_blank"><h1 class="title mb-6">RavenDB Books Update</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: April 05, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the previous post, I focused mostly on reading the code for writing a SST to disk. But I have to admit that I am not really following how you read them back in a way that would be easy to read. In order to understand that, I think that the right place in the code would be the TableCache. The API for that is pretty slick, here are just the header (comments were stripped). class TableCache {&#xA; public:&#xA;  TableCache(const std::string&amp; dbname, const Options* options, int entries);&#xA;  ~TableCache();&#xA;&#xA;  Iterator* NewIterator(const ReadOptions&amp; options,&#xA;                        uint64_t file_number,&#xA;                        uint64_t file_size,&#xA;                        Table** tableptr = NULL);&#xA;&#xA;  Status Get(const ReadOptions&amp; options,&#xA;             uint64_t file_number,&#xA;             uint64_t file_size,&#xA;             const Slice&amp; k,&#xA;             void* arg,&#xA;             void (*handle_result)(void*, const Slice&amp;, const Slice&amp;));&#xA;&#xA;  void Evict(uint64_t file_number);&#xA;&#xA; private:&#xA;&#xA;  Status FindTable(uint64_t file_number, uint64_t file_size, Cache::Handle**);&#xA;};&#xA;&#xA;&#xA;&#xA;There are a couple of interesting things here that show up right away. How do you know what is the number of entries. I guess that this is stored externally, but I am not sure where. I am going to figure that question out first.&#xA;And the answer is strange:&#xA;&#xA;It isn&#x27;t number of entries in the table, it is the number of files? That actually say something very important, since this means that the table cache is reading multiple SST files, rather than just one per cache. Looking at the rest of the API, it makes even more sense. We need to pass the file number that we are going to be reading. That one is going to be got from the Version we are using.&#xA;&#xA;Side note: I just spend an hour or so setting up a tryout project for leveldb, so I can actually execute the code and see what it does. This had me learning cmake (I am using KDevelop to read the code) and I finally got it. Still haven&#x27;t figure out how to step into leveldb&#x27;s code. But that is a good step. &#xA;Also, the debug experience is about 2/10 compared to VS.&#xA;And damn, I am so not a C&#x2B;&#x2B; developer any longer. Then again, never was a real dev on linux, anyway.&#xA;The first thing the TableCache does is to setup a cache. This is interesting, and I followed the code, it create 16 internal caches and has between them. I think that this is done to get concurrency because all the internal cache methods looks like this:&#xA;&#xA;&#xA;Note the mutex lock. That is pretty much how it works for all of the cache work. Looking deeper into the code, I can see another reason why I should be grateful for staying away from C&#x2B;&#x2B;. leveldb comes with its own hash table functionality. At any rate, the cache it using LRU to evict items, and it get the number of entries from the value that was passed in the ctor. That make me think that it hold the opened files.&#xA;Speaking of the cache, here is an example of the code using it:&#xA;&#xA;&#xA;The cache is also used to do block caching, this is why it takes a slice as an argument. I&#x27;m going to go over that later, because this looks quite interesting. The rest of this method looks like this:&#xA;&#xA;&#xA;&#xA;So the only very interesting bit is the Table::Open. The rest is just opening the mmap file and storing it in the cache. Note that the actual file size is passed externally. I am not really sure what this means yet. I&#x27;ll go over the table code later, right now I want to focus on the table cache.&#xA;Looking over the TableCache interface, we can see that we always get the file size from outside. That got me curious enough to figure out why. And the answer is that we always have it in the FileMetaData that we previously explored. I am not sure why that is so important, but I&#x27;ll ignore it for now.&#xA;The rest of TableCache is pretty simple, although this made me grin:&#xA;&#xA;&#xA;More specifically, look at the RegisterCleanup, this is basically registering for the delete event, so they can unref the cache. Pretty nice, all around.&#xA;The rest of the code is just forwarding calls to the Table, so that is what I&#x27;ll be reading next...</p>
-        <a href="https://benfoster.io/blog/nancy-vs-aspnet-mvc-static-content/" target="_blank"><h1 class="title mb-6">Nancy vs ASP.NET MVC - Static content</h1></a>
-        <p class="mb-2">by Ben Foster</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 05, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I cover how to serve static content such as stylesheets and scripts with Nancy and ASP.NET MVC.</p>
-        <a href="https://ardalis.com/march-2013-pluralsight-experiment/" target="_blank"><h1 class="title mb-6">March 2013 Pluralsight Experiment</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 04, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Update: Winner and Results The winner of the experiment&#x2019;s prize is Martin Frey (@tinfrey). You can watch a video of the random drawing here&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="404.html"><span class="back arrow"></span></a>
 

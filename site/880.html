@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/1461/nhibernate-commiter" target="_blank"><h1 class="title mb-6">NHibernate Commiter</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 13, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just wanted to announce that I have been choosen as a commiter in NHibernate&#xA0;:-D</p>
+        <a href="https://ayende.com/blog/1460/castles-continious-integration" target="_blank"><h1 class="title mb-6">Castle&#x27;s Continious Integration</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 13, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In due time, and after some difficulities due to annoying mail servers, Castle now has a Continious Integration process that works. :-)     You can see the daily builds here: http://castleproject.org/~ayende/</p>
         <a href="https://ayende.com/blog/1459/or-m-madness-in-microsoft" target="_blank"><h1 class="title mb-6">OR/M Madness in Microsoft</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: June 11, 2006
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just spent several hours trying to figure out why enabling NHibernate second level caching caused a lot of my tests to fail, seemingly randomly.&#xA;The initial problem was obvious, I was trying to be efficient, and I used a stored procedure (yes, I do use them  ) to delete all the database and restore it to a known state. With caching, this meant that the cache and the database were in an inconsistent state. I need to restore my database to a consistent state because I need my tests to be repeatable.&#xA;Yes, I am familiar with all the argument against unit tests hitting the database, and yes I do feel the pain. I&#x2019;m going to do something about it soon, but for now, I need to work with what I have got. My problem was compounded by the fact that large parts of the database are read only, so I wanted to keep them in the cache for the tests.&#xA;I quickly wrote this function, which was called before each test was run:&#xA;private&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;void ClearCache()&#xA;{&#xA;    ISessionFactory factory = Context. SessionFactory;&#xA;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;ICollection types = factory.GetAllClassMetadata().Keys;&#xA;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;foreach (Type type in types)&#xA;    {&#xA;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;if (typeof(NotChanging) == type)&#xA;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;continue;&#xA;            factory.Evict(type);&#xA; &#xA;&#xA0;   }&#xA;}&#xA;&#xA0;And I thought I was through with it, but apparently not. I still got seemingly random tests failures, I couldn&#x2019;t reproduce them most of the time, and when I did, they made me question whatever the test itself had a bug. Eventually I realized that I was being stupid.&#xA;The reason for that is that NHibernate doesn&#x2019;t really have a single second level cache. It actually has three. Well, not really three, but it is logically segmented to three caches.&#xA;The first cache, which I cleared effectively, was the object cache. This holds the values of the cached entities. &#xA;The second cache, which I forgot about, is the collections cache.  This holds the association between the entities. &#xA;The third cache, which I am not using, is the query cache. It holds the results of HQL queries.&#xA;There are also cache regions, but I won&#x2019;t get into that now. What I need to do was simply add this to my ClearCache() method, and everything turned out just fine:&#xA;foreach (string  role in factory.GetAllCollectionMetadata().Keys)&#xA;{&#xA;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;if(!role.Contains(&quot;NotChangin&quot;))&#xA;   factory.EvictCollection(role);&#xA;}&#xA;&#xA;&#xA0;I need the caching support to hold the major read only data in memory for the tests, since it considerably shorten their runtime.&#xA;I am also going to see what I can do to mock all the data access code that doesn&#x2019;t actually test that talking to the database works. It should be simple enough, but I got quite a bit of tests to refactor.</p>
-        <a href="https://ayende.com/blog/1453/riddle-me-this" target="_blank"><h1 class="title mb-6">Riddle me this...</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 11, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">What is the result of the following code:            public class Foo                        {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; public static void Recursive()                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Recursive();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; public static void Main(string[]args)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; try                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Recursive();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; catch(StackOverflowException&#xA0; e)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Console.WriteLine(&quot;Bummer&quot;);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        }                        In .Net 1.0/1.1 ?    In .Net 2.0 ?</p>
-        <a href="https://ayende.com/blog/1452/jonathan-coulton" target="_blank"><h1 class="title mb-6">Jonathan Coulton</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 11, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Jonathan Coulton is the one who performed the Code Monkey song. He has a lot of free music on his site. I downloaded all of it and liked what I heard, so I bought the entire collection. &#xA;Highly recommended.</p>
         <div class="button flex justify-between">
             <a href="879.html"><span class="back arrow"></span></a>
 

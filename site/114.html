@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/192259-B/re-investigating-query-performance-issue-in-ravendb" target="_blank"><h1 class="title mb-6">re</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 27, 2020
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">At the beginning of the year, we run into a problematic query. The issue was the use of an in clause vs. a series of OR. You can see the previous investigation results here. We were able to pinpoint the issue pretty well, very deep in the guts of Lucene, our query engine.&#xA;&#xA;&#xA;&#xA;Fast Query&#xA;Slow Query&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;Time: 1 &#x2013; 2 ms&#xA;Time: 60 &#x2013; 90 ms&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;The key issue for this query was simple. There are over 600,000 orders with the relevant statuses, but there are no orders for CustomerId &#x201C;customers/100&#x201D;. In the OR case, we would evaluate the query lazily. First checking the CustomerId, and given that there have been no results, short circuiting the process and doing no real work for the rest of the query. The IN query, on the other hand, would do things eagerly. That would mean that it would build a data structure that would hold all 600K&#x2B; documents that match the query, and then would throw that all away because no one actually needed that.&#xA;In order to resolve that, I have to explain a bit about the internals of Lucene. As its core, you can think of Lucene in terms of sorted lists inside dictionaries. I wrote a series of posts on the topic, but the gist of it is:&#xA;&#xA;&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          Dictionary&lt;string Field, Dictionary&lt;string Term, SortedList&lt;int DocId&gt;&gt;&gt; Lucene;&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          lucene.data-structure.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;&#xA;&#xA;&#xA0;&#xA;Note that the ids for documents containing a particular term are sorted. That is important for a lot of optimizations in Lucene, which is also a major problem for the in query. The problem is that each component in the query pipeline needs to maintain this invariant. But when we use an IN query, we need to go over potentially many terms. And then we need to get the results in the proper order to the calling code. I implemented a tiered approach. If we are using an IN clause with a small number of terms in it (under 128), we will use a heap to manage all the terms and effectively do a merge sort on the results.&#xA;When we have more than 128 terms, that stops being very useful, however. Instead, we&#x2019;ll create a bitmap for the possible results and scan through all the terms, filling the bitmap. That can be expensive, of course, so I made sure that this is done lazily by RavenDB.&#xA;The results are in:&#xA;&#xA;&#xA;&#xA;&#xA0;&#xA;OR Query&#xA;IN Query&#xA;&#xA;&#xA;Invalid CustomerId&#xA;1.39 &#x2013; 1.5 ms&#xA;1.33 &#x2013; 1.44 ms&#xA;&#xA;&#xA;Valid CustomerId&#xA;17.5 ms&#xA;12.3 ms&#xA;&#xA;&#xA;&#xA;For the first case, this is now pretty much a wash. The numbers are slightly in favor of the IN query, but it is within the measurement fluctuations.&#xA;For the second case, however, there is a huge performance improvement for the IN query. For that matter, the cost is going to be more noticeable the more terms you have in the IN query.&#xA;I&#x2019;m really happy about this optimization, it ended up being quite elegant.</p>
+        <a href="https://ardalis.com/shift-risk-left/" target="_blank"><h1 class="title mb-6">Shift Risk Left</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 27, 2020
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When planning, whether for a large project or a single feature, there will be risks. Identifying risks and planning appropriate mitigations&#x2026;Keep Reading &#x2192;</p>
         <a href="https://andrewlock.net/deploying-asp-net-core-applications-to-kubernetes-part-9-monitoring-helm-releases-that-use-jobs-and-init-containers/" target="_blank"><h1 class="title mb-6">Monitoring Helm releases that use jobs and init containers</h1></a>
         <p class="mb-2">by Andrew Lock</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: October 19, 2020
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I describe how to create and publish a self-contained Blazor component as a NuGet package. By self-contained I mean that the NuGet package will contain the Blazor component (Razor &#x2B; C#), the style (CSS) and the JavaScript code. Also, the consumer of the package only has to use the com</p>
-        <a href="https://ayende.com/blog/192129-B/looking-for-a-php-developer-to-build-a-php-ravendb-client" target="_blank"><h1 class="title mb-6">Looking for a PHP developer to build a PHP RavenDB client</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 16, 2020
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are looking to expand the number of top tier drivers and build a RavenDB client for PHP. We currently have 1st tier clients for .NET, JVM, Python, Go, C&#x2B;&#x2B; and Node.JS. There are also 2nd tier clients for Ruby, PHP, R and a bunch of other environments. We want to build a fully fledged client for RavenDB for PHP customers and I have had great success in the past in reaching awesome talent through this blog. Chris Kowalczyk had done our Go client and detailed the process in a great blog post. The project will involve building the RavenDB client for PHP, documenting it as well as building a small sample app or two. If you are interested or know someone who would be, I would very happy if you can send us details to jobs@ravendb.net.</p>
-        <a href="https://www.meziantou.net/capturing-unmatched-attributes-and-attribute-splatting-in-blazor.htm" target="_blank"><h1 class="title mb-6">Capturing unmatched attributes and attribute splatting in Blazor</h1></a>
-        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 15, 2020
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the previous posts on Blazor, we have seen how to create a component and define parameters. For instance, you can check the posts about the Modal component, the Repeater component, or the Enum Select component.Sometimes, you want to allow the user to add any arbitrary attributes to the component</p>
         <div class="button flex justify-between">
             <a href="113.html"><span class="back arrow"></span></a>
 

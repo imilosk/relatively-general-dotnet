@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/2903/real-world-nhibernate-reducing-startup-times-for-large-amount-of-entities" target="_blank"><h1 class="title mb-6">Real World NHibernate: Reducing startup times for large amount of entities</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 26, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The scenario that&#xA0;Christiaan Baes need&#xA0;to solve is reducing&#xA0;the startup time of a Win Forms application. The main issue here is that the initial load of the application should be fast, but in this case, we are feeding NHibernate about a hundred entities, so it take a few seconds to run them. I asked Christiaan to send me profiler results of the code, and it looked all right on his end, so it was time to look at NHibernate and see what she had to say about that. The test scenario was startup time for a thousands entities. I think that this is a nice shiny number that probably represent way too much entities per application, but let us go with it. Initial testing showed that for this amount, we get about 14 seconds startup time, just to get the session factory started. Now that wasn&#x27;t right, I felt. NHibernate does a lot of reflection on startup, but even so, 14 seconds was quite a bit. A deeper analysis showed that I was wrong, it wasn&#x27;t reflection that was costing so much, it was actually building the Configuration that took the time, not building the session factory. Why was it taking so long? Well, NHibernate is using XML for configuration, and that xml is validating using a schema. And that took 11 seconds for a thousand documents. Problem. I played a bit with the&#xA0;code, but it remained steady on 11 seconds just for reading the configuration in. Eventually I tried to do merge the 1000 XML documents to a single big document, and that had a significant effect, it dropped the time to just over 3 seconds. To an overall startup time of 5.5 seconds on a 1000 entities session factory. If you are going in this route, I would strongly suggest that you would do this merging as a pre build step, rather than try to work with a single unwieldy artifact. Still not good enough, I hear you think, right? Here are a few other suggestions that are worth keeping in mind:  Why are you initializing it on startup? And does it have to be on the main thread? If you can push it to a background thread, then this is usually all that you would need to do. Do you really need all the entities, from the get go? If not, you can create two session factories. One to serve as a fast initializing factory, able to respond to the initial requests. At the same time, initial the global session factory, and then replace them. Do you really need all those entities in a single session factory? If you have a lot of entities, usually this is a sign of several mixed domains that are involved. It would probably be better to split them up to different session factories. If all of the above still isn&#x27;t enough for you, the next step is persistable configuration itself (probably using serialization. That is not supported by NHibernate at the moment, although I am more than willing to accept a patch that would add this functionality. Hope this helps...</p>
+        <a href="https://ayende.com/blog/2902/rhino-mocks-3-3" target="_blank"><h1 class="title mb-6">Rhino Mocks 3.3</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 26, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, it has been a couple of months, but we have a new release of Rhino Mocks. I would like to thank Aaron Jensen, Ivan Krivyakov and Mike Winburn for contributing.  Probably the two big new features is the ability to call void methods using Expect.Call&#xA0;and the ability to use remoting proxies to mock classes that inherit from MarshalByRefObject. Rhino Mocks will now choose the appropriate mocking strategy based on the type you want.   Note: you cannot pass constructor arguments or create partial mocks with remoting proxies. The change log is:  Bug Fixes:&#xA0;  Fixing inconsistency in how Is.Equals handled ICollection instances, now it will compare them by their values, not their Equals()&#xA0; Fixing NASTY bug where setup result that were defined in a using(mocks.Ordered()) block were not registered properly.&#xA0; Improvments:  Changing error message to &quot;are you calling a virtual (C#) / Overridable (VB) method?&quot; - make it friendlier to VB guys.&#xA0; Exception for Record will not trigger a ReplayAll(), which can mask the exception.&#xA0; Adding a check for running on Mono to avoid calling Marshal.GetExceptionCode in that case.  New features:  Adding support for calling void methods using Expect.Call  Adding remoting proxies. Made IMethodOptions generic. Allows compile time type safety on Return.&#xA0; Adding a PublicFieldConstraint  As usual, you can get it here</p>
         <a href="https://ayende.com/blog/2901/must-resist-decoding" target="_blank"><h1 class="title mb-6">Must resist... decoding</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: October 23, 2007
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I need to express the same logic over two different types. The code is literally the same in 90% of the cases, with minor modifications for each type. Seeking to avoid copy &amp; paste programming, I decide to use some  public class BaseSpecificationController   &lt;TSpecification, TSpecificationResult, TEntity&gt; : BaseController&#xA;&#x9;where TSpecification : BaseSpecification&lt;TEntity,TSpecificationResult&gt;&#xA;&#x9;where TSpecificationResult : BaseSavedResult&#xA;The problem is that I&#xA0;got there, and it is really saving a lot of duplicated code. But&#xA0;still, I can&#x27;t help but dislike such code, it seems like it is cheating.&#xA0; &#xA;&#xA0;&#xA;.</p>
-        <a href="https://ayende.com/blog/2893/memorable-quotes" target="_blank"><h1 class="title mb-6">Memorable Quotes</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 23, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">From the Castle Dev Mailing list:  Ken Egozi: When someone would build a generator that can generate a domain model by listening to a white-board design meeting, that would be a craic. David Marzo: There is already one -&gt; good software developer ;-)</p>
-        <a href="https://ayende.com/blog/2892/more-generics-gotchas-argh" target="_blank"><h1 class="title mb-6">More generics gotchas, argh!</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 23, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have been working on .NET 2.0 for a long time now, generics still manage to trip me. Consider this piece of code: public interface IFoo&lt;TFromInterface&gt; { }&#xA;&#xA;public class Foo&lt;TFromClass&gt; : IFoo&lt;T&gt; { }&#xA;&#xA;[Test]&#xA;public void More_Generics_Gotcha()&#xA;{&#xA;&#x9;Assert.AreEqual(typeof(IFoo&lt;&gt;), &#xA;&#x9;&#x9;typeof(Foo&lt;&gt;).GetInterfaces()[0]);&#xA;}&#xA;&#xA;This test fails. the returned System.Type instance is a IFoo&lt;TFromClass&gt;, which is&#xA0; an unbounded generic parameter, but not the same as IFoo&lt;&gt; itself. Now I need to apologize for Windsor, it wasn&#x27;t its fault all along.</p>
         <div class="button flex justify-between">
             <a href="715.html"><span class="back arrow"></span></a>
 
