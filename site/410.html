@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/161153/ravendb-and-not-having-foreign-keys" target="_blank"><h1 class="title mb-6">RavenDB And Not Having Foreign Keys</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: February 26, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is something that we hear quite often in the mailing list, and I thought that I would spend the time to answer it in full. There tend to be two kinds of FK references in RDMBS, the essential ones and the one the DBA added just to make my life a living hell.  The first one include things that are essential for internal consistency within a single aggregate. For example, the OrderLines.OrderID FK reference to Orders.ID is quite important, since an order line without an order is meaningless. But what about the association between OrderLine.ProductID and Products.ID ?&#xA0;  An OrderLine can most certainly exists without the product, in fact, an OrderLine already copied into it all of the properties of the product that are important for the order. But because of the FK happy nature of most DBAs (and developers, for that matter), we have a FK reference between the two. The problem is that it actually is perfectly fine to remove a product that we are no longer selling from the store.  Yes, there are order lines for that product, but they have been completed ages ago. With a RDBMS and a FK, you cannot do that. So you resort to hacks like IsDeleted = false, which in practice gives you the exact same behavior as a deleted product, except that the FK is happy. Your application has a 50/50 change to work or not work with that. With RavenDB, we make distinctions between internal consistency, which is maintained inside the same document, and external references, which can come and go as they please. You cannot have an order line in RavenDB without an order, because the order is where the order line exists. But you can most certainly remove the product that an order line refers to, because that is outside the scope of the order, it is a separate aggregate.</p>
+        <a href="https://ayende.com/blog/161123/index-prioritization-in-ravendb-problems" target="_blank"><h1 class="title mb-6">Index Prioritization in RavenDB: Problems</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: February 25, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Every now and then we get a request for index prioritization in RavenDB. The requests are usually in the form of:  I have an index (or a few indexes) that are very important, and I would like them to be update before any other indexes. That is really nice request, but it ignores a lot of actual really hard implementation details. In any prioritization scheme, there is the risk of starvation. If index A has to complete before index B, what happens if we have enough writes that index A is always busy? That means that index B will never get to index, and it will fall further &amp; further behind. There are well known algorithms to handle this scenario, mostly from the OS thread scheduling point of view. You could incrementally increase the priority of an index every time that you skipped updating it, until at some point it has higher priority than all the other indexes and gets its moment in the sun. That is workable if all you are working with are threads, and there isn&#x2019;t a significantly different execution environment for a thread to run. For RavenDB indexes, there is actually a major difference in the execution environment depending on when you are running. We have a lot of optimizations inside RavenDB to avoid IO, in particular, we do a lot of work so indexes do not have to wait for their input, we do parallel IO, optimized insert hooks, and a whole bunch of stuff like that. All of those assume that you all of the indexes are going to run together, however. We already have the feature that a very slow index will be allowed to run while the rest of the indexes are keeping up, but that is something that we really try to avoid (we give it a grace period of 3/4 as much time as all of the other indexes combined). That is because the moment you have out of sync indexes, all that hard work is basically going to be wasted. You are going to be needing to load the documents to be indexed multiple times, creating more load on the server. Keeping the documents that were already indexed waiting in memory for the low priority index to work on is also not a good idea, since that is going to cause RavenDB to consume potentially a LOT more memory. I have been thinking about this for a while, but it isn&#x2019;t an easy decision. What do you think?</p>
         <a href="https://ayende.com/blog/161026/hibernating-rhinos-practices-a-sample-project" target="_blank"><h1 class="title mb-6">Hibernating Rhinos Practices</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: February 14, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">And yes, I know about this because we got a support ticket for it.</p>
-        <a href="https://ayende.com/blog/160933/ravendb-has-the-best-users" target="_blank"><h1 class="title mb-6">RavenDB has the best users</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 13, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Talk about making my job easy. Thank you Barry, and I am sorry it took me 17 minutes to get the fix out.</p>
-        <a href="https://ayende.com/blog/160898/defensive-coding-is-your-friend" target="_blank"><h1 class="title mb-6">Defensive coding is your friend</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 12, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We just had a failing test:  As you can see we assumed that fiddler is running, when it isn&#x2019;t. Here is the bug:  Now, this is great when I am testing things out, and want to check what is going on the wire using Fiddler, but I always have to remember to revert this change, otherwise we will have a failing test and a failing build. That isn&#x2019;t very friction free, so I added the following:  Now the code is smart enough to not fail the test if we didn&#x2019;t do things right.</p>
         <div class="button flex justify-between">
             <a href="409.html"><span class="back arrow"></span></a>
 

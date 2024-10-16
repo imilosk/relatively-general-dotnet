@@ -147,6 +147,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/1150/on-toads" target="_blank"><h1 class="title mb-6">On Toads</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 16, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I don&#x27;t like Oracle&#x27;s tools. Today I had a chance to work with Toad a little bit, and I found that the UI is more cluttered than I am used to, but it has several features that I want for SQL Server Management Studio:            Color highlighting for columns and tables            Auto correct form to from (this is huge, I make this mistake all the time).            I can CTRL&#x2B;Click on a table / procedure, and I&#x27;ll get the defination window of this object. This mean that I can quickly browse between stored procedures, tables, etc. Very useful. I would really like this in SQL Management Studio.            You can format the PL/SQL right from Toad. This is way cool, and I really wish I had something for T-SQL&#xA0;as well.    Anyone knows of tools that can provide similar functionality to SQL Management Studio?</p>
+        <a href="https://ayende.com/blog/1149/my-wtf-of-the-day" target="_blank"><h1 class="title mb-6">My WTF of The Day</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 16, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The following tidbit caused quite a bit of problem, and a loss of a day for two people. I&#x27;m working on legacy system right now, and part of this work is refactoring stuff without breaking the behavior. The process is quite big, but we managed quite fine until we suddenly started to get wildly different results. We traced is a dozen times, and eventually we narrowed it down to code that looked a bit like this (PL/SQL):            declare                        cursor offline_sales_cursor as                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; select product_id, customer_id, price                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; from offline_sales                                &#xA0;                        for sale in offline_sales_cursor                begin                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; insert into sales(product_id, customer_id, price)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {sale.product_id, sale.customer_id, sale.price);                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; exception                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; when DUP_VAL_ON_INDEX                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; update sales                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; set price = sale.price                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; where product_id = sale.product_id                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; and customer_id = sale.customer_id;                        end;                        end loop;                                &#xA0;                        commit;        For the purpose of the discussion, sales has a primary key on product_id and customer_id (yes, it&#x27;s bad design, but it&#x27;s not a real db) and foreign keys to the products and customers tables. Can you guess what the problem was?    It turns out that we had an invalid customer id in the offline_sales table, which meant that this would run for a little bit, get a foreign key error and exit the loop and then commit part of the changes! When I refactored this bit, I changed it to two statements, one for updating and one for inserting, so the failure wasn&#x27;t writing anything. I looked at the code several times, and only caught this by accident (the code base has commits spread all over the place). Urgh! Urgh! Urgh! [Gnashing of teeth].</p>
         <a href="https://ayende.com/blog/1148/i-cant-even-give-the-money-away" target="_blank"><h1 class="title mb-6">I can&#x27;t even give the money away!</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -243,30 +267,6 @@
             posted on: March 13, 2006
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This isn&#x27;t new, but it is a great resource&#xA0;for doing phone interviews for developers. It&#x27;s more than just the questions and answers, it is the whole thought process behind it that is impressive.    By the way, I&#x27;m feeling extremely tired in the last couple of days, which is why I don&#x27;t have real content in here. We made a major breakthrough today, so I hope that I either be so tired that I won&#x27;t be able to blog, or so pumped up that I will have to blog.</p>
-        <a href="https://ayende.com/blog/1143/the-making-breaking-of-a-brand" target="_blank"><h1 class="title mb-6">The Making &amp; Breaking of a Brand</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 12, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is a very good post about brand identity, and how&#xA0;a simple mistake can ruin something that took centuries to build. Recommended reading.</p>
-        <a href="https://ayende.com/blog/1142/nhibernate-generics-article" target="_blank"><h1 class="title mb-6">NHibernate &amp; Generics article</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 12, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is a nice article about NHiberate, ASP.Net and Generics, which uses my NHibernate.Generics&#xA0;library.    It got a couple of pointer about NHibernate that I didn&#x27;t know about, such as the transaction levels and the performance implications of specifying the default schema.</p>
         <div class="button flex justify-between">
             <a href="914.html"><span class="back arrow"></span></a>
 
