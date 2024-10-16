@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/165250/end-of-year-32-discount-coupon-has-2-sales-left" target="_blank"><h1 class="title mb-6">End of year 32% discount coupon has 2 sales left!</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 31, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Guys, we still have about 2 available purchases on our end of year sale. This is for a 32% discount for the following products: This applies to:  RavenDB NHibernate Profiler Entity Framework Profiler You can use coupon code: 0x20-twentysomething</p>
         <a href="https://ayende.com/blog/164872/machine-bias-in-profiler-based-optimizations" target="_blank"><h1 class="title mb-6">Machine bias in profiler based optimizations</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: December 19, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the surprising points for improvement in our performance run was the following logic, responsible for copying the data from the user to our own memory:      1: using (var ums = new UnmanagedMemoryStream(pos, value.Length, value.Length, FileAccess.ReadWrite))   2: {   3:     value.CopyTo(ums);   4: }&#xA;Those three lines of code were responsible for no less than 25% of our performance. It was obvious that something needed to be done. My belief is that the unmanaged memory stream is just not optimized for this scenario, resulting in a lot of copying, allocations and costs. &#xA;Here is what we did instead. We create a temporary space that is allocated once, like this:&#xA;&#xA;&#xA;You can see that we are doing some interesting stuff there. In particular, we are allocated a managed buffer, but also force the GC to pin it. We keep this around for the entire lifetime of the database, too. The idea here is that we want to avoid the cost of pinning &amp; unpinning it all the time, even if it means that we have an unmovable memory.&#xA;At any rate that important thing about this is that it gives us access to the same memory from managed and unmanaged perspectives. And that, in turn, leads to the following code:&#xA;&#xA;&#xA;We first read the values from the stream into the managed buffer, then copy them from the unmanaged pointer to the buffer to our own memory.&#xA;The idea here is that we accept a Stream abstraction, and that can only work with managed buffers, so we have to go through this route, instead of having to copy the memory directly. The reason we do that is that we don&#x2019;t want to force the user of our API to materialize the data fully. We want to be able to stream it into the database.&#xA;At any rate, this has made some serious improvement to our performance, but I&#x2019;ll be showing the details on a future post.</p>
-        <a href="https://ayende.com/blog/164866/voron-performance-let-go-off-that-tree-dude" target="_blank"><h1 class="title mb-6">Voron Performance, let go off that tree, dude!</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 18, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">B-Trees has a few really awesome properties, chief among them is that they are playing very well with the hierarchical nature of data access that we have in our systems (L1 &#x2013; L3 caches, main memory, disk, etc). Another really nice property is that searches in a B-Trees have very low costs.  However, it became apparent to us during performance tests that actually searching the tree was very costly. Assuming that we have the following pseudo code:      1: for i in range(1, 1000 * 1000):   2:    add(i, &quot;val&quot;)&#xA;What is the cost of actually doing this? Well, an interesting tidbit about this is that every time we add an item to the tree, we need to search it, so we can find where in the tree that new value goes.&#xA;Cost of search the tree, based on size:&#xA;&#xA;&#xA;&#xA;&#xA;Number of entries&#xA;&#xA;Cost&#xA;&#xA;&#xA;1&#xA;&#xA;0.19&#xA;&#xA;&#xA;1,000&#xA;&#xA;1.93&#xA;&#xA;&#xA;10,000&#xA;&#xA;2.57&#xA;&#xA;&#xA;25,000&#xA;&#xA;2.83&#xA;&#xA;&#xA;50,000&#xA;&#xA;3.02&#xA;&#xA;&#xA;100,000&#xA;&#xA;3.21&#xA;&#xA;&#xA;250,000&#xA;&#xA;3.47&#xA;&#xA;&#xA;500,000&#xA;&#xA;3.66&#xA;&#xA;&#xA;1,000,000&#xA;&#xA;3.86&#xA;&#xA;&#xA;2,000,000&#xA;&#xA;4.05&#xA;The cost, by the way, is O(log36 (N&#x2B;1)). The log36 comes from the number of entries that we can fit in a single page. This cost ignores the actual search inside a page. But it is a good enough approximation for our needs.&#xA;Now, the cost of actually inserting 1 million items is the sum of all of those costs. Which means that the cost for 1 million is 3,576,242.35. This is another example of Schlemiel the Painter algorithm.&#xA;What we did was introduce a small cache, which remember the last few pages that we inserted to. That turned the cost down from searching the tree to checking the cache, where we can usually find the value, and gave a nice performance boost.</p>
         <div class="button flex justify-between">
             <a href="381.html"><span class="back arrow"></span></a>
 

@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/162371/raven-streams-aggregations-how-the-user-sees-them" target="_blank"><h1 class="title mb-6">Raven Streams</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 04, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The major reason for streams is the idea that you don&#x2019;t really care about each individual item on its own. What you care about a lot more is some sort of aggregation over those values. And sure, you do want to be able to access the values, but you generally don&#x2019;t.  Let us say that you are a phone company, and you want to use Raven Streams to record all the events that happened, so you can bill on them. Let us imagine that we are interested in just SMS for the moment, so we append each sms to the stream. Then we are going to write something like:      1: from msg in messages   2: select new   3: {   4:     Customer = msg.From,   5:     Count = 1   6: }   7:&#xA0;    8: from result in results   9: group result by result.Customer  10: into g  11: select new  12: {  13:     Customer = g.Key,  14:     Count = g.Sum(x=&gt;x.Count)  15: }&#xA;If you ever did RavenDB map/reduce indexes, this should be very familiar to you. However, unlike RavenDB, here we don&#x2019;t need to handle any pesky updates or deletes. That means that the implementation is much simpler, but I&#x2019;ll discuss that on my next post.&#xA;In the meantime, let us consider what is the result of this would be. It would generate a result, which we would persist and allow you to lookup. One can imagine that you can do this via the customer id, and get the sum total as it is right now.&#xA;But you&#x2019;ll probably want to do additional operations, so we need to consider this as well.&#xA;For that matter, imagine the scenario where we want to get the data about SMS, MMS, phone calls, etc. How would you expect that to look like?</p>
         <a href="https://ayende.com/blog/162370/raven-streams-architecture-thoughts-storage" target="_blank"><h1 class="title mb-6">Raven Streams architecture thoughts: Storage</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -244,18 +256,6 @@
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that we are planning for Raven 3.0 is the introducing of additional options. In addition to having RavenDB, we will also have RavenFS, which is a replicated file system with an eye toward very large files. But that isn&#x2019;t what I want to talk about today. Today I would like to talk about something that is currently just in my head. I don&#x2019;t even have a proper name for it yet.  Here is the deal, RavenDB is very good for data that you care about individually. Orders, customers, etc. You track, modify and work with each document independently. If you are writing a lot of data that isn&#x2019;t really relevant on its own, but only as an aggregate, that is probably not a good use case for RavenDB. Examples for such things include logs, click streams, event tracking, etc. The trivial example would be any reality show, where you have a lot of users sending messages to vote for a particular candidate, and you don&#x2019;t really care for the individual data points, only the aggregate. Other things might be to want to track how many items were sold in a particular period based on region, etc. The API that I had in mind would be something like:      1: foo.Write(new PurchaseMade { Region = &quot;Asia&quot;, Product = &quot;products/1&quot;, Amount = 23 } );   2: foo.Write(new PurchaseMade { Region = &quot;Europe&quot;, Product = &quot;products/3&quot;, Amount = 3 } );&#xA;And then you can write map/reduce statements on them like this:&#xA;&#xA;&#xA;   1: // map   2: from purchase in purchases   3: select new   4: {   5:     purchase.Region,   6:     purchase.Item,   7:     purchase.Amount   8: }   9:&#xA0;   10: // reduce  11: from result in results  12: group result by new { result.Region, result.Item }  13: into g  14: select new  15: {  16:     g.Key.Region,  17:     g.Key.Item,  18:     Amount = g.Sum(x=&gt;x.Amount)  19: }&#xA;Yes, this looks pretty much like you would have in RavenDB, but there are important distinctions:&#xA;&#xA;We don&#x2019;t allow modifying writes, nor deleting them.&#xA;Most of the operations are assumed to be made on the result of the map/reduce statements.&#xA;The assumption is that you don&#x2019;t really care for each data point.&#xA;There is going to be a lot of those data points, and they are likely to be coming in at a relatively high rate.&#xA;Thoughts?</p>
         <a href="https://ayende.com/blog/162242/and-that-is-why-i-wrote-my-own-db" target="_blank"><h1 class="title mb-6">And that is why I wrote my own db&#x2026;</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 23, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20"></p>
-        <a href="https://ayende.com/blog/162274/ravendb-dynamic-aggregation-webinar" target="_blank"><h1 class="title mb-6">RavenDB Dynamic Aggregation Webinar</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
                     <span>

@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3810/avoid-object-initializers-the-using-statement" target="_blank"><h1 class="title mb-6">Avoid object initializers &amp; the using statement</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 15, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This piece of code has a huge bug in it. Can you see it?     I&#x2019;ll give you a hint, what is going to happen if Key, IV or Mode are going to throw an exception? Well, let us check the actual generated code from Reflector.     As you can see, we first set the value to a local variable, we set the properties and only then we enter the using clause. If any of the properties will throw out an exception, we will never enter the using block, and the object will never be disposed.  Personally, I think that this is an issue with the compiler, that it should be able to generate safe code for this scenario. As it is, the code looks fine, but the subtle bug can come and bite you.  Beware.</p>
         <a href="https://ayende.com/blog/3809/rhino-service-bus-field-level-security" target="_blank"><h1 class="title mb-6">Rhino Service Bus</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: January 12, 2009
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">CodeMash 2009, the third annual Ohio conference (and as far as I know, the largest Ohio developers&#x2019; conference), was by all accounts a great&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/3801/fixing-the-heisenbug" target="_blank"><h1 class="title mb-6">Fixing the heisenbug</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 12, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just run the Rhino Service Bus test suite which resulted in the test suite hanging. This is where it most often hang.             1: [Fact]&#xA;&#xA;       2: public void A_message_that_fails_processing_should_go_back_to_queue_on_transactional_queue()&#xA;&#xA;       3: {&#xA;&#xA;       4:     TransactionalTransport.MessageArrived &#x2B;= ThrowOnFirstAction();&#xA;&#xA;       5:&#xA0; &#xA;&#xA;       6:     TransactionalTransport.Send(TransactionalTestQueueUri, DateTime.Today);&#xA;&#xA;       7:&#xA0; &#xA;&#xA;       8:     gotFirstMessage.WaitOne();&#xA;&#xA;       9:&#xA0; &#xA;&#xA;      10:     Assert.NotNull(transactionalQueue.Peek());&#xA;&#xA;      11:&#xA0; &#xA;&#xA;      12:     gotSecondMessage.Set();&#xA;&#xA;      13: }&#xA;  &#xA;&#xA;&#xA;And it kept getting hang on line 8. Now, it worked on other machines, and when I run this on its own, it worked just fine. I knew that the issue was probably a matter of test interaction, but how could I debug this?&#xA;&#xA;When running under the debugger, it didn&#x2019;t reproduce itself. &#xA;&#xA;It was pretty consistent in where it failed, however, and that gave me an opening. Many people are not familiar with the ability to interact with the debugger from your code. But the .NET framework contains System.Diagnostics.Debugger class. And that showed me the path.&#xA;&#xA;I put Debugger.Launch() as the first line of the test, and run the tests without the debugger. When this particular test was executed, I broke into the debugger, and I was able to check what the current state of the system was. As it turned out, I had another bus instance reading from the queue. That was because another few tests weren&#x2019;t disposing of their buses properly. I fixed that and the test suite run normally.</p>
         <div class="button flex justify-between">
             <a href="602.html"><span class="back arrow"></span></a>
 

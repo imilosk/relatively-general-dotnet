@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/2541/boo-trick-even-nicer-hash-literals" target="_blank"><h1 class="title mb-6">Boo trick: Even Nicer Hash Literals</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 11, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Boo has the concept of Has Literals, and it can really make a difference in a lot of cases. It makes some things possible to write.&#xA0;Even leaving aside common things like dictionaries constants, consider this signature:public void Configure(IDictionary options)&#xA;{&#xA;&#x9;// do work&#xA;}&#xA;In Boo, I can call this method like this:config.Configure({&#xA;&#x9;&quot;connection_string&quot;: &#x9;&quot;data source...&quot;,&#xA;&#x9;&quot;batch_size&quot;:&#x9;&#x9;15&#xA;//&#x9;etc&#xA;})&#xA;This&#xA0; is much clearer than the C# option, but we can do better.public class UnknownHashLiteralKeyToStringLiteral : ProcessMethodBodiesWithDuckTyping&#xA;{&#xA;&#x9;public override void OnReferenceExpression(ReferenceExpression node)&#xA;&#x9;{&#xA;&#x9;&#x9;IEntity entity = NameResolutionService.Resolve(node.Name);&#xA;&#x9;&#x9;//search for the left side of a key in a hash literal expression&#xA;&#x9;&#x9;if (node.ParentNode is ExpressionPair &#xA;                &amp;&amp; ((ExpressionPair) node.ParentNode).First == node&#xA;                &amp;&amp; node.ParentNode.ParentNode is HashLiteralExpression)&#xA;&#x9;&#x9;{&#xA;                &#x9;ExpressionPair parent = (ExpressionPair) node.ParentNode;&#xA;&#x9;                StringLiteralExpression literal = CodeBuilder.CreateStringLiteral(node.Name);&#xA;&#x9;                parent.First = literal;&#xA;&#x9;                parent.Replace(node, literal);&#xA;&#x9;                return;&#xA;        &#x9;}&#xA;&#x9;&#x9;base.OnReferenceExpression(node); &#xA;&#x9;}&#xA;}&#xA;Now, we have to register it in the compiler:compiler.Parameters.Pipeline.Replace(&#xA;    typeof(ProcessMethodBodiesWithDuckTyping), &#xA;    new UnknownHashLiteralKeyToStringLiteral());&#xA;Now, we can write this kind of code:config.Configure({&#xA;&#x9;connection_string: &#x9;&quot;data source...&quot;,&#xA;&#x9;batch_size:&#x9;&#x9;15&#xA;//&#x9;etc&#xA;})&#xA;It make the syntax much clearer, and it make quite a bit of a difference in the clarify of the code. I am going to put it into Brail, MonoRail has quite a few of methods that takes dictionaries, and it would make the syntax even nicer.</p>
         <a href="https://ayende.com/blog/2540/windsor-decorators-and-chains-of-responsabilityes-oh-yeah" target="_blank"><h1 class="title mb-6">Windsor, Decorators and Chains of Responsabilityes, Oh YEAH!</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: June 09, 2007
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Okay, so Aaron Jensen&#xA0;has suggest an alternative syntax to this (which I don&#x27;t like, since it has strings):        IEventRaiser&#xA0;loadRaiser&#xA0;=&#xA0;new&#xA0;EventRaiser((IMockedObject)mockedView,&#xA0;&quot;Load&quot;);    It is this:obj.Bar &#x2B;= EventRaiser.Raise(this, EventArgs.Empty);    Basically, it is reversing the syntax a bit, since it is actually the &quot;register to event&quot; syntax, but we can use that to raise events in a fairly natural way, without resorting to strings.    I am not sure if the sytnax is clear enough, so I wanted to ask, what would you rather have?</p>
-        <a href="https://ayende.com/blog/2531/rhino-mocks-events-purity-vs-practicality" target="_blank"><h1 class="title mb-6">Rhino Mocks Events</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 08, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the core principals of Rhino Mocks is &quot;No Strings&quot;, and I have gone to great lengths in order to avoid using strings in Rhino Mocks. However, at one point you must stop and consider if this is really worth it. I believe that I have reached into the limits of what the language can do.    Here is&#xA0;how you can raise an event in Rhino Mocks today:            mockedView.Load&#xA0;&#x2B;=&#xA0;null;        IEventRaiser&#xA0;loadRaiser&#xA0;=&#xA0;LastCall.IgnoreArguments().GetEventRaiser();        No strings involved, and it is safe to use in the face of refactorying. However, it does create an expectatin that something will register to this event, but that is something that you want to happen anyway. Today I read this piece of code:IEventRaiser&#xA0;loadRaiser&#xA0;=&#xA0;new&#xA0;EventRaiser((IMockedObject)mockedView,&#xA0;&quot;Load&quot;);    I consider this a hack, because this is working around the way Rhino Mocks is supposed to work. Nevertheless, this is a valid use case if you don&#x27;t want/care to know about event registration. In the case of a stub, you truly want to only get the event raiser, without the line noise of the version above.    So, in order to support this scenario without all the casting, you can now do this:IEventRaiser&#xA0;loadRaiser&#xA0;=&#xA0;EventRaiser.Create(mockedView,&#xA0;&quot;Load&quot;);    Just to make this clear, I don&#x27;t really like this syntax, and I would recommend using the one above, but it is a valid request.     You can get it from the repository, or wait a few days until I make a release.</p>
         <div class="button flex justify-between">
             <a href="756.html"><span class="back arrow"></span></a>
 

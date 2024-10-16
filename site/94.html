@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/193957-A/answers-detecting-livelihood-in-a-distributed-cluster" target="_blank"><h1 class="title mb-6">Answers: Detecting livelihood in a distributed cluster</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 17, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday I asked about dealing with livelihood detection of nodes running in AWS. The key aspect is that this need to be simple to build and easy to explain.Here are a couple of ways that I came up with, nothing ground breaking, but they do the work while letting someone else do all the heavy lifting.Have a well known S3 bucket that each of the nodes will write an entry to. The idea is that we&#x2019;ll have something like (filename &#x2013;&#xA0; value):i-04e8d25534f59e930 &#x2013; 2021-06-11T22:01:02i-05714ffce6c1f64ad &#x2013; 2021-06-11T22:00:49The idea is that each node will scan the bucket and read through each of the files, getting the last seen time for all the nodes. We&#x2019;ll consider all the nodes whose timestamp is within the last 1 minute to be alive and any other node is dead.&#xA0; Of course, we&#x2019;ll also need to update the node&#x2019;s file on S3 every 30 seconds to ensure that other nodes know that we are alive.The advantage here is that this is trivial to explain and implement and it can work quite well in practice. The other option is to actually piggy back on top of the infrastructure that is dedicated for this sort of scenario. Create an elastic load balancer and setup a target group. On startup, the node will register itself to the target group and setup the health check endpoint. From this point on, each node can ask the target group to find all the healthy nodes.This is pretty simple as well, although it requires significantly more setup. The advantage here is that we can detect more failure modes (a node that is up, but firewalled away, for example).Other options, such as having the nodes ping each other, are actually quite complex since they need to find each other. That lead to some level of service locator, but then you&#x2019;ll have to avoid each node pining all the other nodes, since that can get busy on the network.</p>
         <a href="https://ayende.com/blog/193956-A/challenge-detecting-livelihood-in-a-distributed-cluster" target="_blank"><h1 class="title mb-6">Challenge</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: June 09, 2021
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday I had presented a webinar on using Machine Learning and Time Series in RavenDB. One of the things that I love about doing those webinars is that I get to field questions from the audience and have to really think on my feet.In almost all cases, I think that I am able to provide good answers, and I usually accompany these with a live demo showing what is going on.Yesterday, that wasn&#x2019;t the case. During the demo, I managed to run into a fairly obscure bug very deep in the internals of RavenDB and got the wrong results. Then I got stuck on that and couldn&#x2019;t figure out what is a proper workaround until just after the webinar concluded.Hugely embarrassing, but at least I can take comfort that it wasn&#x2019;t the first time that a live demo failed and probably won&#x2019;t be the last time. The good news, on the other hand, is that I created an issue to fix this problem. Today I made myself a cup of coffee and was about to dig into the problem when I realized that it has already been fixed. Time from opening the bug to it getting fixed, under 6 hours. That is without rushing it, mind you. I think that given the turnaround time, it is a good thing overall that I run into this.The actual problem, for what it is worth, is that we had lazily evaluated a collection during its enumeration. However, when using GroupBy(), we effectively enumerated the value twice, fetching different values each time. The second time, we would use the last value from the collection, since it was lazily evaluated. You can check the pull request if you are that much of a nerd .</p>
-        <a href="https://ardalis.com/csharp-generics-best-practices/" target="_blank"><h1 class="title mb-6">C# Generics Best Practices</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 08, 2021
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There was a time when C# didn&#x27;t support generics. It was a dark time. Ragged bands of .NET developers roamed the harsh landscape, copy&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="93.html"><span class="back arrow"></span></a>
 

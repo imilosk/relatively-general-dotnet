@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3646/api-design" target="_blank"><h1 class="title mb-6">API Design</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 11, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There are several important concerns that needs to be taken into account when designing an API. Clarity is an important concern, of course, but the responsibilities of the users and implementers of the API should be given a lot of consideration. Let us take a look at a couple of designs for a simple notification observer. We need to observe a set of actions (with context). I don&#x27;t want to have force mutable state on the users, so I have started with this approach (using out parameters instead of return values in order to name the parameter): public interface INotificationObserver&#xA;{&#xA;    void OnNewSession(out object sessionTag);&#xA;    void OnNewStatement(object sessionTag, StatementInformation statementInformation, out object statementTag);&#xA;    void OnNewAction(object statementTag, ActionInformation actionInformation);&#xA;}&#xA;I don&#x27;t really like this, too much magic objects here, and too much work for the client. We can do it in a slightly different way, however:&#xA;public delegate void OnNewAction(ActionInformation actionInformation);&#xA;&#xA;public delegate void OnNewStatement(StatementInformation statementInformation, out OnNewAction onNewAction);&#xA;&#xA;public interface INotificationObserver&#xA;{&#xA;    void OnNewSession(out OnNewStatement onNewStatement);&#xA;}</p>
         <a href="https://ayende.com/blog/3645/sins-of-omissions" target="_blank"><h1 class="title mb-6">Sins of Omissions</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: October 09, 2008
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The easiest way of getting there is to have no mutable state. And here is a simple test to ensure that. Seeing how CouchDB code works and how erlag handle things is quite educating in this regard.[TestFixture]&#xA;public class EnssureTypesSafeForMultiThreadingTestFixture&#xA;{&#xA;    [Test]&#xA;    public void TypeIsSafeForMultiThreading()&#xA;    {&#xA;        var visitedTypes = new List&lt;Type&gt;&#xA;        {   // immutable types, partial list&#xA;            typeof(int),&#xA;            typeof(long),&#xA;            typeof(string),&#xA;            typeof(DateTime)&#xA;        };&#xA;        foreach (var type in GetRootTypesToCheck())&#xA;        {&#xA;            CheckType(type, visitedTypes);&#xA;        }&#xA;    }&#xA;&#xA;    private static void CheckType(Type type, ICollection&lt;Type&gt; types)&#xA;    {&#xA;        if(types.Contains(type))&#xA;            return;&#xA;        types.Add(type);&#xA;        var fields = type.GetFields(BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public);&#xA;        foreach (var info in fields)&#xA;        {&#xA;            var isReadOnlyField = (info.Attributes &amp; FieldAttributes.InitOnly)==FieldAttributes.InitOnly;&#xA;            if(isReadOnlyField==false)&#xA;                throw new InvalidAsynchronousStateException(&quot;Dude, &quot; &#x2B; type &#x2B; &quot;.&quot; &#x2B; info.Name &#x2B;&#xA;                                                            &quot; is not marked as read only. You are NOT safe for multi threading, enjoy the deadlock, bye!&quot;);&#xA;            CheckType(info.FieldType, types);&#xA;        }&#xA;    }&#xA;&#xA;    private static IEnumerable&lt;Type&gt; GetRootTypesToCheck()&#xA;    {&#xA;        // return types that I am interested in verifying&#xA;    }&#xA;}</p>
-        <a href="https://ayende.com/blog/3636/rhino-mocks-challenge-implement-this-feature" target="_blank"><h1 class="title mb-6">Rhino Mocks Challenge: Implement This Feature</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 08, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Okay, let us see if this approach works...&#xA;Here is a description of a feature that I would like to have in Rhino Mocks (modeled after a new feature in Type Mock). I don&#x27;t consider this a complicated feature, and I would like to get more involvement from the community in building Rhino Mocks (see the list of all the people that helped get Rhino Mocks 3.5 out the door).&#xA;The feature is fluent mocks. The idea is that this code should work:&#xA;&#xA;  var mockService = MockRespository.GenerateMock&lt;IMyService&gt;();&#xA;  Expect.Call( mockService.Identity.Name ).Return(&quot;foo&quot;);&#xA;&#xA;  Assert.AreEqual(&quot;foo&quot;, mockService.Identity.Name);&#xA;&#xA;Where identity is an interface.&#xA;The best place to capture such semantics is in the RecordMockState.&#xA;Have fun, and send me the patch :-)</p>
         <div class="button flex justify-between">
             <a href="624.html"><span class="back arrow"></span></a>
 

@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/195650-B/challenge-find-the-slow-down-answer" target="_blank"><h1 class="title mb-6">Challenge</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 16, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I asked about a slow piece of code and why it is so slow. The answer is pretty simple, I messed up, take a look at this piece of code:When the Value is an int, I&#x2019;m creating a span from the address of a long variable (initialized to zero). That means that I have a lot of hash collisions, which means that adding to the dictionary turned into a sequential operation, which means that the actual cost here is O(N**2).Interestingly enough, you can&#x2019;t write this code without the use of unsafe. I actually didn&#x2019;t know that the scope of the variable was even valid here to have its address taken. That was very hard to debug, because the problem was hidden away somewhere very far from where we looked at.</p>
         <a href="https://enterprisecraftsmanship.com/posts/how-to-assert-database-state/" target="_blank"><h1 class="title mb-6">How to Assert Database State?</h1></a>
         <p class="mb-2">by Vladimir Khorikov</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: December 09, 2021
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I ran into this post and I thought that I would share my thinking on the matter. I don&#x2019;t actually know anything about IndexedDB, but I have been working with databases for a sufficiently long time to understand what the root problem here is.&#xA;The issue the post is talking about is that IndexedDB is slow, to the rate of inserting hundreds of documents takes multiple seconds. When you go a bit deeper into the post, you realize that the trouble is not with the number of documents that are being saved, but the number of transactions.&#xA;IndexedDB has the concept of transactions, and I&#x2019;m going to err on the safe side and assume that it has durability. I dug a bit and found that IndexedDB is based on LevelDB (and I do know that one quite a bit). The underlying issue is that each transaction commit needs to issue an fsync(), and fsync is slow!&#xA;Pretty much all database engines have to deal with that, the usual answer is to allow transaction merging of some sort. Many relational databases will write to the log and commit multiple transactions in a single fsync(), RavenDB will do explicit transaction merging in order to batch writes to disk.&#xA;However, for pretty much every database out there with durability guarantees, the worst thing you can do is write a lot of data one transaction at a time. Server databases still benefit from being able to amortize multiple operations across different requests, but a client side database is effectively forced to do serial work with no chance for optimization.&#xA;From the client perspective, the only viable option here is to batch writes to get better performance. Then again, if you are working on the client side, you are either responding to a user action (in which case you have plenty of time to commit) or running in the background, which means that you have the ability to batch.</p>
-        <a href="https://andrewlock.net/creating-a-source-generator-part-1-creating-an-incremental-source-generator/" target="_blank"><h1 class="title mb-6">Creating an incremental generator</h1></a>
-        <p class="mb-2">by Andrew Lock</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 09, 2021
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Creating a source generator - Part 1</p>
         <div class="button flex justify-between">
             <a href="76.html"><span class="back arrow"></span></a>
 

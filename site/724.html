@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/2832/trying-to-mimic-erlang-style-tasks-in-c" target="_blank"><h1 class="title mb-6">Trying to mimic Erlang style tasks in C#</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 05, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After I lamented about missing key features for Erlang style tasks, Avish has told me about ThreadPool.RegisterWaitForSingleObject, which I was unaware of. I bang out this implementation of parallel sort as an example. Hacking code, proof of concept, written at 3AM in the morning, etc. public static WaitHandle ParQuickSort&lt;T&gt;(T[] domain, int lo, int hi)&#xA;&#x9;where T : IComparable&lt;T&gt;&#xA;{&#xA;&#x9;if (hi - lo &lt;= 1)&#xA;&#x9;{&#xA;&#x9;&#x9;return new ManualResetEvent(true); //already signalled, no wait&#xA;&#x9;}&#xA;&#x9;ManualResetEvent manualResetEvent = new ManualResetEvent(false);&#xA;&#x9;Semaphore semaphore = new Semaphore(0, 2);&#xA;&#xA;&#x9;int pivot = Partition(domain, lo, hi);&#xA;&#xA;&#x9;WaitOrTimerCallback releaseSemapore = delegate&#xA;&#x9;{&#xA;&#x9;&#x9;int release = semaphore.Release();&#xA;&#x9;&#x9;if (release == 1)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;manualResetEvent.Set();&#xA;&#x9;&#x9;}&#xA;&#x9;};&#xA;&#x9;ThreadPool.QueueUserWorkItem(&#xA;&#x9;&#x9;delegate&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;WaitHandle leftWaitHandle = ParQuickSort(domain, lo, pivot - 1);&#xA;&#x9;&#x9;&#x9;ThreadPool.RegisterWaitForSingleObject(leftWaitHandle,&#xA;&#x9;&#x9;&#x9;                                       releaseSemapore, null, TimeSpan.FromDays(1), true);&#xA;&#x9;&#x9;});&#xA;&#x9;ThreadPool.QueueUserWorkItem(&#xA;&#x9;&#x9;delegate&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;&#xA;&#x9;&#x9;&#x9;WaitHandle rightWaitHandle = ParQuickSort(domain, pivot &#x2B; 1, hi);&#xA;&#xA;&#x9;&#x9;&#x9;ThreadPool.RegisterWaitForSingleObject(rightWaitHandle,&#xA;&#x9;&#x9;&#x9;                                       releaseSemapore, null, TimeSpan.FromDays(1), true);&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;);&#xA;&#x9;return manualResetEvent;&#xA;}&#xA;&#xA0;&#xA;Yes, it is ugly, but bear with me.&#xA;The usage pattern is simple:&#xA;WaitHandle sort = ParQuickSort(data, 0, count - 1);&#xA;sort.WaitOne();&#xA;Obviously we can use a Future here instead.&#xA;What is interesting is that hacking approach thought me several things, RegisterWaitForSingleObject will crash &amp; burn if you try to wait for over 369,846 objects, since at that point you will get this lovely exception:&#xA;&#xA;Unhandled Exception: System.ApplicationException: Not enough storage is available to process this command. (Exception from HRESULT: 0x80070008) &#xA0;&#xA0; at System.Threading.ThreadPool.RegisterWaitForSingleObjectNative(WaitHandle waitHandle, Object state, UInt32 timeOutInterval, Boolean executeOnlyOnce, RegisteredWaitHandle registeredWaitHandle, StackCrawlMark&amp; stackMark, Boolean compressStack)&#xA;...&#xA;Second, performance here is really a bitch, it took the impl above 5 seconds to sort through 100,000 items, while Array.Sort did it in a few milliseconds.&#xA0;In fact here are the numbers:&#xA;&#xA;Parallel: 00:00:06.2656250Array.Sort: 00:00:00.0156250&#xA;I actually had to get to 100,000 items before I could catch Array.Sort actually taking any time. &#xA;I am going to bet that what skews the problem is all the calls to events and semaphores, those are kernel calls, which are taking long time. Not nearly wake enough to try to implement user mode locking strategy that would work here.&#xA;At any rate, it looks like this approach, at least, is not really going to be a worthwhile one.</p>
         <a href="https://ayende.com/blog/2831/refactoring-threading-code" target="_blank"><h1 class="title mb-6">Refactoring threading code</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: October 03, 2007
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have hardly had time to read Empire of Ivory and listen to Black Powder War and two thirds of Empire of Ivory when I got Making Money from Terry Prachett. I have read Going Postal with great enjoyment, in fact, I just finished listening to it on the way back from JAOO. I also got several other books as well, but I have yet to open them at all, since that one has all but capture all my attention. We will see how fast I can go through that. &#xA0; &#xA0; &#xA0; &#xA0; &#xA0; &#xA0; . P.S: I noticed that I speak a lot more about other interests lately beside technology and programming, does it bother you?</p>
-        <a href="https://ayende.com/blog/2823/the-clr-sources" target="_blank"><h1 class="title mb-6">The CLR Sources</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 03, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have no idea why this isn&#x27;t in much wider circulation, but this is huge. ScottGu has announced that Microsoft is Releasing the Source Code for the .NET Framework Libraries.  I am disappointed to see that even in the tiny source code samples that he has in the post I have violent disagreements (they speak about sealing stuff, which I have serious objection to). This hopefully means a lot less ReflectorDebugging, although I am not sure about all the implication that this has.</p>
         <div class="button flex justify-between">
             <a href="723.html"><span class="back arrow"></span></a>
 
