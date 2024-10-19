@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/181985-C/patterns-for-high-performance-c" target="_blank"><h1 class="title mb-6">Patterns for high-performance C#</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: February 26, 2018
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Federico has given an interesting talk exploring some of the crazy lengths we go to for performance with RavenDB. You can judge our mental state yourself:</p>
         <a href="https://www.meziantou.net/mstest-v2-customize-test-execution.htm" target="_blank"><h1 class="title mb-6">MSTest v2: Customize test execution</h1></a>
         <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: February 19, 2018
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is part of the series &#x27;MSTest v2&#x27;. Be sure to check out the rest of the blog posts of the series!MSTest v2: Setup a test project and run testsMSTest v2: Exploring assertsMSTest v2: Data testsMSTest v2: Test lifecycle attributesMSTest v2: Create new asserts (this post)MSTest v2: Customize</p>
-        <a href="https://ayende.com/blog/181793-C/rejection-dejection-and-resurrection-oh-my" target="_blank"><h1 class="title mb-6">Rejection, dejection and resurrection, oh my!</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 16, 2018
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Regardless of how good your software is, there is always a point where we can put more load on the system than it is capable of handling.One such case is when you are firing about a hundred requests a second, per second, regardless of whatever the previous requests have completed and at the same time throttling the I/O so we can&#x2019;t complete the requests fast enough. What happens then is known as a convoy. Requests start piling up, as more and more work is waiting to be done, we are falling further and further behind. The typical way this ends is when you run out of resources completely. If you are using thread per requests, you end up with all your threads blocked on some lock. If you are using async operations, you start consuming more and more memory as you hold the async state of the request until it is completed. We put a lot of pressure on the system, and we want to know that it responds well. And the way to do that is to recognize that there is a convoy in progress and handle it. But how can you do that?The problem is that you are currently in the middle of processing a set of operations in a transaction. We can obviously abort it, and roll back everything, but the problem is that we are now in the second stage. We have a transaction that we wrote to the disk, and we are waiting for the disk to come back and confirm that the write is successful while already speculatively executing the current transaction. And we can&#x2019;t abort the transaction that we are currently writing to disk, because there is no way to know at what stage the write is.&#xA0; So we now need to decide what to do. And we choose the following set of behaviors. When running a speculative transaction (a transaction that is run while the previous transaction is being committed to disk) we observe the amount of memory that is used by this transaction. If the amount of memory being used it too high, we stop processing incoming operations and wait for the previous transaction to come back from the disk.At the same time, we might still be getting new operations to complete, but we can&#x2019;t process them. At this point, after we waited for enough time to be worrying, we start proactively rejecting requests, telling the client immediately that we are in a timeout situation and that they should failover to another node.The key problem is that I/O is, by its nature, highly unpredictable, and may be impacted by many things. On the cloud, you might hit your IOPS limits and see a drastic drop in performance all of a sudden. We considered a lot of ways to actually manage it ourselves, by limiting what kind of I/O operations we&#x2019;ll send at each time, queuing and optimizing things, but we can only control the things that we do. So we decided to just measure what is going on and react accordingly. Beyond being proactive to incoming requests, we are also making sure that we&#x2019;ll surface these kind of details to the user:Knowing that the I/O system may be giving us this kind of response can be invaluable when you are trying to figure out what is going on. And we made sure that this is very clearly displayed to the admin.</p>
         <div class="button flex justify-between">
             <a href="216.html"><span class="back arrow"></span></a>
 

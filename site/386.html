@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/164482/some-notes-about-fsync" target="_blank"><h1 class="title mb-6">Some notes about fsync</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 18, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">On my laptop, fsync has effectively no cost. That is probably because of some configuration setting (it is a battery based system, no need to pay the fsync call).&#xA0; On my desktop machine (significantly more powerful than my laptop), I have an fsync times that are an order of magnitude or more higher. In practice, if you work with fsync, you can expect to get a maximum of about 200 &#x2013; 300 fsync calls per second on SSD, and significantly less on HDD. If you are seeing higher numbers than that, you are probably not really doing fsync, and are exposed to data integrity issues if you have a hard crash.  In particular, it appears that for high performance code, you really want to forget all about fsync for ensuring your transactional needs.  And that is before we started talking about the cost of fsync (FlushFileBuffers, to be more accurate) as the file size grows. It appears that there is at least some correlation between the size of the file and the cost of calling fsyn/FlushFileBuffers on it.  Considering that we are talking about potentially very large files, we really want to be careful about it. All in all, I think that we need to say goodbye to relying of fsync for ensuring ACID. But how can we ensure that we&#x2019;ll be properly ACID? Well, the answer is in the previous post, look at how other people are doing it, but I&#x2019;ll expand on that in my next post.</p>
         <a href="https://ayende.com/blog/164577/is-select-broken-memory-mapped-files-with-unbufferred-writes-race-condition" target="_blank"><h1 class="title mb-6">Is select() broken? Memory mapped files with unbufferred writes == race condition?</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: November 09, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It appears that we are really picking up the pace. We are now is feature 3 of the 6 Big Ticket items that we have for RavenDB 3.0. You can registered for this webinar here: https://www2.gotomeeting.com/register/162117130 Oh, and be sure to&#x2026; expand your mind. As usual, guesses about what this feature is are welcome.</p>
-        <a href="https://ayende.com/blog/164290/deleting-aint-easy" target="_blank"><h1 class="title mb-6">Deleting ain&#x2019;t easy</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: November 08, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We started getting test failures in Voron regarding to being unable to cleanup the data directory. Which was a major cause for concern. We thought that we had a handle leak, or something like that.  As it turned out, we could reproduce this issue with the following code:      1: class Program   2: {   3:     static void Main(string[] args)   4:     {   5:         var name = Guid.NewGuid().ToString();   6:         for (int i = 0; i &lt; 1000; i&#x2B;&#x2B;)   7:         {   8:             Console.WriteLine(i);   9:             Directory.CreateDirectory(name);  10:&#xA0;   11:             for (int j = 0; j &lt; 10; j&#x2B;&#x2B;)  12:             {  13:                 File.WriteAllText(Path.Combine(name, &quot;test-&quot; &#x2B;j), &quot;test&quot;);  14:             }  15:&#xA0;   16:             if (Directory.Exists(name))  17:                 Directory.Delete(name, true);  18:         }  19:           20:     }  21: }&#xA;If you run this code, in 6 out of 10 runs, it would fail with something like this:&#xA;&#xA;I am pretty sure that the underlying cause is some low lever &#x201C;thang&#x201D; somewhere on my system. FS Indexing, AV, etc. But it basically means that directory delete is not atomic, and that I should basically just suck it up and write a robust delete routine that can handle failure and retry until it is successful.</p>
         <div class="button flex justify-between">
             <a href="385.html"><span class="back arrow"></span></a>
 

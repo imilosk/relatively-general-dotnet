@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3111/convention-based-security-a-monorail-sample" target="_blank"><h1 class="title mb-6">Convention based security: A MonoRail Sample</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 23, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was asked how I would got about building a real world security with the concept of securing operations instead of data.  This is a quick &amp; dirty implementation of the concept by marrying Rhino Security to MonoRail. This is so quick and dirty that I haven&#x27;t even run it, so take this as a concept, not the real implementation, please. The idea is that we can map each request to an operation, and use the convention of &quot;id&quot; as a special meaning to perform operation security that pertain to specific data. Here is the code: public class RhinoSecurityFilter : IFilter&#xA;{&#xA;    private readonly IAuthorizationService authorizationService;&#xA;&#xA;    public RhinoSecurityFilter(IAuthorizationService authorizationService)&#xA;    {&#xA;        this.authorizationService = authorizationService;&#xA;    }&#xA;&#xA;    public bool Perform(ExecuteWhen exec, IEngineContext context, IController controller,&#xA;                        IControllerContext controllerContext)&#xA;    {&#xA;        string operation = &quot;/&quot; &#x2B; controllerContext.Name &#x2B; &quot;/&quot; &#x2B; controllerContext.Action;&#xA;        string id = context.Request[&quot;id&quot;];&#xA;        object entity = null;&#xA;        if (string.IsNullOrEmpty(id) == false)&#xA;        {&#xA;            Type entityType = GetEntityType(controller);&#xA;            entity = TryGetEntity(entityType, id);&#xA;        }&#xA;&#xA;        if(entity==null)&#xA;        {&#xA;            if (authorizationService.IsAllowed(context.CurrentUser, operation) == false)&#xA;            {&#xA;                DenyAccessToAction();&#xA;            }&#xA;        }&#xA;        else&#xA;        {&#xA;            if (authorizationService.IsAllowed(context.CurrentUser, entity, operation) == false)&#xA;            {&#xA;                DenyAccessToAction();&#xA;            }&#xA;        }&#xA;        return true;&#xA;    }&#xA;}&#xA;It just perform a security check using the /Controller/Action names, and it tries to get the entity from the &quot;id&quot; parameter if it can.&#xA;Then, we can write our base controller:&#xA;[Filter(ExecuteWhen.BeforeAction,typeof(RhinoSecurityFilter))]&#xA;public class AbstractController : SmartDispatcherController&#xA;{&#xA;&#xA;}&#xA;Now you are left with configuring the security, but you already have a cross cutting security implementation. &#xA;As an example, hitting this url: /orders/list.castle?id=15&#xA;Will perform a security check that you have permission to list customer&#x27;s 15 orders.&#xA;This is pretty extensive, probably overly so, however. A better alternative would be to define an attribute with the ability to override the default operation name, so you can group several action into the same operation.&#xA;You would still need a way to bypass that, however, since there are some thing where you would have to allow access and perform custom permissions, no matter how flexible Rhino Security is, or you may be required to do multiply checks to verify that, and this system doesn&#x27;t allow for it.&#xA;Anyway, this is the overall idea, thoughts?</p>
         <a href="https://ayende.com/blog/3110/designing-the-security-model" target="_blank"><h1 class="title mb-6">Designing the Security Model</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: January 17, 2008
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Playing with Silverlight and needed a simple way to redirect the page. This isn&#x27;t built-in yet but probably will be. For now, you can call&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/tfs-tips/" target="_blank"><h1 class="title mb-6">TFS Tips</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 16, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m just wrapping up a long article on Team System 2008 and its new capabilities, especially its continuous integration support and build&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="691.html"><span class="back arrow"></span></a>
 

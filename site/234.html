@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/180322/ravendb-4-0-the-server-dashboard" target="_blank"><h1 class="title mb-6">RavenDB 4.0</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 27, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that we have been saving is the hooking together of all the work we have ben doing to expose how RavenDB works into the operations dashboard. This has just landed in the nightly and can give you a lot of insight into exactly what is going on inside your server.You can see some of the screenshots below. The idea is that in addition to exposing all of these metrics over dedicated endpoints and SNMP, we will also save users the trouble of setting up monitoring and just show them what is going on directly. Operators can just head to this page and see what is going on, and it is meant to be put as a background for users to observe this during routine operations.</p>
         <a href="https://ayende.com/blog/180321/centralized-temporal-history-for-the-ages" target="_blank"><h1 class="title mb-6">Centralized temporal history for the ages</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: October 23, 2017
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Nowadays, most of us are using TypeScript as a replacement for JavaScript. If you are not, maybe you should look at this previous post: Still not using TypeScript?. TypeScript files must be compiled before you can use them in the browser. Visual Studio does it automatically very great. However, if</p>
-        <a href="https://ayende.com/blog/180225/pr-review-code-has-cost-justify-it" target="_blank"><h1 class="title mb-6">PR Review</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 20, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There is a reason why people talk about idiomatic code. Code that is idiomatic to the language matches what it expect and it generally faster / easier to work with for both developers and the compiler / runtime.During a PR review, I run into this code:The idiomatic manner for writing this code would have been any of:&#x201C;@id&#x201D; == propertyConstants.Documents.Metadata.Id == propertyproperty.Equals(Constants.Documents.Metadata.Id)Constants.Documents.Metadata.Id.Equals(property)I can argue that the second option is the most idiomatic, and that the 3rd option can fail with Null Reference Exception if the property is null, but all of them are pretty clear.Now, RavenDB has a lot on non idiomatic code, usually when we need to get more performance. For example:This is code that is doing very much what is done above, but it does this on the raw byte buffer, and it knows that it is accessing UTF8 characters, so we can do some nice optimizations there to compare by just doing two instructions.Indeed, when queried, the developer answered:Most of the time its going to be false and comparing ints is cheaper than stringsThere are several problems with this. First, this particular piece of code isn&#x2019;t in a part of the code that is extremely performance sensitive. The string buffer work above is for processing requests from the network, a piece of code that can be called tens and hundreds of thousands of times per second. Performance there matters, a lot.&#xA0; This code is meant to be called as part of streaming results to the user, so it is likely to handle very large volume of data. Performance there matters, for sure, but we need to consider how much it matters.Second, let us peek into what will actually happen if we drop the property.Length check. The call will end up calling to the native string routines in the CLR, and the relevant portion is:In other words, this check is already going to happen, we didn&#x2019;t really save anything from making it. Third, and the most subtle of them all. This check is using a check against a constant, whose value is &#x201C;@id&#x201D;. It also check that the property .Length is equal to 3. The whole point of using a constant is that we need to replace it in just one location. But in this case, we will likely change the constant value, not realize that there is a hardcoded length elsewhere in the code and fail miserably with hard to explain behavior.</p>
         <div class="button flex justify-between">
             <a href="233.html"><span class="back arrow"></span></a>
 

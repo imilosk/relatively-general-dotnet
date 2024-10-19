@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/193665-A/aws-roles-aws-lambda-and-eventual-consistency" target="_blank"><h1 class="title mb-6">AWS Roles, AWS Lambda and eventual consistency</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 12, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m doing some cloud work, and I am working based off the official documentation, trying to automate the creation of an AWS Lambda. In order to allow me to quickly iterate, I&#x2019;m basically creating the entire thing from scratch each time.&#xA;I have the following code:&#xA;&#xA;aws iam create-role --role-name $AWS_ROLE --assume-role-policy-document file://trust-policy.json&#xA;aws iam attach-role-policy --role-name $AWS_ROLE&#xA0; --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole&#xA;aws lambda create-function --function-name $FUNC_NAME --zip-file fileb://lambda.zip --handler lambda_function.lambda_handler&#xA0; --runtime python3.8 --role $ARN_ROLE&#xA;&#xA;So far, so good, and exactly like it shows in the docs. But if you&#x2019;ll run it as a script, it will fail with:&#xA;&#xA;An error occurred (InvalidParameterValueException) when calling the CreateFunction operation: The role defined for the function cannot be assumed by Lambda.&#xA;&#xA;If I re-run the exact same command, however, it works properly.&#xA;There is this interesting command, which indicates that roles are using eventual consistency:&#xA;&#xA;aws iam wait role-exists --role-name $AWS_ROLE&#xA;&#xA;Except&#x2026; that this doesn&#x2019;t work. It looks like there is some additional delay between creating the role, validating that it was created and when it is actually available for Lambda to be used.&#xA;After looking around and feeling like a fool, I added a sleep for 10 seconds to the script, and the problem went away.&#xA;I&#x2019;m posting this for posterity sake and in the hope that someone can tell me that there is a better way. For now, I think I need a shower.</p>
         <a href="https://www.meziantou.net/tracking-cloudflare-requests-using-application-insights.htm" target="_blank"><h1 class="title mb-6">Tracking Cloudflare Worker requests using Application Insights</h1></a>
         <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: April 05, 2021
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In a project I had to create something similar to a syntax highlighter for a Blazor application. The code takes a string and highlights some parts of it. So, the idea is to create a component which outputs a raw html fragment that uses &lt;span class=&quot;style-1&quot;&gt;text&lt;/span&gt; to colorize some</p>
-        <a href="https://ayende.com/blog/193506-B/building-a-phone-book-part-iii" target="_blank"><h1 class="title mb-6">Building a phone book</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 02, 2021
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the past two posts in the series, I talked about ways to store phone book records in a file. During the candidates review process, I noticed that many candidates failed to make their lives significantly easier by placing limits on themselves.For example:Using variable length records.Using a single file.Choosing simple algorithm to do the whole task.If we force fixed length records, either directly or via record splitting (if each record is 64 bytes, a record that is bigger than that would reside in some multiple of the record size), the task become much easier. I&#x2019;ve mostly ignored that in my code so far because I&#x2019;m using binary offsets, but it can really make the code a lot simpler. Using a single file lead to complications, because you have to do internal space management (where do the records live, where is the metadata?). It also make it much harder to recover used space in many cases. The last one is probably the most interesting limitation, and not something that I would expect a junior developer to figure out. The use of a single option is typically limiting you to whatever a particular algorithm is providing, but you can extend on that significantly.Let&#x2019;s see another approach to building a persistent phone book. I&#x2019;m going to effectively build an LSM here. You can see the code here.I called it a pretty horrible LSM (Log Structure Merge), but all the relevant pieces are there. It is just horribly inefficient. The key problem, by the way, is around the number of times it will open a file handle. That can be really slow on Windows and end up being a real issue for any significant size.There are also probably a lot of other bugs there, but also enough to figure out how this is actually built.And with this post, I can can say that I explicitly scratched this itch.A fun task to take this further, by the way, is to try to implement a persistent trie for the phone book.</p>
         <div class="button flex justify-between">
             <a href="98.html"><span class="back arrow"></span></a>
 

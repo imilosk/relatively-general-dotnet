@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/160641/ravendb-2-1-features-robust-sql-replication" target="_blank"><h1 class="title mb-6">RavenDB 2.1 Features: Robust SQL Replication</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 14, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We had the ability to replicate things to SQL for a long while. But I was never really happy with the implementation. It was awkward, hard to use/configure/setup and didn&#x2019;t really give us a lot of options in general. After we finished working on 2.0, I had some free time and used that to create the new SQL Replication bundle, which is much nicer. Basically, we go from this guy:  To those guys:   And the fun part is that we no longer require to do this using indexing, or have to worry about connectivity issues. RavenDB will automatically handle disruptions in connectivity, and would heal rifts automatically. But probably the best part is that this is how we define the transformation function between RavenDB and your RDBMS of choice:</p>
         <a href="https://ardalis.com/presenting-at-telerik-software-pros-conference-in-new-delhi-india/" target="_blank"><h1 class="title mb-6">Presenting at Telerik Software Pros Conference in New Delhi India</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: January 01, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Exactly 4 years after the 1.0 release of Uber Prof, we have the 2.0 release for Uber Prof. You can find it here: http://hibernatingrhinos.com/products/ New features include production and cloud profiling, performance improvement and better error detection &amp; guidance.</p>
-        <a href="https://ayende.com/blog/160546/the-last-ravendb-feature-of-the-year-bulk-inserts" target="_blank"><h1 class="title mb-6">The last RavenDB feature of the year, bulk inserts</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 31, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the most exciting new features that got into RavenDB 2.0 is the notion of bulk inserts. Unlike the &#x201C;do batches in a loop&#x201D; approach, we actually created an optimized approach and a hand crafted code path that reduce the time of the standard RavenDB saves (which does a lot, but come at a cost). In particular, we made sure that we can parallelize the operation between the client and the server, so we don&#x2019;t have to build the entire request in memory on the client and then wait for it all to be in memory on the server before we can start operation. Instead, we have a fully streamed operation from end to end. Here is what the API looks like:      1: using (var bulkInsert = store.BulkInsert())   2: {   3:     for (int i = 0; i &lt; 1000*1000; i&#x2B;&#x2B;)   4:     {   5:         bulkInsert.Store(new User {Name = &quot;Users #&quot; &#x2B; i});   6:     }   7: }&#xA;This uses a single request to the server to do all the work. And here are the results: &#xA;&#xA;&#xA;This API has several limitations:&#xA;&#xA;You must provide the id at the client side (in this case, generated via hilo).&#xA;It can&#x27;t take part of DTC transactions&#xA;If you want updates, you need to explicitly state (other would throw).&#xA;Put triggers will execute, but the AfterCommit will not.&#xA;This bypass the indexing memory pre fetching layer.&#xA;Changes() will not be raised for documents inserted using bulk-insert.&#xA;There isn&#x27;t a single transaction for the entire operation, rather, this is done in batches and each batch is transactional on its own.&#xA;This is explicitly meant to drop a very large number of records to RavenDB very fast, and it does this very well, typically an order of magnitude or more faster than the &#x201C;batches in a loop&#x201D;&#xA0; approach.&#xA;A note about the last limitation, though. The whole idea here it to reduce, as much as possible, the costs of actually doing a bulk insert. That means that we can&#x2019;t keep a transaction of millions of item open. Instead, we periodically flush the transaction buffer throughout the process. Assuming the default batch size of 512 documents, that means that an error in one of those documents will result in the entire batch of 512 being rolled back, but will not roll back previously committed batches.&#xA;This is done to reduce transaction log size and to make sure that even during a bulk insert operation, we can index the incoming documents while they are being stream in.</p>
         <div class="button flex justify-between">
             <a href="413.html"><span class="back arrow"></span></a>
 

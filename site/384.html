@@ -147,6 +147,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/164740/immutable-collections-performance-take-ii" target="_blank"><h1 class="title mb-6">Immutable collections performance, take II</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 06, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Why is the performance of an immutable list over 16 times slower than a standard list? I took a peek at what it was actually doing, and it made a lot of sense. In order to maintain efficient indexing access, the actual storage of the data in the immutable list is a binary tree. With the key being used as the indexer. This result is a much higher cost for pretty much everything. Let us look at the following:      1: var listsp = Stopwatch.StartNew();   2: var list = new List&lt;int&gt;(Enumerable.Range(0, 10*1000*1000));   3:&#xA0;    4: for (int i = 0; i &lt; list.Count; i&#x2B;&#x2B;)   5: {   6:     var _ = list[i];   7: }   8:&#xA0;    9: Console.WriteLine(listsp.Elapsed);  10:&#xA0;   11: var ilist = ImmutableList&lt;int&gt;.Empty.AddRange(list);  12: listsp.Restart();  13:&#xA0;   14: for (int i = 0; i &lt; ilist.Count; i&#x2B;&#x2B;)  15: {  16:     var _ = ilist[i];  17: }  18: Console.WriteLine(listsp.Elapsed);&#xA;This List&lt;T&gt; is 0.23 seconds, ImmutableList&lt;T&gt; takes 1.28 seconds. When I use foreach, instead, we get 0.22 seconds vs. 2.29 seconds.&#xA;As you can see from the blog post describing them, because immutable collections are mostly implemented as binary trees, I don&#x2019;t really think that there is a good way to approach this as is. The problem is that the immutable collections actually need to do a lot more than what I need them to do.&#xA;Now, it might have been more acceptable to use them if the perf was limited to just writing to them, it might have been acceptable. But as you can see, we have the same problem when we are reading, and that is quite unacceptable.</p>
         <a href="https://ardalis.com/configuring-performance-counters-to-run-over-time/" target="_blank"><h1 class="title mb-6">Configuring Performance Counters to Run Over Time</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
@@ -255,18 +267,6 @@
             posted on: November 28, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am currently in the states, and I can&#x2019;t go anywhere without seeing a lot of signs for Black Friday. Since it seems that this is a pretty widely spread attempt to do a load test on everyone&#x2019;s servers (and physical stores, for some reason). I decided that I might as well join the fun and see how we handle the load. You can use one of the following coupon codes (each one has between 4 &#x2013; 16 uses) to get a 20% discount for any of our products, if you buy in the next 48 hours.   pink-Sunday  white-Monday  green-Tuesday  orange-Wednesday  red-Thursday  black-Friday  yellow-Saturday This explicitly includes 20% discounts for RavenDB and the Profilers.</p>
-        <a href="https://ayende.com/blog/164353/nhibernate-runfaster-secret-toggle" target="_blank"><h1 class="title mb-6">NHibernate.RunFaster() secret toggle</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: November 28, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I keep getting asked by people: &#x201C;What is the configuration option to make NHibernate run faster?&#x201D; People sort of assume that NHibernate is configured to be slow by default because it amuses someone. Well, while there isn&#x2019;t a &#x201C;Secret_incantation&#x201D; = &#x201C;chicken/sacrifice&#x201D; option in NHibernate, there is this one:  And it pretty much does the same thing. No, I won&#x2019;t explain why. Go read the docs.</p>
         <div class="button flex justify-between">
             <a href="383.html"><span class="back arrow"></span></a>
 
