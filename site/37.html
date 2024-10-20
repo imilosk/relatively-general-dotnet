@@ -111,54 +111,6 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
-        <a href="https://www.stevejgordon.co.uk/introducing-the-new-ihostedlifecycleservice-interface-in-dotnet-8" target="_blank"><h1 class="title mb-6">Introducing the new IHostedLifecycleService Interface in .NET 8</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: August 09, 2023
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As regular readers will be aware, an area of .NET which I follow closely is Microsoft.Extensions.Hosting. I&#x2019;ve already blogged about a change in .NET 8, where new concurrency options have been introduced to support parallel running of the StartAsync and StopAsync across multiple IHostedServices. In this post, we&#x2019;ll look at some new lifecycle events introduced [&#x2026;]</p>
-        <a href="https://ayende.com/blog/199874-A/a-performance-profile-mystery-the-cost-of-stopwatch" target="_blank"><h1 class="title mb-6">A performance profile mystery: The cost of Stopwatch</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: August 09, 2023
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Measuring the length of time that a particular piece of code takes is a surprising challenging task. There are two aspects to this, the first is how do you ensure that the cost of getting the start and end times won&#x2019;t interfere with the work you are doing. The second is how to actually get the time (potentially many times a second) in as efficient way as possible.&#xA;To give some context, Andrey Akinshin does a great overview of how the Stopwatch class works in C#. On Linux, that is basically calling to the clock_gettime system call, except that this is not a system call. That is actually a piece of code that the Kernel sticks inside your process that will then integrate with other aspects of the Kernel to optimize this. The idea is that this system call is so frequent that you cannot pay the cost of the Kernel mode transition. There is a good coverage of this here.&#xA;In short, that is a very well-known problem and quite a lot of brainpower has been dedicated to solving it. And then we reached this situation:&#xA;&#xA;What you are seeing here is us testing the indexing process of RavenDB under the profiler. This is indexing roughly 100M documents, and according to the profiler, we are spending 15% of our time gathering metrics?&#xA;The StatsScope.Start() method simply calls Stopwatch.Start(), so we are basically looking at a profiler output that says that Stopwatch is accounting for 15% of our runtime?&#xA;Sorry, I don&#x2019;t believe that. I mean, it is possible, but it seems far-fetched.&#xA;In order to test this, I wrote a very simple program, which will generate 100K integers and test whether&#xA0;they are prime or not. I&#x2019;m doing that to test compute-bound work, basically, and testing calling Start() and Stop() either across the whole loop or in each iteration.&#xA;I run that a few times and I&#x2019;m getting:&#xA;&#xA;Windows: 311 ms with Stopwatch per iteration and 312 ms without&#xA;Linux: 450 ms with Stopwatch per iteration and 455 ms without&#xA;&#xA;On Linux, there is about 5ms overhead if we use a per iteration stopwatch, on Windows, it is either the same cost or slightly cheaper with per iteration stopwatch.&#xA;Here is the profiler output on Windows:&#xA;&#xA;And on Linux:&#xA;&#xA;Now, that is what happens when we are doing a significant amount of work, what happens if the amount of work is negligible? I made the IsPrime() method very cheap, and I got:&#xA;&#xA;So that is a good indication that this isn&#x2019;t free, but still&#x2026;&#xA;Comparing the costs, it is utterly ridiculous that the profiler says that so much time is spent in those methods.&#xA;Another aspect here may be the issue of the profiler impact itself. There are differences between using Tracing and Sampling methods, for example.&#xA;I don&#x2019;t have an answer, just a lot of very curious questions.</p>
-        <a href="https://ayende.com/blog/199873-A/qcon-san-francisco-workshop-building-a-database-from-the-ground-up" target="_blank"><h1 class="title mb-6">QCon San Francisco Workshop: Building a database from the ground up</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: August 08, 2023
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m going to QCon San Francisco and will be teaching a full day workshop where we&#x2019;ll start from a C compiler and&#xA0; an empty file and end up with a functional storage engine, indexing and more.&#xA;Included in the minimum requirements are implementing transactions, MVCC, persistent data structures, and indexes.&#xA;The workshop is going to be loosely based on the book, but I&#x2019;m going to condense things so we can cover this topic in a single day.&#xA;Looking forward to seeing you there.</p>
-        <a href="https://andrewlock.net/asp-dotnet-core-in-action-third-edition-is-now-in-print/" target="_blank"><h1 class="title mb-6">ASP.NET Core in Action, Third Edition is now in print</h1></a>
-        <p class="mb-2">by Andrew Lock</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: August 08, 2023
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My new book, ASP.NET Core in Action, Third Edition, is now in print. In this post I describe some of the changes, how you can get it, and how to get money off&#x2026;</p>
         <a href="https://ayende.com/blog/199841-A/struct-memory-layout-optimizations-practical-considerations" target="_blank"><h1 class="title mb-6">Struct memory layout optimizations, practical considerations</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -231,6 +183,54 @@
             posted on: July 25, 2023
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Exploring the .NET 8 preview - Part 5</p>
+        <a href="https://ayende.com/blog/199745-A/production-postmortem-the-dog-ate-my-request" target="_blank"><h1 class="title mb-6">Production postmortem</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 24, 2023
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A customer called us, quite upset, because their RavenDB cluster was failing every few minutes. That was weird, because they were running on our cloud offering, so we had full access to the metrics, and we saw absolutely no problem on our end.&#xA;During the call, it turned out that every now and then, but almost always immediately after a new deployment, RavenDB would fail some requests. On a fairly consistent basis, we could see two failures and a retry that was finally successful.&#xA;Okay, so at least there is no user visible impact, but this was still super strange to see. On the backend, we couldn&#x2019;t see any reason why we would get those sort of errors.&#xA;Looking at the failure stack, we narrowed things down to an async operation that was invoked via DataDog. Our suspicions were focused on this being an error in the async machinery customization that DataDog uses for adding non-invasive monitoring.&#xA;We created a custom build for the user that they could test and waited to get the results from their environment. Trying to reproduce this locally using DataDog integration didn&#x2019;t raise any flags.&#xA;The good thing was that we did find a smoking gun, a violation of the natural order and invariant breaking behavior.&#xA;The not so good news was that it was in our own code. At least that meant that we could fix this.&#xA;Let&#x2019;s see if I can explain what is going on. The customer was using a custom configuration: FastestNode. This is used to find the nearest / least loaded node in the cluster and operate from it.&#xA;How does RavenDB know which is the fastest node? That is kind of hard to answer, after all. It checks.&#xA;Every now and then, RavenDB replicates a read request to all nodes in the cluster. Something like this:&#xA;&#xA;&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          Task&lt;Node&gt; FindFastest(Request req)&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;             using var cts  = new CancellationTokenSource();&#xA;        &#xA;        &#xA;          &#xA;             var tasks = new List&lt;Task&gt;();&#xA;        &#xA;        &#xA;          &#xA;             foreach(var node in cluster.Nodes)&#xA;        &#xA;        &#xA;          &#xA;             {&#xA;        &#xA;        &#xA;          &#xA;                 tasks.Add(req.Execute(node, cts.Token));&#xA;        &#xA;        &#xA;          &#xA;             }&#xA;        &#xA;        &#xA;          &#xA;             var first = await Task.WhenAny(tasks);&#xA;        &#xA;        &#xA;          &#xA;             var idx = tasks.IndexOf(first);&#xA;        &#xA;        &#xA;          &#xA;             return cluster.Nodes[idx];&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          FastestNode.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;&#xA;&#xA;The idea is that we send the request to all the nodes, and wait for the first one to arrive. Since this is the same request, all servers will do the same amount of work, and we&#x2019;ll find the fastest node from our perspective.&#xA;Did you notice the cancellation token in there? When we return from this function, we cancel the existing requests. Here is what this looks like from the monitoring perspective:&#xA;&#xA;This looks exactly like every few minutes, we have a couple of failures (and failover) in the system and was quite confusing until we figured out exactly what was going on.</p>
+        <a href="https://www.meziantou.net/roslyn-analyzer-to-check-the-types-of-structured-log-messages.htm" target="_blank"><h1 class="title mb-6">Analyzer to validate the parameters of structured log messages</h1></a>
+        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 24, 2023
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Microsoft.Extensions.Logging allows providers to implement semantic or structured logging. This means that the logging system can store the parameters of the log message as fields instead of just storing the formatted message. This enables logging providers to index the log parameters and perform a</p>
+        <a href="https://ayende.com/blog/199746-A/podcast-hansleminutes-all-the-performance-with-ravendbs-oren-eini" target="_blank"><h1 class="title mb-6">Podcast</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 21, 2023
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I had a great time talking with Scott Hanselman about how we achieve great performance for RavenDB with .NET.You can listen to the podcast here, as usual, I would love your feedback.In this episode, we talk to Oren Eini from RavenDB. RavenDB is a NoSQL document database that offers high performance, scalability, and security. Oren shares his insights on why performance is not just a feature, but a service that developers and customers expect and demand. He also explains how RavenDB achieves fast and reliable data access, how it handles complex queries and distributed transactions, and how it leverages the cloud to optimize resource utilization and cost efficiency!</p>
+        <a href="https://andrewlock.net/exploring-the-dotnet-8-preview-exploring-the-new-minimal-api-source-generator/" target="_blank"><h1 class="title mb-6">Exploring the new minimal API source generator</h1></a>
+        <p class="mb-2">by Andrew Lock</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 18, 2023
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Exploring the .NET 8 preview - Part 4</p>
         <div class="button flex justify-between">
             <a href="36.html"><span class="back arrow"></span></a>
 

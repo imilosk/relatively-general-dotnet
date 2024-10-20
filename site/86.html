@@ -111,54 +111,6 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
-        <a href="https://ayende.com/blog/194721-B/production-postmortem-the-guinness-record-for-page-faults-high-cpu" target="_blank"><h1 class="title mb-6">Production postmortem</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 17, 2021
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We got a pretty nasty bug at a customer site a few months ago. Every now and then, the server running RavenDB will go into a high CPU mode, use 100% CPU and stay there for extended period of time. After a while, it will just return back to normal. Looking at the details, there was nothing really that should cause this scenario. The amount of load of the system didn&#x2019;t justify this load, we are talking about a maximum load of under 500 requests / second. RavenDB can handle that much on a Raspberry PI without straining itself, after all.The problem was that we couldn&#x2019;t figure out what was going on&#x2026; none of the usual metrics were relevant. Typically, when we see high CPU utilization, the fault is either our code or the GC is working hard. In this case, however, while the RavenDB process was responsible for the CPU usage, there was no indication that it was any of the usual suspects. Here is what the spike looked like:The customer has increased the size of the machine several time, trying to accommodate the load, but the situation was not getting better. In fact, the situation appeared to be getting worse. This is on a server running Windows 2016, and all the nodes in the cluster would experience this behavior, effectively taking the system down. The did not do that on an synchronized schedule, but one would go into a high CPU load, and the clients would fail to the other nodes, which will usually (but not always) trigger the situation. After a short while, it would get back down to normal rates, but that was obviously not a good situation.After a while, we found something that was absolutely crazy. Looking at the Task Manager, we added all the possible columns and looked at them. Take a look at the following screen shot:What you see here is the Page Fault Delta, basically, how many page faults happened in the system in the past second for this process. A high number on this column is when you see hundreds of page faults. Thousands of page faults usually means that you are swapping badly. Hundreds of thousands? I have never seen such a scenario and I couldn&#x2019;t imagine what that actually is. What is crazier is that this number should be physically impossible. At a glance, we are looking at a lot of reads from the disk, but looking at the disk metrics, we could see that we had very little activity there. That is when we discovered that there is another important metric, Hard Page Faults / sec. That metric, on the other hand, typically ranged in the single digits or very low double digits, nothing close to what we were seeing. So what was going on here?In addition to hard page faults (reading the data from disk), there is also the concept of soft page faults. Those page faults can happen if the OS can find the data it needs in RAM (the page cache, for example). But if it is in RAM, why do we even have a page fault in the first place? The answer is that while the memory may be in RAM, it may not have mapped to the process in question.Consider the following image, we have two processed that mapped the same file to memory. On both processes, the first page is mapped to the same physical page. But the 3rd page on the second process (5678) is not mapped. What do you think will happen if the process will access this page?At this point, the CPU will trigger a page fault, which the OS needs to handle. How is it going to do that? It can fetch the data from disk, but it doesn&#x2019;t actually need to do so. What it needs to do is just update the page mapping to point to the already loaded page in memory. That is what is called a soft page fault (with hard page fault requiring us to go to disk). Note that the CPU utilization above shows that the vast majority of the time is actually spent on system time, not user time. That means that the kernel is somehow doing a lot of work, but what is going on? The issue with page fault delta was the key to understanding what exactly is going on here. When we looked deeper using ETW, we were able to capture the following trace:What you can see in the image is that the vast majority of the time is spent in handling the page fault on the kernel side, as expected given the information that we have so far. However, the reason for this issue is that we are contending on an exclusive lock? What lock is that?We worked with Microsoft to figure out what exactly is going on and we found that in order to modify the process mapping table, Windows needs to take a lock. That make sense, since you need to avoid concurrent modification to the page table. However, on Windows 2016, that is a process wide lock. Consider the impact of that. If you have a scenario where a lot of threads want to access pages that aren&#x2019;t mapped to the process, what will happen?On each thread, we&#x2019;ll have a page fault and handle that. If the page fault is a hard page fault, we will issue a read and put the thread to sleep until this happen. But what if this is a soft page fault? Then we just need to take the process lock, update the mapping table and return. But what if I have a high degree of concurrency? Like 64 concurrent cores that all contend on the same exact lock? You are going to end up with the exact situation above. There is going to be a hotly contested lock and you&#x2019;ll spend all your time at the kernel level.The question now was, why did this happen? The design of RavenDB relies heavily on memory mapped I/O and it is something that we have been using for over a decade. What can cause us to have so many soft page faults? The answer came from looking even more deeply into the ETW traces we took. Take a look at the following stack:When we call FlushFileBuffers, as we need to do to ensure that the data is consistent on disk, there is a lot that is actually going on. However, one of the key aspects that seems to be happening is that Windows will remove pages that were written by FlushFileBuffers from the working set of the process. That will lead to page faults (soft ones). We confirmed with Microsoft that this is the expected behavior, calling FlushFileBuffers (fsync) will trim the modified pages from the process mapping table. This is done to improve coherency between the memory mapped pages and the page cache, I believe.To reproduce this scenario, you&#x2019;ll need to do something similar to:Map a large number of pages (in this case, hundreds of GB)Modify the data in those pages (in our case, write documents, indexes, etc)Call FlushFileBuffers on the dataFrom many threads, access the recently flushed data (each thread ideally accessing a different page)On Windows 2016, you&#x2019;ll hit a spin lock contention issue and spend most of your time contending inside the kernel. The recommendation from Microsoft has been to move to Windows 2019, where the memory lock granularity has been increased, so they won&#x2019;t all contend on the same lock. Indeed, testing on Windows 2019 we weren&#x2019;t able to reproduce the problem.The really strange thing here is that we have using the exact same code and approach in RavenDB for many years, and only recently did we see a shift with most of our customers running on Linux. That particular behavior is how we are used to be running, and I would expect it to be triggered often.The annoying thing about this is that this is actually the case of too much of a good thing. Usually RavenDB will scale linearly with the number of cores for reads, the customer in question moved from RavenDB 3.5 to RavenDB 5.2, and they used the same size machine in both cases. RavenDB 5.2 is far more efficient, however. It was able to utilize the cores a lot better and trigger this behavior on a consistent basis. Using RavenDB 3.5, on the other hand, a lot of the CPU time was spent on doing other things, so we didn&#x2019;t trigger this issue. Indeed, a workaround to improve performance was to reduce the number of cores on the system. That reduced the contention and made the whole system more stable. The actual solution, however, was to run on Windows 2019, but that was a hard problem to solve. We tested pretty much any scenario that we could think to see what can help us here. And yes, we tested this on&#xA0; Linux, and didn&#x2019;t see any indication of a similar problem.</p>
-        <a href="https://ardalis.com/dependency-injection-book-review/" target="_blank"><h1 class="title mb-6">Dependency Injection Book Reviewed</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 16, 2021
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I like to use an index card as a bookmark when I&#x27;m reading non-fiction books, so that I can come back to interesting topics later or review&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/should-controllers-reference-repositories-services/" target="_blank"><h1 class="title mb-6">Should Controllers Reference Repositories or Services</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 14, 2021
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last updated: 13 October 2023 A common question students ask when learning about Clean Architecture, SOLID, and/or Domain-Driven Design (DDD&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://andrewlock.net/exploring-dotnet-6-part-1-looking-inside-configurationmanager-in-dotnet-6/" target="_blank"><h1 class="title mb-6">Looking inside ConfigurationManager in .NET 6</h1></a>
-        <p class="mb-2">by Andrew Lock</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 14, 2021
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Exploring .NET 6 - Part 1</p>
         <a href="https://ayende.com/blog/194689-B/the-latency-of-making-a-coffee-cup" target="_blank"><h1 class="title mb-6">The latency of making a coffee cup</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -231,6 +183,54 @@
             posted on: September 07, 2021
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe a problem where upgrading my Blazor app to .NET 6 broke my source generators that relied on Blazor components.&#x2026;</p>
+        <a href="https://www.meziantou.net/how-not-to-read-a-string-from-an-utf-8-stream.htm" target="_blank"><h1 class="title mb-6">How not to read a string from an UTF-8 stream</h1></a>
+        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: September 06, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is part of the series &#x27;Strings in .NET&#x27;. Be sure to check out the rest of the blog posts of the series!String comparisons are harder than it seemsHow to correctly count the number of characters of a stringCorrectly converting a character to lower/upper caseHow not to read a string from an</p>
+        <a href="https://benfoster.io/blog/minimal-apis-custom-model-binding-aspnet-6/" target="_blank"><h1 class="title mb-6">Custom Model Binding in ASP.NET 6.0 Minimal APIs</h1></a>
+        <p class="mb-2">by Ben Foster</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: September 02, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post covers some of the extensibility points offered by ASP.NET 6.0 Minimal APIs to customize model binding</p>
+        <a href="https://enterprisecraftsmanship.com/posts/database-always-valid-domain-model/" target="_blank"><h1 class="title mb-6">Database and Always-Valid Domain Model</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: August 31, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today, we&#x2019;ll talk about an important question: how does the application database fit into the concept of Always-Valid Domain Model?&#xA;&#xA;&#xA;In other words, is the database part of the always-valid boundary or should you consider it an external system and validate all data coming from it?</p>
+        <a href="https://andrewlock.net/downloading-artifacts-from-azure-devops-using-dotnet/" target="_blank"><h1 class="title mb-6">Downloading artifacts from Azure DevOps using .NET</h1></a>
+        <p class="mb-2">by Andrew Lock</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: August 31, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I show how to use the Azure DevOps REST API to view the results of builds from Pipelines and how to download the artifacts&#x2026;</p>
         <div class="button flex justify-between">
             <a href="85.html"><span class="back arrow"></span></a>
 

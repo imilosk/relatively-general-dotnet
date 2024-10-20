@@ -86,8 +86,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Close modal if clicked outside the modal frame
     document.addEventListener('click', function (event) {
-        if (!dialog.contains(event.target) && dialog.open) {
-            closeDialog(dialog);
+        const dialogDimensions = dialog.getBoundingClientRect();
+
+        if (
+            event.clientX < dialogDimensions.left ||
+            event.clientX > dialogDimensions.right ||
+            event.clientY < dialogDimensions.top ||
+            event.clientY > dialogDimensions.bottom
+        ) {
+            dialog.close();
         }
     });
 

@@ -111,54 +111,6 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
-        <a href="https://ardalis.com/devlink-2010-call-for-speakers/" target="_blank"><h1 class="title mb-6">DEVLINK 2010 Call For Speakers</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 20, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The call for speakers for DEVLINK 2010 is now open. They are opening the call earlier this year to allow everyone ample time to consider the&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/4332/effectus-fatten-your-infrastructure" target="_blank"><h1 class="title mb-6">Effectus</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 20, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Continuing in my exploration of the Effectus code base, which originated from my Building a Desktop To-Do Application with NHibernate article on MSDN Magazine, I wanted to talk today about how to build an application infrastructure.  First, to be clear, I am not talking about infrastructure pieces such as caching, data access, etc. Those are generic concerns and you should be able to just get them from an off the shelve library. When I am talking about an application infrastructure, I am talking about the infrastructure code that you are going to need to write for a particular application. You are always going to have to do that, even if it is something as simple as just wiring the container together, or registering session handling, etc.  From my point of view, the point of the application infrastructure is to make writing the actual application features as simple as possible. Ideally, you want to make the infrastructure pieces handle everything that isn&#x2019;t purely related to the feature you are implementing. The reason that an application infrastructure can do this while a generic infrastructure cannot is that an application infrastructure can make a lot of assumptions about the way the application is built.  Let us take the Main screen feature in Effectus, shall we, it will let us look at how this is implemented:     public Observable&lt;int&gt; CurrentPage { get; set; }&#xA;&#xA;public Fact CanMovePrev&#xA;{&#xA;    get { return new Fact(CurrentPage, () =&gt; CurrentPage &gt; 0); }&#xA;}&#xA;&#xA;public Fact CanMoveNext&#xA;{&#xA;    get { return new Fact(CurrentPage, () =&gt; CurrentPage &#x2B; 1 &lt; NumberOfPages); }&#xA;}&#xA;&#xA;public void OnCreateNew()&#xA;{&#xA;    Presenters.Show(&quot;CreateNew&quot;);&#xA;}&#xA;&#xA;public void OnActionsChoosen(ToDoAction action)&#xA;{&#xA;    Presenters.Show(&quot;Edit&quot;, action.Id);&#xA;}&#xA;&#xA;public void OnLoaded()&#xA;{&#xA;    LoadPage(0);&#xA;}&#xA;&#xA;public void OnMoveNext()&#xA;{&#xA;    LoadPage(CurrentPage &#x2B; 1);&#xA;}&#xA;&#xA;public void OnMovePrev()&#xA;{&#xA;    LoadPage(CurrentPage - 1);&#xA;}&#xA;  &#xA;&#xA;Looking the code, we can see that there are actually a lot of infrastructure playing a part here.&#xA;&#xA;&#xA;  Automatic binding of On[Button Name]() methods to the button command.&#xA;&#xA;  &#xA;    Within this, enabling / disabling automatically using Can[Button Name] properties&#xA;  &#xA;&#xA;  Automatic binding of On[List name]Choosen(Item) to the selected item changed behavior on the list.&#xA;&#xA;  Automatic updates of property states using Fact.&#xA;&#xA;  Automatic updates of property values, using Observable.&#xA;&#xA;&#xA;There isn&#x2019;t much to say about the automatic binding between UI actions and presenter methods, except that I think it is clear how this behavior reduce the level of infrastructure level code that you would have to write, test and maintain. But both Fact and Observable deserve a bit more explanation.&#xA;&#xA;In the LoadPage() method, not shown here, we are updating the CurrentPage property, this will trigger invalidation of the all the facts bound to the value (CanMoveNext, CanMovePrev), which will force their re-evaluation. Since the infrastructure knows how to wire this up to the appropriate commands on the UI, this means that this will enable/disable the given controls automatically. What is more, look at the code. It is clear, concise and pretty easy to reason about and use.&#xA;&#xA;I&#x2019;ll leave the actual exploration of the implementation to you, it is fairly simple, but the idea is important. The Effectus application actually have more infrastructure code than it have code to implement its features. But that is a very small application. Just to give you an idea, the # of lines of code devoted to infrastructure in Effectus is about 600 LOC! In most applications, you probably wouldn&#x2019;t even notice the amount of code that the infrastructure takes, but the effects are quite clear.</p>
-        <a href="https://ardalis.com/view-binary-encoded-wcf-messages/" target="_blank"><h1 class="title mb-6">View Binary Encoded WCF Messages</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 19, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;re doing any work with WCF (and perhaps Silverlight, for example, but any client will do) and you&#x2019;d like to maximize the performance&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/4331/effectus-building-ui-based-on-conventions" target="_blank"><h1 class="title mb-6">Effectus</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 19, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I waited for a while after my article was posted, to see if anyone caught on to some of the things that I did in the sample code that weren&#x2019;t related to NHibernate usage. It seems that no one caught on to that, so I&#x2019;ll try pointing them out explicitly.  The basic format of a feature in Effectus is this:     Each feature have a Presenter (business logic for the feature), a View Model, which is directly bound to the View and is the main way that Presenter has to communicate with the View. The main responsibility of the Model is to be bound to the UI, and allow the presenter to update it, but it is not quite enough.  The UI also need to raise events and handle user input. A common example is handling button clicks. You can&#x2019;t really map them into Model behavior, at least not easily and in a way that make sense to the developers. Instead, I defined a set of conventions. As you can see in the picture, based on the name of the element, we match is with the appropriate execute method and the way to decide if the command can execute. Under the cover, we generate the appropriate ICommand instance, bound to the Presenter behavior.     If you look at the code, you can see that the conventions extend even to handling the selected item changed in a list box, including passing the newly selected instance back to the presenter. Those conventions are project specific, based on what the project need, and they result in a code base that is very easy to read and follow. Moreover, they result in a codebase that is relatively free from infrastructure concerns.  I am going to have a few more posts about Effectus, can you figure out what else I put in that code base?</p>
         <a href="https://ardalis.com/where-is-the-fix-button-in-windows-photo-viewer-in-windows-7/" target="_blank"><h1 class="title mb-6">Where is the Fix button in Windows Photo Viewer in Windows 7?</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
@@ -231,6 +183,54 @@
             posted on: December 15, 2009
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My book is on Manning&#x2019;s Deal of the Day. DSLs in Boo: Domain Specific Languages in .NET &#x2013; get the ebook for $10&#xA0; by using this link.  The journey for the book is done, so it is the full deal and the final version that you&#x2019;ll be getting.</p>
+        <a href="https://ayende.com/blog/4326/uberprof-performance-challenges" target="_blank"><h1 class="title mb-6">UberProf performance challenges</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 14, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that the profiler is supposed to do is to handle large amount of data, so I was pretty bummed to hear that users are running into issues when they try to use the profiler in high load scenarios, such as load tests.  Luckily, one of the things that the profiler can do is output to a file, which let me simulate what is going on on the customer site very easily.  The first performance problem is that the profiler isn&#x2019;t processing things fast enough:     The second is that there are some things that just totally breaks my expectations     There are solutions for those problems, and I guess that I know what I&#x2019;ll be doing in the near future :-)</p>
+        <a href="https://ayende.com/blog/4325/i-know-i-broke-the-build-but-that-is-no-reason-to-be-rude" target="_blank"><h1 class="title mb-6">I know I broke the build, but that is no reason to be rude</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 14, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Sometimes I think that Git is too smart.</p>
+        <a href="https://ayende.com/blog/4324/uberprof-new-feature-programmatic-integration" target="_blank"><h1 class="title mb-6">&#xDC;berProf new feature: Programmatic Integration</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 13, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well&#x2026; I am still working done the list of stuff people request for the profiler (NH Prof, HProf, L2S Prof &amp; EF Prof) , and one of the things that popped into the head of the list was wanting to have programmatic access to the profiler output. We aren&#x2019;t talking about just the XML reports that are available, but to be able to get the data in a way that is easy to work with.  Well, here it is:     There is a new DLL in the profiler distribution, HibernatingRhinos.Profiler.Integration, where you can find the CaptureProfilerOutput class. That class will let you start the profiler, capture whatever happens in the middle, and finally stop and return you an instance of a report, containing all the data about what actually happened.  This is perfect if you want to use the profiler as part of your integration tests library. As an aside, you can also use the new DLL to programmatically parse (by using XML Serialization) the XML reports that you generate as part of your build, so you get very easy way to build rules around that report.</p>
+        <a href="https://ayende.com/blog/4323/entity-framework-profiler-is-now-in-public-beta" target="_blank"><h1 class="title mb-6">Entity Framework Profiler is now in public beta</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 12, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After some time in private beta, the Entity Framework Profiler has now to the public beta stage.      For the beta period, I am offering a 30% discount for EF Prof.   EF Prof brings the an unparallel level of insight into Entity Framework internals. You can see exactly what sort of actions Entity Framework takes against you database, view the results of queries, correlate queries to the matching lines of code that spawn them and get on the spot guidance when you are violating Entity Framework best practices.  Here is the screen shot, and you can also take a look at the live demo as well.</p>
         <div class="button flex justify-between">
             <a href="542.html"><span class="back arrow"></span></a>
 
