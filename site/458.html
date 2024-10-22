@@ -111,6 +111,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/136193/the-required-infrastructure-frees-you-from-infrastructure-decisions" target="_blank"><h1 class="title mb-6">The required infrastructure frees you from infrastructure decisions</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 16, 2011
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that I try to do whenever I design a system is to have just enough infrastructure in place to make sure that I don&#x2019;t have to make any infrastructure decisions. What does this means? It means that the code that actually does the interesting things, the code that actually provide a business value, isn&#x2019;t really aware of the context that it is running on. It can make assumptions about the state of the world in which it runs.  For example, let us take this controller, it inherits from RavenController, and it assumes that when it runs, it will have a documentSession instance primed &amp; ready for it: public ActionResult Validate(Guid key)&#xA;{&#xA;  var license = documentSession.Query&lt;License&gt;()&#xA;    .Customize(x=&gt;x.Include&lt;License&gt;(y=&gt;y.OrderId))&#xA;    .Where(x=&gt;x.Key == key)&#xA;    .FirstOrDefault();&#xA;&#xA;  if (license == null)&#xA;    return HttpNotFound();&#xA;&#xA;  var orderMessage = documentSession.Load&lt;OrderMessage&gt;(license.OrderId);&#xA;&#xA;  switch (orderMessage.OrderType)&#xA;  {&#xA;    case &quot;Perpetual&quot;:&#xA;      return Json(new {License = &quot;Valid&quot;});&#xA;  }&#xA;&#xA;  return HttpNotFound();&#xA;}&#xA;&#xA;&#xA;What is important about that is that it isn&#x2019;t actively doing something, it just assumes that it is there. &#xA;Why is that important? It is important because instead of going ahead and creating the session, we assume it is there, we are unaware of how it got there, who did it, etc. If we wanted to execute this code in a unit test, all we would need to do is to plug a session in, and then execute the code.&#xA;But that is just part of this. Let us look at a more complex scenario, the processing of an order:&#xA;public class ProcessOrderMessageTask : BackgroundTask&#xA;{&#xA;  public string OrderId { get; set; }&#xA;&#xA;  public override void Execute()&#xA;  {&#xA;    var orderMessage = documentSession.Load&lt;OrderMessage&gt;(OrderId);&#xA;&#xA;    var license = new License&#xA;    {&#xA;      Key = Guid.NewGuid(),&#xA;      OrderId = orderMessage.Id&#xA;    };&#xA;    documentSession.Store(license);&#xA;&#xA;    TaskExecuter.ExecuteLater(new SendEmailTask&#xA;    {&#xA;      From = &quot;orders@tekpub.com&quot;,&#xA;      To = orderMessage.Email,&#xA;      Subject = &quot;Congrats on your new tekpub thingie&quot;,&#xA;      Template = &quot;NewOrder&quot;,&#xA;      ViewContext = new&#xA;      {&#xA;        orderMessage.OrderId,&#xA;        orderMessage.Name,&#xA;        orderMessage.Amount,&#xA;        LiceseKey = license.Key&#xA;      }&#xA;    });&#xA;&#xA;    orderMessage.Handled = true;&#xA;  }&#xA;&#xA;&#xA;  public override string ToString()&#xA;  {&#xA;    return string.Format(&quot;OrderId: {0}&quot;, OrderId);&#xA;  }&#xA;}&#xA;&#xA;&#xA;There are several things that are happening here:&#xA;&#xA;Again, we are assuming that when we run, we are actually going to run with the documentSession set to a valid value.&#xA;Note that we have the notion of TaskExecuter.ExecuteLater.&#xA;That is actually quite an important aspect of infrastructure ignorance.&#xA;ExecuteLater is just that, a promise to execute something later, it doesn&#x2019;t specify how or when. In fact, it takes this a bit farther than that. Only if the current operation will complete successfully will this task run. So if we failed to commit the transaction, the SendemailTask won&#x2019;t get executed. Those sort of details can only happen when we let go of trying to control everything and let the infrastructure support us.&#xA;During the Full Throttle episode in which this code was written, we moved the task execution from a background thread to a different process, and nothing in the code had to change, because the only thing that we had to do is to setup the environment that the code expected.&#xA;I really like this sort of behavior, because it frees the code from all the nasty infrastructure concerns, at the same time as it gives you an incredibly powerful platform to work on.&#xA;And just for fun, this result in a system that you can play with with great ease, you don&#x2019;t have to worry about your choice. You can modify them at any time, because you don&#x2019;t really care how those things are done.</p>
+        <a href="https://ayende.com/blog/135169/frictionless-development-web-config-and-connection-strings" target="_blank"><h1 class="title mb-6">Frictionless development: Web.config and connection strings</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 15, 2011
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is something that I actually run into a lot at customer sites. They have a lot of friction during development between different connection strings that developers use during development. For example, we may have one developer using: &lt;add name=&quot;RavenDB&quot; connectionString=&quot;Url=http://localhost:8080&quot; /&gt;&#xA;&#xA;&#xA;While another is using:&#xA;&lt;add name=&quot;RavenDB&quot; connectionString=&quot;Url=http://localhost:8191;Database=TheApp&quot; /&gt;&#xA;&#xA;&#xA;This usually causes a hell of a lot of trouble in most teams (or maybe you have developers that use SQL Express, and some who installed SQL Development, etc). &#xA;That is friction, and you want to deal with that as soon as possible. The easiest thing to do is actually:&#xA;&lt;add name=&quot;Ayende-PC&quot; connectionString=&quot;Url=http://localhost:8080&quot; /&gt;&#xA;&lt;add name=&quot;Ayende-Laptop&quot; connectionString=&quot;Url=http://localhost:8191;Database=TheApp&quot; /&gt;&#xA;&#xA;&#xA;This works, because the connection string name is now the machine name (System.Environment.MachineName). That is a great first step, because it means that you can get things done without fighting over the connection string in the web.config.&#xA;Another alternative is to have a default connection string, and allow to &#x201C;override&#x201D; it with the specification of a connection string specific for the machine.&#xA;It is a small thing, but it actually helps quite a lot. You can extend this to other settings as well. For apps that have a lot of settings, I usually take them out of the Web.config into a Default.config file, and the configuration reader is set to look for [MachineName].config first, and only then at the Default.config file.</p>
         <a href="https://ayende.com/blog/134145/sharding-vs-having-multiple-databases" target="_blank"><h1 class="title mb-6">Sharding vs. Having multiple databases</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -207,30 +231,6 @@
             posted on: November 05, 2011
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How to list the software you have installed on your Windows PC.</p>
-        <a href="https://www.meziantou.net/validation-with-postsharp.htm" target="_blank"><h1 class="title mb-6">Validation with PostSharp</h1></a>
-        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: November 04, 2011
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">PostSharp allows you to do AOP (Aspect Oriented Programming). To summarize the interest of PostSharp nothing beats a small quote:Do you ever find yourself creating a mess by duplicating boilerplate code because of tracing, exception handling, data binding, threading, or transaction management? You&#x27;</p>
-        <a href="https://benfoster.io/blog/switching-between-the-cloud-and-on-premise-with-structuremap/" target="_blank"><h1 class="title mb-6">Switching between the cloud and on-premise with StructureMap</h1></a>
-        <p class="mb-2">by Ben Foster</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: November 02, 2011
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I look at how we can make use of StructureMap profiles to easily switch between Azure and on-premise environments.</p>
         <div class="button flex justify-between">
             <a href="457.html"><span class="back arrow"></span></a>
 

@@ -111,6 +111,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/166497/the-nice-thing-about-working-in-a-large-team" target="_blank"><h1 class="title mb-6">The nice thing about working in a large team&#x2026;</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 21, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There are a lot of stuff that are hard to do when you are working on a large team. But the really nice thing is the velocity in which you can move. I just started the morning with the following commands:  And I have another PR pending for a different branch that I&#x2019;m going to have to look at. Overall, I think that this is a pretty cool thing to have. We can push forward in many direction at once, and it can be pretty awesome to look at all the good thins that are coming our way.</p>
+        <a href="https://ayende.com/blog/166465/optimizing-voron-and-the-cost-of-multi-trees" target="_blank"><h1 class="title mb-6">Optimizing Voron and the cost of Multi Trees</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 18, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the nice features that Voron got from LMDB is the notion of multi trees. If I recall correctly, LMDB calls them duplicate items, or something like that. Basically, it is the ability to store multiple values for a single key.&#xA;&#xA;&#x9;Update: The behavior described in this post has been in LMDB for the over 3 years. It is just something that&#xA0;Voron didn&#x27;t have. Please note that this post discuss the Voron&#x27;s limitation and its solution, not LMDB, which has had the solution for a long time.&#xA;&#xA;&#x9;Those items are actually stored as a nested tree, which effectively gives us a great way to handle duplicates. From an API standpoint, this looks like this:&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;// store&#xA;tree.MultiAdd(tx, &quot;Eini&quot;, &quot;users/1&quot;);&#xA;tree.MultiAdd(tx, &quot;Eini&quot;, &quot;users/3&quot;);&#xA;tree.MultiAdd(tx, &quot;Eini&quot;, &quot;users/5&quot;);&#xA;&#x9;&#x9;&#xA;&#xA;&#xA;//read &#xA;using(var it = tree.MultiRead(tx, &quot;Eini&quot;))&#xA;{&#xA;    if(it.Seek(Slice.BeforeAllKeys) == false)&#xA;        yield break;&#xA;    do&#xA;    {&#xA;        yield return it.CurrentKey; // &quot;users/1&quot;, &quot;users/3&quot;, &quot;users/5&quot;&#xA;    }while(it.MoveNext());&#xA;}&#xA;&#x9;&#xA;&#xA;&#xA;&#x9;Internally, we handle this in the following fashion:&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;If a multi add operation is the very first such operation, we&#x2019;ll add it as a simple key/value pair in the tree.&#xA;&#x9;&#xA;&#x9;&#x9;If a multi add operation is the 2nd such operation, we&#x2019;ll create a new tree, and add both operations to the new tree. The original tree will have the key/nested tree reference stored.&#xA;&#xA;&#xA;&#x9;That lead to a very easy to use API, which is quite useful in many cases. However, it also have space usage implication. In particular, a tree means that we have to allocate at least one page to it. And that means that we have to allocate 4KB to hold any multi tree with more than a single value. Since there are actually a lot of scenarios where we would want to store a small number of small values, that can often lead to a lot of waste on our part. We use 4KB to store data that we could have stored in just 64 bytes, for example. That means that when we want to actually store things that might be duplicated, we actually need to consider the taken space consideration as well.&#xA;&#xA;&#x9;I think that this is a pretty bad idea, because it leads us to do things with composite keys under some scenarios. That is something that Voron should be able to just handle for me.&#xA0; So we changed that, in fact, what we did was changed the way we approach multi trees in general. Now, for every multi value, we can store up to 1KB of items in the same page as the key, before we devolve into a full blown multi tree.&#xA;&#xA;&#x9;The idea is that we can use the same Page mechanism we use elsewhere, and just have a nested page inside the parent page. As long as the nested page is small enough, we can just store it embedded. That result in some nice space saving. Since usually we have items in the following counts: zero, one, few, lots.&#xA;&#xA;&#x9;We need this to help with Corax, and in general, that would reduce the amount of space we need to use in many cases.</p>
         <a href="https://ayende.com/blog/166369/the-corax-experiment-api" target="_blank"><h1 class="title mb-6">The Corax Experiment: API</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -207,30 +231,6 @@
             posted on: April 09, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Now that the conference is over ,and I am merely doing 3 back to back RavenDB courses in 3 cities and 2 continents, I can sit back and look at that. I was, in a word, a blast. We had eight speakers giving 14 talks, about topics that moved from date and time handling in RavenDB to operational concerns to architectural how to. But, to be honest, I think that I found the attendees to be the main attraction. It was really good to finally meet so many of the people we have been talking with over the past few years. And what people are building with RavenDB is flat out amazing, and just a little bit scary. It is a funny thing when I see people take our tool and put it to uses that we have never even imagined. Another great part was the hackaton. We had, in the space of a few hours, produced a major new feature for RavenDB (distributed counters), with everything wired up: Storage, Wire Protocol and even the UI. We still need to complete the replication bits, but those are coming. We have recorded the sessions, and we hope to have the edited videos soon. I wanted to take the time and thank the speakers and the attendees for such a great conference . We&#x2019;ll be seeing you again soon&#x2026; .</p>
-        <a href="https://ayende.com/blog/166402/my-ravendb-conference-presentations" target="_blank"><h1 class="title mb-6">My RavenDB Conference presentations</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 08, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB 3.0 Keynote  from Oren Eini        How Voron works: Insight into the new RavenDB storage engine  from Oren Eini        Tailored database solutions: Building a 100 billion records db in 20 minutes  from Oren Eini</p>
-        <a href="https://ayende.com/blog/166401/ravenconf-day-1" target="_blank"><h1 class="title mb-6">RavenConf, day 1</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 08, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I started the day at 5:30 AM, because we had to go to the venue and get everything ready. This is now 01:30 AM for the next day, and I am still stoked.  I took this picture at around 8 AM, when people started to queue up to go into the conference:  For that matter, you can see a few other photos from the conference here. I&#x2019;ll do a retrospect about the conference when I have time to breath. But for now, I can report that the RavenDB Hackaton was quite a success, we have a cool new feature mostly implemented. You can see it here: https://github.com/ayende/ravendb/tree/duco And yes, I&#x2019;ll talk about that in the future as well. But right now, I&#x2019;m going to have a db capable of managing a 100 billion records tomorrow, live on stage, so I probably need to get some sleep done&#x2026;</p>
         <div class="button flex justify-between">
             <a href="370.html"><span class="back arrow"></span></a>
 
