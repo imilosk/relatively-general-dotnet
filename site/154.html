@@ -111,6 +111,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/188642-A/searching-through-text-part-ii-exploring-posting-lists-persistence" target="_blank"><h1 class="title mb-6">Searching through text</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 16, 2019
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In full text search terminology, a posting list is just a list of document ids. These are used to store and find matches for particular terms in the index.I took the code from the previous post and asked it to give me the top 50 most frequent terms in the dataset and their posting lists. The biggest list had over 200,000 documents, and I intentionally use multiple threads to build things, so the actual list is going to be random from run to run (which adds a little more real-worldedness to the system*).*Yes, I invented that term. It make sense, so I&#x2019;m sticking with it.I took those posting lists and just dumped them to a file, in the simplest possible format. Here are the resulting files:There are a few things to note here. As you can see, the file name is the actual term in the index, the contents of the file is a sorted list of int64 of the document ids (as 8 bytes little endian values).I&#x2019;m using int64 here because Lucene uses int32 and thus has the ~2.1 billion document limit, which I want to avoid. It also make it more fun to work with the data, because of the extra challenge.&#xA0; The file sizes seems small, but the from file contains over 250,000 entries. When dealing with posting lists, size matter, a lot. So let&#x2019;s see what it would take to reduce the size here, shall we?Simply zipping the file gives us a massive space reduction, so there is a lot left on the table, which is great. Actually, I might have skipped a few steps:Posting lists are sorted, because it helps do things like union / intersect queries.Posting lists are typically only added to.Removal are handled separately, with a merge step to clean this up eventually.Because the value is sorted, the first thing I tried was to use a diff model with variable sized int. Here is the core code:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          public class DiffBinaryWriter : BinaryWriter&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              long prev;&#xA;        &#xA;        &#xA;          &#xA;              public DiffBinaryWriter(Stream s, long start) : base(s)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  prev = start;&#xA;        &#xA;        &#xA;          &#xA;                  WriteValue(prev);&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              public void Diff(long cur)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  var diff = cur - prev;&#xA;        &#xA;        &#xA;          &#xA;                  prev = cur;&#xA;        &#xA;        &#xA;          &#xA;                  if (diff &lt;= 0)&#xA;        &#xA;        &#xA;          &#xA;                      throw new ArgumentOutOfRangeException($&quot;{cur} is not greater than {prev}, values aren&#x27;t sorted&quot;);&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;                  WriteValue(diff);&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              private void WriteValue(long diff)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  if (diff &gt; int.MaxValue)&#xA;        &#xA;        &#xA;          &#xA;                  {&#xA;        &#xA;        &#xA;          &#xA;                      // probably rare&#xA;        &#xA;        &#xA;          &#xA;                      Write7BitEncodedInt(0); // indicate that we need to read a full long here&#xA;        &#xA;        &#xA;          &#xA;                      Write(diff);&#xA;        &#xA;        &#xA;          &#xA;                      return;&#xA;        &#xA;        &#xA;          &#xA;                  }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;                  Write7BitEncodedInt((int)diff);&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          diff.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;Nothing really that interesting, I have to admit, but it did cut the size of the file to 242KB, which is nice (and better than ZIP). Variable sized integers are used heavily by Lucene, so I&#x2019;m very familiar with them. But there are other alternatives.StreamVByte is a new one, with some impressive perf numbers, but only gets us to 282 KB (but it is possible / likely that my implementation of the code is bad).FastPFor compresses the (diffed) data down to 108KB. RoaringBitmap gives us a total of 64KB.There are other methods, but they tend to go to the esoteric and not something that I can very quickly test directly. It is important to note that there are several separate constraints here:Final size on diskComputational cost to generate that final formatComputation cost to go from the final format to the original valuesHow much (managed) memory is required during this processThat is enough for now, I believe. My next post will deal delve into the actual semantics that we need to implement to get a good behavior from the system. This is likely going to be quite interesting.</p>
+        <a href="https://ardalis.com/running-integration-tests-in-build-pipelines-with-a-real-database/" target="_blank"><h1 class="title mb-6">Running Integration Tests in Build Pipelines with a Real Database</h1></a>
+        <p class="mb-2">by Ardalis</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 16, 2019
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last updated: 13 October 2023 A pain point for some organizations is figuring out how to run tests that involve databases. These are not&#x2026;Keep Reading &#x2192;</p>
         <a href="https://www.stevejgordon.co.uk/health-checks-with-grpc-and-asp-net-core-3" target="_blank"><h1 class="title mb-6">Health Checks with gRPC and ASP.NET Core 3.0</h1></a>
         <p class="mb-2">by Steve Gordon</p>
         <p class="mb-6 flex gap-1.5">
@@ -207,30 +231,6 @@
             posted on: October 10, 2019
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is the webinar recording from last week.</p>
-        <a href="https://ardalis.com/configure-different-implementations-for-different-controllers-in-configureservices/" target="_blank"><h1 class="title mb-6">Configure Different Implementations for Different Controllers in ConfigureServices</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 09, 2019
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You may find yourself in a position where you need to have two (or more) different implementations of the same interface within your ASP.NET&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ardalis.com/dotnet-ef-does-not-exist/" target="_blank"><h1 class="title mb-6">dotnet-ef does not exist</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 09, 2019
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x27;re trying to run EF Core migrations using commands like  or  and you&#x27;re getting errors like the one shown in the screenshot above&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="153.html"><span class="back arrow"></span></a>
 

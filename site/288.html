@@ -111,6 +111,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://www.stevejgordon.co.uk/loading-pin-on-bing-maps-from-asp-net-core-mvc-data" target="_blank"><h1 class="title mb-6">Loading Pin on Bing Maps from ASP.NET Core MVC Data</h1></a>
+        <p class="mb-2">by Steve Gordon</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 17, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As I&#x2019;ve covered a few times previously in my blog I&#x2019;m really enjoying working on the allReady project which is run by the Humanitarian Toolbox non-profit organisation. One of the great things about this project from a personal perspective is the chance to learn and develop my skills, whilst also contributing to a good cause. [&#x2026;]</p>
+        <a href="https://ayende.com/blog/175779/ravendb-retrospective-the-governors" target="_blank"><h1 class="title mb-6">RavenDB Retrospective</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 17, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB&#x2019;s core philosophy is that It Just Works and that means that we try very hard to get things right. Conversely, that means that we are also trying to make it hard to do the wrong thing. Basically, we want to push you hard into the pit of success.  Part of that approach is what we call the governors. It is a set of features that will detect and abort known bad behavioral patterns.&#xA0; I have already talked about Unbounded Result Sets  and I recently run into this post, which shows how nasty a problem that can be, and how invisible. Another governor we have in place is the session&#x2019;s maximum request limit. A session is meant to be a scope, it has a very short duration and is typically used for a single request / processing a single message, etc. It is supposed to live as long as the business transaction. Because the session is scoped, we can reason that a single session that is making a lot of database operation is probably doing something pretty bad. For example, it might be calling the database in a loop. Those kind of issues can be truly insidious. Let us look at the following code (taken from here):    This kind of thing is a silent performance killer. No one is likely to see this is happening, and it will silently increase the number of database operations that your application make, leading to increased DB load, higher page load times and all sort of problems associated with it. In one particular case, I saw a single page load generate 17,000 queries to the database. The software in question grew over time, and people assumed that this was just it took to run the software. Their database server was a true monster (this was about a decade ago), with dedicated RAM disks, high CPU count and a truly ridiculous amount of memory. Just to explain, we are talking about something like this:  But a decade ago, and it had a quite a bit of space. Now, this kind of beasty can do 500K IOPS (I&#x2019;m drooling just thinking about it), but it is damn expensive. Just to put things in perspective, I spent several weeks at that company working on this particular problem, the cost of those weeks of work didn&#x2019;t even cover the cost of the drive on that machine.  And on that monster, we were seeing page load times in the tens of seconds, and extremely high system load. I was able to bring it down to about 70 queries per page load, and their database server has pretty much idled ever since (IIRC, they turn that machine into a VM host for all the rest of their software, actually). This is something that can bite.  To avoid that, we have the max numbers of requests in the session, which will abort excessive amount of database chatter. This have two important effects:  It follow the &#x201C;better let one bad request die rather than take down the entire application&#x201D;. It put a budget on the number of calls that you can make. Now, that budget is actually really interesting. Because we have it, we need to think about how we can reduce the number of database calls that we have to process the request. That led to a whole bunch of features around that. Lazy requests, includes and transformers to name just a few. That had a positive unintended consequence. RavenDB is fast,&#xA0; really fast, but it is also typically deployed as a network database, that means that each database call actually go over the network, and we all remember our fallacies, right?  In our profiling, we found that most often, the real cost in a RavenDB application was the back &amp; forth chatter with the database. Reducing the number of requests we make to the server has an immediate benefit. And RavenDB allows you to do that by pipelining requests with Lazy, predicting requests with Includes or running the whole thing on the server side with Transformers.  And, like all governors, you can control it, RavenDB allows you to decide what the limit should be (on that particular session or globally based on your actual needs and environment.</p>
         <a href="https://www.stevejgordon.co.uk/debugging-into-asp-net-core-source" target="_blank"><h1 class="title mb-6">Debugging into ASP.NET Core Source</h1></a>
         <p class="mb-2">by Steve Gordon</p>
         <p class="mb-6 flex gap-1.5">
@@ -207,30 +231,6 @@
             posted on: October 10, 2016
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My new course Building a Pragmatic Unit Test Suite&#xA0;for Pluralsight went live.&#xA; Building a Pragmatic Unit Test Suite Unit testing can be applied differently. Like many other things in programming, there are a lot of ways to mess up with it. It&#x2019;s important to differentiate unit testing techniques that help bring confidence in your code base correctness from techniques that can potentially have a devastating effect on your entire test suite.</p>
-        <a href="https://ayende.com/blog/175713/timing-the-time-it-takes-to-parse-time-part-i" target="_blank"><h1 class="title mb-6">Timing the time it takes to parse time</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 10, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a small part from a larger benchmark that we run:  &#xA0; The index in question is using a DateTime field, and as you can see, quite a lot of time is spent in translating that. 50% of our time, in fact. That is&#x2026; not so nice.  The question now is why we do it? Well, let us look at the code:   Here we can see several things, first, there is the small issue with us allocating the string to check if it is a date, but that isn&#x2019;t where the money is. That is located in the TryParseExact. This method is actually quite impressive. Given a pattern, it parses the pattern, then it parse the provided string. And if we weren&#x2019;t calling it hundreds of thousands of times, I&#x2019;m sure that it wouldn&#x2019;t be an issue.&#xA0; But we are, so we are left with writing our own routine to do this in a hard coded manner. I built the following benchmark to test this out:  As you can see, this is pretty much identical to our code, and should tell us how good we are. Here are the benchmark results:     Method  Platform  Jit  Toolchain  Runtime  Median  StdDev   ParseDateTime  X64  RyuJit  Host  Host  2,458.2915 ns  102.7071 ns   ParseDateTime  X86  Host  Clr  Clr  2,506.7353 ns  142.7946 ns   ParseDateTime  X86  LegacyJit  Host  Host  2,443.4806 ns  51.4903 ns In my next post, I&#x2019;ll show what I came up with that can beat this.</p>
-        <a href="https://www.meziantou.net/iis-express-ssl.htm" target="_blank"><h1 class="title mb-6">IIS Express &amp; SSL</h1></a>
-        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 09, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">IIS Express is a version of IIS that is optimized for developers. This version does not provide all the features of IIS, but it is often sufficient to develop a web application.IIS Express is used by default by Visual Studio to host sites during development. By default, the site uses the HTTP proto</p>
         <div class="button flex justify-between">
             <a href="287.html"><span class="back arrow"></span></a>
 

@@ -111,6 +111,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/178433/distributed-work-in-ravendb-4-0" target="_blank"><h1 class="title mb-6">Distributed work in RavenDB 4.0</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 02, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I talked about the new clustering mode in RavenDB 4.0 a few days ago. I realized shortly afterward that I didn&#x2019;t explain a crucial factor. RavenDB has several layers of distributed work.At the node level, all nodes are (always) part of a cluster. In some cases, it may be a cluster that is a single node, but in all cases, a node is part of a cluster. Cluster form a consensus between all the nodes (using Raft) and all cluster wide operations go through Raft.Cluster wide operations are things like creating a new database, or assigning a new node to the database and other things that are obviously cluster wide related. But a lot of other operations are also handled in this manner. Creating an index goes through Raft, for example. And so does high availability subscriptions and backup information. The idea is that the cluster holds the state of its databases, and all such state flow through Raft.A database can reside in multiple nodes, and we typically call that a database group (to distinguish from the cluster as a whole). Data written to the database does not go out over Raft. Instead, we use multi master distributed mesh to replication all data (documents, attachments, revisions, etc) between the different nodes in the database. Why is that? The logic that guides us is simple. Cluster wide operations happen a lot less often and require a lot more resiliency to operate properly. In particular, not doing consensus resulted in having to deal with potential conflicting changes, which was a PITA. On the other hand, common operations such as document writes tend to have a lot more stringent latency requirements, and what is more, we want to be able to accept writes even in the presence of failure. Consider a network split in a 3 nodes cluster, even though we cannot make modifications to the cluster state on the side with the single node, we are still able to accept and process write and read requests. When the split heals, we can merge all the changes between the nodes, potentially generating (and resolving) conflicts as needed. The basic idea is that for data that is stored in the database, we will always accept the write, because it it too important to let it just go poof. But for data about the database, we will ensure that we have a consensus for it, since almost all such operations are admin based and repeatable. Those two modes end up creating an interesting environment. At the admin level, they can work with the cluster and be sure that their changes are properly applied cluster wide. At the database level, each node will always accept writes to the database and distribute them across the cluster in a multi master fashion. A client can choose to accept a write to a single node or a to a particular number of nodes before considering a write successful, but even with network splits, we can still remain up and functioning. A database group has multiple nodes, and all of them are setup to replicate to one another in master/master setup as well as distribute whatever work is required of the database group (backups, ETL, etc). What about master/slave setups?We have the notion of adding an outgoing only connection to a database group, one of the nodes in the cluster will take ownership on that connection and replicate all data to it. That allow you to get master/slave, but we&#x2019;ll not failover to the other node, only to a node inside our own database group. Typical reasons for such a scenario is if you want to have a remote offsite node, or if you have the need to run complex / expensive operations on the system and you want to split that work away from the database group entirely.</p>
+        <a href="https://enterprisecraftsmanship.com/posts/code-review-fabric-class/" target="_blank"><h1 class="title mb-6">Code review: Fabric class</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 01, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is the second code review session where I showcase a real-world code example. If you want to learn more about this new format, check out this post. You can also request a review yourself. To do that, use the form on this page.&#xA; Code review: Fabric class The full source code of this one is rather large for a single blog post, so I decided to pick the most interesting portions of it - those I think could be improved.</p>
         <a href="https://ayende.com/blog/178402/artificial-documents-in-ravendb-4-0" target="_blank"><h1 class="title mb-6">Artificial documents in RavenDB 4.0</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -207,30 +231,6 @@
             posted on: May 30, 2017
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The ASP.NET Core 2.0 preview 1 metapackage, Microsoft.AspNetCore.All, includes every package released as part of ASP.NET Core. This post looks at why.&#x2026;</p>
-        <a href="https://ayende.com/blog/178369/a-thread-per-task-keep-the-headache-away" target="_blank"><h1 class="title mb-6">A thread per task keep the headache away</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 29, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of very conscious choices we made in RavenDB 4.0 is to use threads. Not just run code that is multi threaded, but actively use the notion of a dedicated thread per task.In fact, most of the work in RavenDB (beyond servicing requests) is done by a dedicated thread. Each index, for example, has its own thread, transactions are merged and pushed using (mostly) a single thread. Replication is using dedicated threads, and so does the cluster communication mechanism. That runs contrary to advice that I have been told many times, that threads are expensive resource and that we should not hold up a thread if we can use async operations to give it up as soon as possible. And to a certain extent, I still very much believe it. Certainly all our request processing is using this manner. But as we got faster and faster we observed some really hard issues with using thread pools, since you can&#x2019;t rely on them executing a particular request in a given time frame, and having a mix bag of operations in a thread pool is a mix for slowing the whole thing down.Dedicated threads give us a lot of control and simplicity, from the ability to control the priority of certain tasks to the ability to debug and blame them properly.For example, here is how a portion of the threads on a running RavenDB server look like in the debugger:And done of our standard endpoints can give you thread timing for all the various tasks we do, so if there is an expensive thing going on, you can tell, and you can act accordingly. All of this has also led to an architecture that is mostly about independent thread doing their job in isolation, which means that a lot of the backend code in RavenDB doesn&#x2019;t have to worry about threading concerns. And debugging it is as simple as stepping through it. That isn&#x2019;t true for request processing threads, which are heavily async, so they are all doing mostly reads. Even when you are actually sending a write to RavenDB, what is actually happening is that we have the request thread parse the request, then queue it up for the transaction merging thread to actually process it. That means that there is usually little (if any) contention on locks throughout the system.It is a far simpler model, and it has proven itself capable of making a very complex system understandable and maintainable for us.</p>
-        <a href="https://www.meziantou.net/asp-net-core-precompiling-razor-views.htm" target="_blank"><h1 class="title mb-6">ASP.NET Core - Precompiling razor views</h1></a>
-        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 29, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Improving the startup time of your website is important. There are many reasons for a website to take time to get ready: loading lots of dll, loading data, compiling views, etc. In this post, I&#x27;ll explain how to reduce the startup time by precompiling razor views.The view precompilation is a build</p>
         <div class="button flex justify-between">
             <a href="255.html"><span class="back arrow"></span></a>
 

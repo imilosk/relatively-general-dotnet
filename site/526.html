@@ -111,6 +111,30 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4477/optimizing-expensive-calls" target="_blank"><h1 class="title mb-6">Optimizing &#x201C;expensive&#x201D; calls</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 30, 2010
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Take a look at the following code:     It is obvious where we need to optimize, right?   Except&#x2026; each call here takes about 0.8 millisecond. Yes, we could probably optimize this further, but the question is, would it be worth it?  Given a sub millisecond performance, and given that trying to implement a different serialization format would be expensive operation, I think that there just isn&#x2019;t enough justification to do so.</p>
+        <a href="https://ayende.com/blog/4476/unbounded-concurrency" target="_blank"><h1 class="title mb-6">Unbounded concurrency</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 29, 2010
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday I talked about a problem that kept appearing, my application getting slower and slower and eventually dying. The code that I was testing it with was:     Parallel.ForEach(Directory.GetFiles(&quot;Docs&quot;,&quot;*.json&quot;), file =&gt;&#xA;{&#xA;    PostTo(&quot;http://localhost:9090/bulk_docs&quot;, file);&#xA;});&#xA;  &#xA;&#xA;The Docs directory contains about 90,000 files, and there is no concurrent connection limit. Average processing time for each request when running in a single threaded mode was 100 &#x2013; 200 ms. &#xA;&#xA;The problem was, at its root, an unbounded concurrency issue. Here is what happened.&#xA;&#xA;Handling a single request is pretty fast, but it is still going to block for about a 100 ms. The Parallel ForEach implementation is getting notified about the blocked thread, and in order to increase parallelism, it is going to spin another thread and give it the next task. That thread is going to block as well, and after a while, another thread will be created, etc.&#xA;&#xA;This code is big enough, and the response times are built just so to encourage the thread pool to create more and more threads. The server, at the same time, is having to deal with more and more work, causing request times to increase, which causes the client to create more threads, which causes the server to become more and more distressed, until eventually it fails and requests starts to error.&#xA;&#xA;The fun part is that if you reduce the load on the server, it would resume operating normally. But the errors that it gave in the meanwhile was&#x2026; cryptic. There is a reason why most servers limit their concurrency level, there are always enough clients to saturate a server, and it is better to place a client on a request queue or send him &#x201C;busy now, come back later&#x201D; error than to crash because of resource allocation issues somewhere in the middle of processing a request.</p>
         <a href="https://ardalis.com/sql-table-refactoring-challenge/" target="_blank"><h1 class="title mb-6">Sql Table Refactoring Challenge</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
@@ -207,30 +231,6 @@
             posted on: April 26, 2010
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After trying it out on NH Prof, profiler subscriptions are now opened for all the profilers.     Linq To SQL Profiler    Entity Framework Profiler    Hibernate Profiler   A profiler subscription allows you to pay a small monthly free (~16$) and get the full profiler capabilities along with the assurance of no upgrade cost when the next major version comes out.  In addition to the monthly subscription, I got requests for a yearly subscription. I am not sure that I quite follow the logic, but I am not going to make it harder for people to give me money, so that is available as well for all profilers.</p>
-        <a href="https://ayende.com/blog/4472/ravendb-performance-tweaks" target="_blank"><h1 class="title mb-6">RavenDB Performance Tweaks</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 26, 2010
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Continuing my efforts to make RavenDB faster, I finally settled on loading all the users from Stack Overflow into Raven as a good small benchmark for Raven. This is important, because I want something big enough to give me meaningful stats, but small enough so I would have to wait too long for results.  The users data from Stack Overflow is ~180,000 documents, but it loads in just a few minutes, so that is very useful.  With that, I was able to identify a major bottleneck:     The AddTask takes a lot of time, mostly because it needs to update a Json field, so it needs to load it, update, and then save it back. In many cases, it is the same value that we keep parsing over &amp; over again. I introduced a Json Cache, which could save the parsing cost. When introducing this, I was also able to make it useful in a few other places, which should hopefully improve performance in a few more places.  Current speed, when inserting ~183,000 documents (over HTTP on the local host) in batches of 128 documents is 128 milliseconds. I consider this pretty good. Note that this is with indexing enabled, but not counting how long it takes for the background indexes to finish processing.  When measuring that as well, after inserting hundreds of thousands of documents, it took another half a second (but note that my measuring granularity was 0.5 second) to finish updating the indexes on the background. I think it is time to try to throw the entire StackOverflow data dump at Raven and see how fast it can handle it.</p>
-        <a href="https://ayende.com/blog/4471/how-to-get-really-fast-benchmarks" target="_blank"><h1 class="title mb-6">How to get REALLY fast benchmarks</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 25, 2010
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was very excited when I tried this code, it produced amazing performance:     private static void LoadDataFor(string searchPattern)&#xA;{&#xA;    foreach (var file in Directory.GetFiles(&quot;Docs&quot;, searchPattern).OrderBy(x=&gt;x))&#xA;    {&#xA;        var sp = Stopwatch.StartNew();&#xA;        var httpWebRequest = (HttpWebRequest)WebRequest.Create(&quot;http://localhost:8080/bulk_docs&quot;);&#xA;        httpWebRequest.Method = &quot;POST&quot;;&#xA;        using(var requestStream = httpWebRequest.GetRequestStream())&#xA;        {&#xA;            var readAllBytes = File.ReadAllBytes(file);&#xA;            requestStream.Write(readAllBytes, 0, readAllBytes.Length);&#xA;        }&#xA;        Console.WriteLine(&quot;{0} - {1}&quot;, Path.GetFileName(file), sp.Elapsed);&#xA;    }&#xA;}&#xA;  &#xA;&#xA;Can you figure out what the fatal flaw in this code is?</p>
         <div class="button flex justify-between">
             <a href="525.html"><span class="back arrow"></span></a>
 
