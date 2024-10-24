@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/165573/time-series-feature-design-system-behavior" target="_blank"><h1 class="title mb-6">Time series feature design</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: February 14, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It is easy to forget that a database isn&#x2019;t just about storing and retrieving data. A lot of work goes into the actual behavior of the system beyond the storage aspect.  In the case of time series database, just storing the data isn&#x2019;t enough, we very rarely actually want to access all the data. If we have a sensor that send us a value once a minute, that comes to 43,200 data points per month. There is very little that we actually want to do for that amount of data. Usually we want to do things over some rollup of the data. For example, we might want to see the mean per day, or the standard deviation on a weakly basis, etc. We might also want to do some down sampling. By that I mean that we take a series whose value is stored on a per minute / second basis and we want to store just the per day totals and delete the old data to save space. The reason that I am using time series data for this series of blog posts is that there really isn&#x2019;t all that much that you can do for a time series data, to be honest. You store it, aggregate over it, and&#x2026; that is about it. Users might be able to do derivations on top of that, but that is out of scope for a database product.  Can you think about any other behaviors that the system needs to provide?</p>
         <a href="https://ayende.com/blog/165572/time-series-feature-design-the-wire-format" target="_blank"><h1 class="title mb-6">Time series feature design</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: February 05, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post introduces SaasKit, a new project I&#x2019;m working on to help developers build SAAS based applications, covering common challenges such as Multi-tenancy.</p>
-        <a href="https://ayende.com/blog/165249/self-flagellation-and-the-barbarians-are-at-the-gate" target="_blank"><h1 class="title mb-6">Self flagellation and the barbarians are at the gate</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 04, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We got a report from a user about severe issues with RavenDB. It reports resource exhaustion with plenty of resources still available, and once that happens, it will refuse to even restart itself, forcing a process kill. As you can imagine, that was a pretty big deal for us, so we set out to investigate. And we found some interesting results. One of the things that we like to keep in mind with RavenDB is that it is a safe choice. Whenever we need to make a decision between various tradeoffs, we&#x2019;ll always chose the safe choice. That means, among other things, that we are pretty careful about the way that we approach external input. And in this case, we are actively protecting ourselves from the outside world. One of the ways we do that is by limiting the number of requests that we will concurrently process. The idea is that it is better to flat out reject requests than put such a load on the system that it will eventually crash. Indeed, that has been such a successful tactic that to this day, there has been exactly zero production issues with it. To my knowledge, it hasn&#x2019;t ever been even noticed by any of our users.  The actual issue is that we have an internal limit that is set by default to 256 concurrent transactions. And by default, we will accept up to 192 concurrent requests. Then I looked at the actual logs, and I found:  And that explains much, but not nearly all. We had this in our code base for roughly 8 months. There are still other things that protect us from those issues, not the least of which is that it is actually hard to generate that number of requests against us (you really have to try very hard, usually from multiple machines). But there was one scenario that we didn&#x2019;t consider for the purpose of protecting ourselves from the barbarians at the gate. Multi Get requests.  Multi Get requests allows you to package multiple requests to RavenDB into a single physical request. Those requests are going to cost you a single round trip to the server, and you can run as many of those as you want. In the dump we received, we could see 17 pending Multi Get request, and about 400 queries being executed, each of them requiring their own session. No wonder we got out of session errors. Final note: for what it is worth, I changed our limits to 1,024 concurrent sessions and 512 concurrent requests, which is more reasonable considering the kind of hardware we usually run on. Multi Get has another 192 sessions that it can utilize, and the rest are dedicated for background processes.</p>
         <div class="button flex justify-between">
             <a href="377.html"><span class="back arrow"></span></a>
 

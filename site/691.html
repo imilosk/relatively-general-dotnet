@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3121/from-boobs-to-bake" target="_blank"><h1 class="title mb-6">From BooBS to Bake</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 26, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Okay, I renamed Boo Build System to Bake. Now you can cut the jokes and actually integrate it into a PC environment.  The repository is here, although you can just grab the binaries.</p>
         <a href="https://ayende.com/blog/3120/rhino-security-external-api" target="_blank"><h1 class="title mb-6">Rhino Security</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: January 24, 2008
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have been tearing my hair our today, because I couldn&#x27;t figure out why something that should have worked didn&#x27;t ( second level caching , obviously ). Along the way, I found out several things that you should be aware of. First of all, let us talk about what the feature is, shall we? NHibernate is design as an enterprise OR/M product, and as such, it has very good support for running in web farms scenarios. This support include running along side with distributed caches, including immediate farm wide updates.&#xA0; NHibernate goes to great lengths to ensure cache consistency in these scenarios (it is not perfect, but it is very good). A lot of the things that tripped me today were related to just that, NHibernate was working to ensure cache consistency and I wasn&#x27;t aware of that. The way it works, NHibernate keeps three caches.   The entities cache - the entity data is disassembled and then put in the cache, ready to be assembled to entities again. The queries cache - the identifiers of entities returned from queries, but no the data itself (since this is in the entities cache). The update timestamp cache - the last time a table was written to. The last cache is very important, since it ensures that the cache will not serve stale results.  Now, when we come to actually using the cache, we have the following semantics.   Each session is associated with a timestamp on creation. Every time we put query results in the cache, the timestamp of the executing session is recorded. The timestamp cache is updated whenever a table is written to, but in a tricky sort of way:  When we perform the actual writing, we write a value that is somewhere in the future to the cache. So all queries that hit the cache now will not find it, and then hit the DB to get the new data. Since we are in the middle of transaction, they would wait until we finish the transaction. If we are using low isolation level, and another thread / machine attempts to put the old results back in the cache, it wouldn&#x27;t hold, because the update timestamp is into the future.  When we perform the commit on the transaction, we update the timestamp cache with the current value. Now, let us think about the meaning of this, shall we? If a session has perform an update to a table, committed the transaction and then executed a cache query, it is not valid for the cache. That is because the timestamp written to the update cache is the transaction commit timestamp, while the query timestamp is the session&#x27;s timestamp, which obviously comes earlier. The update timestamp cache is not updated until you commit the transaction! This is to ensure that you will not read &quot;uncommited values&quot; from the cache. Another gotcha is that if you open a session with your own connection, it will not be able to put anything in the cache (all its cached queries will have invalid timestamps!) In general, those are not things that you need to concern yourself with, but I spent some time today just trying to get tests for the second level caching working, and it took me time to realize that in the tests I didn&#x27;t used transactions and I used the same session for querying as for performing the updates.</p>
-        <a href="https://ardalis.com/ohio-day-of-net/" target="_blank"><h1 class="title mb-6">Ohio Day of .NET</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 23, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Several user groups in southern and central Ohio are putting together a Day of .NET event this spring. The Central Ohio Day of .NET 200&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="690.html"><span class="back arrow"></span></a>
 

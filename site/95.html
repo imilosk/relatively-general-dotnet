@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/193922-A/the-performance-regression-odyssey" target="_blank"><h1 class="title mb-6">The performance regression odyssey</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 10, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We care a lot about the performance of RavenDB. Aside from putting a lot of time an effort into ensuring that RavenDB uses optimal code, we also have a monitoring system in place to alert us if we can observe a performance degradation. Usually those are fairly subtle issues, but we got an alert on the following scenario. As you can see, we are seeing a big degradation of this test.The actual test in question is doing a low level manipulation of Voron (RavenDB&#x2019;s storage engine), and as such, stand at the core of our performance hotspots to watch for.Looking at the commits around that time frame, we quickly narrow the fault down to the following changes:A really important observation here, however, is that this method is not called in the test. So we were looking at whatever this change caused a regression in code generation. I couldn&#x2019;t believe that this is the case, to be honest. Indeed, looking at the generated assembly, there was no difference between the two versions. But something cause the performance to degrade significantly enough for this test that it raised all sorts of alarm bells.We started looking into a lot of details about the system, the usual things like checking for thermal throttling, etc. We struck gold on this command: sudo smartctl --all /dev/nvme0n1Take a look at the results:    SMART overall-health self-assessment test result: FAILED!&#xA;    - NVM subsystem reliability has been degraded    SMART/Health Information (NVMe Log 0x02, NSID 0x1)&#xA;    Critical Warning:                   0x04&#xA;    Temperature:                        35 Celsius&#xA;    Available Spare:                    100%&#xA;    Available Spare Threshold:          10%&#xA;    Percentage Used:                    115%&#xA;    Data Units Read:                    462,613,897 [236 TB]&#xA;    Data Units Written:                 2,100,668,468 [1.07 PB]&#xA;    Host Read Commands:                 10,355,495,581&#xA;    Host Write Commands:                9,695,954,131&#xA;    Controller Busy Time:               70,777In other words, the disk is literally crying at us. This tells us that the drive has been in action for ~50 days of actual activity and that it has gone beyond is design specs. In particular, you can see that we wrote over a petabyte of data to the disk as part of our test case executions. This is a 500GB drive, which means that we fill it to capacity over 2,000 times before we hit this issue.Once we hit this capacity (Percentage Used is &gt; 100%), the drive needs to do a lot more work, so we are seeing longer test times.First time that I closed a bug by sending a PO to get new hardware, I got to admit.</p>
         <a href="https://ayende.com/blog/193921-A/messing-up-a-live-demo-opps" target="_blank"><h1 class="title mb-6">Messing up a live demo, opps</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: May 31, 2021
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Roslyn analyzers provide a live static analysis of your code. They can detect wrong usages of APIs, security issues, performance issues, etc. Analyzers often provide many rules. If some of them do not apply to your project, you can use a .editorconfig file to disable them. Also, some rules are conf</p>
-        <a href="https://www.stevejgordon.co.uk/using-dateonly-and-timeonly-in-dotnet-6" target="_blank"><h1 class="title mb-6">Using DateOnly and TimeOnly in .NET 6</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 25, 2021
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In .NET 6 (preview 4), two long-awaited types have been introduced as part of the core library. DateOnly and TimeOnly allow developers to represent either the date or time portion of a DateTime. These two new types are structs (value types) and may be used when your code deals with date or time concepts independently. [&#x2026;]</p>
         <div class="button flex justify-between">
             <a href="94.html"><span class="back arrow"></span></a>
 

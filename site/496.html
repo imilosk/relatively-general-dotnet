@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4726/challenge-your-own-threadlocal" target="_blank"><h1 class="title mb-6">Challenge</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 17, 2010
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I found a bug in Lucene.NET that resulted in a memory leak in RavenDB. Take a look here (I have simplified the code to some extent, but the same spirit remains):     public class CloseableThreadLocal&#xA;{&#xA;    [ThreadStatic] private static Dictionary&lt;object, object&gt; slots;&#xA;&#xA;    public static Dictionary&lt;object, object&gt; Slots&#xA;    {&#xA;        get { return slots ?? (slots = new Dictionary&lt;object, object&gt;()); }&#xA;    }&#xA;&#xA;    public /*protected internal*/ virtual Object InitialValue()&#xA;    {&#xA;        return null;&#xA;    }&#xA;&#xA;    public virtual Object Get()&#xA;    {&#xA;        object val;&#xA;&#xA;        if (Slots.TryGetValue(this, out val))&#xA;        {&#xA;            return val;&#xA;        }&#xA;        val = InitialValue();&#xA;        Set(val);&#xA;        return val;&#xA;    }&#xA;&#xA;    public virtual void Set(object val)&#xA;    {&#xA;        Slots[this] = val;&#xA;    }&#xA;&#xA;    public virtual void Close()&#xA;    {&#xA;        if (slots != null)// intentionally using the field here, to avoid creating the instance&#xA;            slots.Remove(this);&#xA;    }&#xA;}&#xA;  &#xA;&#xA;As you can imagine, this is a fairly elegant way of doing this (please note, .NET 4.0 have the ThreadLocal class, which I strongly recommend using). But it has one very serious flaw. It you don&#x2019;t close the instance, you are going to leak some memory. As you can imagine, that is a pretty bad thing to do.&#xA;&#xA;In general, I consider such designs as pretty bad bugs when writing managed code. We have the GC for a reason, and writing code that forces the user to manually manage memory is BAD for you. Here is an example showing the problem:&#xA;&#xA;&#xA;  class Program&#xA;{&#xA;    static void Main(string[] args)&#xA;    {&#xA;        UseThreadLocal();&#xA;        GC.Collect(2);        GC.WaitForPendingFinalizers();&#xA;        Console.WriteLine(CloseableThreadLocal.slots.Count);&#xA;    }&#xA;&#xA;    private static void UseThreadLocal()&#xA;    {&#xA;        var tl = new CloseableThreadLocal();&#xA;        tl.Set(&quot;hello there&quot;);&#xA;        Console.WriteLine(tl.Get());&#xA;    }&#xA;}&#xA;  &#xA;&#xA;This will show that after the UseThreadLocal() run and we force full collection, the value is still there.&#xA;&#xA;Without using the builtin ThreadLocal, can you figure out a way to solve this? &#xA;&#xA;Points goes to whoever does this with the minimum amount of changes to the code.</p>
         <a href="https://ayende.com/blog/4725/the-right-storage-model" target="_blank"><h1 class="title mb-6">The right storage model</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: December 10, 2010
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 12/3/2010Let us say that we have the following document:     {&#xA;  &quot;Name&quot;: &quot;Ayende&quot;,&#xA;  &quot;LastScore&quot;: 239.2,&#xA;  &quot;MaxScore&quot;: 392.6&#xA;}&#xA;  &#xA;&#xA;And we want to find all documents whose last score is within a certain range from their max score. Note that for different queries, the range that I can use may be different.&#xA;&#xA;RavenDB doesn&#x2019;t offer the option of doing computation in the where clause. Mostly, that is because such computations are going to perform badly unless special care is taken to avoid that. Instead, we are going to create a computed field in the index.&#xA;&#xA;First, we define:&#xA;&#xA;&#xA;  from u in docs.Users&#xA;where u.MaxScore&#xA;select new { Score = u.LastScore / u.MaxScore } &#xA;  &#xA;&#xA;This computed field now allows us to query on it very easily. Moreover, when we query, we are still querying over pre-computed data, which is going to blindingly fast.</p>
-        <a href="https://ayende.com/blog/4717/nh-prof-new-feature-alert-on-bad-like-query" target="_blank"><h1 class="title mb-6">NH Prof New Feature</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 09, 2010
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 12/3/2010One of the things that are coming to NH Prof is more smarts at the analysis part. We now intend to create a lot more alerts and guidance. One of the new features that is already there as part of this strategy is detecting bad &#x2018;like&#x2019; queries.  For example, let us take a look at this     This is generally not a good idea, because that sort of query cannot use an index, and requires the database to generate a table scan, which can be pretty slow.  Here is how it looks like from the query perspective:    And NH Prof (and all the other profilers) will now detect this and warn about this.    In fact, it will even detect queries like this:</p>
         <div class="button flex justify-between">
             <a href="495.html"><span class="back arrow"></span></a>
 

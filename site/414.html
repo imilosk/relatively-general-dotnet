@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/160673/bug-fixes-nightmares" target="_blank"><h1 class="title mb-6">Bug fixes &amp; nightmares</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 16, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This just happened. I am working on clearing my mail box, when I got a repro for a high CPU load from a user.  Spent an hour trying to figure out what is going on. Found that the problem is something with map/reduce under extreme load. Couldn&#x2019;t figure it out. Went to bed depressed after midnight. Got up at 4 AM, sat down on the same problem. Solved it (root cause, that @ayende guy doing O(N Scary) stuff) in under 15 minutes. Now I need to figure out what to do with the rest of the night. Also, currently in Denmark (Copenhagen) and it is bloody cold out here. This is what I look like when I am cold:</p>
         <a href="https://ayende.com/blog/160641/ravendb-2-1-features-robust-sql-replication" target="_blank"><h1 class="title mb-6">RavenDB 2.1 Features: Robust SQL Replication</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: January 02, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">With RavenDB Bulk Inserts, we significantly improved the time we take to insert a boat load of documents to RavenDB. By over an order of magnitude, in fact. How did we do that? By doing a whole bunch of things, but mostly by being smart in utilizing the resources on both client &amp; server. Here is how a standard request timeline looks like:  As you can see, there are several factors that hold us up here. We need to prepare (in memory) all of the data to send. On the server side ,we wait until we have the entire dataset before we can start processing the data. Just that aspect cost us a lot. And because there is finite amount of memory we can use, it means that we have to split things to batches, and each batch is a separate request, requiring the same song and dance just on the network layer. That doesn&#x2019;t count what we have to do on the server end once we actually have the data, which is to get the data, process it, flush it to disk, register it for indexing,&#xA0; call fsync, etc. That isn&#x2019;t too much, unless you are trying to shove as much data s you can, as fast as you can. In contrast, this is how the bulk insert looks like on the network:  We stream the results to the server directly, so while the client is still sending results, we are already flushing them to disk.  To make things even more interesting, we aren&#x2019;t using standard GZip compression over the whole request. Instead, each batch is compressed independently, which means we don&#x2019;t have a dependency on the internals of the compression routine internal buffering system, etc. It also means that we get each batch much faster. There are, of course, rate limits built in, to protect ourselves from flooding the buffers, but for the most part, you will have hard time hitting them.  In addition to that, because we are in the context of a single request, we can apply additional optimizations, we can do lazy flushes (not have to wait for a full fsync for each batch) because we do the final fsync at the end of the final request. Finally, we actually created an optimized code path that skips doing a lot of the things that we do in the normal path. For example, by default we assume you are doing an insert only (saves checking the disk, and will throw if not true), we don&#x2019;t populate the indexing prefetching queue, etc. All in all, it means that we got more than an order of magnitude improvement.</p>
-        <a href="https://ayende.com/blog/160577/uber-prof-2-0-is-out" target="_blank"><h1 class="title mb-6">Uber Prof 2.0 is OUT!</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 01, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Exactly 4 years after the 1.0 release of Uber Prof, we have the 2.0 release for Uber Prof. You can find it here: http://hibernatingrhinos.com/products/ New features include production and cloud profiling, performance improvement and better error detection &amp; guidance.</p>
         <div class="button flex justify-between">
             <a href="413.html"><span class="back arrow"></span></a>
 

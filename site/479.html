@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4832/a-minimal-actor-framework-part-2" target="_blank"><h1 class="title mb-6">A minimal actor framework, part 2</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 05, 2011
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 4/29/2011Yesterday I introduced a very minimal actor &#x201C;framework&#x201D;, and I noted that while it was very simple, it wasn&#x2019;t a very good one. The major problems in that implementation are:     No considerations for errors    No considerations for async operations   The first one seems obvious, but what about the second one, how can we not consider async operations in an actor framework?  Well, the answer to that is quite simple, our actor framework assumed that we were always going to execute synchronously. That isn&#x2019;t going to work if there is a need to do things like async IO.  As it happened, that is precisely what I had in mind for this code, so I wrote this:     public class Actor&lt;TState&gt;&#xA;{&#xA;    public TState State { get; set; }&#xA;&#xA;    private readonly ConcurrentQueue&lt;Func&lt;TState, Task&gt;&gt; actions = new ConcurrentQueue&lt;Func&lt;TState, Task&gt;&gt;();&#xA;    private Task activeTask;&#xA;&#xA;    public void Act(Func&lt;TState, Task&gt; action)&#xA;    {&#xA;        actions.Enqueue(action);&#xA;&#xA;        lock(this)&#xA;        {&#xA;            if (activeTask != null) &#xA;                return;&#xA;            activeTask = Task.Factory.StartNew(ExecuteActions);&#xA;        }&#xA;    }&#xA;&#xA;    public event EventHandler&lt;UnhandledExceptionEventArgs&gt; OnError;&#xA;&#xA;    private void InvokeOnError(UnhandledExceptionEventArgs e)&#xA;    {&#xA;        var handler = OnError;&#xA;        if (handler == null) &#xA;            throw new InvalidOperationException(&quot;An error was raised for an actor with no error handling capabilities&quot;);&#xA;        handler(this, e);&#xA;    }&#xA;&#xA;    private void ExecuteActions()&#xA;    {&#xA;        Func&lt;TState, Task&gt; func;&#xA;        if (actions.TryDequeue(out func))&#xA;        {&#xA;            func(State)&#xA;                .ContinueWith(x =&gt;&#xA;                {&#xA;                    if (x.Exception != null)&#xA;                    {&#xA;                        InvokeOnError(new UnhandledExceptionEventArgs(x.Exception, false));&#xA;                        return;&#xA;                    }&#xA;                    ExecuteActions();&#xA;                });&#xA;            return;&#xA;        }&#xA;        lock(this)&#xA;        {&#xA;            activeTask = null;&#xA;        }&#xA;    }&#xA;}&#xA;  &#xA;&#xA;Thoughts?d</p>
         <a href="https://ayende.com/blog/4831/a-minimal-actor-framework" target="_blank"><h1 class="title mb-6">A minimal actor framework</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: April 28, 2011
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have a WCF Service that occasionally yields a message like this one: Maximum number of items that can be serialized or deserialized in an&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/4825/an-elegant-threadlocal-for-silverlight" target="_blank"><h1 class="title mb-6">An elegant ThreadLocal for Silverlight</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 28, 2011
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the annoying bits about Silverlight is how much of what I consider core API isn&#x2019;t there. For example, concurrent collections or thread local.  I didn&#x2019;t have the time to implement concurrent collections properly, but thread local isn&#x2019;t really that hard. Here is a simple implementation:     public class ThreadLocal&lt;T&gt;&#xA;{&#xA;    private readonly Func&lt;T&gt; valueCreator;&#xA;&#xA;    public class Holder&#xA;     {&#xA;         public T Val;&#xA;     }&#xA;&#xA;    [ThreadStatic]&#xA;    private static ConditionalWeakTable&lt;object, Holder&gt; _state;&#xA;&#xA;    public ThreadLocal():this(() =&gt; default(T))&#xA;    {&#xA;    }&#xA;&#xA;    public ThreadLocal(Func&lt;T&gt; valueCreator)&#xA;    {&#xA;        this.valueCreator = valueCreator;&#xA;    }&#xA;&#xA;    public T Value&#xA;    {&#xA;        get&#xA;        {&#xA;            Holder value;&#xA;            if (_state == null || _state.TryGetValue(this, out value) == false)&#xA;            {&#xA;                var val = valueCreator();&#xA;                Value = val;&#xA;                return val;&#xA;            }&#xA;            return value.Val;&#xA;        }&#xA;        set&#xA;        {&#xA;            if (_state == null)&#xA;                _state = new ConditionalWeakTable&lt;object, Holder&gt;();&#xA;            var holder = _state.GetOrCreateValue(this);&#xA;            holder.Val = value;&#xA;        }&#xA;    }&#xA;}&#xA;  &#xA;&#xA;The fun part, it satisfies the entire contract, but I am willing to bet it is going to cause some head scratching.</p>
         <div class="button flex justify-between">
             <a href="478.html"><span class="back arrow"></span></a>
 

@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/167586/ravendb-on-azure" target="_blank"><h1 class="title mb-6">RavenDB On Azure</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 31, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It took a while, but it is here. The most requested feature on the Azure Store is here:  This is currently only available on the East US region. That is going to change, but it will take a bit of time. You can vote on which regions you want RavenHQ on Azure to expand to. RavenHQ on Azure can be used in one of two ways. You can purchase it via the Azure Marketplace, in which case you have to deal only with a single invoice, and you can manage everything through the Azure site. However, the Azure Marketplace doesn&#x2019;t currently support prorated and tiered billing, which means that the plans that you purchase in the marketplace have hard limits on data. You could also purchase those same plans directly from RavenHQ and take advantage of usage based billing, which allows you to use more storage than what&#x2019;s included in the plan at a prorated cost. RavenHQ is now offering a lower price point for replicated plans, so you don&#x2019;t have to think twice before jumping into the high availability option.</p>
         <a href="https://ayende.com/blog/167585/what-is-my-query-doing" target="_blank"><h1 class="title mb-6">What is my query doing?</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: July 18, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The other night at the Hudson Software Craftsmanship meeting at the Falafel Software training center in Hudson, Ohio, I did the Red Pencil&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/167363/introducing-inefficiencies-into-ravendb-on-purpose" target="_blank"><h1 class="title mb-6">Introducing inefficiencies into RavenDB, on purpose</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 18, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yes, I choose the title on purpose. The topic of this post is this issue. In RavenDB, we use replication to ensure high availability and load balancing. We have been using that for the past five years now, and in general, it has been great, robust and absolutely amazing when you need it. But like all software, it can run into interesting scenarios. In this case, we had three nodes, call them A, B and C. In the beginning, we had just A &amp; B and node A was the master node, for which all the data was written and node B was there as a hot spare. The customer wanted to upgrade to a new RavenDB version, and they wanted to do that with zero downtime. They setup a new node, with the new RavenDB server, and because A was the master server, they decided to replicate from node B to the new node. Except&#x2026; nothing appear to be happening.  No documents were replicating to the new node, however, there was a lot of CPU and I/O. But nothing was actually happening. The customer opened a support call, and it didn&#x2019;t take long to figure out what was going on. The setup the replication between the nodes with the default &#x201C;replicate only documents that were changed on this node&#x201D;. However, since this was the hot spare node, no documents were ever changed on that node. All the documents in the server were replicated from the primary node. The code for that actually look like this:  public IEnumerable&lt;Doc&gt; GetDocsToReplicate(Etag lastReplicatedEtag){    foreach(var doc in Docs.After(lastReplicatedEtag)    {         if(ModifiedOnThisDatabase(doc) == false)               continue;         yield return doc;    }}var docsToReplicate = GetDocsToReplicate(etag).Take(1024).ToList();Replicate(docsToReplicate);&#xA;However, since there are no documents that were modified on this node, this meant that we had to scan through all the documents in the database. Since this was a large database, this process took time. &#xA;The administrators on the server noted the high I/O and that a single thread was constantly busy and decided that this is likely a hung thread. This being the hot spare, they restarted the server. Of course, that aborted the operation midway, and when the database started, it just started everything from scratch.&#xA;The actual solution was to tell the database, &#x201C;just replicate all docs, even those that were replicated to you&#x201D;. That is the quick fix, of course.&#xA;The long term fix was to actually make sure that we abort the operation after a while, report to the remote server that we scanned up to a point, and had nothing to show for it, and go back to the replication loop. The database would then query the remote server for the last etag that was replicated, it would respond with the etag that we asked it to remember, and we&#x2019;ll continue from that point.&#xA;The entire process is probably slower (we make a lot more remote calls, and instead of just going through everything in one go, we have to stop, make a bunch of remote calls, then resume). But the end result is that the process is now resumable. And an admin will be able to see some measure of progress for the replication, even in that scenario.</p>
         <div class="button flex justify-between">
             <a href="362.html"><span class="back arrow"></span></a>
 

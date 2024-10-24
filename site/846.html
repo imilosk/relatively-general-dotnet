@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/1749/how-to-fight-race-conditions-with-a-single-thread" target="_blank"><h1 class="title mb-6">How to fight race conditions with a single thread</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 09, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">All of a sudden, AMBUSH!    A piece of code that we have been using successfully for the last 4 - 5 months started throwing Null Reference Exception. This exception was one of the impossible ones. That same piece of code would work flawlessly as long as it wasn&#x27;t doing much, but the moment you tried to do something very heavy (CPU &amp;&amp; Memory wise), it started crashing. The crash was always in the same place, but with wildly different (and all correct) inputs.    Running the code in the debugger wasn&#x27;t much of a help. You would get the exception, find the line and look at it, check all the inputs and&#xA0;see that they are correct. Running the code a second time (either by moving the instruction pointer or by quick eval) would succeed.    That was the point that I was really grateful that I insist that we use debug builds of all our framework stuff (NHibernate, baseline business framework, etc). I started debugging this issue furiously. No success. I stripped it down to just business logic running in a console application, trying to isolate the conditions that cause the error. I ruled out threading issues, IIS wierdness, corrupted memory and wierd state of the moon.     Remember, it wasn&#x27;t easily repreducable in the debugger, trying to step into the offending code always worked. Eventually, I found myself looking at the following lines:            if(context.Locator.Contains(key))        &#xA0; &#xA0;return&#xA0;context.Locator.Get(key);        //create,&#xA0;store&#xA0;and&#xA0;return&#xA0;value        That was part of a custom instantiation policy for Object Builder.    Can you see the bug now?    Wait for it...    Object Builder uses Week Reference Dictionary to store some stuff. In this case, the object that I needed to be returned. Between the first and second line, a GC collection occurs, renderring this check pointless. The next time I would try to run this, it would correctly realize that it didn&#x27;t have the value and create it, causing the craziness in debugging it. The fix?            object&#xA0;val&#xA0;=&#xA0;context.Locator.Get(key);        if(val!=null)        &#xA0; &#xA0;return&#xA0;val;        //create,&#xA0;store&#xA0;and&#xA0;return&#xA0;value        I burned over two days over this bug, and I don&#x27;t think that I was as angry with a bug for a long time.</p>
         <a href="https://ayende.com/blog/1748/write-a-program-that-writes-itself" target="_blank"><h1 class="title mb-6">Write a program that writes itself...</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: October 07, 2006
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Didja know?runas /savedcred /user:administrator cmd    The above command will prompt you for a password once, and then rememeber it. This make it very close to the su command on unix.</p>
-        <a href="https://ayende.com/blog/1739/active-record-rocks" target="_blank"><h1 class="title mb-6">Active Record Rocks!</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 07, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have been head down in NHibernate for the last several months, and as a result, I think that I started to miss just how enabling Active Record really is. This weekend I have been working on with it with a venegance, and I love it. The NHibernate 1.2 integration is really important, because it allows to infer even more stuff!    Allow me to present, in all its glory, the amount of stuff needed to make a class persistent:        The collapsed properties merely hide the get/set clutter, by the way.     This is enough information for Active Record (along with the other classes defined in the same way, to allow me to work against the model&#xA0;immediately after creating it!</p>
         <div class="button flex justify-between">
             <a href="845.html"><span class="back arrow"></span></a>
 

@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/172097/micro-benchmarks-and-hot-paths" target="_blank"><h1 class="title mb-6">Micro benchmarks and hot paths</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 16, 2015
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m doing some work to refactor a complex piece of code, and I have a piece of memory that is allocated, then accessed via a struct pointer. This piece of code gets called a lot, so I wondered about the tradeoff of holding a pointer that is already casted to the right struct pointer vs the cost of another pointer in the object. Note, those are objects that are created a lot, and used a lot. Those are not the kind of things that you would usually need to worry about. Because I wasn&#x2019;t sure, I decided to test this out. And I used BenchmarkDotNet to do so:  public struct FooHeader&#xA;{&#xA;    public long PageNumber;&#xA;    public int Size;&#xA;}&#xA;&#xA;[BenchmarkTask(platform: BenchmarkPlatform.X86,&#xA;           jitVersion: BenchmarkJitVersion.LegacyJit)]&#xA;[BenchmarkTask(platform: BenchmarkPlatform.X64,&#xA;               jitVersion: BenchmarkJitVersion.LegacyJit)]&#xA;[BenchmarkTask(platform: BenchmarkPlatform.X64,&#xA;               jitVersion: BenchmarkJitVersion.RyuJit)]&#xA;public unsafe class ToCastOrNotToCast&#xA;{&#xA;    byte* p;&#xA;    FooHeader* h;&#xA;    public ToCastOrNotToCast()&#xA;    {&#xA;        p = (byte*)Marshal.AllocHGlobal(1024);&#xA;        h = (FooHeader*)p;&#xA;    }&#xA;&#xA;    [Benchmark]&#xA;    public void NoCast()&#xA;    {&#xA;        h-&gt;PageNumber&#x2B;&#x2B;;&#xA;    }&#xA;&#xA;    [Benchmark]&#xA;    public void Cast()&#xA;    {&#xA;        ((FooHeader*)p)-&gt;PageNumber&#x2B;&#x2B;;&#xA;    }&#xA;&#xA;    [Benchmark]&#xA;    public void DirectCastArray()&#xA;    {&#xA;        ((long*)p)[0]&#x2B;&#x2B;;&#xA;    }&#xA;&#xA;&#xA;    [Benchmark]&#xA;    public void DirectCastPtr()&#xA;    {&#xA;        (*(long*)p)&#x2B;&#x2B;;&#xA;    }&#xA;}&#xA;&#xA;&#xA;The last two tests are pretty much just to have something to compare to, because if needed, I would just calculate memory offsets manually, but I doubt that those would be needed.&#xA;The one downside of BenchmarkDotNet is that it takes a very long time to actually run those tests. I&#x2019;ll save you the suspense, here are the results:&#xA;&#xA;I was expected the NoCast method to be faster, to be honest. But the Cast method is consistently (very slightly) the fastest one. Which is surprising.&#xA;Here is the generated IL:&#xA;&#xA;And the differences in assembly code are:&#xA;&#xA;Note that I&#x2019;m not 100% sure about the assembly code. I got it from the disassembly windows in VS, and it is possible that it changed what is actually going on.&#xA;So I&#x2019;m not really sure why this would be difference, and it is really is a small difference. But it is there.</p>
         <a href="https://enterprisecraftsmanship.com/posts/most-valuable-software-development-principles/" target="_blank"><h1 class="title mb-6">Most valuable software development principles</h1></a>
         <p class="mb-2">by Vladimir Khorikov</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: September 21, 2015
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ll be speaking in FooCafe &#x2013; Malmo on 5th October. This talk will focus on the common mistake of tacking additional complexity into your software, and the resulting mess that result, as well as ways to avoid it and get simpler and more understandable codebases.</p>
-        <a href="https://ayende.com/blog/172065/unsafe-operations-terminology-and-operational-hazards-the-end-result" target="_blank"><h1 class="title mb-6">Unsafe operations terminology and operational hazards, the end result</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 18, 2015
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Dave had an interesting comment about the previous post in this topic.  Actually I would have kept the original terms. Clarity is way more important than &#x27;protecting&#x27; an click and point administrator. If an administrator is so incredible stupid to experiment with an production cluster, than it is his right! To protect against accidental hits on the very big &#x27;leave cluster&#x27; button, you can ask the admin to enter 3 digit number that is displayed to confirm the action. But leaving and joining an cluster are defacto industry terms which makes it easier for admins coming from other data storage solutions to get an handle on RavenDB. I think that there is some confusion regarding the actual terms. Here is the current UI, after the changes I discussed in the previous post:  As you can see, we have &#x201C;Add another server to cluster&#x201D;, and &#x201C;Leave cluster&#x201D;, which are standard and common operations, they are what you&#x2019;ll use in pretty much all cases. The advanced cluster operations are unsafe, they are there to enable the operator to recover from a disaster that took the majority of the cluster down. Those aren&#x2019;t standard operations, they are hidden by default under &#x201C;advanced&#x201D;, and even then we want to make sure that users are thinking about them.</p>
         <div class="button flex justify-between">
             <a href="327.html"><span class="back arrow"></span></a>
 

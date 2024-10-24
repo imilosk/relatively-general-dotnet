@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/163681/diagnosing-ravendb-problem-in-production" target="_blank"><h1 class="title mb-6">Diagnosing RavenDB problem in production</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 10, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We have run into a problem in our production system. Luckily, this is a pretty obvious case of misdirection. Take a look at the stack trace that we have discovered:  The interesting bit is that this is an &#x201C;impossible&#x201D; error. In fact, this is the first time that we have actually seen this error ever. But looking at the stack trace tells us pretty much everything. The error happens in Dispose, but that one is called from the constructor. Because we are using native code, we need to make sure that an exception in the ctor will properly dispose all unmanaged resources. The code looks like this:  And here we can see the probable cause for error. We try to open a transaction, then an exception happens, and the Dispose is called, but it isn&#x2019;t ready to handle this scenario, so throws. The original exception is masked, and you have a hard debug scenario.</p>
         <a href="https://ayende.com/blog/163873/vorons-log" target="_blank"><h1 class="title mb-6">Voron&#x2019;s Log</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: September 30, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Discover how RavenDB powers uCommerce, an e-commerce platform for .NET tightly integrated CMSs Umbraco and Sitecore. Helping customers find the product they&#x27;re looking for is one of the biggest challenges in e-commerce: Learn how uCommerce integrates RavenDB and its faceted search capabilities into the core platform to solve this challenge. Monday, October 14, 2013 Space is limited.Reserve your Webinar seat now at:https://www2.gotomeeting.com/register/591534170</p>
-        <a href="https://ayende.com/blog/163137/sparse-files-memory-mapped-files" target="_blank"><h1 class="title mb-6">Sparse files &amp; memory mapped files</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 30, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the problems with memory mapped files is that you can&#x2019;t actually map beyond the end of the file. So you can&#x2019;t use that to extend your file.&#xA0; I had a thought and set out to check, what will happen if I create a sparse file, a file that only take space when you write to it, and at the same time, map it?  As it turn out, this actually work pretty well in practice. You can do so without any issues. Here is how it works: using (var f = File.Create(path))&#xA;{&#xA;    int bytesReturned = 0;&#xA;    var nativeOverlapped = new NativeOverlapped();&#xA;    if (!NativeMethod.DeviceIoControl(f.SafeFileHandle, EIoControlCode.FsctlSetSparse, IntPtr.Zero, 0,&#xA;                                      IntPtr.Zero, 0, ref bytesReturned, ref nativeOverlapped))&#xA;    {&#xA;        throw new Win32Exception();&#xA;    }&#xA;    f.SetLength(1024*1024*1024*64L);&#xA;}&#xA;&#xA;&#xA;This create a sparse file that is 64Gb in size. Then we can map it normally:&#xA;using (var mmf = MemoryMappedFile.CreateFromFile(path))&#xA;using (var memoryMappedViewAccessor = mmf.CreateViewAccessor(0, 1024*1024*1024*64L))&#xA;{&#xA;    for (long i = 0; i &lt; memoryMappedViewAccessor.Capacity; i &#x2B;= buffer.Length)&#xA;    {&#xA;        memoryMappedViewAccessor.WriteArray(i, buffer, 0, buffer.Length);&#xA;    }&#xA;}&#xA;&#xA;&#xA;And then we can do stuff to it.&#xA0; And that include writing to yet unallocated parts of the file. This also means that you don&#x2019;t have to worry about writing past the end of the file, the OS will take care of all of that for you.&#xA;Happy happy, joy joy, etc.&#xA;One problem with this method, however. It means that you have a 64Gb file, but you don&#x2019;t have that much allocated. What that means in turn is that you might not have that much space available for the file. Which brings up an interesting question, what happens when you are trying to commit a new page, and the disk is out of space? Using file I/O you would get an IO error with the right code. But using memory mapped files, the error would actually turn up during access, which can happen pretty much anywhere. It also means that it is a Standard Exception Handling error in Windows, which require special treatment. &#xA;To test this out, I wrote the following so it would write to a disk that had only about 50 Gb free. I wanted to know what would happen when it run out of space. That is actually something that happens, and we need to be able to address this issue robustly. The kicker is that this might actually happen at any time, so that would really result is some&#x2026; interesting behavior with regards to robustness. In other words, I don&#x2019;t think that this is a viable option, it is a really cool trick, but I don&#x2019;t think it is a very well thought out option.&#xA;By the way, the result of my experiment was that we had an effectively a frozen process. No errors, nothing, just a hung. Also, I am pretty sure that WriteArray() is really slow, but I&#x2019;ll check this out at another pointer in time.</p>
         <div class="button flex justify-between">
             <a href="389.html"><span class="back arrow"></span></a>
 
