@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/161707/reviewing-leveldb-part-xv-memtables-gets-compacted-too" target="_blank"><h1 class="title mb-6">Reviewing LevelDB</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 12, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As mentioned before, every 4 MB or so, we will move the current memtable and switch to a new one, turning the current one into an immutable memtable, which will then be compacted to disk. This post is about that process. The work there is done by the surprisingly name: DBImpl::CompactMemTable, which then calls to WriteLevel0Table. That method build the actual table, using the same approach I already covered. Honestly, the code is pretty obvious now that I spent enough time reading this. The only thing of interest is DeleteObsoleteFiles() method, which looks interesting if only because it is one of the few places leveldb actually does real work with files. Mostly, however, ParseFileName is interesting:   It give me a good way to look at the actual files being used. This will be important when we will investigate how leveldb handles recovery. Leveldb will consider files obsolete if:  They are log files and aren&#x27;t of the current/previous log number.  If it is a manifest file, keep the current one (or later if there are any).  If it is a table file, keep it if it is in use. A table file may have been compacted away.  If it is a lock file, info log or the current db file.  All of this is interesting, but on a minor level. I think that we are nearing the end of the codebase now. The only thing that I really want to go into is the recovery parts, and that would pretty much be it.</p>
         <a href="https://ayende.com/blog/161708/reviewing-leveldb-part-xvi-recovery-aint-so-tough" target="_blank"><h1 class="title mb-6">Reviewing LevelDB</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: April 03, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We got several requests for this, so here you go. A small snippet (10 minutes out of more than 12 hours!) of the RavenDB Course that is available for purchase.</p>
-        <a href="https://ayende.com/blog/161701/reviewing-leveldb-part-ix-compaction-is-the-new-black" target="_blank"><h1 class="title mb-6">Reviewing LevelDB</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 03, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After going over the VersionSet, I understand how leveldb decide when to compact and what it decide to compact. More or less, at least. This means that I now mostly can figure out what this does:  Status DBImpl::BackgroundCompaction()  A user may force manual compaction of a range, or we may have reasons of our own to decide to compact, based on leveldb heuristics. Either way, we get the Compaction object, which tells us what files we need to merge. There is a check there whatever we can do a trivial compaction, that is, just move the file from the current level to level&#x2B;1. The interesting thing is that we avoid doing that if this is going to cause issues in level&#x2B;2 (require more expensive compaction later on).  But the interesting work is done in DoCompactionWork, where we actually do compaction of complex data. The code refers to snapshots for the first time that I see. We only merge values that are in a valid snapshot. So data doesn&#x27;t &#x201C;go away&#x201D; for users. While holding a snapshot active. The actual work starts in here:    This give us the ability to iterate over all of the entries in all of the files that need compaction. And then we go over it:    But note that on each iteration we do a check if we need to CompactMemTable(); I followed the code there, and we finally write stuff to disk! I am quite excited about this, but I&#x27;ll handle that in a future blog post. I want to see how actual compaction works.  We then have this:    This is there to stop a compaction that would force a very expensive compaction next time, I think. As a side note, this really drive me crazy:    Note that we have current_output() and FileSize() in here. I don&#x27;t really care what naming convention you use, but I would really rather that you had one. If there is one for the leveldb code base, I can&#x27;t say that I figured it out. It seems like mostly it is PascalCase, but every now &amp; then we have this_style methods. Back to the code, it took me a while to figure it out.    Will return values in sorted key order, that means that if you have the same key in multiple levels, we need to ignore the older values. After this is happening, we now have this:    This is where we are actually writing stuff out to the SST file! This is quite exciting :-). I have been trying to figure that out for a while now. The rest of the code in the function is mostly stuff related to stats book keeping, but this looks important:   This generate the actual VersionEdit, which will remove all of the files that were compacted and add the new file that was created as a new Version to the VersionSet. Good work so far, even if I say so myself. We actually go to where we are building the SST files. Now it is time to look at the code that build those table. Next post, Table Builder...</p>
         <div class="button flex justify-between">
             <a href="405.html"><span class="back arrow"></span></a>
 

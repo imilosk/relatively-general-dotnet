@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/176876/ravendb-conference-videos-zapping-ever-faster-how-zap-sped-up-by-two-orders-of-magnitude-using-ravendb" target="_blank"><h1 class="title mb-6">RavenDB Conference videos</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: February 21, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post from the RavenDB conference, Hagay Albo talks about substantial performance gain as a result of using RavenDB.  oin a real uplift experience with Hagay Albo, the CTO of the Zap/Yellow Page Group in Israel, in which he explains how his team was able to take a legacy (slow and hard to modify) group of sites and make them easier to work with, MUCH faster and greatly simplified the operational environment. By prioritizing high availability, flexible data modeling and focusing on raw speed Zap was able to reduce its load times by Two Orders of Magnitudes. Using RavenDB as the core engine behind Zap&#x27;s new sites had improved site traffic, reduced time to market and made it possible to implement the next-gen features that were previously beyond reach.</p>
         <a href="https://andrewlock.net/under-the-hood-of-the-middleware-analysis-package/" target="_blank"><h1 class="title mb-6">Under the hood of the Middleware Analysis package</h1></a>
         <p class="mb-2">by Andrew Lock</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: February 14, 2017
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After talking about increasing the Voron page size, let us talk about another very important optimization. High data locality. The importance of locality comes up again and again in performance.The cost of getting the next bit of data can be so prohibitedly expensive that it dominates everything else, including standard Big O time complexity metrics. A fun discussion of that is here.  Remember that Voron actually stores all data in pages, and that means that it needs some way to allocate new pages. And by default, whenever you allocate a page, we use a page from the end of the file. In certain scenarios (pure sequential inserts), that generates some pretty good allocation pattern, but even there it can cause issues. Let us consider what the database file looks like after a while:  Imagine that the green sections are all pages that belong to the same B&#x2B;Tree inside Voron. Traversing the B&#x2B;Tree now means that we have a very high probability of having to jump around in the file a lot. Since we are memory mapped, we wouldn&#x2019;t typically feel this, since we aren&#x2019;t actually hitting the disk that often, but it has several interesting implications:  Startup time can increase rapidly, since we need to issue many I/O requests to different places in the file Flush / sync time is also increased, because it need to touch more of the disk Trees are typically used for indexes in Voron, and a document collection would typically have a few different storage indexes (lookup by etag, lookup by name, etc). Because they store different data, they have different growth pattern, so they are going to allocate pages at different rate, which means that the scattering of the pages across the data file is even more sever.  The change we just finished implementing is going to do several important things all at once:  Pages for all the storage indexes of a collection are going to be pre-allocated, and when they run out, be allocated again in batches. The indexes will ask the storage to allocate pages nearby the sibling page, to increase locality even further. All indexes will use the same pre-allocation buffer, so they all reside in roughly the same place. That also give us some really interesting optimizations opportunities. Since indexes are typically order of magnitude smaller than the data they cover, it is possible to ask the operation system to prefetch the sections that we reserved for indexes for each collection in advance, leading to far less paging in the future and improving the startup time. It also means that the operation system can issue a lot more continuous reads and writes, which is perfectly in line with what we want.  The new allocation strategy ends up looking like this:  In this case, we have enough data to fill the first pre-allocated section, and then we allocate a new one. So instead of 4 operations to load things, we can do this in 2.  Even without explicit prefetching on our end, this is going to be great because the operating system is going to be able to recognize the pattern of access and optimize the access itself.</p>
-        <a href="https://ardalis.com/ddd-with-aspnet-core-workshop-at-devintersections/" target="_blank"><h1 class="title mb-6">DDD with ASPNET Core Workshop at DevIntersections</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 14, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ll be teaching a one-day workshop at DevIntersections&#x2019; spring show on Domain-Driven Design with ASP.NET Core. I gave this workshop, which&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="271.html"><span class="back arrow"></span></a>
 

@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3065/meta-methods" target="_blank"><h1 class="title mb-6">Meta Methods</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 21, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A meta-method is a shortcut into the compiler; it is a method that accepts AST nodes[1] and returns an AST node.  Let us implement this very simple scenario, the assert statement. Now, because Boo already has that, we will use &#x201C;verify&#x201D; as the method name. Here is the full method implementation:[Meta]&#xA;static def verify(expr as Expression):&#xA;&#x9;return [|&#xA;&#x9;&#x9;unless $expr:&#xA;&#x9;&#x9;&#x9;raise $(expr.ToCodeString())&#xA;&#x9;|]&#xA;&#xA;We are using quasi quotation to save us typing. This is a static method decorated with the [Meta] attribute, and accepting an AST expression. This is all you need in order to create a meta-method. When you have a meta-method, you can call it, like this:&#xA;verify 1 == 2&#xA;Now the interesting tidbit happens. When the compiler sees a call to a meta-method, it doesn&#x2019;t emit the code to call this method at runtime. Instead, during compilation, the meta-method is executed. We pass it the AST of the arguments of the method code (including anonymous blocks), and then we replace this method call with the result of calling the meta-method.&#xA;It is important that you&#x2019;ll understand that after compilation, where in the code we had this:verify 1 == 2&#xA;&#xA;The actual compiled bits will have this:unless 1 == 2:&#xA;&#x9;raise &#x201C;1 == 2&#x201D;&#xA;&#xA;Please go over it again, to make sure that you understand how it works. It is similar to text substitution macros in C and C&#x2B;&#x2B;, but this is actual code that is running during compilation that gets to output any code that it wants back into the compilation process, not mere text preprocessing. In addition to that, we are dealing directly with the compiler&#x2019;s AST, not just copying lines of text.&#xA;This seems to be something that a lot of people have a hard time grasping. The compiler will ask you, at compilation time, what kind of transformation you want to do on the code. It will then take the result of the transformation (the method return value) and put it where the method call used to be.&#xA;The Boo code above can also be translated to the following C#, which is a bit more explicit about what is going on:[Meta]&#xA;public static UnlessStatement verify(Expression expr)&#xA;{&#xA;&#x9;UnlessStatement unlessS = new UnlessStatement();&#xA;&#x9;unless.Condition = Expression.Lift(expr);&#xA;&#x9;RaiseStatement raise = new RaiseStatement();&#xA;&#x9;raise.Exception = Expression.Lift(expr.ToCodeString());&#xA;&#x9;unless.Statements.Add(raise);&#xA;&#x9;return unless;&#xA;}&#xA;&#xA;Both have the same exact semantics. &#xA;We have actually used meta-methods before, when we implemented the &#x201C;when&#x201D; keyword for the scheduling DSL. Meta-methods are used in DSL quite often. They are usually the first step that we need to take into the compiler when we run into the limits of what the compiler gives us out of the box.&#xA;&#xA;&#xA;[1] An ast node is generic term to all the types that compose the abstract syntax tree of the language.</p>
         <a href="https://ayende.com/blog/3064/if-it-walks-like-a-duck-and-it-quacks-like-a-duck" target="_blank"><h1 class="title mb-6">If it walks like a duck and it quacks like a duck</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: December 18, 2007
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There is a discussion in the alt.net mailing list right now about how far you can and should trust your compiler. I thinks that this is interesting, because this piece of code of mine is on its way to production: public Guid Create&lt;T&gt;(T newEntity)&#xA;{&#xA;&#x9;using (CrmService svc = GetCrmService())&#xA;&#x9;{&#xA;&#x9;&#x9;object cheatCompiler = newEntity;&#xA;&#x9;&#x9;Guid guid = svc.Create((BusinessEntity) cheatCompiler);&#xA;&#x9;&#x9;return guid;&#xA;&#x9;}&#xA;}&#xA;&#xA;This is part an implementation of an interface in an assembly that cannot reference BusinessEntity.&#xA;I am feeling good with this.</p>
-        <a href="https://ayende.com/blog/3055/choices" target="_blank"><h1 class="title mb-6">Choices...</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 18, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">IFooFactoryFactoryFactoryFactory vs. Factory&lt;Factory&lt;Factory&lt;Factory&lt;Factory&lt;IFooFactory&gt;&gt;&gt;&gt;&gt; Discuss...</p>
         <div class="button flex justify-between">
             <a href="697.html"><span class="back arrow"></span></a>
 

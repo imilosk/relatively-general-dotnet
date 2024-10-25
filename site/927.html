@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/1046/circular-dependencies" target="_blank"><h1 class="title mb-6">Circular Dependencies</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: February 16, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So, I need to copy a set of tables from one database to another, the issue is that the source database keeps changing, so, in a true developer fashion, I added another layer of indirection and instead of writing scripts to copy the database I wrote a program that would write scripts that would copy the database.    I&#x27;m pretty proud of it, it uses the SQL Runner tool that I mentioned earlier, and it work in stages, so the first thing that copied is tables with no foreign keys, then the tables that depended on those, and then the tables that depend on those, and so on. The issue is that I&#x27;ve a couple of tables that have circular dependencies (sometimes a dependency on itself). This presents an interesting problem since I don&#x27;t want to start special casing for each table type.     I can see several options there:            Drop the foreign keys, copy the tables and recreate from scratch - On general I don&#x27;t like this, especially since generating the code to recreate the foreign key is not trivial.            Try to copy anyway, maybe I would get lucky or there aren&#x27;t any real references between the tables.            Leave it as a totally manual process (which is a real option, since this is a mostly one off thing).    Ideas?</p>
         <a href="https://ayende.com/blog/1045/signs-of-troubles-reflector-single-quote-strings-etc" target="_blank"><h1 class="title mb-6">Signs Of Troubles: Reflector, Single Quote Strings, Etc</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: February 16, 2006
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Nearly a month ago I made a statement about date processing in SQL that made me use SQL CLR in order to solve this problem. Since then I think I learned a couple of things about SQL, so I think I would like to retrack this statement.&#xA;The issue that I had was finding out the first day of a month given a spesific year / month combination. I eventually solved it with something similar to:&#xA;new DateTime(year,month,1)&#xA;The problem was that it wasn&#x27;t handling null values very well, and I didn&#x27;t feel like loading VS.Net, adding nullables and checks to the whole thing. One of the things that really annoyed me with SQL is that there isn&#x27;t a straight forward way to take a day, month, year combination and make a date out of it. In .Net it&#x27;s very easy to do, but I couldn&#x27;t figure out to do this in SQL.&#xA;Anatoly tried to point me in the right way, but I couldn&#x27;t see it. Anyway, today it hit me, and I immedately dropped my SQL CLR function in favor of this one:&#xA;CREATE FUNCTION FirstDayOfMonth(@year int, @month int)&#xA0; &#xA;RETURNS DATETIME AS&#xA0;&#xA0; &#xA;BEGIN&#xA0; &#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; RETURN DATEADD(MONTH,@month-1,DATEADD(YEAR,@year-1900,0))&#xA0; &#xA;END&#xA;This handles everything just fine, uses T-SQL (so no security issues), and it&#x27;s actually readable to me. I took a second look at Anatoly&#x27;s code, and it is just as clear to me now. A month and a half ago I need to really think about it to figure it out, and even then I rejected it in favor of the familiar CLR based solution.&#xA;The secret above is with the zero, which translate to 01/01/1900, once I&#x27;ve a known date, I can start playing with it. My second issue was with finding the last day of the month, once I had the above function, it was simplicity itself to write the next one:&#xA;CREATE FUNCTION LastDayOfMonth(@year int, @month int)&#xA0; &#xA;RETURNS DATETIME AS&#xA0;&#xA0; &#xA;BEGIN&#xA0; &#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; RETURN DATEADD(DAY,-1,&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; DATEADD(MONTH,1,&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; DATEADD(MONTH,@month-1,&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; DATEADD(YEAR,@year-1900,0))))&#xA;END&#xA;Get the first day of the month, add a month and substruct a day. Very nice to do.&#xA;Next step, figuring out how to strip date / time components of a date.</p>
-        <a href="https://ayende.com/blog/1036/moving-away-from-oop" target="_blank"><h1 class="title mb-6">Moving away from OOP</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 15, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is an interesting article about the direction that C&#x2B;&#x2B; seems to take now. Basically, it&#x27;s about moving from inheritance and strict OO to generic programming and external algorithms.&#xA;When I was working with C&#x2B;&#x2B; I just loved the abilities of the standard library and the way I could plug things together. I mostly agree with the article, it&#x27;s much better to have a way to hook things into a class from the outside than do it from the inside.&#xA;It&#x27;s one reason that I&#x27;m so excited about extention methods, they will allow you to do some very nice things without having to touch the object itself.</p>
         <div class="button flex justify-between">
             <a href="926.html"><span class="back arrow"></span></a>
 

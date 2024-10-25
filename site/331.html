@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/171874/concurrent-max-value" target="_blank"><h1 class="title mb-6">Concurrent max value</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: August 28, 2015
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For a feature in RavenDB, I need to figure out the maximum number of outputs per document an index has. Now, indexing runs in multiple threads at the same time, so we ended up with the following code:  var actualIndexOutput = maxActualIndexOutput;&#xA;if (actualIndexOutput &gt; numberOfAlreadyProducedOutputs)&#xA;{&#xA;    // okay, now let verify that this is indeed the case, in thread safe manner,&#xA;    // this way, most of the time we don&#x27;t need volatile reads, and other sync operations&#xA;    // in the code ensure we don&#x27;t have too stale a view on the data (beside, stale view have&#xA;    // to mean a smaller number, which we then verify).&#xA;    actualIndexOutput = Thread.VolatileRead(ref maxActualIndexOutput);&#xA;    while (actualIndexOutput &gt; numberOfAlreadyProducedOutputs)&#xA;    {&#xA;        // if it changed, we don&#x27;t care, it is just another max, and another thread probably&#xA;        // set it for us, so we only retry if this is still smaller&#xA;        actualIndexOutput = Interlocked.CompareExchange(&#xA;            ref maxActualIndexOutput, &#xA;            numberOfAlreadyProducedOutputs,&#xA;            actualIndexOutput);&#xA;    }&#xA;}&#xA;&#xA;&#xA;The basic idea is that this code path is hit a lot, once per document indexed per index. And it also needs to be thread safe, so we first do an unsafe operation, then a thread safe operations.&#xA;The idea is that we&#x2019;ll quickly arrive at the actual max number of index inputs,&#xA0; but we don&#x2019;t have to pay the price of volatile reads or thread synchronization.</p>
         <a href="https://benfoster.io/blog/vat-for-saas-businesses-in-the-eu/" target="_blank"><h1 class="title mb-6">VAT for SaaS businesses in the EU</h1></a>
         <p class="mb-2">by Ben Foster</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: August 19, 2015
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ll be presenting at the GOTO Copenhagen conference in Oct 7 &#x2013; 8 this year. The full session summary is:  Presentation: Highly Available &amp; Scalable Solutions with RavenDB Track: Solutions Track 1 / Time: Monday 13:20 - 14:10 / Location: Rosenborg RavenDB is a 2nd generation document database, with built-in load distribution, seamless replication, disaster recovery and data-driven sharding. In this session, we are going to explore how RavenDB deals with scaling under load and remain highly available even under failure conditions. We&#x27;ll see how RavenDB&#x27;s data-driven sharding allows to increase the amount of the data in our cluster without giving up the benefits of data locality. We are are going to execute complex distributed map-reduce queries on a sharded cluster, giving you lightning-fast responses over very large data volumes. Hibernating Rhinos will also be presenting at a booth, and we&#x2019;ll have a few members of the core team there to talk about RavenDB and the cool things that you can do with it.</p>
-        <a href="https://enterprisecraftsmanship.com/posts/state-vs-migration-driven-database-delivery/" target="_blank"><h1 class="title mb-6">State vs migration-driven database delivery</h1></a>
-        <p class="mb-2">by Vladimir Khorikov</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: August 18, 2015
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The topic described in this article is a part of my Database Delivery Best Practices Pluralsight course&#xA; In the previous post, I wrote about the database versioning best practices. I&#x2019;ve got a lot of feedback on that topic. One of the responses stated that the article was (admittedly) one-sided as it didn&#x2019;t cover the other widely spread approach to managing the database delivery process. I decided to fill that gap and provide my own comparison of the two.</p>
         <div class="button flex justify-between">
             <a href="330.html"><span class="back arrow"></span></a>
 

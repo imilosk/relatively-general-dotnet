@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/165121/without-strings-it-is-a-dark-cold-place" target="_blank"><h1 class="title mb-6">Without strings, it is a dark, cold place&#x2026;</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 14, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So I set out to do some non trivial stuff with file parsing. The file format is CSV, and I am explicitly trying to do it with as few string allocations as possible. In effect, I am basically relying on a char array that I manually manage. But as it turns out, this is not so easy. To start with, 65279 should be taken out and shot. That is the BOM marker (U&#x2B;FEFF), and it is has a very nasty habit of showing up when you are mixing StreamWriter and reading from a byte stream, even when I made sure to use the UTF8 encoding anyway. It is possible, as I said, but it is anything but nice. I set out to do non trivial stuff using this approach, but I wonder how useful this actually is. From experience, this can kill a system performance. This has been more than just my experience: http://joeduffyblog.com/2012/10/30/beware-the-string Of course, the moment that you start dealing with your own string type, it is all back in the good bad days of C&#x2B;&#x2B; and BSTR vs cstr vs std::string vs. MyString vs OmgStr. For example, how do you look at the value during debug&#x2026; I am pretty sure that in general, that isn&#x2019;t something that you&#x2019;ll want to do. In my spike, quite a lot of the issues that came up were directly associated with this. On the other hand, this did let me do things like string pooling, efficient parsing with no allocations, etc. But I&#x2019;ll talk about that specific project in my next post.</p>
         <a href="https://ayende.com/blog/165091/strings-are-annoying" target="_blank"><h1 class="title mb-6">Strings are annoying</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: January 03, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A common question teams face is, when should we take the time to refactor our code? Refactoring is defined as improving the design or&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/164961/growable-memory" target="_blank"><h1 class="title mb-6">Growable memory</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 03, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I wish that I could have more control over virtual memory. In particular, what I would really like at this time is the ability to map two virtual address ranges to the same physical memory. And yes, I am well aware (and already using) the ability to do just that using memory mapped files.&#xA0; However, what I would like to do is to have a pure memory based system, without any files being involved. This is meant to be used for the memory only system, which is commonly meant to be be used for unit testing. The reason that I want to be able to map the physical memory multiple times is that I have a buffer. Let us say that it is 1MB in size. And now I need to grow it. I can&#x2019;t ask the OS to just grow the buffer, since it might not have the virtual address available past the buffer end by the time I request it. What I would like to do is to request a new virtual allocation, let us say of 2 MB, and then ask the OS to map the same physical memory for the first buffer to the first section of the new buffer, and new memory for the rest.  The end result is that the first part of the buffer is mapped twice, and any changes you make there will be visible in both locations. Now, it is pretty easy to do this with memory mapped files, but I couldn&#x2019;t find a way to do it sans files. What I ended up doing is reserve a large portion of the virtual address space (using VirtualAlloc) and then committing it on demand. But I would really have liked to do something better, because now just moved the problem to when I run out of the reserved buffered space.</p>
         <div class="button flex justify-between">
             <a href="380.html"><span class="back arrow"></span></a>
 

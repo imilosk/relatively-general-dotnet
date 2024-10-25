@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4299/can-you-hack-this-out" target="_blank"><h1 class="title mb-6">Can you hack this out?</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 19, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently had to take a really deep look into how to cheat the CLR, that brought about some interesting discoveries, including the fact that it is, surprisingly, possible to do so. &#xA;Let us say that you have this code in some 3rd party assembly that you cannot modify:&#xA;&#xA;&#xA;internal interface IRunner{    void Execute();}public sealed class AssemblyRunner : IRunner{    void IRunner.Execute()    {        Console.WriteLine(&quot;executing&quot;);    }}public class CompositeRunner&lt;T&gt; where T : new(){    public void Execute()    {        if(!typeof(IRunner).IsAssignableFrom(typeof(T)))            throw new InvalidOperationException(&quot;invalid type&quot;);        var runner = (IRunner)new T();        Console.WriteLine(&quot;starting&quot;);        runner.Execute();        Console.WriteLine(&quot;done&quot;);    }}&#xA;&#xA;&#xA;&#xA;Can you get the CompositeRunner to output:&#xA;&#xA;    &#xA;        starting&#xA;        before executing&#xA;        executing&#xA;        after executing&#xA;        done&#xA;    &#xA;&#xA;The real problem was a bit harder, but this is a good start.</p>
         <a href="https://ayende.com/blog/4298/reducing-friction-as-a-standard-operating-method" target="_blank"><h1 class="title mb-6">Reducing friction as a standard operating method</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: November 13, 2009
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, after talking about it quite often recently, I think it is just about time to make this public.  The Linq to Sql Profiler is now on public beta, and it is even more awesome than you could imagine.  We are able to get a tremendous amount of information out of Linq to Sql, so from profiling behavior it is quite on par with NH Prof or Hibernate Profiler.  Here is a screen shot:           Please note that the UI color scheme is still under development, we would love to hear feedback about that as well.  Like NH Prof, L2S Prof is currently offered in a 30% discount for the duration of the beta period.  Looking forward for your feedback&#x2026;</p>
-        <a href="https://ayende.com/blog/4289/debugging-win32-crash-in-nh-prof" target="_blank"><h1 class="title mb-6">Debugging Win32 crash in NH Prof</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: November 13, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that happened when I pushed the UberProf build of NH Prof out is that people started complaining that trying to load a saved snapshot would crash the application. It took me a while to reproduce that, but I finally manage to get this:     When I tried to debug it, all I got was this, and native stack trace that I had no way of actually resolving.     Trying to reproduce the problem in the debugger resulted in the same experience. I tried playing around with WinDbg for a while, but I am not very good at that, so I gave up and tried something that I find useful in the past. Tell Visual Studio that I want it to capture all types of exceptions, not just CLR exceptions:         Using this mode, I managed to get:     This led me to inspect the CancellableWaitBoxView.xaml, which contains:       And now it all made sense. With the UberProf builds, each profiler has a distinct assembly name. The problem is that this XAML refer to the master assembly name (which I use for development).&#xA0;   The reason this issue was hard to fix was that it is WPF window failing, and then somehow that exception is being swallowed and translated into a native error dialog, I am not quite sure why. Once I knew what the problem was, the fix was quite simple (using assembly resolve).</p>
         <div class="button flex justify-between">
             <a href="546.html"><span class="back arrow"></span></a>
 

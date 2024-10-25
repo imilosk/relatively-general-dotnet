@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4366/wpf-webbrowser-and-javascript-interaction" target="_blank"><h1 class="title mb-6">WPF WebBrowser and JavaScript interaction</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 15, 2010
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I found myself needing to interact with JavaScript API in a WebBrowser hosted in a WPF application. That turned out to be quite a challenge to figure out, but I prevailed :-)  Given the following XAML:     &lt;Window x:Class=&quot;WpfApplication1.Window1&quot;&#xA;    xmlns=&quot;http://schemas.microsoft.com/winfx/2006/xaml/presentation&quot;&#xA;    xmlns:x=&quot;http://schemas.microsoft.com/winfx/2006/xaml&quot;&#xA;    Title=&quot;Window1&quot; Height=&quot;300&quot; Width=&quot;300&quot;&gt;&#xA;    &lt;Grid&gt;&#xA;      &lt;WebBrowser x:Name=&quot;Browser&quot; /&gt;&#xA;    &lt;/Grid&gt;&#xA;&lt;/Window&gt;&#xA;  &#xA;&#xA;You can interact with the JavaScript API using this code:&#xA;&#xA;&#xA;  public partial class Window1 : Window&#xA;{&#xA;    public Window1()&#xA;    {&#xA;        InitializeComponent();&#xA;        Browser.LoadCompleted &#x2B;= BrowserOnLoadCompleted;&#xA;        Browser.Navigate(new Uri(&quot;http://example.com&quot;));&#xA;    }&#xA;&#xA;    private void BrowserOnLoadCompleted(object sender, NavigationEventArgs navigationEventArgs)&#xA;    {&#xA;        var doc = (HTMLDocument)Browser.Document;&#xA;        var head = doc.getElementsByTagName(&quot;head&quot;).Cast&lt;HTMLHeadElement&gt;().First();&#xA;        var script = (IHTMLScriptElement)doc.createElement(&quot;script&quot;);&#xA;        script.text = &quot;alert(&#x27;hi&#x27;);&quot;;&#xA;        head.appendChild((IHTMLDOMNode)script);&#xA;        script.text = &quot;alert(&#x27;bye&#x27;);&quot;;&#xA;    }&#xA;}&#xA;  &#xA;&#xA;This allow you to inject JavaScript commands to the browser by manipulation the script.text property. It isn&#x2019;t generally useful, I&#x2019;ll admit, but for my scenario, it seems to be doing the job.</p>
         <a href="https://ayende.com/blog/4365/my-java-experience" target="_blank"><h1 class="title mb-6">My Java Experience</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: January 09, 2010
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the more interesting points of my posts about Entity Framework &amp; NHibernate is the discovery of things that Entity Framework can do that NHibernate cannot. In fact, if you&#x2019;ll read the posts, instead of the comments, you can see that this is precisely what I asked, but people didn&#x2019;t really read the text.  I wanted to dedicate this post to ghost objects, and how NHibernate deals with them.  Before we start, let me explain what ghost objects are. Let us say that you have a many to one polymorphic association, such as the one represented as Comment.Post.  A post may be either a Post or an Article, and since NHibernate by default will lazy load the association, NHibernate will generate a proxy object (also called a ghost object). That, in turn, result in several common issues: Leaking this and the inability to cast to the proper type are the most common ones.  In practice, this is something that you would generally run into when you are violating the Liskov Substitution Principle, so my general recommendation is to just fix your design.  Nevertheless, since the question pop up occasionally, I thought that I might write a bit more details on how to resolve this. Basically, the main issue is that at the point in time where we are loading the Comment entity, we don&#x2019;t have enough information to know what the actual entity type is. The simplest way to work around this issue is to tell NHibernate to load the associated entity as part of the parent entity load.  In the case of the comment, we can do it like this:     &lt;many-to-one name=&quot;Post&quot; &#xA;             lazy=&quot;false&quot;&#xA;             outer-join=&quot;true&quot;&#xA;             column=&quot;PostId&quot;/&gt;&#xA;  &#xA;&#xA;The lazy=&#x201D;false&#x201D; tell NHibernate to load the association eagerly, while the outer-join will add a join to load it in a single query. One thing to note, however, is that (by design) HQL queries will ignore any hints in the mapping, so you would have to specify join fetch explicitly in the mapping, otherwise it would generate a separate query for that.&#xA;&#xA;Since we eagerly load the associated entity, and we know its type, we don&#x2019;t have to deal with any proxies, and can avoid the ghost objects problem completely.</p>
-        <a href="https://ardalis.com/software-craftsmanship-at-codemash/" target="_blank"><h1 class="title mb-6">Software Craftsmanship at CodeMash</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 08, 2010
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This week at CodeMash I will be co-hosting a Precompiler session on Software Craftsmanship with Brendan Enrick on behalf of the Hudson&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="538.html"><span class="back arrow"></span></a>
 

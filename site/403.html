@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/162018/the-difference-between-ordering-boosting" target="_blank"><h1 class="title mb-6">The difference between Ordering &amp; Boosting</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 16, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This seems to be a pretty common issue with people getting the two of them confused. As an example, let us take the users in Stack Overflow:  Here, we want to get the users in order. We want to get all the users in descending order of reputation. But what happens when we want to do an actual search, for example, we want to get users by tag. Perhaps we want to get someone that knows some ravendb.  Here is the data that we have to work with:  Now, when searching, we want to be able to do the following. Find users that match what the tags that we specified, that are relevant and have them show up in reputation order. And that is where it kills us. Relevancy &amp; order are pretty much exclusive. Before we can explain that, we need to understand that order is absolute, but relevancy is not. If I have 10,000 tags, there is very little meaning to me having a tag or not. But if I have 10 tags, me having a tag or not is a lot more important. You want to talk with an expert in a specific field, not just someone who is a jack of all trades. Now, it might be that you want to apply some boost factor to users with high reputation, because there are people who are jack of all trades and master of most. That is the difference between boosting and ordering. Ordering is absolute, while boosting is a factor applied against the relative relevancy of the current query.</p>
         <a href="https://ayende.com/blog/162017/how-not-to-deal-with-replication-lag" target="_blank"><h1 class="title mb-6">How not to deal with Replication Lag</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: May 06, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Hey, California people, I&#x2019;m coming your way. I&#x2019;ll be speaking at FalafelCon 2013 next month about Refactoring with SOLID Principles. The&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/161793/ravens-storage-memtables-are-tough" target="_blank"><h1 class="title mb-6">Raven&#x2019;s Storage: Memtables are tough</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 06, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Memtables are conceptually a very simple thing. You have the list of values that you were provided, as well as a skip list for searches. Complications:  Memtables are meant to be used concurrently. We are going to have to have to hold all of our values in memory. And I am really not sure that I want to be doing that. When we switch between mem tables (and under write conditions, we might be doing that a lot), I want to immediately clear the used memory, not wait for the GC to kick in. The first thing to do was to port the actual SkipList from the leveldb codebase. That isn&#x2019;t really hard, but I had to make sure that assumptions made for the C&#x2B;&#x2B; memory model are valid for the CLR memory model. In particular, .NET doesn&#x2019;t have AtomicPointer, but Volatile.Read / Volatile.Write are a good replacement, it seems. I decided to port the one from leveldb because I don&#x2019;t know what assumptions other list implementations have made. That was the first step in order to create a memtable. The second was to decide where to actually store the data. Here is the most important method for that part:     public void Add(ulong seq, ItemType type, Slice key, Stream val)&#xA;The problem is that we cannot just reference this. We have to copy those values into memory that we control. Why is that? Because the use is free to change the Stream contents or the Slice&#x2019;s array as soon as we return from this method. By the same token, we can&#x2019;t just batch this stuff in memory, again, because of the LOH. The way this is handled in leveldb never made much sense to me, so I am going to drastically change that behavior. &#xA;In my implementation, I decided to do the following:&#xA;&#xA;Copy the keys to our own buffer, and keep them inside the skip list. This is what we will use for actually doing searches.&#xA;Change the SkipList to keep track of values, as well as the key.&#xA;Keep the actual values in unmanaged memory, instead of managed memory. That avoid the whole LOH issue, and give me immediate control on when the memory is disposed.&#xA;This took some careful coding, because I want to explicitly give up on the GC for this. That means that I need to make damn sure that I don&#x2019;t have bugs that would generate memory leak. &#xA;Each memtable would allocate 4MB of unmanaged memory, and would write the values to it. Note that you can write over 4MB (for example, by writing a very large value, or by writing a value whose length exceed the 4MB limit. At that point, we would allocate more unmanaged memory, and hand over the memory table to compaction.&#xA;The whole thing is pretty neat, even if I say so myself .</p>
         <div class="button flex justify-between">
             <a href="402.html"><span class="back arrow"></span></a>
 

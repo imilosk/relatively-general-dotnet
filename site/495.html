@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4736/psychic-debugging" target="_blank"><h1 class="title mb-6">Psychic Debugging</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 29, 2010
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I think that I am getting too much of those recently:</p>
         <a href="https://ayende.com/blog/4735/public-service-announcement-git-master-repositories-for-the-rhino-tools-projects" target="_blank"><h1 class="title mb-6">Public Service Announcement</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: December 19, 2010
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 12/15/2010Well, last time we tried to introduce a finalizer, but we forgot that we were using our own instance as the key to the slots dictionary, which prevented us from being collected, hence we never run the finalizer.  All problems can be solved by adding an additional level of indirection&#x2026; instead of using our own instance, let us use a separate instance:     public class CloseableThreadLocal&#xA;{&#xA;    [ThreadStatic] public static Dictionary&lt;object, object&gt; slots;&#xA;&#xA;    object holder = new object();&#xA;    public static Dictionary&lt;object, object&gt; Slots&#xA;    {&#xA;        get { return slots ?? (slots = new Dictionary&lt;object, object&gt;()); }&#xA;    }&#xA;&#xA;    public /*protected internal*/ virtual Object InitialValue()&#xA;    {&#xA;        return null;&#xA;    }&#xA;&#xA;    public virtual Object Get()&#xA;    {&#xA;        object val;&#xA;&#xA;        if (Slots.TryGetValue(holder, out val))&#xA;        {&#xA;            return val;&#xA;        }&#xA;        val = InitialValue();&#xA;        Set(val);&#xA;        return val;&#xA;    }&#xA;&#xA;    public virtual void Set(object val)&#xA;    {&#xA;        Slots[holder] = val;&#xA;    }&#xA;&#xA;    public virtual void Close()&#xA;    {&#xA;        GC.SuppressFinalize(this);&#xA;        if (slots != null)// intentionally using the field here, to avoid creating the instance&#xA;            slots.Remove(holder);&#xA;    }&#xA;&#xA;    ~CloseableThreadLocal()&#xA;    {&#xA;        Close();&#xA;    }&#xA;}&#xA;  &#xA;&#xA;Now it should work, right?&#xA;&#xA;Expect that it doesn&#x2019;t&#x2026; We still see that the data isn&#x2019;t cleaned up properly, even though the finalizer is run.&#xA;&#xA;Why?</p>
-        <a href="https://ayende.com/blog/4727/wrong-answer-1-your-own-threadlocal" target="_blank"><h1 class="title mb-6">Wrong answer #1: Your own ThreadLocal</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 18, 2010
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 12/15/2010Well, one way we can use to solve the problem is by introducing a finalizer, like so:     public class CloseableThreadLocal&#xA;{&#xA;    [ThreadStatic] private static Dictionary&lt;object, object&gt; slots;&#xA;&#xA;    public static Dictionary&lt;object, object&gt; Slots&#xA;    {&#xA;        get { return slots ?? (slots = new Dictionary&lt;object, object&gt;()); }&#xA;    }&#xA;&#xA;    public /*protected internal*/ virtual Object InitialValue()&#xA;    {&#xA;        return null;&#xA;    }&#xA;&#xA;    public virtual Object Get()&#xA;    {&#xA;        object val;&#xA;&#xA;        if (Slots.TryGetValue(this, out val))&#xA;        {&#xA;            return val;&#xA;        }&#xA;        val = InitialValue();&#xA;        Set(val);&#xA;        return val;&#xA;    }&#xA;&#xA;    public virtual void Set(object val)&#xA;    {&#xA;        Slots[this] = val;&#xA;    }&#xA;&#xA;    public virtual void Close()&#xA;    {&#xA;        GC.SuppressFinalize(this);&#xA;        if (slots != null)// intentionally using the field here, to avoid creating the instance&#xA;            slots.Remove(this);&#xA;    }&#xA;&#xA;   ~CloseableThreadLocal()&#xA;   {&#xA;         Close();&#xA;   }&#xA;}&#xA;  &#xA;&#xA;But this will not actually work, executing this code shows that we still have a memory leak:&#xA;&#xA;&#xA;  internal class Program&#xA;{&#xA;    private static void Main(string[] args)&#xA;    {&#xA;        UseThreadLocal();&#xA;        GC.Collect(int.MaxValue);&#xA;        GC.WaitForPendingFinalizers();&#xA;        Console.WriteLine(CloseableThreadLocal.slots.Count);&#xA;    }&#xA;&#xA;    private static void UseThreadLocal()&#xA;    {&#xA;        var tl = new CloseableThreadLocal();&#xA;        tl.Set(&quot;hello there&quot;);&#xA;        Console.WriteLine(tl.Get());&#xA;    }&#xA;}&#xA;  &#xA;&#xA;Why? And how can we fix this?</p>
         <div class="button flex justify-between">
             <a href="494.html"><span class="back arrow"></span></a>
 

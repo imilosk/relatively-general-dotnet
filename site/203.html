@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/183457-A/i-want-to-see-the-qa-process-that-catch-this-bug" target="_blank"><h1 class="title mb-6">I want to see the QA process that catch this bug!</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 21, 2018
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When we get bug reports from the field, we routinely also do a small assessment to figure out why we missed the issue in our own internal tests and runway to production.We just got a bug report like that. RavenDB is not usable at all on a Raspberry PI because of an error about Non ASCII usage. This is strange. To start with we test on Raspberry Pi. To be rather more exact, we test on the same hardware and software combination that the user was running on.&#xA0; And what is this Non ASCII stuff? We don&#x2019;t have any such thing in our code.As we investigated, we figured out that the root cause was that we were trying to pass a Non ASCII value to the headers of the request. That didn&#x2019;t make sense, the only things we write to the request in this case is well defined values, such as numbers and constant strings. All of which should be in ASCII. What was going on?After a while, the mystery cleared. In order to reproduced this bug, you needed to have the following preconditions:A file hashed to a negative Int64 value.A system whose culture settings was set to sv-SE (Swedish).Run on Linux.This is detailed in this issue. On Linux (and not on Windows), when using Swedish culture, negative numbers are using: &#x201D;&#x2212;1&#x201D; and not &#x201C;-1&#x201D;. For those of you with sharp eyes, you noticed that this is U&#x2B;2212, (minus sign), and not U&#x2B;002D (hyphen minus). On Linux, for Unicode knows what, this is used as the negative mark. I would complain, but my native language has &#x201E;. Anyway, the fix was to force the usage of invariant when converting the Int64 to a string for the header, which is pretty obvious. We are also exploring how to fix this in a more global manner.But I keep coming back to the set of preconditions that is required. Sometimes I wonder why we miss a bug, in this case, I can only say that I would have been surprised if we would have found it.</p>
         <a href="https://ayende.com/blog/183426-C/ravendb-4-1-features-cluster-wide-acid-transactions" target="_blank"><h1 class="title mb-6">RavenDB 4.1 Features</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: June 13, 2018
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We just upgraded our stable branch to .NET Core 2.1. The process was pretty smooth overall, but we did get the following exchange in our internal Slack channel. It went something like this:is it known that import doesn&#x27;t work ? As you can imagine, Import is pretty important for us.nodoes it work on your machine ?checking,,,what&#x27;s an error?no error.so UI is blocked?do you have any errors in dev tools console?`TypeError: e is undefined`doesn&#x27;t says to me muchsame thing in incognitoexport doesn&#x27;t work eitherlol the reason is: dotnet core 2.1&#xA;the websockets are faster and I had race in code&#xA;will push fix shortlyThere you have it, .NET Core 2.1 broke our code. Now I have to go and add Thread.Sleep somewhere&#x2026;</p>
-        <a href="https://andrewlock.net/suppressing-the-startup-and-shutdown-messages-in-asp-net-core/" target="_blank"><h1 class="title mb-6">Suppressing the startup and shutdown messages in ASP.NET Core</h1></a>
-        <p class="mb-2">by Andrew Lock</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 12, 2018
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I show how to disable the startup messages shown in the console when you run an ASP.NET Core application using WebHostBuilder or HostBuilder.&#x2026;</p>
         <div class="button flex justify-between">
             <a href="202.html"><span class="back arrow"></span></a>
 

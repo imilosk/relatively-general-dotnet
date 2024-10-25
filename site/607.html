@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3780/nh-prof-alerts-excessive-number-of-rows-returned" target="_blank"><h1 class="title mb-6">NH Prof Alerts</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 29, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a bit from the docs for NH Prof, which I am sharing in order to get some peer review. The excessive number of rows returned is a warning that is being generated from the profiler when... a query is returning a large number of rows. The simplest scenario is that we simply loaded all the rows in a large table, using something like this code: session.CreateCriteria(typeof(Order))&#xA;&#x9;.List&lt;User&gt;();&#xA;This is a common mistake when you are binding to a UI component (such as a grid) that perform its own paging. This is a problem is several levels:&#xA;&#xA;We tend to want to see only part of the data&#xA;We just loaded a whole lot of unnecessary data&#xA;We are sending more data over the network&#xA;We have higher memory footprint than we should have&#xA;In extreme cases, we may crash as a result of out of memory exception&#xA;None of those are good things, and like the discussion on unbounded result sets, this can be easily prevented by applying a limit at the database level to the number of rows that we will load.&#xA;But it is not just simple queries without limit that can cause issue, another common source of this error is Cartesian product when using joins. Let us take a look at this query:&#xA;session.CreateCriteria(typeof(Order))&#xA;&#x9;.SetFetchMode(&quot;OrderLines&quot;, FetchMode.Join)&#xA;&#x9;.SetFetchMode(&quot;Snapshots&quot;, FetchMode.Join)&#xA;&#x9;.List&lt;Order&gt;();&#xA;Assuming that we have ten orders, with ten order lines each and five snapshots each, we are going to load 500 rows from the database. Mostly, they will contain duplicate data that we already have, and NHibernate will reduce the duplication to the appropriate object graph.&#xA;The problem is that we still loaded too much data, with the same issues as before. Now we also have the problem that Cartesian product doesn&#x27;t tend to stop at 500, but escalate very quickly to ridiculous number of rows returned for trivial amount of data that we actually want.&#xA;The solution for this issue is to change the way we query the data. Instead of issuing a single query with several joins, we can split this to several queries, and send them all to the database in a single batch using Multi Queries.</p>
         <a href="https://ayende.com/blog/3779/architecture-advice-scale-the-architecture-to-fit-the-application" target="_blank"><h1 class="title mb-6">Architecture Advice: Scale the architecture to fit the application</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: December 24, 2008
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that I am doing with NH Prof is not only giving you visibility into what NHibernate is doing, but also trying to automate my own experience in analyzing best practices and problematic usages of NHibernate. NH Prof will detect usage patterns and warn against bad practices and suggest how to deal with them. The first one that I implemented was detecting Select N&#x2B;1, and the feedback from the beta group was &quot;Wow! I didn&#x27;t even know that we had this problem, but casual use with the profiler immediately showed it.&quot; Here is the newest feature, detecting &amp; warning about unbounded result sets:   And the actual warning:</p>
-        <a href="https://ayende.com/blog/3770/nh-prof-new-feature-row-counts" target="_blank"><h1 class="title mb-6">NH Prof new feature</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 24, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">That was actually a hard to implement feature, since this is not something that NHibernate just give out. Nevertheless, by trawling through the codebase long enough, I was able to figure out how to do this.   As an aside, one of the requested features for NH Prof was to be able to get DB level stats. I am not going to do this for v1.0, but I now have a pretty firm idea about how to implement this. We will have to see how many people request this information.</p>
         <div class="button flex justify-between">
             <a href="606.html"><span class="back arrow"></span></a>
 

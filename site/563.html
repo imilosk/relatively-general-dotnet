@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4159/your-queries-are-going-to-fail-in-production" target="_blank"><h1 class="title mb-6">Your queries are going to fail in production</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: August 31, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Reading Davy Brion&#x2019;s post There Is No Excuse For Failing Queries In Production had me twitching slightly. The premise is that since you have tests for your queries, they are not going to fail unless some idiot goes to the database and mess things up,and when that is going to happen, you are going to trip a circuit breaker and fail fast. Davy&#x2019;s post is a response to a comment thread on another post:     Bertrand Le Roy: Would it make sense for the query to implement IDisposable so that you can put it in a using block? I would be a little concerned about the query failing and never getting disposed of.      Davy Brion: well, if a query fails the underlying SqlCommand object will eventually be garbage collected so i wouldn&#x2019;t really worry about that. Failed queries shouldn&#x2019;t happen frequently anyway IMO because they typically are the result of incorrect code.   The problem with Davy&#x2019;s reasoning is that I can think of several very easy ways to get queries to fail in production even if you go through testing and put your DB under lock &amp; key. Probably the easiest problems to envision are timeouts and transaction deadlocks. Imagine the following scenario, your application is running in production, and the load is big enough (and the request pattern is such that) transaction deadlocks begin to happen. Deadlocks in the DB are not errors. Well, not in the usual sense of the word. They are transient and should be dealt separately.  Using Davy&#x2019;s approach, we would either have the circuit breaker tripping because of a perfectly normal occurrence or we may have a connection leak because we are assuming that all failures are either catastrophic or avoidable.</p>
         <a href="https://ayende.com/blog/4158/how-i-found-a-memory-leak" target="_blank"><h1 class="title mb-6">How I found a memory leak</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: August 27, 2009
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I got a few bug reports about NH Prof giving an error that looks somewhat like this one:     System.Windows.Markup.XamlParseException: Cannot convert string &#x27;0.5,1&#x27; in attribute &#x27;EndPoint&#x27; to object of type &#x27;System.Windows.Point&#x27;. Input string was not in a correct format.&#xA0;    It took a while to figure out exactly what is going on, but I finally was able to track it down to this hotfix (note that this hotfix only take cares of list separator, while the problem exists for the decimal separator as well. Since I can&#x2019;t really install the hotfix for all the users of NH Prof, I was left with having to work around that.  I whimpered a bit when I wrote this, but it works:     private static void EnsureThatTheCultureInfoIsValidForXamlParsing()&#xA;{&#xA;&#x9;var numberFormat = CultureInfo.CurrentCulture.NumberFormat;&#xA;&#x9;if (numberFormat.NumberDecimalSeparator == &quot;.&quot; &amp;&amp; &#xA;&#x9;&#x9;numberFormat.NumberGroupSeparator == &quot;,&quot;) &#xA;&#x9;&#x9;return;&#xA;&#x9;Thread.CurrentThread.CurrentCulture = CultureInfo.GetCultureInfo(&quot;en-US&quot;);&#xA;&#x9;Thread.CurrentThread.CurrentUICulture = CultureInfo.GetCultureInfo(&quot;en-US&quot;);&#xA;}&#xA;&#xA;&#xA;I wonder when I&#x2019;ll get the bug report about NH Prof not respecting the user&#x2019;s UI culture&#x2026;</p>
-        <a href="https://ayende.com/blog/4149/nh-prof-the-ten-minutes-feature" target="_blank"><h1 class="title mb-6">NH Prof</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: August 27, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">15:51 - I have about ten more minutes before starting a presentation, and I thought that I might as well make use of the time and do some work on NH Prof.  This feature is supporting filtering of sessions by URL. And I don&#x2019;t expect it to be very hard.  16:01 - Manual testing is successful, writing a test for it  16:02 &#x2013; Test passed, ready to commit, but don&#x2019;t have network connection to do so.  The new feature is integrated into the application, in the UI, filtering appropriately, the works:     Just for fun, I did the feature with the projector on in front of the waiting crowd. I love NH Prof architecture.</p>
         <div class="button flex justify-between">
             <a href="562.html"><span class="back arrow"></span></a>
 

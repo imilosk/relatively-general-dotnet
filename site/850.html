@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/1716/did-you-know-language-specs" target="_blank"><h1 class="title mb-6">Did you know? (Language Specs?)</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 01, 2006
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Visual Studio 2005 comes with C# 1.2 and C# 2.0 specs. You can find them here: &quot;D:\Program Files\Microsoft Visual Studio 8\VC#\Specifications\1033&quot;.    I couldn&#x27;t find the VB Specs :-)</p>
         <a href="https://ayende.com/blog/1715/the-executable-configuration-anti-pattern" target="_blank"><h1 class="title mb-6">The Executable Configuration (Anti Pattern?)</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: September 29, 2006
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let us assume that you have an architecture that demands that you&#x27;ll have a database per client (quite common, by my experiance), but the application&#xA0;layers are the same. This is usually done for reasons of security and/or scalability. So there is no way a client can get information for another client.    This is fairly simple to handle with NHibernate, you just create a session factory per each client. This is actually an advantage, since you can start playing with the implementations of the classes for each client. (Yes, you are reading me correctly. In this case, it possible to turn NHibernate into an Inversion Of Control container).    The issue turns up when you have caching turned on. Assuming you have an entity of the same type with the same identifier in two of the databases, you may very will mix the data when it is cached. NHibernate maintain a single second level cache per session factory, so you are supposed to be safe from this. The problem is that the cache space is shared (and it has to be shared).    Let us take an example of an Employee object with id of #5, which exist in both IniTech and Fuzbar databases. When the employee instnace is loaded and put in the cache, the cache key that is used looks something like: &quot;NHibernate:Entities.EmployeeManagement.Employee:5@5&quot;. Now, when we try to load an employee from the second database, we first lookup in the cache, finding that there is an instance there, because the cache keys matches.    This is happening because the cache space (so to speak) is the same space for all the caching strategies. For SysCache, it is the ASP.Net cache that is used for the cache space. For distributed caching, Memcached is used. In both cases, if the same cache key is generated, the information will be returned even if the key was actually inserted by another session factory.    In this sceanrio, I solved the issue by modifying the SysCacheProvider to be aware of the current database, and insert the current database name to the cache key. This solved all the issues in one stroke.    The JIRA issue for this is here. I was surprised to learn that I was the first to encounter this, and in the comments to the JIRA issue, I found that indeed I wasn&#x27;t the first. :-)    The issue is solve by specifying cache region prefix in the session factory configuration, but the functionality wasn&#x27;t ported to NHibernate yet.</p>
-        <a href="https://ayende.com/blog/1707/upward-compatability-preparing-for-next-version" target="_blank"><h1 class="title mb-6">Upward compatability: Preparing for next version</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 29, 2006
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Okay, here is an interesting issue. I am currently building a big project using NHibernate 1.0.2, and I need some features on NHibernate 1.2, mostly with regard to the new critieras. At the moment, we can&#x27;t move to 1.2, there are concerns about it being beta and other changes that will keep us busy with technical stuff rather than building business stuff. Those are valid concerns, but I still feel that it will take more time in the end to move to the new version.     I can solve the problem with 1.0.2, but not cleanly. I can back port the new stuff that I need (basically, a single class) and use it against NHibernate 1.0.2 (without modifications to NHibernate). The issue I wonder about is how to prepare for the eventual move to NHibernate 1.2. The last thing that I want is to have two ways to do something, or using the inferior method to handle it.     I already have a big comment right there://TODO:&#xA0;Fix&#xA0;this&#xA0;by&#xA0;XYZ&#xA0;when&#xA0;moving&#xA0;to&#xA0;NHibernate&#xA0;1.2     &#xA0;Any other suggestions?</p>
         <div class="button flex justify-between">
             <a href="849.html"><span class="back arrow"></span></a>
 

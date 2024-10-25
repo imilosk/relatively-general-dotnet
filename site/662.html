@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3344/bug-hunting-story" target="_blank"><h1 class="title mb-6">Bug Hunting Story</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 03, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The bug: SvnBridge will not accept a change to a filename using multi byte format.  Let us start figuring out what is going on, shall we?  Hm... looks like when TortoiseSVN is PUT-ing the file, it uses the directory name instead of the actual file name. Obviously, this is a client bug, and I can close this bug and move on to doing other things. Except that I am pretty sure that SVN can handle non ASCII characters...  Let us compare the network trace from SVN and SvnBridge and see what is going on...  Oh, I got the problem. TortoiseSVN is requesting a CHECKOUT, and we return the wrong URL. Obviously I did something astoundingly stupid there when I processed that request. Indeed, taking a look at what is going on there is... interesting.  Finally I realize that the problem is that while TortoiseSVN sends the URL in seemingly reasonable format, it is obviously being read wrongly by SvnBridge. It is using ASCII encoding to read this, while it probably should use UTF8. Because of that, the URL looks something like /tfsrtm08/test/????.txt, and ? is the query string terminator, no wonder I have issues.  But, how does it work for standard SVN servers. Hm, looks like when TortoiseSVN uses Url Encoding for the URL when taking to a standard SVN server. Why is it doing this?   Hm... looks like the URL that TortoiseSVN uses when it is request a CHECKOUT is the one that is returned in the response to a PROPFIND request.  Sure, that is easy to fix, we will just Url Encode the response from the PROPFIND handler.  Except that it doesn&#x27;t work...  Oh, we also handle some of that in the file node class, so we will fix it there.  Yeah!  Except that it still doesn&#x27;t work!  Grr! Looks like the way we handle Url Encoding is too invasive, we need to only UrlEncode non ASCII characters, this means that we should not encode characters such as &#x27;/&#x27;, for example.  Let us try this again, shall we?  Hm... it still doesn&#x27;t work. What is going on.  Excuse me while I am having a nervous breakdown, please.  Oh! When we send the response to the CHECKOUT request, we send the URL for the PUT request in the location header, and we haven&#x27;t Url Encoded that yet.  And now it works... :-D  Let us run the test and commit...  We have a broken test.  *Sob*  Well, okay, that is actually a test that is supposed to be broken (it is testing the way we Url Encode urls, after all).  Number of code lines changed, less than 20.  Number of hours spent of this bug: over eight hours.  Conclusion, I am not really being productive today. I am off to visit the code generation wizard...</p>
         <a href="https://ardalis.com/customer-service-is-key/" target="_blank"><h1 class="title mb-6">Customer Service Is Key</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: May 28, 2008
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am considering having a language that mandates tests. If you don&#x27;t have a matching test for the code in question, it will refuse to run. If the tests fail, it will refuse to run. If the tests takes too long, they are considered failed and the code will refuse to run.  This certainly ensure that there would be test. It wouldn&#x27;t ensure that they would be meaningful, however. That is fine by me. I am not interested in policy through enforcement, just gentle encouragement in the right direction.   The technical challenges of implementing such a system are nil. The implications on the workflow and ease of use for such a system are unknown. On the surface, checked exceptions are great. In practice, they are very cumbersome. This is why I am warning that I have only toyed with the idea, not implemented it.  Thoughts?</p>
-        <a href="https://ayende.com/blog/3338/audio-book-review-starship" target="_blank"><h1 class="title mb-6">Audio Book Review: Starship</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 27, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">SciFi Inflation is the best term that I can use for this book series. It was engaging enough for me to go through all three books, but it bothered me enough to put a negative post about it.  Just about anything in those books is over-inflated. Interstellar travel times are measured in minutes, thousands of sentient races exists, sensors that can read the details of a ship from thirty light years away, an interstellar power has 300 million ships, etc.  This is like nails on board, highly disturbing for the flow of the story. And the story is good, it is just that those are beyond &quot;wavehand physics away&quot;, I expect that. But I expect that to be done in a believable way.  Case in point, at one time the ship just blew up a few other ships, and it was hit with a bit of debris. The command that the Captain gibes? &quot;Pilot, takes us half a light year out, I want to have a little time to respond if something like that happen again.&quot;  Does the author have any idea about how big a light year is?  Urgh!</p>
         <div class="button flex justify-between">
             <a href="661.html"><span class="back arrow"></span></a>
 

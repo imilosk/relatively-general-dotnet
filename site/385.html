@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/164642/quick-peek-into-voron-perf-work" target="_blank"><h1 class="title mb-6">Quick peek into Voron perf work</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: November 29, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Those are interim results, but it gives me some hope. This is running on a different machine than the numbers I posted before. But I have enough to compare to each other. You can see it here. All numbers are in operations / sec. Writing 100,000 sequential items (100 items per transaction in 1,000 transactions):  And writing 100,000 random items:  &#xA0; And here is what we really care about. Comparing Voron to Esent:  This is actually pretty amazing, because we are now at about 25% write speed of Esent for sequential writes (we used to be at less than 5%). When talking about random writes (what we really care about) we are neck in neck.</p>
         <a href="https://ayende.com/blog/164737/black-friday-sale-20-off-for-the-next-48-hours" target="_blank"><h1 class="title mb-6">Black Friday sale: 20% off for the next 48 hours</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: November 20, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So far, we have got to the conclusion that we are going to ditch fsync in favor of unbuffered write through calls. We also saw that it can play nicely with memory mapped files, which is what we are using for Voron. However, there is a problem here. Before we can write the data to the journal file, we need some way to actually put it. Previously, we could use the memory directly from the memory mapped journal file, and then just flush it. However, now we cannot do that, the only writes that we can do to the journal are using the unbufered write through I/O. Otherwise, we have to deal call fsync again. And sadly, we cannot call WriteFile on the memory that is mapped to the same part of the file that we write to.  That means that we need some scratch space to work with. And that means that we need to make some choices here. The obvious place to handle this scratch space is memory. The problem with that is that this means that we are going to compete with the rest of the system for available memory. In particular, we would need some way to free up memory after we use it, or we may hold into it forever. But if we free the memory, we might need to use it again, in which case we have a free/alloc pattern that isn&#x2019;t going to be good. Ideally, we want to get a continuous range of memory, so that probably explains why we care about its size and not releasing it early. One thing that I should note is that we are worried mostly about big transactions, ones that might need to touch hundreds or thousands of megabytes. Those tend to be rare, yes, but I hate to have any sort of hard limits in my software. So what we&#x2019;ll probably do is create another memory mapped file, of a size that is at least as big as the current journal file. And we will put all of our in flight transactional data in there. The good news about it is that we can re-use the space on every transaction, just overwriting what previous values. It also means that we easily expand the size of the current transaction buffer, so to speak. And under high memory pressure, we have an easier way to handle things.  When the transaction actually commits, we will write directly from the scratch space to the journal file, as a single, sequential, unbuffered write through write. Externally, there would be much of a change. And most of that would probably just have to do with the transaction commit semantics. Speaking of which, we probably want to talk about the way we store the header information&#x2026;</p>
-        <a href="https://www.meziantou.net/pex-code-digger.htm" target="_blank"><h1 class="title mb-6">PEX &amp; Code Digger</h1></a>
-        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: November 20, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When one develops, comes the fateful moment of testing. One would be tempted to say to himself &quot;I am a developer not a tester&#x2026; writing tests is not my job&#x27;. Unfortunately it does not always happen like that in real life (it&#x27;s not always easy to be a developer &#x1F603;). Sometimes you have to spend a lot</p>
         <div class="button flex justify-between">
             <a href="384.html"><span class="back arrow"></span></a>
 

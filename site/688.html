@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3140/hosting-addins-the-problem-with-untrusted-code" target="_blank"><h1 class="title mb-6">Hosting AddIns - The problem with untrusted code</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: February 13, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let us assume that we need to load some code, potentially un-trusted / hostile into our application. The runtime has a lot of functionality to offer us in this regard, we can segregate the strange code pretty well in a low privilege AppDomain, but we can&#x27;t protect ourselves from the AddIn killing us. There are two simple ways an AddIn can kill the host application, without the host being able to do something about it. Both are very easy to do by mistake, unfortunately. The first is to simply throw an unhandled exception from a thread and the second is to cause a stack overflow. Both are considered as fatal errors and can not be recovered. In fact, in the stack overflow case, you can&#x27;t ever get any information about what exactly happened. Here is a simple malicious addin that cannot be recovered or traced: public class MaliicousAddin : MarshalByRefObject&#xA;{&#xA;    public void Execute()&#xA;    {&#xA;        new Thread(delegate(object obj)&#xA;        {&#xA;            Overflow();&#xA;        }).Start();&#xA;    }&#xA;&#xA;    private void Overflow()&#xA;    {&#xA;        Overflow();&#xA;    }&#xA;}&#xA;&#xA;This puts us in somewhat of a problem. We want to have a way to recover from malicious (or badly written) add ins. There are two ways that I have found to do so, both are unsatisfactory. The first is to simply run the AddIns in another process, which means that the add in can still crash the process, but the host is actually running on another process, and so not affected. The second is to play with the CRL Hosting API in order to modify the default runtime behavior. This option is probably out if you plan on hosting your application somewhere (like IIS, for example).&#xA;Any other options?</p>
         <a href="https://ayende.com/blog/3139/travel-plans" target="_blank"><h1 class="title mb-6">Travel Plans</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: February 09, 2008
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After talking about the advantages setting up environments where the laziest approach is also the faster approach, I want to talk a bit about the details of actually doing it. Zero Friction approach is very important for the overall success of a project, because it means that the right thing is the easy thing, so that is what will get done.  Something to note is that this doesn&#x27;t excuse ignorance, the developers using this approach should be able to at least understand the concepts and methods that they use. I am saying that there is no excuse for making the right thing the hard thing. That is setting yourself up for failure. We will start from the database, a subject near and dear to my heart. When you are working with a database, you are going to have to deal with schema changes, and those can be a pain if you are making rapid modifications, very often. This is even more of a pain when you are building the domain model, and keep having to make changes all the time. My solution for that is to setup a /home/createindex.castle action, which has the following code: [AccessibleThrough(Verb.Post)]&#xA;public void CreateDatabase(bool allow)&#xA;{&#xA;&#x9;PropertyBag[&quot;allow&quot;] = allow;&#xA;&#x9;if (allow == false)&#xA;&#x9;{&#xA;&#x9;&#x9;PropertyBag[&quot;message&quot;] = &quot;You must check the box in order to create the database&quot;;&#xA;&#x9;&#x9;return;&#xA;&#x9;}&#xA;&#x9;if(Request.IsLocal == false)&#xA;&#x9;{&#xA;&#x9;&#x9;PropertyBag[&quot;message&quot;] = &quot;This action is only valid from the local machine&quot;;&#xA;&#x9;&#x9;return;&#xA;&#x9;}&#xA;&#x9;try&#xA;&#x9;{&#xA;&#x9;&#x9;ActiveRecordStarter.CreateSchema();&#xA;&#x9;&#x9;PropertyBag[&quot;message&quot;] = &quot;Database successfully created&quot;;&#xA;&#x9;}&#xA;&#x9;catch (Exception ex)&#xA;&#x9;{&#xA;&#x9;&#x9;PropertyBag[&quot;error&quot;] = ex;&#xA;&#x9;}&#xA;}&#xA;This means that I can hit a web page, check a box, submit and I have a new database. The reason that I have the extra steps in the middle is that I this is a destructive operation.&#xA;Another option is to use the SchemaUpdate feature that was recently added to NHibernate, that is a non destructive operation, one that you can safely put inside the Application_Start method.</p>
-        <a href="https://ardalis.com/cio-magazine-on-agile-development/" target="_blank"><h1 class="title mb-6">CIO Magazine on Agile Development</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: February 08, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The latest issue of CIO Magazine has a featured article on Getting Clueful: 7 Things CIOs Should Know About Agile Development. It includes&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="687.html"><span class="back arrow"></span></a>
 

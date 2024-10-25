@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/152833/orders-search-in-ravendb" target="_blank"><h1 class="title mb-6">Orders Search in RavenDB</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 09, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that we have been working on recently is our internal ordering system. We did a major upgrade on how it works, and along the way, we moved it to RavenDB. This post is to talk specifically about one feature in the system, Order Search. As you can probably guess, order search is something that is quite important. It is annoying to an extent, because users come to us with all sort of information about an order, from &#x201C;I ordered last year some stuff&#x201D; to &#x201C;with order id E12312312&#x201D;. The later is very easy, the former tends to be somewhat of a challenge to find. So I set out to try to figure out if we can do something better than just the standard gigantic search screen. For example, here is how you can search an order using Plimus:  There is way too much stuff there. Not to mention that the backend of such a screen is likely complex. Instead, I choose to go with a different metaphor:  The question is, how to do it? It turns out that this is really quite simple to do with RavenDB, here is the full index: public class Orders_Search : AbstractIndexCreationTask&lt;Order, Orders_Search.ReduceResult&gt;&#xA;{&#xA;    public class ReduceResult&#xA;    {&#xA;        public string Query { get; set; }&#xA;        public DateTime LastPaymentDate { get; set; }&#xA;    }&#xA;&#xA;    public Orders_Search()&#xA;    {&#xA;        Map = orders =&gt; from order in orders&#xA;                        select new&#xA;                        {&#xA;                            Query = new object[]&#xA;                            {&#xA;                                order.FirstName, &#xA;                                order.LastName, &#xA;                                order.OrderNumber, &#xA;                                order.Email, &#xA;                                order.Email.Split(&#x27;@&#x27;),&#xA;                                order.CompanyName,&#xA;                                order.Payments.Select(payment =&gt; payment.PaymentIdentifier),&#xA;                                order.LicenseIds&#xA;                            },&#xA;                            LastPaymentDate = order.Payments.Last().At&#xA;                        };&#xA;    }&#xA;}&#xA;&#xA;&#xA;&#xA;And here is the UI for that:&#xA;&#xA;&#xA;But the question here is, how does this work?&#xA;Well, it turns out that RavenDB has some really interesting behavior when you feed it an IEnumerable. Instead of trying to index the IEnumerable as a single value, it index that as a multi value field.&#xA;That means that for each order, we are going to actually store the following data in the Query field:&#xA;&#xA;Ayende&#xA0; (FirstName)&#xA;Rahien&#xA0;&#xA0; (LastName)&#xA;E11111111 (Order Number)&#xA;ayende@ayende.com (Email)&#xA;ayende (Email.Split(&#x2018;@&#x2019;) first part)&#xA;ayende.com (Email.Split(&#x2018;@&#x2019;) second part)&#xA;Hibernating Rhinos (Company)&#xA;E111111 (PaymentIdentifier for first payment)&#xA;E111234&#xA0; (PaymentIdentifier for second payment)&#xA;E123412 (PaymentIdentifier for third payment)&#xA;EFA32826-1E09-48FA-BC0E-9A9AAF0FDD70 (LicenseIds#1)&#xA;95CDDED2-2D19-48AF-991D-1284446CB7A3 (LicenseIds #2)&#xA;Because we store all of those values inside a single field, we can query for either one of them. Hell, we can even enable full text search on the field and allow even more interesting searches.&#xA;And the best thing, it pretty much Just Works. The user can put anything that might identify the order, and we will figure it out for him. And since the user is often me, I am very happy about it.</p>
         <a href="https://ayende.com/blog/153249/ravendb-course-in-london-28-29-february" target="_blank"><h1 class="title mb-6">RavenDB Course in London: 28&#x2013;29 February</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: December 29, 2011
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are uploading RavenDB videos to our YouTube channel on a regular basis. Here&#x27;s a list of the most recent videos:  Polymorphism and RavenDB   &#xA0; The &quot;Lost Session&quot; @ KAN Malmo - Introduction to RavenDB   &#xA0; Virtual Brown Bag - RavenDB @ Orlando .NET User Group   &#xA0; Scaling with RavenDB   RavenOverflow - building a StackOverflow clone with RavenDB</p>
-        <a href="https://ayende.com/blog/152801/windows-7-conflict-resolution-dialog-how-i-hate-thee" target="_blank"><h1 class="title mb-6">Windows 7 Conflict Resolution Dialog: How I hate thee</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 29, 2011
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Do you see this thing?   I hate it. (Yes, I know that Win 8 has a better one) The reason that I hate it, there is no shortcut keys for &#x201C;Move and Replace&#x201D;, so I have to use the freaking mouse, which takes forever.</p>
         <div class="button flex justify-between">
             <a href="453.html"><span class="back arrow"></span></a>
 

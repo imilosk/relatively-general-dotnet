@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/181441-C/production-test-run-the-self-flagellating-server" target="_blank"><h1 class="title mb-6">Production Test Run</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 24, 2018
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Sometimes you see the impossible. In one of our scenarios, we saw a cluster that had such a bad case of split brain that it came near to fracturing the very boundaries of space &amp; time. In a three node cluster, we have one node that looked to be fine. It connected to all the other nodes and was the cluster leader. The other two nodes, however, were not in the cluster and in fact, they were showing signs that they never were in the cluster.What was really strange was that we took the other two machines down and the first node was still showing a successful cluster. We looked deeper and realized that it wasn&#x2019;t actually a healthy situation, in fact, this node was very rapidly switching between leader and follower mode. It took a bit of time to figure out what was going on, but the root cause was DNS. We had the three nodes on separate DNS (a.oren.development.run, b.oren.development.run, c.oren.development.run) and they were setup to point to the three machines. However, we have previously used the same domain names to run a cluster on the first machine only. Because of the way DNS updates, whenever the machine at a.oren.development.run would try to connect to b.oren.development.run it would actually connect to itself. At this point, A would tell B that it is the leader. But A is B, so A would respond by becoming a follower (because it was told it should, by itself). Because it became a follower, it disconnected from itself. After a timeout, it would become leader again, and the cycle would continue. Every time that the server would get up, it would whip itself down again. &#x201C;I&#x2019;m a leader&#x201D;, &#x201C;No, I&#x2019;m a leader&#x201D;, etc.This is a fun thing to discover. We had to trace pretty deep to figure out that the problem was in the DNS cache (since the DNS itself was properly updated).We fixed things so we now recognize if we are talking to ourselves and error properly.</p>
         <a href="https://ayende.com/blog/181505-C/handling-tens-of-thousands-of-requests-sec-on-t2-nano-with-kestrel" target="_blank"><h1 class="title mb-6">Handling tens of thousands of requests / sec on t2.nano with Kestrel</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: January 18, 2018
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After the previous posts about TypeScript, I&#x27;m sure you&#x27;d like to migrate your application from JavaScript to TypeScript. If you haven&#x27;t read them yet, take a few minutes:Still not using TypeScript?Detect common JavaScript errors with TypeScriptThe migration from JavaScript to TypeScript is not a v</p>
-        <a href="https://ayende.com/blog/181346-C/production-test-run-too-much-of-a-good-thing-isnt-so-good-for-you" target="_blank"><h1 class="title mb-6">Production Test Run</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 17, 2018
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Not all of our testing happened in a production settings. One of our test clusters was simply running a pretty simple loop of writes, reads and queries on all the nodes in the cluster while intentionally destabilizing the system.After about a week of this we learned that this worked, there were no memory leaks or increased resource usage and also that the size of the data on disk was about three orders of magnitude too much. Investigating this we discovered that the test process introduced conflicts because it wrote the same set of documents to each of the nodes, repeatedly. We are resolving this automatically but are also keeping the conflicted copies around so users can figure out what happened to their system. In this particular scenario, we had a lot of conflicted revisions, and it was hard initially to figure out what took that space. In our production system, we also discovered that we log too much. One of the interesting feedback items we were looking for in this production test run is to see what kind of information we can get from the logs and make sure that the details there are actionable. A part of that was to see if we could troubleshoot something simply using the logs, and add missing details if there were stuff that we couldn&#x2019;t figure out from them.We also discovered that under load, we would log a lot. In particular, we had logs detailed every indexed document and replicated item. These are almost never useful, but they generate a lot of noise when we lowered the log settings. So that went away as well. We are very focused on logs usability, it should be possible to understand what is going on and why without drowning in minutia.</p>
         <div class="button flex justify-between">
             <a href="221.html"><span class="back arrow"></span></a>
 

@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://andrewlock.net/accessing-services-when-configuring-mvcoptions-in-asp-net-core/" target="_blank"><h1 class="title mb-6">Accessing services when configuring MvcOptions in ASP.NET Core</h1></a>
+        <p class="mb-2">by Andrew Lock</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 27, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is a follow on to one by Steve Gordon, in which I show a clean way to use configured services when setting up MvcOptions when calling AddMvc.&#x2026;</p>
         <a href="https://enterprisecraftsmanship.com/posts/verifying-collaborations-at-system-edges/" target="_blank"><h1 class="title mb-6">Verifying collaborations at the system edges</h1></a>
         <p class="mb-2">by Vladimir Khorikov</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: October 19, 2016
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Your application probably needs to communicate with a database of some kind. Naturally, that database isn&#x2019;t open to the world &#x2013; it needs to&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/175780/that-is-my-memory-youre-freeing-you-foreign-thread" target="_blank"><h1 class="title mb-6">That is my memory you&#x2019;re freeing, you foreign thread!</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 18, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB is a pretty big project, and it has been around for quite a while. That means that we have run into a lot of strange stuff over the years. In particular, support incidents are something that we track and try to learn from. Today&#x2019;s post is about one such lesson. We want to be able to track, on a per thread basis, how much memory is in use. Note that when we say that, we talk about unmanaged memory. The idea is, once we track it, we can manage it. Here is one such example:  Note that this has already paid for itself when it showed us very clearly (and without using special tools), exactly who is allocating too much memory. Memory allocation / de-allocation is often a big performance problem, and we are trying very hard to not get painted into performance corners. So a lot of our actual memory usage is allocate once, then keep around in the thread for additional use. This turn out to be quite useful. It also means that for the most part, we really don&#x2019;t have to worry about thread safety. Memory allocations happen in the context of a thread, and are released to the thread once an operation is done.  This gives us high memory locality and it avoids having to take locks to manage memory. Which is great, except that we also have quite a bit of async request processing code. And async request processing code will quite gladly jump threads for you. So that lead to a situation where you allocate memory in thread #17 at the beginning of the request and it waits for I/O, so when it finally completes, the request finish processing in thread #29. In this case, we keep the memory we go for next usage in the finishing thread. This is based on the observation that we typically see the following patterns:  Dedicated threads for tasks, that do no thread hopping, each have unique memory usage signature, and will eventually settle into the memory it needs to process everything properly. Pools of similar threads that share roughly the same tasks with one another, and have thread hopping. Over time, things will average out and all threads will have roughly the same amount of memory. That is great, but it does present us with a problem, how do we account for that? If thread #17 allocated some memory, and it is now sitting in thread #29&#x2019;s bank, who is charged for that memory? The answer is that we always charge the thread that initially allocated the memory, even if it currently doesn&#x2019;t have that memory available. This is because it is frequently the initial allocation that we need to track, and usage over time just means that we are avoiding constant malloc/free calls.  It does present a problem, what happens if thread #29 is freeing memory that belongs to thread #17? Well, we can just decrement the allocated value, but that would force us to always do threads safe operations, which are more expensive. Instead, we do this:  If the freeing thread is the same as the allocation thread, just use simple subtraction, crazy cheap. But if it was allocated from another thread, do the thread safe thing. Then we smash both values together to create the final, complete, picture.</p>
         <div class="button flex justify-between">
             <a href="286.html"><span class="back arrow"></span></a>
 

@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3937/nhibernate-mapping-component" target="_blank"><h1 class="title mb-6">NHibernate Mapping - &lt;component/&gt;</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 08, 2009
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">&lt;component/&gt; is an interesting feature of NHibernate, which map more or less directly into the notion of a Value Type in DDD. This is a way to create an object model with higher granularity than the physical data model.  For example, let us take the following table:     And this object model:     They are quite different, where the physical data model put all the data in a single table, we want to treat them in our object model as two separate classes. This is where &lt;component/&gt; comes into play:  &lt;class name=&quot;Person&quot;&#xA;&#x9;table=&quot;People&quot;&gt;&#xA;&#xA;&#x9;&lt;id name=&quot;Id&quot;&gt;&#xA;&#x9;&#x9;&lt;generator class=&quot;identity&quot;/&gt;&#xA;&#x9;&lt;/id&gt;&#xA;&#x9;&lt;property name=&quot;Name&quot; /&gt;&#xA;&#x9;&lt;component name=&quot;Address&quot;&gt;&#xA;&#x9;&#x9;&lt;property name=&quot;Line1&quot;/&gt;&#xA;&#x9;&#x9;&lt;property name=&quot;Line2&quot;/&gt;&#xA;&#x9;&#x9;&lt;property name=&quot;City&quot;/&gt;&#xA;&#x9;&#x9;&lt;property name=&quot;Country&quot;/&gt;&#xA;&#x9;&#x9;&lt;property name=&quot;ZipCode&quot;/&gt;&#xA;&#x9;&lt;/component&gt;&#xA;&lt;/class&gt;&#xA;&#xA;This mapping will translate between the physical data model and the object model. And the mapping is complete, so even queries are done in the way you would expect it:&#xA;&#xA; &#xA;&#xA;And then we let NHibernate sort it out and give us our pretty object graph.</p>
         <a href="https://ayende.com/blog/3936/nhibernate-mapping-property" target="_blank"><h1 class="title mb-6">NHibernate Mapping - &lt;property/&gt;</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: April 03, 2009
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As I stated before, I started writing a queuing system a few days ago, loosely based on my previous efforts in this area, but aimed to create a production ready queuing infrastructure that I can use in my own applications. The decision to build this was not made lightly, but I wanted a queuing system that met my needs, and was flexible enough to extend at needs.   The design goals stated for Rhino Queues were:     XCopy deployable     Zero configuration     Durable     Supports System.Transactions     Works well with Load Balancing hardware     Supports sub queues     Support arbitrarily large messages    It is now publically available, and I think it deserve some discussion.  Here is a very simple example of using it:     var queueManager = new QueueManager(new IPEndPoint(IPAddress.Loopback, 2200), &quot;queues.esent&quot;);&#xA;queueManager.CreateQueues(&quot;Web&quot;);&#xA;var queue = queueManager.GetQueue(&quot;Web&quot;);&#xA;&#xA;while(ContinueProcessing)&#xA;{&#xA;    using(var tx = new TransactionScope())&#xA;    {&#xA;        var msg = queue.Receive();&#xA;        Console.WriteLine(&quot;Message from {0}:&quot;, msg.Headers[&quot;source&quot;]);&#xA;        Console.WriteLine(Encoding.Unicode.GetString(msg.Data));&#xA;        tx.Complete();&#xA;    }&#xA;}&#xA;&#xA;&#xA;This example is merely to show the API.&#xA;&#xA;The actual software is pretty interesting. Communication between different queues are done using TCP, with a protocol that works well with load balancing hardware, making load balancing queued application as easy as balancing any HTTP based app.&#xA;&#xA;You cannot see it in the API example, but the system is supporting System.Transactions fully, so sending a message is delayed until a transaction is committed, and receipt of a message would be rolled back on transaction rollback. We even support recovery after a hard crash, by plugging into the recovery mechanism that MSDTC offers us. &#xA;&#xA;All messages are durable, so a system reboot will not remove them. While the default mode for Rhino Queues is an embedded component in your application (XCopy deployable), we still support the ability to deliver a message to a server that is down, by implementing a fairly flexible message retry mechanism.&#xA;&#xA;Because Rhino Service Bus makes such a heavy use of this, we are also support sub queues, and we have no hard limit on the size of messages that we can deliver.&#xA;&#xA;I delayed announcing this until I could finish integrating this completely into Rhino Service Bus, but this is now done, and should just work. Rhino Service Bus will still supports MSMQ, but I think that a lot of the work that we are going to do now on Rhino Service Bus would be with the new queuing infrastructure.</p>
-        <a href="https://ardalis.com/stir-trek-event-in-columbus-ohio/" target="_blank"><h1 class="title mb-6">Stir Trek Event in Columbus Ohio</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 02, 2009
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ll be attending and speaking at Stir Trek on 8 May 2009, which happens to be the date the new Star Trek movie opens (coincidentally). What&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="587.html"><span class="back arrow"></span></a>
 
