@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://enterprisecraftsmanship.com/posts/value-object-better-implementation/" target="_blank"><h1 class="title mb-6">Value Object: a better implementation</h1></a>
+        <p class="mb-2">by Vladimir Khorikov</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: August 28, 2017
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is about a better implementation of Value Object.</p>
         <a href="https://ayende.com/blog/179585/optimizing-select-projections-part-i" target="_blank"><h1 class="title mb-6">Optimizing select projections</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: August 23, 2017
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Routing in ASP.NET MVC apps has often presented challenges to developers, resulting in a bunch of different route debugging tools and nuget&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/179489/breaking-the-language-barrier" target="_blank"><h1 class="title mb-6">Breaking the language barrier</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: August 22, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In RavenDB 4.0, we decided to finally bite the bullet and write our own query language. That led to a lot of really complex decisions that we had to make. I already posted about the language and you saw some first drafts. RQL is meant to be instantly familiar to anyone who used SQL before. At the same time, this led to issues. In particular, the major issue is that SQL as a language is meant to handle rectangular tables, and RavenDB isn&#x2019;t storing data in tables.&#xA0; For that matter, we also want to give our users the ability to express themselves fully in the query language, that means support for complex queries and complex projections.For a while, we explored the option of supporting nested selects as the way to express these semantics, but that was pretty horrible, both in terms of the complexity of the implementation and in terms of the complexity of the language. Instead, we decided that take only the good parts out of SQL .What do I mean by that? Well, here is a pretty simple query:And here is how we can ask for specific fields:You&#x2019;ll note that we moved the select clause to the end of the query. The idea being that the syntax will hint to the user about the order of operations in the pipeline.Next we add some filtering, giving us:This isn&#x2019;t really interesting except for the part where implementing this was a lot of fun. Things become both more interesting and more obvious when we look at a full query, with almost everything there:And again, this is pretty boring, because except for the clauses location, you might as well write SQL. So let us see what happens when we start mixing some of RavenDB&#x2019;s own operations. Here is how we can traverse the object graph on the database side:This is an interesting example, because you can see that we have traversed the path of the relation and are able to fetch not just the data from the documents we are looking for, but also the related documents. It is important to note that this happens after the where, so you can&#x2019;t filter on that (but you can plug this in the index, but that is a story for another time). I like this syntax, because it is very clear about what is going on, but at the same time, it is also very limited. If I want anything that isn&#x2019;t rectangular, I need to jump through hops. Instead, let us try something else&#x2026;The idea is that we can use a JavaScript object literal in place of the select. Instead of fighting with the language and have to fight it, we have a very natural way to express projections from RavenDB. The cool part is that you can apply logic as well, so things like string concatenation or logic in the select clause are absolutely permitted. However, take a look at the example, we have code duplication here, in the formatting for customer and contact names. We can do something about it, though:The idea is that we also have a way to define functions to hold common logic and handle the more complex details if we need to. In this manner, instead of having to define and deploy transformers, you can define that directly in your query. Naturally, if you want to calculate the Mandelbrot set inside the query, that is&#x2026; suspect, but the idea is that having JavaScript applied on the results of the query give us a lot more freedom and easy of use. The actual client side in C# is going to remain unchanged and was already updated to talk to the new backend, but in our dynamic language clients, I think we&#x2019;ll work to expose this more, since it is a much better fit in such environments.Finally, here is the full query, with everything that we can do:Don&#x2019;t focus too much the actual content of the queries, they are mostly there to show off the syntax. The last query now has the notion of include directly in the query. As an aside, you can now use load and include to handle tertiary includes. I didn&#x2019;t actually set out to build them, but they came naturally from the syntax, and they are probably going to stay.I have a lot more to say about this, but I&#x2019;m so excited about this feature that I just got to get it out there. And yes, as you can see, you can declare several functions, and you can also call them from one another so there is a lot of power at the table right now.</p>
         <div class="button flex justify-between">
             <a href="242.html"><span class="back arrow"></span></a>
 

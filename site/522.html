@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/4515/porting-mvc-music-store-to-raven-porting-the-homecontroller-the-right-way" target="_blank"><h1 class="title mb-6">Porting MVC Music Store to Raven</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 22, 2010
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As I mentioned, we can solve the GetTopSellingAlbums() problem using map/reduce, but that isn&#x2019;t really a good way of doing it. The problem with doing that (aside from the scared looks and pained sounds that you get when you mention it) is that it is trying to solve the problem in a relational way. Indeed, the previous solution was an near duplication of how a relational database would process that query. So, what is the doc db approach for solving this issue?  The answer is quit simple, remember that documents are independent, and think about the question. What we are asking is what are the top selling albums. If we add a CountSold property to the album, we would suddenly find it so much easier to handle this problem. This means that we would need to update all the albums that are part of a given order when an order is submitted, but that is acceptable (this exact same operation is commonly done in SQL databases as well).  For now, let us waive how we create the CountSold property and fill it with the right values (I&#x2019;ll discuss it in my next post), for now, assume that this happened, how can we GetTopSellingAlbums() problem?   Well, that is easy enough. All we need to do is define an index for CountSold.   // AlbumsByCountSold&#xA;from album in docs.Albums&#xA;select new { album.CountSold };&#xA;&#xA;&#xA;&#xA;With that, we can implement GetTopSellingAlbums like this:&#xA;&#xA; &#xA;&#xA;And now it is done, very simple, very efficient and quit elegant, eve if I say so myself.</p>
         <a href="https://ayende.com/blog/4514/find-the-design-flaw" target="_blank"><h1 class="title mb-6">Find the design flaw</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: May 18, 2010
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The MVC Music Store release came as a fortunate surprise, I wanted to write a sample application for Raven, and having someone else write all the hard bits (the UI :-)) for me and leave to just replace the data access is just about ideal. The overall goal is to touch absolutely no JS/HTML code in the app, replacing just the controllers. It would be interesting to see if I&#x2019;ll manage to do that.  The database model for the application is:     You can see some interesting things in the schema immediately:     The Cart table should probably be called CartLineItem, because it stores a row per item in the cart.          The CartId is not an foreign key, but a reference to the user name or the session id.       The Artist table only hold the artist name, there is no other data.   With this information, I think that the following data model would be appropriate:  Albums        The album document contains a reference to the Genre as well as the Genre&#x2019;s name. This allows us to display the album without having to refer to the Genre document.    The album document contains the artist name and id, for much the same reason.    There isn&#x2019;t actually a set of Artist documents in the database. We don&#x2019;t keep any information about an artist, except its name, so I didn&#x2019;t see a reason to introduce it at this time.   Genre         The genre document is an exact duplicate of the Genre table, no surprises here.   Cart     The cart is a pretty common document format, we have a single document and it contains an array of elements where the relational model contained a set of rows. Note that the UserIdentifier is where we store the user id or the session id for the cart.  Order     Order is another pretty standard document format. We aggregate all the order information to a single document, and we aggregate related information (Address) to a specific node.  Artist  There is no artist document.  Why does Genre deserve a standalone document while Artist gets subsumed into Album?          For the simple reason that the application does something with Genres (if only just displaying their description) where the only thing that is done with Artists is displaying their name in the context of an album. At this point, I consider Artist to be wholly owned by album, so there is no reason to keep a separate document for it. The only reason that album&#x2019;s artist have and artist id is that I am assuming (based on the data) that the source for artist is an external system that does something a bit more meaningful with it than keep the artist name around.  This is just one half of the work we need to do, we have defined the data model, now we need to consider how this is used in a broader context, and add the query model using indexes. That will be covered in a future post.</p>
-        <a href="https://ardalis.com/630/" target="_blank"><h1 class="title mb-6">Dont Throw Duplicate Exceptions</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 17, 2010
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In your code, you&#x2019;ll sometimes have write code that validates input using a variety of checks. Assuming you haven&#x2019;t embraced AOP and done&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="521.html"><span class="back arrow"></span></a>
 

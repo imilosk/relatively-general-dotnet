@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/165313/the-cost-of-working-with-strings" target="_blank"><h1 class="title mb-6">The cost of working with strings</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: January 15, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Following my last post, I decided that it might be better to actually show what the difference is between direct string manipulation and working at lower levels. I generated a sample CSV file with 10 million lines and 6 columns. The file size was 658MB. I then wrote the simplest code that I could possibly think of:      1: public class TrivialCsvParser   2: {   3:     private readonly string _path;   4:&#xA0;    5:     public TrivialCsvParser(string path)   6:     {   7:         _path = path;   8:     }   9:&#xA0;   10:     public IEnumerable&lt;string[]&gt; Parse()  11:     {  12:         using (var reader = new StreamReader(_path))  13:         {  14:             while (true)  15:             {  16:                 var line = reader.ReadLine();  17:                 if (line == null)  18:                     break;  19:                 var fields = line.Split(&#x27;,&#x27;);  20:                 yield return fields;  21:             }  22:         }  23:     }  24: }&#xA;This run in 8.65 seconds (with a no-op action) and kept the memory utilization at about 7MB. &#xA;Then next thing to try was just reading through the file without doing any parsing. So I wrote this:&#xA;&#xA;&#xA;   1: public class NoopParser   2: {   3:     private readonly string _path;   4:&#xA0;    5:     public NoopParser(string path)   6:     {   7:         _path = path;   8:     }   9:&#xA0;   10:     public IEnumerable&lt;object&gt; Parse()  11:     {  12:         var buffer = new byte[1024];  13:         using (var stream = new FileStream(_path,FileMode.Open, FileAccess.Read))  14:         {  15:             while (true)  16:             {  17:                 var result = stream.Read(buffer, 0, buffer.Length);  18:                 if (result == 0)  19:                     break;  20:                 yield return null; // noop  21:             }  22:         }  23:     }  24: }&#xA;Note that this isn&#x2019;t actually doing anything. But this took 0.83 seconds, so we see a pretty important big difference here. By the way, the amount of memory used isn&#x2019;t noticeably different here. Both use about 7 MB. Probably because we aren&#x2019;t actually holding up to any of the data in any meaningful way.&#xA;I have run the results using release build, and I run it multiple times, so the file is probably all in the OS cache. So I/O cost is pretty minimal here. However, note that we aren&#x2019;t doing a lot of stuff that is being done by the TrivialCsvParser. For example, doing line searches, splitting the string to fields, etc. But interestingly enough, just removing the split will reduce the cost from 8.65 seconds to 3.55 seconds.</p>
         <a href="https://ayende.com/blog/165121/without-strings-it-is-a-dark-cold-place" target="_blank"><h1 class="title mb-6">Without strings, it is a dark, cold place&#x2026;</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: January 06, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am not going to have a lot of commentary here, I think that I can let the numbers speak for themselves. Here are the current performance test of Voron vs. Esent on my machine.  Note, the numbers are in millions of writes per second here! For Random Writes, the numbers are in thousands of writes per second:  Okay, I lied about no commentary. What you can see is that in our test, inserting 1.5 million items to storage. In sequential runs, we get such big variance because the test run itself is so short. (Nitpicker, yes, we&#x2019;ll post longer benchmarks). Note that this was running on a pretty good SSD drive, but what about HDD? Yes, that isn&#x2019;t a mistake, Esent is doing 901 writes per second.   As we have seen, we are pretty good at reading, but what are the current results?  As you can see, we are significantly better than Esent for reads in single and dual threaded modes, but Esent is faster when it can use more threads. That annoyed me, so I set out to figure out what was blocking us. As it turned out, searching the B-tree was quite expensive, but when I added a very small optimization (remember the last few searched pages), we saw something very interesting).  (The Esent results are different than the previous run because we run it on a different disk (still SSD)). What about random reads?   Now, one area where we currently suck is large writes, where we are doing really bad, but we&#x2019;re working on that. Overall, I am pretty happy about it all.</p>
-        <a href="https://ardalis.com/when-should-you-refactor/" target="_blank"><h1 class="title mb-6">When Should You Refactor</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: January 03, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A common question teams face is, when should we take the time to refactor our code? Refactoring is defined as improving the design or&#x2026;Keep Reading &#x2192;</p>
         <div class="button flex justify-between">
             <a href="380.html"><span class="back arrow"></span></a>
 

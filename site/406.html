@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/161709/reviewing-leveldb-part-xvii-filters-what-filters-oh-those-filters" target="_blank"><h1 class="title mb-6">Reviewing LevelDB</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 15, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was all set to finish this series, when I realized that I missed something important, I didn&#x2019;t covered, and indeed, I don&#x2019;t currently understand, what filters are, and how are they used. As usual, once I actually got to the part of the code where this is actually handled (instead of ignoring it), it made a lot more sense:  And that, following with the rest of the code that I read makes a lot more sense. A SST is a sorted table, essentially. We have the keys and the blocks, etc. And we can find a value very quickly. But what if you could do this even more cheaply? Using a bloom filter is a good way to never get false negative, and it will reduce the amount of work we have to do if we can&#x2019;t find the key in the SST drastically (only need to read the filter value, don&#x2019;t even need to do any additional checks). Quite elegant, even if I say so myself. There is one thing to pay attention to and that is that you can define your own comparator, in which case you must also define you own filter policy. If you use a comparator that ignore casing, you also need to provider a filter that ignore casing.</p>
         <a href="https://ayende.com/blog/161707/reviewing-leveldb-part-xv-memtables-gets-compacted-too" target="_blank"><h1 class="title mb-6">Reviewing LevelDB</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: April 04, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It seems like I have been trying to get to the piece that actually write to disk for a very long while.  The API from the header file looks to be pretty nice. I would assume that you would call it something like this: TableBuilder builder(options,writableFile);&#xA;builder.Add(&#x201C;one&#x201D;, &#x201C;bar&#x201D;);&#xA;builder.Add(&#x201C;two&#x201D;, &#x201C;foo&#x201D;);&#xA;builder.Finish();&#xA;&#xA;&#xA;There are some things that looks funky. Like Flush(), which has a comment that I don&#x27;t follow: Can be used to ensure that two adjacent entries never live in the same data block.&#xA;Oh well, maybe I need to actually read the code first?&#xA;And immediately we have this:&#xA;&#xA;I think that this explain why you have Flush(), this forces different blocks. Most of the time, you let leveldb handle that, but you can also control that yourself if you really know what you are doing.&#xA;There is something called FilterBlockPolicy, but I don&#x27;t get what it is for, ignoring for now.&#xA;Calling Add() does some really nice things with regards to the implementation. Let us say that we are storing keys with similar postfixes. That is very common.&#xA;When considering leveldb for RavenDB, we decided that we would store the data in this manner:&#xA;&#xA;/users/ayende/data = {} &#xA;/users/ayende/metadata = {}&#xA;Now, when we want to add them, we add the first one and then the second one, but we have a chance to optimize things.&#xA;We can arrange things so we would output:&#xA;&#xA;0,19,2&#xA;/users/ayende/data&#xA;{}&#xA;15, 9, 3&#xA;metadata&#xA;{}&#xA;Note that for the second key, we can reuse the first 15 characters of the previous entry. And we just saved some bytes on the disk.&#xA;Now, blocks are held in memory, and by default they are flushed every 4 KB or so. &#xA;&#xA;Side note: looking at the code, it is really scary just how many times data is copied from one memory location to another in the leveldb codebase. Client code to WriteBatch, WriteBatch to MemTable, MemTable to TableBuilder, etc.&#xA;Okay, so now I am pretty sure that I am following what is going on when writing to disk. Still not sure how you search in an SST. The data is sorted, but that looks like it would require multiple seeks .There is metadata &amp; index blocks in there, but I am not quite sure how they would work. Need to read the reader side of things to really get things. Well, I&#x27;ll do that next time...</p>
-        <a href="https://ayende.com/blog/161921/ravendb-course-snippet" target="_blank"><h1 class="title mb-6">RavenDB Course Snippet</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 03, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We got several requests for this, so here you go. A small snippet (10 minutes out of more than 12 hours!) of the RavenDB Course that is available for purchase.</p>
         <div class="button flex justify-between">
             <a href="405.html"><span class="back arrow"></span></a>
 

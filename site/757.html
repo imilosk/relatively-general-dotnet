@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/2545/test-drive-design-code-refactor" target="_blank"><h1 class="title mb-6">Test (Drive Design) -&gt; Code -&gt; Refactor</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 11, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Another discussion with Eli Lopian, check it here. I would start out by saying that I agree to what he says, especially:  It is the process that will allow us to meet future requirements. A process that will allow us to change the design as the features grow. I wouldn&#x27;t call it process, but what the hell.  This, however, I disagree:  Lets recall the TDD process:  Write Tests -&gt; Code -&gt; Refactor (Design) Notice that the Design stage is the LAST stage, it is not:  Design (For Testability) -&gt; Test -&gt; Code  In my view, the way it works is that you: Write Test (Drive Design) -&gt; Code -&gt; Refactor The idea is that writing tests is design, coding and refactoring is just making sure that it is working :-)</p>
         <a href="https://ayende.com/blog/2544/the-sins-of-xml" target="_blank"><h1 class="title mb-6">The Sins of XML</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: June 10, 2007
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today I had to deal with optimizing a page. Under certain circumstances, it would take ~30 seconds to run. On my machine, of course, it would load nearly instantly. The first thing that I did was put a DB profiler and watch the traffic going to the DB server. In my experience, that should always be the first place to look. No, not because I am using an OR/M, because that is usually the most common place for remote calls, and that is usually has an order of magnitude higher cost than anything else that I can do in the application. It also helps that openning a DB Profiler is as simple matter as it can be. Now, again, I could have looked for costly queries, but I didn&#x27;t think that I would have much, I looked for lots of queries. I found that the page used 32 separate queries to the database in order to get the data. That wasn&#x27;t nice of this page, of course, but the depressing part was that it wasn&#x27;t the usually &quot;Select N&#x2B;1 - slap an eager load on it and move on&quot;, it was a true case of a page that simply needed to display a wide object graph, which required a lot of queries to load. Frankly, lazy loading was just part of it, the other part of it was that the controller for this page had performed quite a few queries on its own (get me paged count of decendants, get me count of friends, etc).  So, I rolled up my sleeves and started to go over the controller, looking for all the places that it performed any kind of data access. After isolating those, I create a method &quot;EagerLoadDataEfficently&quot; and started to work. I am using NHibernate trunk, which means that I have the lovely Multi Criteria support, that made my life a lot easier. What I basically had to do was to take each query in place, and stuff it into the Multi Criteria, execute that, and get on with it. It took about an hour and a half*, and was a lot of fun. End result, we got the page down to 4 queries, and that was because it had two &lt;iframe&gt;s in it, and I didn&#x27;t feel like managing the state between three separate requests. Zero code changes in the UI layer, zero model changes as a result.&#xA0;All the changes were in tuning the Multi Criteria. In this case, it really was a no-brainer optimization. I am very pleased with this feature. I am going to put a screen cast soon about what it can do, by the way. * Had to split responsabilities between classes, I reused a controller where I shouldn&#x27;t have, which caused some delay.</p>
-        <a href="https://ayende.com/blog/2535/sahil-on-or-m" target="_blank"><h1 class="title mb-6">Sahil on OR/M</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: June 10, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Sahil Malik&#xA0;has a post about his thoughts on OR/M. I don&#x27;t agree on two points, I think that he underestimate the usefulness of Linq For SQL, and I can&#x27;t understand this:  eSQL is what differentiates Entity Framework from the rest of the ORMs. eSQL is quite kickass From what I have seen, eSQL is fairly cumbersome, and I don&#x27;t really get how it makes EF different than other OR/Ms.</p>
         <div class="button flex justify-between">
             <a href="756.html"><span class="back arrow"></span></a>
 

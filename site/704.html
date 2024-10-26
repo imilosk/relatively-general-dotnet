@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3014/another-paging-approach" target="_blank"><h1 class="title mb-6">Another paging approach</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: December 06, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have hard time believing that, but this is something that I learned from how MS CRM works. This is the first time that I ever saw this approach, although it seems so obvious when you think about it. Updated: Fixed a bug found by Nathan Baulch, thanks! The idea here is to solve the problem of SQL 2000 not really having a good way to do paging. The basic pattern is this: select top [N] * from [TableName] &#xA;where [orderCriteria] &gt; @orderCriteriaPreviousMaxValue or &#xA;(&#xA;&#x9;[Id] &gt; @PreviousID and &#xA;&#x9;[orderCriteria] = @orderCriteriaPreviousMaxValue&#xA;) &#xA;order by [orderCriteria], [Id]&#xA;&#xA;What do I mean by that?&#xA;Let us say that I want to get the first page of customers, I would issue the following query:&#xA;select top 25 * from Customers &#xA;order by Customers.Name, Customers.Id&#xA;&#xA;Now, I want to get the next page, I can do this using this approach:&#xA;select top 25 * from Customers&#xA;where Customers.Name &gt;= @CustomerNamePreviousMaxValue or&#xA;(&#xA;&#x9;Customers.Id &gt; @PreviousId and &#xA;&#x9;Customers.Name &gt; @CustomerNamePreviousMaxValue&#xA;)&#xA;order by Customers.Name, Customers.Id&#xA;All we need to remember is the last row&#x27;s value from the previous query, and pass it to this one. Using this approach we can efficently page through result sets, without having to deal with the limitations of SQL Server limited top capabilities.&#xA;The usage of the filtering and the ordering ensure that we will always get the next result back. I find it quite elegant. What is surprising, I don&#x27;t think that I have ever seen it in any other place.</p>
         <a href="https://ayende.com/blog/3013/perfoming-joins-without-having-all-the-data-in-memory" target="_blank"><h1 class="title mb-6">Perfoming joins without having all the data in memory</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: December 04, 2007
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I read this post with interest, apparently Linq for SQL is doing something odd, because I can&#x27;t quite believe the results that this guy is getting. From the post:  So I dug into the call graph a bit and found out the code causing by far the most damage was the creation of the LINQ query object for every call! The actual round trip to the database paled in comparison I can&#x27;t imagine what they are doing there to cause this performance characteristics. From my own experiments with Linq, it should definitely not produce this amount of efforts.</p>
-        <a href="https://ayende.com/blog/3006/a-time-for-a-dsl" target="_blank"><h1 class="title mb-6">A time for a DSL</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: December 04, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Most of the time, I use a DSL as a way to setup and configure some sort of a runtime engine. We will get to that later when we will talk about imperative vs. declarative DSL. But the rule of the thumb that I use is that I&#x2019;ll use a Fluent Interface if I usually need this functionality at the same time I am developing. If I need to be expressive at a different time than the development of the application, then it probably means that I should use a DSL instead. The issues of complexity vs. expressiveness also come into play, of course. If I can have a more expressive syntax out of a DSL than I can when using a Fluent Interface, that is also a consideration. I&#x2019;ll admit that I tend to favor building DSL over Fluent Interfaces, precisely because I leant the other way in the past, and got burned badly by the complexity involved in trying to maintain something of that complexity in a rigid language. If you need to do things externally, a DSL is the place to look for. In fact, if you feel the urge to put XML into place, as anything except strict data storage mechanism, that is a place to go with a DSL. Fluent Interfaces relies heavily on intellisense in order to create that fluent feeling. If you need to work on it outside the IDE, that is probably going to be a factor.  Extensibility is also a concern; let us go back to the scheduling sample. We have the scheduling engine, and we have the tasks themselves. Consider that to write a task using a DSL I usually have to write a small text file, but to write a task using a Fluent Interface requires creating a project, compiling, etc. This means that it is often easier to use a DSL than a Fluent Interface, especially if we would like to hand this DSL to non developers.</p>
         <div class="button flex justify-between">
             <a href="703.html"><span class="back arrow"></span></a>
 

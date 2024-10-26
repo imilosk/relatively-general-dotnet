@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/193697-A/disk-space-management-inside-voron" target="_blank"><h1 class="title mb-6">Disk space management inside Voron</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 15, 2021
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Voron is RavenDB&#x2019;s storage engine. It is how we store data, keep transactions and in generally get a lot of our abilities. In this post, I want to talk about the way RavenDB manages disk space internally.&#xA0; Voron uses a single data file to do its work, the data file is divided into 8KB pages, like so:Voron uses eager disk allocations to reserve disk space from the operating system. Each time the space inside the file runs out, Voron will double the size of the file. That last until the file size reaches 2GB, after which RavenDB will grow by 1GB at a time. This behavior ensures that Voron gives the underlying file system enough information to provide the database with a continuous range of disk space. In other words, we grab disk space in large chunks to avoid fragmentation of the data file.&#xA0;&#xA0; What happens when you delete data, however? Voron mark the free space in its free list and will use that space before it will allocate more disk space from the operating system.Why aren&#x2019;t we releasing the disk space back to the operating system? The simplest reason is that it isn&#x2019;t an just the data at the end of the file that is freed. In fact, like in the image above, free and busy segments are interwoven in the file. We can&#x2019;t just truncate the file.Internal references inside of RavenDB make use of the position data inside the file, so just moving the data won&#x2019;t help. Instead, you have to compact the data. That forces us to re-write the entire database layout from scratch and fixes those references.&#xA0; That is an offline operation, however. For the most part, it doesn&#x2019;t actually matter. RavenDB will use the internal free space as needed, so it isn&#x2019;t like it is actually lost. One feature that we are considering for version 6.0 of RavenDB is hole punching. That means that we&#x2019;ll make use of advanced file system API to free the disk space allocated to RavenDB even mid file.On Linux, that means using FALLOC_FL_PUNCH_HOLE. On Windows, that means using FSCTL_SET_ZERO_DATA.That will have the advantage of freeing disk space back to the operating system without needing user intervention. In particular, that is going to make it so a user that delete data to free disk space see the free space reflected in the OS metrics.There are problems with this approach, however. First, the size of the file remains the same, which leads to interesting questions. Consider:Second, this defeats the purpose of wanting to optimize disk allocations. If we free disk space in this manner, when we get it back, it may no longer be continuous on the disk. That said, it is not that big a problem in the days of SSDs and NVMes as it was at the time of the rotational hard disk. Then, you may get into a very bad situation in which Voron tries to use disk space that it had allocated mid file (but was already freed) but it can&#x2019;t, because the disk is full. Right now, this is simply an impossible error, with hole punching, we need to consider how to deal with this.</p>
         <a href="https://ardalis.com/testing-exceptions-with-xunit-and-actions/" target="_blank"><h1 class="title mb-6">Testing Exceptions with xUnit and Actions</h1></a>
         <p class="mb-2">by Ardalis</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: April 07, 2021
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve been using docker-compose quite a bit lately for a distributed app that includes 3 front end apps, 2 databases, RabbitMQ, and PaperCut&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://andrewlock.net/my-new-book-aspnetcore-in-action-2e-is-available-now/" target="_blank"><h1 class="title mb-6">ASP.NET Core in Action, Second Edition is available now!</h1></a>
-        <p class="mb-2">by Andrew Lock</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: April 06, 2021
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My new book, ASP.NET Core in Action, Second Edition is available now. In this post I describe what&#x27;s changed since the first version and why.&#x2026;</p>
         <div class="button flex justify-between">
             <a href="98.html"><span class="back arrow"></span></a>
 

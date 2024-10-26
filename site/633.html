@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/3591/persistent-dsl-caching-issues" target="_blank"><h1 class="title mb-6">Persistent DSL caching issues</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: September 10, 2008
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A while ago I talked about persistent DSL caching. I was asked why my solution was not a builtin part of Rhino DSL.   The reason for that is that this is actually a not so simple problem. Let me point out a few of the issues that are non obvious.     Need to handle removal of scripts    Need to handle updating scripts    Need to handle new scripts   Those are easy, sort of, but what about this one?     Need to handle DSL updates   When you are in development mode, you really need to know that changing the way the DSL behaves would also invalidate any cache.  I like to keep a very high bar of quality on the software I make, and there is a fine distinction between one off attempts and reusable ones. One off attempts can be hackish and stupid. Reusable implementations should be written properly.  And no, there isn&#x27;t anything overly complex here. Just time to test all bases.  Anyone feels like sumbiting a patch?</p>
         <a href="https://ayende.com/blog/3590/impressive" target="_blank"><h1 class="title mb-6">Impressive</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: September 04, 2008
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was having a discussion today about the way business rules are implemented. And large part of the discussion was focused on trying to get a specific behavior in a specific circumstance. As usual, I am going to use a totally different example, which might not be as brutal in its focus as the real one.  We have a set of business rules that relate to what is going to happen to a customer in certain situations. For example, we might have the following:     upon bounced_check or refused_credit:&#xA;&#x9;if customer.TotalPurchases &gt; 10000: # preferred&#xA;&#x9;&#x9;ask_authorizatin_for_more_credit&#xA;&#x9;else:&#xA;&#x9;&#x9;call_the cops&#xA;&#xA;upon new_order:&#xA;&#x9;if customer.TotalPurchases &gt; 10000: # preferred&#xA;&#x9;&#x9;apply_discount 5.precent&#xA;&#xA;  upon order_shipped:     send_marketing_stuff unless customer.RequestedNoSpam&#xA;&#xA;&#xA;What is this code crying for? Here is a hint, it is not the introduction of IsPreferred, although that would be welcome. &#xA;&#xA;I am interested in hearing what you will have to say in this matter.&#xA;&#xA;And as a total non sequitur, cockroaches at Starbucks, yuck.</p>
-        <a href="https://ayende.com/blog/3581/persistent-dsl-caching" target="_blank"><h1 class="title mb-6">Persistent DSL Caching</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: September 04, 2008
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a note to myself, because I don&#x27;t have the time for a proper post. When you are dealing with a DSL that contains more than just a few scripts, you really being to care about compilation times. Even with caching, this can be a problem.  The solution is the same that we have been using for the last three to four decades, don&#x27;t compile if the source hasn&#x27;t changed.  The code to make this happen using Rhino DSL is here:     public override CompilerContext Compile(string[] urls)&#xA;{&#xA;    var outputAssemblyName = OutputAssemblyName(urls);&#xA;    if (CanUseCachedVersion(outputAssemblyName, urls))&#xA;        return new CompilerContext { GeneratedAssembly = Assembly.Load(File.ReadAllBytes(outputAssemblyName)) };&#xA;    return base.Compile(urls);&#xA;}&#xA;&#xA;private bool CanUseCachedVersion(string outputAssemblyName, string[] urls)&#xA;{&#xA;    var asm = new FileInfo(outputAssemblyName);&#xA;    if(asm.Exists==false)&#xA;        return false;&#xA;    foreach (var url in urls)&#xA;    {&#xA;        if(File.GetLastWriteTime(url) &gt; asm.LastWriteTime)&#xA;            return false;&#xA;    }&#xA;    return true;&#xA;}&#xA;&#xA;&#xA;And in the CustomizeCompiler method:&#xA;&#xA;&#xA;  protected override void CustomizeCompiler(BooCompiler compiler, CompilerPipeline pipeline, string[] urls)&#xA;{&#xA;    compiler.Parameters.OutputAssembly = OutputAssemblyName(urls);&#xA;    // add implicit base class here...&#xA;    if (pipeline.Find(typeof(SaveAssembly)) == -1)&#xA;        pipeline.Add(new SaveAssembly());}&#xA;&#xA;&#xA;It is impossible to overstate how big a difference this can make.</p>
         <div class="button flex justify-between">
             <a href="632.html"><span class="back arrow"></span></a>
 

@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/162402/what-comes-after-leveldb" target="_blank"><h1 class="title mb-6">What comes after leveldb?</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: June 10, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Kellabyte rightfully points out that leveldb was designed primarily for mobile devices, and that there have been many things that can be done that weren&#x2019;t because of that design goal. I was already pointed out to HyperDex&#x2019;s port of leveldb, and I am also looking into what Basho is doing with it.  You can read a bit about what HyperDex did to improve things here. And Basho challenges are detailed in the following presentation. The interesting thing about this is why people want to go to leveldb to start with. To put it simply, it is a really good product, in the sense that it is doing what it needs to do, and it is small enough so you can understand it in a reasonably short order. The fun starts when you disagree with the decisions made for you by leveldb, it is actually quite easy to make changes to the root behavior of the project without making significant changes to the overall architecture. Looking over the HyperDex changes overview, it appears that they were able to make very targeted changes. All the hard problems (storing, searching, atomicity, etc) were already solved, now the problem is dealing with optimizing them. I&#x2019;m going to review the changes made by both Basho &amp; HyperDex to leveldb, because I think that it would be a facinating object of study. In particular, I was impressed with how leveldb merged transactions, and I am looking forward at how HyperDex parallelized them.</p>
         <a href="https://ayende.com/blog/162401/on-friction-in-software" target="_blank"><h1 class="title mb-6">On friction in software</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: May 28, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB has always came with some sample data that you could use to test things out. Unfortunately, that sample data was pretty basic, and didn&#x2019;t really cover a lot of interesting scenarios. For RavenDB 2.5, we updated the sample data to use the brand new and amazing (wait for it&#x2026;) Northwind database.  At a minimum, it would make demoing stuff easier. And in order to make things even nicer, you can get the C# classes for the sample data here.</p>
-        <a href="https://ayende.com/blog/162305/challenge-the-problem-of-locking-down-tasks" target="_blank"><h1 class="title mb-6">Challenge</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 27, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The following code has very subtle bug:      1: public class AsyncQueue   2: {   3:     private readonly Queue&lt;int&gt; items = new Queue&lt;int&gt;();   4:     private volatile LinkedList&lt;TaskCompletionSource&lt;object&gt;&gt; waiters = new LinkedList&lt;TaskCompletionSource&lt;object&gt;&gt;();   5:&#xA0;    6:     public void Enqueue(int i)   7:     {   8:         lock (items)   9:         {  10:             items.Enqueue(i);  11:             while (waiters.First != null)  12:             {  13:                 waiters.First.Value.TrySetResult(null);  14:                 waiters.RemoveFirst();  15:             }  16:         }  17:     }  18:&#xA0;   19:     public async Task&lt;IEnumerable&lt;int&gt;&gt; DrainAsync()  20:     {  21:         while (true)  22:         {  23:             TaskCompletionSource&lt;object&gt; taskCompletionSource;  24:             lock (items)  25:             {  26:                 if (items.Count &gt; 0)  27:                 {  28:                     return YieldAllItems();  29:                 }  30:                 taskCompletionSource = new TaskCompletionSource&lt;object&gt;();  31:                 waiters.AddLast(taskCompletionSource);  32:             }  33:             await taskCompletionSource.Task;  34:         }  35:     }  36:&#xA0;   37:     private IEnumerable&lt;int&gt; YieldAllItems()  38:     {  39:         while (items.Count &gt; 0)  40:         {  41:             yield return items.Dequeue();  42:         }  43:&#xA0;   44:     }  45: }&#xA;I&#x2019;ll even give you a hint, try to run the following client code:&#xA;&#xA;   1: for (int i = 0; i &lt; 1000 * 1000; i&#x2B;&#x2B;)   2: {   3:     q.Enqueue(i);   4:     if (i%100 == 0)   5:     {   6:         Task.Factory.StartNew(async () =&gt;   7:             {   8:                 foreach (var result in await q.DrainAsync())   9:                 {  10:                     Console.WriteLine(result);  11:                 }  12:             });  13:     }  14:&#xA0;   15: }&#xA;Can you figure out what the problem is?</p>
         <div class="button flex justify-between">
             <a href="400.html"><span class="back arrow"></span></a>
 

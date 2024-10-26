@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/157697/new-in-ravendb-studio-1-2-enhancements-to-querying" target="_blank"><h1 class="title mb-6">New in RavenDb Studio 1.2</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: August 04, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Read the full details are on our company blog.</p>
         <a href="https://ayende.com/blog/157601/rpgwithme-ravendb-and-plain-awesomeness" target="_blank"><h1 class="title mb-6">RPGWithMe, RavenDB and plain awesomeness</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: July 27, 2012
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I promised that I&#x2019;ll talk about the actual implementation details of how RavenDB deal with changes, after moving from SignalR to our own implementation. First, let us examine the problem space. We need to be able to get notified by the server whenever something interesting happened. We don&#x2019;t want to do active polling. That leaves the following options:  TCP Connection WebSockets Long Polling Streamed download TCP Connections won&#x2019;t work here. We are relying on HTTP for all things, and I like HTTP. It is easy to work with, there are great tools (thanks, Fiddler!) around to do that and you can debug/test/scale it without major hurdles. Writing you own TCP socket server is a lot of fun, but debugging why something went wrong is not. WebSockets would have been a great options, but they aren&#x2019;t widely available yet, and won&#x2019;t work well without special servers, which I currently don&#x2019;t have. Long Polling is an option, but I don&#x2019;t like it. It seems like a waste and I think we can do better. Finally, we have the notion of a streamed download. This is basically the client downloading from the server, but instead of having the entire request download in one go, the server will send events whenever it has something. Given our needs, this is the solution that we choose in the end.  How it works is a tiny bit complex, so let us see if I can explain with a picture. This is the Fiddler trace that you see when running a simple subscription test:   The very first thing that happens is that we make a request to /changes/events?id=CONNECTION_ID, the server is going to keep this connection open, and whenever it has something new to send to the client, it will use this connection. In order to get this to work, you have to make sure to turn off bufferring in IIS (HttpListener doesn&#x2019;t do buffering) and when running in Silverlight, you have to disable read buffering. Once that is done, on the client side you need to read from the server in an async manner and raise events whenever you got a full response back. For our purposes, we used new lines as response marker, so we would read from the stream until we got a new line, raise that event, and move on. Now, HTTP connections are only good for one request/response. So we actually have a problem here, how do we configure this connection?  We use a separate request for that. Did you note that we have this &#x201C;1/J0JP5&#x201D; connection id? This is generated on the client (part an always incrementing number, part random) for each connection id. The first part is a sequential id that is used strict to help us debug things &#x201C;1st request, 2nd request&#x201D; are a log easier than J0JP5 or some guid. We can then issue commands for this connection, in the sample above you can see those commands for watching a particular document and finally stopping altogether. This is what the events connection looks like:   Each change will be a separate line. Now, this isn&#x2019;t everything, of course. We still have to deal with errors and network hiccups, we do that by aborting the events connection are retrying. On the server, we keep&#xA0; track of connections and pending messages for connections, and if you reconnect within the timeout limit (a minute or so), you won&#x2019;t miss any changes. If this sounds like the way SignalR works, that is no accident. I think that SignalR is awesome software, and I copied much of the design ideas off of it.</p>
-        <a href="https://ayende.com/blog/157217/awesome-ravendb-feature-of-the-day-eval-patching-part-ii-denormalized-references" target="_blank"><h1 class="title mb-6">Awesome RavenDB Feature of the day</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 26, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned yesterday that I am keeping the best for today. What I am going to show you is how you can use Eval Patching for keeping track of denormalized references. In this case, we have Users &amp; Posts. Each Post contains a UserName property as well as the user id. When the user changes his name, we need to update all of the relevant posts. Here is how you can do this: store.DatabaseCommands.UpdateByIndex(&quot;Posts/ByUser&quot;,&#xA;    new IndexQuery{Query = &quot;UserId:&quot; &#x2B; userId},&#xA;    new AdvancedPatchRequest&#xA;        {&#xA;            Script = @&quot;&#xA;var user = LoadDocument(this.UserId);&#xA;this.UserName = user.Name;&#xA;&quot;&#xA;        });&#xA;&#xA;&#xA;And this is a really simple scenario, the options that this opens, the ability to load a separate document and modify the current document based on its value is really powerful.</p>
         <div class="button flex justify-between">
             <a href="429.html"><span class="back arrow"></span></a>
 

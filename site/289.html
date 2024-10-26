@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/175809/ravendb-3-5-release-candidate-3-and-final-is-out" target="_blank"><h1 class="title mb-6">RavenDB 3.5 Release Candidate 3 (and final) is out</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 11, 2016
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">All our latest fixes are in it, and this is likely the final release. You can get it here. Please take it for a spin, we plan to do RTM release next week, and RC3 is supported to run in production.</p>
         <a href="https://andrewlock.net/custom-authorisation-policies-and-requirements-in-asp-net-core/" target="_blank"><h1 class="title mb-6">Custom authorisation policies and requirements in ASP.NET Core</h1></a>
         <p class="mb-2">by Andrew Lock</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: October 05, 2016
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We&#x2019;ve been running all sort of benchmarks on RavenDB, ranging from micro optimizations to a single heavily used routine that focused on re-ordering the instructions so the CPU can execute them in parallel to large scale load testing and data processing. This tale is about the later. We have defined 6 indexes over a data set of over 18 million documents with a total size of 57GB. We then run it on a system that had 16GB of RAM (and typically had a lot less actually available). When we started, we very quickly run out of memory, in fact, our allocations exceeded the database size (so we allocated over 60 GB) before we decided to focus on fixing that. The problem was the scope of the batch, it was too long, and we didn&#x2019;t reuse the memory inside the same batch. Once that was fixed, we were able to run the performance test successfully. Total time to run it? Over 9 hours. Granted, this is talking about 6 indexes each needing to go over the entire dataset, so we expect it to take a while, and it is much faster than in previous versions, but that is still far too much. I should probably explain that the whole point of doing something like that is to see the interference effects. What happen when you have a bunch of competing indexes over the same resources (CPU, memory, disk)? Turn out, there is a lot going there, and you can&#x2019;t really get good profiling results from this kind of run&#xA0; (to start with, the profiling overhead would push this into a multi day effort), and while we captured some profiling run of shorter stats, we weren&#x2019;t really able to pinpoint the blame.  So we added the tooling we needed to figure it out, and then put that in the studio. The end result was&#x2026; not so good.  Yes, that is the studio trying to display the debug information for that benchmark. It&#x2026; did not go so well for us. In other words, before we could fix the benchmark, we had to optimize the code that would tell us where we are spending all that time in the benchmark . As it turned out, the problem was that our code was optimizing for problems we no loner had. Basically, in RavenDB 3.x we have to take into account our memory usage, and pretty much all of it is managed memory. That lead to some interesting problems, to whit, we don&#x2019;t know how much memory we use. The fact that a document is size so and so when serialized to disk means exactly squat with regards to how much it is actually going to take in memory. And because too much allocations lead to higher GC costs down the road, we put term limits on the size of the indexing batches we&#x2019;ll process. Effectively, we will take a certain amount of documents to process in a batch, and then complete the batch. All the memory we used in the batch will go away, and hopefully we didn&#x2019;t push too much of it into higher generations. But the real costs that we have in RavenDB 4.x are very different. To start with, we use a lot less managed operations, and we use Voron for pretty much everything. That means that our costs has now shifted, instead of worrying about releasing the memory as quickly as possible, we need to worry about reducing the number of times we go to disk. As it turns out, artificially reducing the batch size results in us processing more batches, which require us to hit the disk a lot more. The same logic applies to RavenDB 3.x (and we have users who have configured RavenDB to have very long batches for exactly that reason), but that come at GC cost that simply does not exist in RavenDB 4.0. The immediate solution was to remove all the batch limits and see what would happen. Overall performance had doubled. We were able to process the same amount of information in about half the time. And that is before we did deep dive with a profiler to seek inefficiencies.</p>
-        <a href="https://www.stevejgordon.co.uk/asp-net-mvc-core-html-encoding-json-body" target="_blank"><h1 class="title mb-6">ASP.NET MVC Core: HTML Encoding a JSON Request Body</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 04, 2016
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">On a recent REST API project built using ASP.NET Core 1.0 we wanted to add some extra security around the inputs we were accepting. Specifically around JSON data being sent in the body of POST requests. The requirement was to ensure that we HTML encode any of the deserialized properties to prevent an API client [&#x2026;]</p>
         <div class="button flex justify-between">
             <a href="288.html"><span class="back arrow"></span></a>
 

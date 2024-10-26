@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/161921/ravendb-course-snippet" target="_blank"><h1 class="title mb-6">RavenDB Course Snippet</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: April 03, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We got several requests for this, so here you go. A small snippet (10 minutes out of more than 12 hours!) of the RavenDB Course that is available for purchase.</p>
         <a href="https://ayende.com/blog/161701/reviewing-leveldb-part-ix-compaction-is-the-new-black" target="_blank"><h1 class="title mb-6">Reviewing LevelDB</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: March 27, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You can read about the theory of Sorted Strings Tables and Memtables here. In this case, what I am interested in is going a bit deeper into the leveldb codebase, and understanding how the data is actually kept in memory and what is it doing there. In order to do that, we are going to investigate MemTable. As it turned out, this is actually a very simple data structure. A MemTable just hold a SkipList, whish is a sorted data structure that allows O(log N) access and modifications. The interesting thing about Skip List in contrast to Binary Trees, is that it is much easier to create a performant solution of concurrent skip list (either with or without locks) over a concurrently binary tree. The data in the table is just a list of key &amp; value (or delete marker). And that means that searches through this can give you three results:  Here is the value for the key (exists) The value for the key was remove (deleted) The value is not in the memory table (missing) It is the last part where we get involved with the more interesting aspect of LevelDB (and the reason it is called leveldb in the first place). The notion that you have multiple levels. The mem table is the first one, and then you spill the output out to disk (the Sorted Strings Table). Now that I figure out how simple MemTable is really is, I am going to take a look at the leveldb log, and then dive into Sorted Strings Table.</p>
-        <a href="https://ayende.com/blog/161413/reviewing-leveldb-part-iv-on-std-string-buffers-and-memory-management-in-c" target="_blank"><h1 class="title mb-6">Reviewing LevelDB</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 26, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">his is a bit of a side track. One of the things that is quite clear to me when I am reading the leveldb code is that I was never really any good at C&#x2B;&#x2B;. I was a C/C&#x2B;&#x2B; developer. And that is a pretty derogatory term. C &amp; C&#x2B;&#x2B; share a lot of the same syntax and underlying assumption, but the moment you want to start writing non trivial stuff, they are quite different. And no, I am not talking about OO or templates. I am talking about things that came out of that. In particular, throughout the leveldb codebase, they are very rarely, if at all, allocate memory directly. Pretty much the whole codebase rely on std::string to handle buffer allocations and management. This make sense, since RAII is still the watch ward for good C&#x2B;&#x2B; code. Being able to utilize std::string for memory management also means that the memory will be properly released without having to deal with it explicitly. More interestingly, the leveldb codebase is also using std::string as a general buffer. I wonder why it is std::string vs. std::vector&lt;char&gt;,&#xA0; which would bet more reasonable, but I guess that this is because most of the time, users will want to pass strings as keys, and likely this is easier to manage, given the type of operations available on std::string (such as append). It is actually quite fun to go over the codebase and discover those sort of things. Especially if I can figure them out on my own . This is quite interesting because from my point of view, buffers are a whole different set of problems. We don&#x2019;t have to worry about the memory just going away in .NET (although we do have to worry about someone changing the buffer behind our backs), but we have to worry a lot about buffer size. This is because at some point (80Kb), buffers graduate to the large object heap, and stay there. Which means, in turn, that every time that you want to deal with buffers you have to take that into account, usually with a buffer pool. Another aspect that is interesting with regards to memory usage is the explicit handling of copying. There are various places in the code where the copy constructor was made private, to avoid this. Or a comment is left about making a type copy-able intentionally. I get the reason why, because it is a common failing point in C&#x2B;&#x2B;, but I forgot (although I am pretty sure that I used to know) the actual semantics of when/ how you want to do that in all cases.</p>
         <div class="button flex justify-between">
             <a href="406.html"><span class="back arrow"></span></a>
 

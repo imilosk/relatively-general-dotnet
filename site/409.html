@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/161250/ravendb-and-storing-large-number-of-entities-types-in-a-single-database" target="_blank"><h1 class="title mb-6">RavenDB and storing large number of entities types in a single database</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: March 15, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">By default, we expect to have a rather smaller number of entities types in a database. Unlike relational databases, where you typically see hundreds or thousands of tables, because everything gets dumped into a single database (and because a single document in RavenDB typically reside in many relational tables). That said, we got a few complaints about this story, because the studio UI becomes hard to use when this happens. We decided to support it in an interesting fashion. This is what your documents will look like when you have ~60 entities types in a single database:  And here is where you go if you have hundreds of them. Psychedelic days are here again!</p>
         <a href="https://ayende.com/blog/161314/reviewing-ravenburgerco-what-could-be-improved" target="_blank"><h1 class="title mb-6">Reviewing RavenBurgerCo: What could be improved?</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: March 05, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB previously had a really nice feature for temporary indexes. Since we expected most of them to be temporary, we indexed them directly into memory, greatly saving in IO costs. With the removal of temporary indexes, that left us the option of just removing the entire code path and moving on to other things. But we sat down and thought about this for a while. Typically, the busiest part in the index&#x2019;s life is its creation, because the database needs to go through all the documents in the db and index them. We have changed things so during this creation period, we will actually index to memory, without hitting the disk. Only if we reached a configurable size or finished indexing everything will we spill everything to disk. This, in turn, gives us the best of both worlds. We get a really nice optimization for new indexes, and we don&#x2019;t have to hit the disk for indexes that would soon go away. And, of course, we get the perf boost for all indexes now.</p>
-        <a href="https://ayende.com/blog/161219/robs-sprint-indexes-and-the-death-of-temporary-indexes" target="_blank"><h1 class="title mb-6">Rob&#x2019;s Sprint: Indexes and the death of temporary indexes</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: March 04, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB&#x2019;s ability to analyze your queries and generate the required indexes on the fly has always been a great boon. Rob Ashton was involved in the original implementation and during his visits to Hibernating Rhinos&#x2019; secret lair, he got to whack that thing on the head a few more times. We need to separate two important things:  Automatically generating the indexes based on your queries. The temporary indexes model itself. The first part is a really important feature. The second is just an implementation detail. In particular, temporary indexes had a few problems. Most importantly, they were temporary, and there was an explicit step for promoting those indexes from one stage to the other. That caused some confusion, and there was a period of time, exactly when we decided that the index was important enough to keep, that caused the index to effectively reset itself. The other problem was that the moment that an index was upgraded to an auto index, it was there forever. What Rob has done was to remove the concept of temporary indexes all together, which got rid of a whole bunch of code. Instead, we have just standard auto indexes. And now we had a drastically simplified story. We didn&#x2019;t have the drastic jump from temp to auto, with irrecoverable implications. Of course, this leads to a lot of interesting questions. Temporary indexes had the benefit of being indexed directly to memory, and they would go away after a database restart, as well as a whole lot of stuff. Not having special code for that made things a lot simpler for us, actually. Automatic indexes have their age, and that is tracked internally by RavenDB. If an automatic indexed isn&#x2019;t being used, it will become idle an eventually abandoned. If it is a very young index, we will decide it was a temporary index after all, and remove it from the system completely. This feature, along with idling indexes, opened up the door for the next important feature, index merging. But before that, we need to upgrade the smarts for the query optimizer&#x2026; which happens to be our next topic.</p>
         <div class="button flex justify-between">
             <a href="408.html"><span class="back arrow"></span></a>
 

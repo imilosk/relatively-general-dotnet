@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/201505-B/optimizing-facets-query-performance-in-corax" target="_blank"><h1 class="title mb-6">Optimizing facets query performance in Corax</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 31, 2024
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB allows you to query your data freely and cheaply. It is one of those things that makes or breaks a database, after all. After over a decade of working with Lucene as our backend indexing engine, we built Corax, a new querying &amp; indexing engine that offers far better performance. Building an indexing engine is a humongous&#xA0;task. It took us close to ten years from the first line of code to Corax actually shipping. But I&#x2019;m really happy with the way it turned out. Building a query engine is a big task, and we focused primarily on making the most common queries fast. The issue at hand is that RavenDB has many features, and we don&#x2019;t have infinite time. So for the less common features, we typically implemented them as a straightforward port from whatever Lucene is doing. One such feature is facets. Let&#x2019;s say that I want to buy a jacket. There are way&#xA0;too many choices, so I can use a faceted query to help me narrow it down. &#xA0;Here is what this looks like in code:from Products&#xD;&#xA;where search(Description, &quot;suit jacket&quot;)&#xD;&#xA;select facet(Brand), &#xD;&#xA;       facet(Price &lt; 200, &#xD;&#xA;             Price between 200 and 400, &#xD;&#xA;             Price between 400 and 800,&#xD;&#xA;             Price &gt; 800)And here is what this looks like as a website:I mentioned that we implemented some features as a straightforward port from Lucene, right?We did that because RavenDB offers very rich querying semantics, and we couldn&#x2019;t spend the time to craft every single bit upfront. The idea was that we would get Corax out the door and be faster in most common scenarios, and at least at parity with everything else. It works for most scenarios, but not all of them. We recently got a query similar to the one above that was slower in Corax than in Lucene. That is usually good news since we have far more optimization opportunities in Corax. Lucene (and especially our usage of it) has already been through the wringer so many times that it is really hard to eke out any more meaningful performance gains. Corax&#x2019;s architecture, on the other hand, gives us many more chances to do so.In the case of facets, the way Lucene handles that is roughly similar to this:def brand_facet(matches: List[int]):&#xD;&#xA;  facet = dict()&#xD;&#xA;  for term, docsForTerm in reader.terms(&quot;Brand&quot;):&#xD;&#xA;     facet[term] = count_intersect(matches,docsForTerm)Given the results of the query, run over all the terms for a particular field and intersect the documents for every term with the matches for the query. Lucene is able to do that efficiently because it materializes all its data into managed memory. That has costs associated with it:Higher managed memory usage (and associated GC costs)Slower initial queriesThe benefit of this approach is that many operations are simple, which is great. Corax, on the other hand, does not&#xA0;materialize all its data into managed memory. It uses persistent data structures on disk (leading to reduced memory usage and faster responses on the first query).The advantage we have with Corax is that the architecture allows us to optimize a lot more deeply. In this case, however, it turned out to be unnecessary, as we are already keeping track of all the relevant information. We just needed to re-implement faceted search in a Corax-native manner.You can see the changes here. But here is the summary. For a dataset with 10,000,000 records, with hundreds of brands to facet on, we get:Yes, that isn&#x2019;t a mistake. Corax is so fast here that you can barely observe it &#x1F642;.</p>
         <a href="https://devblogs.microsoft.com/dotnet/enhancing-help-in-fsi/" target="_blank"><h1 class="title mb-6">Enhancing #help in F# Interactive</h1></a>
         <p class="mb-2">by David Schaefer</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: July 22, 2024
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Learn how to integrate AI into your .NET applications with Prompty, a powerful Visual Studio Code extension.</p>
-        <a href="https://www.meziantou.net/stop-the-script-when-an-error-occurs-in-powershell.htm" target="_blank"><h1 class="title mb-6">Stop a script when an error occurs in PowerShell</h1></a>
-        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 22, 2024
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">By default, PowerShell doesn&#x27;t stop the script when an error occurs. Instead, it writes the error to the error stream and continues executing the script. You can change this behavior by setting the $ErrorActionPreference variable to Stop. When you do this, PowerShell stops the script when an error</p>
         <div class="button flex justify-between">
             <a href="7.html"><span class="back arrow"></span></a>
 

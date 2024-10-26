@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/162305/challenge-the-problem-of-locking-down-tasks" target="_blank"><h1 class="title mb-6">Challenge</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: May 27, 2013
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The following code has very subtle bug:      1: public class AsyncQueue   2: {   3:     private readonly Queue&lt;int&gt; items = new Queue&lt;int&gt;();   4:     private volatile LinkedList&lt;TaskCompletionSource&lt;object&gt;&gt; waiters = new LinkedList&lt;TaskCompletionSource&lt;object&gt;&gt;();   5:&#xA0;    6:     public void Enqueue(int i)   7:     {   8:         lock (items)   9:         {  10:             items.Enqueue(i);  11:             while (waiters.First != null)  12:             {  13:                 waiters.First.Value.TrySetResult(null);  14:                 waiters.RemoveFirst();  15:             }  16:         }  17:     }  18:&#xA0;   19:     public async Task&lt;IEnumerable&lt;int&gt;&gt; DrainAsync()  20:     {  21:         while (true)  22:         {  23:             TaskCompletionSource&lt;object&gt; taskCompletionSource;  24:             lock (items)  25:             {  26:                 if (items.Count &gt; 0)  27:                 {  28:                     return YieldAllItems();  29:                 }  30:                 taskCompletionSource = new TaskCompletionSource&lt;object&gt;();  31:                 waiters.AddLast(taskCompletionSource);  32:             }  33:             await taskCompletionSource.Task;  34:         }  35:     }  36:&#xA0;   37:     private IEnumerable&lt;int&gt; YieldAllItems()  38:     {  39:         while (items.Count &gt; 0)  40:         {  41:             yield return items.Dequeue();  42:         }  43:&#xA0;   44:     }  45: }&#xA;I&#x2019;ll even give you a hint, try to run the following client code:&#xA;&#xA;   1: for (int i = 0; i &lt; 1000 * 1000; i&#x2B;&#x2B;)   2: {   3:     q.Enqueue(i);   4:     if (i%100 == 0)   5:     {   6:         Task.Factory.StartNew(async () =&gt;   7:             {   8:                 foreach (var result in await q.DrainAsync())   9:                 {  10:                     Console.WriteLine(result);  11:                 }  12:             });  13:     }  14:&#xA0;   15: }&#xA;Can you figure out what the problem is?</p>
         <a href="https://ayende.com/blog/162337/special-offer-29-discount-for-all-our-products" target="_blank"><h1 class="title mb-6">Special Offer</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: May 20, 2013
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There is a big problem in the RavenDB build process. To be rather more exact, there is a&#x2026; long problem in the RavenDB build process.  As you can imagine, when the build process run for that long, it doesn&#x2019;t&#x27; get run too often. We already had several runs of &#x201C;let us optimize the build&#x201D;. But&#x2026; the actual reason for the tests taking this long is a bit sneaky.  To save you from having to do the math, this means an average of 1.15 seconds per test. In most tests, we actually have to create a RavenDB instance. That doesn&#x2019;t take too long, but it does take some time. And we have a lot of tests that uses the network, because we need to test how RavenDB works on the wire. From that perspective, it means that we don&#x2019;t seem to have any real options. Even if we cut the average cost of running the tests by half, it would still be a 30 minutes build process.  Instead, we are going to create a layered approach. We are going to freeze all of our existing tests, move them to an Integration Tests project. We will create a small suite of tests that cover just core stuff with RavenDB, and use that. Over time, we will be adding tests to the new test project. When that becomes too slow, we will have another migration. What about the integration tests? Well, those will be run solely by our build server, and we will setup things so we can automatically test when running from our own forks, not the main code line.</p>
-        <a href="https://ayende.com/blog/162145/ravendb-webinar-aggregation-just-jump-a-grade-or-two" target="_blank"><h1 class="title mb-6">RavenDB Webinar</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: May 17, 2013
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In tomorrow&#x2019;s Webinar, we will discuss handle dynamic aggregation using RavenDB. A new feature in 2.5, this is meant to give you more options for reporting queries, including complex aggregation, dynamic selection, etc. You can register here: https://www2.gotomeeting.com/register/789291530</p>
         <div class="button flex justify-between">
             <a href="401.html"><span class="back arrow"></span></a>
 

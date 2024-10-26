@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/2919/dynamic-methods" target="_blank"><h1 class="title mb-6">Dynamic Methods</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 29, 2007
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I don&#x27;t hear it talked about, but the CLR has a very efficient way to generate code at runtime. Probably this is because this code generation stuff is something that is accessible through IL generation only, and that is not for the faint of heart. Nevertheless, there are some very useful uses for this. NHibernate is utilizing this approach to avoid the costs of reflection, for instance. Let us take a look about a simple scenario, we want to translate any delegate type with two parameters to a call to an instance method on our class: public class Program&#xA;{&#xA;&#x9;private static void Main(string[] args)&#xA;&#x9;{&#xA;&#x9;&#x9;new Program().Execute();&#xA;&#x9;}&#xA;&#xA;&#x9;private void Execute()&#xA;&#x9;{&#xA;&#x9;&#x9;//instance that has events that we want to subscribe the adapter to &#xA;&#x9;&#x9;DataGridView dataGridView1 = new DataGridView();&#xA;&#x9;&#x9;EventInfo ei = dataGridView1.GetType().GetEvent(&quot;RowPrePaint&quot;);&#xA;&#xA;&#x9;&#x9;ParameterInfo[]pia = ei.EventHandlerType.GetMethod(&quot;Invoke&quot;).GetParameters();&#xA;&#xA;&#x9;&#x9;MethodInfo methodInfo = this.GetType().GetMethod(&quot;Handler&quot;, &#xA;&#x9;&#x9;&#x9;new Type[]{typeof (object), typeof (object)});&#xA;&#xA;&#x9;&#x9;DynamicMethod mtd = new DynamicMethod(&#xA;&#x9;&#x9;&#x9;&quot;Adapter&quot;,&#xA;&#x9;&#x9;&#x9;typeof(void),&#xA;&#x9;&#x9;&#x9;new Type[]&#xA;&#x9;&#x9;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;typeof (Program), // this &#xA;&#x9;&#x9;&#x9;&#x9;&#x9;pia[0].ParameterType,// sender&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;pia[1].ParameterType // e&#xA;&#x9;&#x9;&#x9;&#x9;}, this.GetType(), true);&#xA;&#xA;&#x9;&#x9;ILGenerator gtr = mtd.GetILGenerator();&#xA;&#x9;&#x9;gtr.Emit(OpCodes.Ldarg_0); // this&#xA;&#x9;&#x9;gtr.Emit(OpCodes.Ldarg_1); // sender&#xA;&#x9;&#x9;gtr.Emit(OpCodes.Ldarg_2); // e&#xA;&#x9;&#x9;gtr.Emit(OpCodes.Call, methodInfo);&#xA;&#x9;&#x9;gtr.Emit(OpCodes.Ret);&#xA;&#xA;&#x9;&#x9;// generate a delegate bound to this object instance&#xA;&#x9;&#x9;Delegate dynamicDelegate = mtd.CreateDelegate(typeof(DataGridViewRowPrePaintEventHandler), this);&#xA;&#x9;&#x9;//register the adapter&#xA;&#x9;&#x9;ei.AddEventHandler(dataGridView1, dynamicDelegate);&#xA;&#xA;&#xA;&#x9;&#x9;dataGridView1.GetType().GetMethod(&quot;OnRowPrePaint&quot;, BindingFlags.NonPublic | BindingFlags.Instance)&#xA;&#x9;&#x9;&#x9;.Invoke(dataGridView1, new object[] { null });&#xA;&#x9;}&#xA;&#xA;&#x9;// method that handles the call&#xA;&#x9;public void Handler(object x, object y)&#xA;&#x9;{&#xA;&#x9;&#x9;Console.WriteLine(&quot;{0}: {1}, {2}&quot;, this.GetHashCode(), x, y);&#xA;&#x9;}&#xA;}&#xA;Take into account that you are probably going to want to cache the method anyway, but this is a cool, if long winded way of achieving this. Personally, in this scenario I would probably simply write a reflection based wrapper, the complexity doesn&#x27;t really have justification in such a case, but this is just an example, of course.</p>
         <a href="https://ayende.com/blog/2918/sql-gotchas" target="_blank"><h1 class="title mb-6">SQL Gotchas</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: October 27, 2007
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Udi has an interesting presentation&#xA0;that I recommend that you go through. He is going to present it at Tech Ed (Thu Nov 8 13:30 - 14:45 Room 117). Most of the ideas are familiar to me because I have spoken to him about them before, but it represent new concepts to most people. I would preface his suggestion with the usual warning about designing for performance. Udi&#x27;s points are about big systems, so consider if they are appropriate to your scenario first. A pal of mine once told me that he designs systems for an order of magnitude increase in the requirements. So a system that works for a hundred users should also scale to a thousand users (additional hardware, maybe, but the architecture should hold), but going beyond that will require more than just throwing hardware at the issue. This sounds like a good rule of the thumb.</p>
-        <a href="https://ayende.com/blog/2909/if-at-first-you-dont-succeed-get-a-5kg-hammer" target="_blank"><h1 class="title mb-6">If at first you don&#x27;t succeed, get a 5kg hammer</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 27, 2007
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My command history for the last hour:</p>
         <div class="button flex justify-between">
             <a href="714.html"><span class="back arrow"></span></a>
 

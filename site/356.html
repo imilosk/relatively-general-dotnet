@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/168641/ravenfs-and-nservicebus-data-bus" target="_blank"><h1 class="title mb-6">RavenFS and NServiceBus&#x2019; Data Bus</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: October 13, 2014
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The NServiceBus data bus allows you to send very large messages by putting them on a shared resource and sending the reference to it. An obvious use case for this is using RavenFS. I took a few moments and wrote an implementation for that*.  public class RavenFSDataBus : IDataBus, IDisposable{    private readonly FilesStore _filesStore;    private Timer _timer;    private object _locker = new object();    private void RunExpiration(object state)    {        bool lockTaken = false;        try        {            Monitor.TryEnter(_locker, ref lockTaken);            if (lockTaken == false)                return;            using (var session = _filesStore.OpenAsyncSession())            {                var files = session.Query()                    .WhereLessThan(&quot;Time-To-Be-Received&quot;, DateTime.UtcNow.ToString(&quot;O&quot;))                    .OrderBy(&quot;Time-To-Be-Received&quot;)                    .ToListAsync();                files.Wait();                foreach (var fileHeader in files.Result)                {                    session.RegisterFileDeletion(fileHeader);                }                session.SaveChangesAsync().Wait();            }        }        finally        {            if (lockTaken)                Monitor.Exit(_locker);        }    }    public RavenFSDataBus(string connectionString)    {        _filesStore = new FilesStore        {            ConnectionStringName = connectionString        };    }    public RavenFSDataBus(FilesStore filesStore)    {        _filesStore = filesStore;    }    public Stream Get(string key)    {        return _filesStore.AsyncFilesCommands.DownloadAsync(key).Result;    }    public string Put(Stream stream, TimeSpan timeToBeReceived)    {        var key = &quot;/data-bus/&quot; &#x2B; Guid.NewGuid();        _filesStore.AsyncFilesCommands.UploadAsync(key, stream, new RavenJObject        {            {&quot;Time-To-Be-Received&quot;, DateTime.UtcNow.Add(timeToBeReceived).ToString(&quot;O&quot;)}        }).Wait();        return key;    }    public void Start()    {        _filesStore.Initialize(ensureFileSystemExists: true);        _timer = new Timer(RunExpiration);        _timer.Change(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));    }    public void Dispose()    {        if (_timer != null)            _timer.Dispose();        if (_filesStore != null)            _filesStore.Dispose();    }}&#xA;* This is written to check it out, hasn&#x2019;t been tested very well yet.</p>
         <a href="https://ayende.com/blog/168387/complex-nested-structures-in-ravendb" target="_blank"><h1 class="title mb-6">Complex nested structures in RavenDB</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: October 02, 2014
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Mauro and Manuel are talking about tax returns in Italy, and how RavenDB helps process a lot of them.   RavenDB - Case Study: Building multi-million document applications with scalability in mind from &#xD8;redev Conference on Vimeo.</p>
-        <a href="https://ayende.com/blog/168673/google-domains-wont-take-my-money" target="_blank"><h1 class="title mb-6">Google Domains won&#x2019;t take my money</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: October 02, 2014
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is frustrating. I&#x2019;m trying to use the new Google Domains (if only because I&#x2019;m sick of GoDaddy&#x2019;s aggressive upsale approach).&#xA;&#xA;&#x9;This is what happened when I tried it.&#xA;&#xA;&#x9;&#xA;&#xA;&#x9;That sucks, but I&#x2019;m actually a business user for Google Apps, so I called their support. I&#x2019;m currently on the 32th minute of the call, and so far they explained to me numerous times that this is not possible to do, and are still unable to tell me why they are refusing to take my card.&#xA;&#xA;&#x9;I can understand, beta service and all of that, but using Wallet isn&#x2019;t beta, and not being able to tell me what is wrong is not cool.</p>
         <div class="button flex justify-between">
             <a href="355.html"><span class="back arrow"></span></a>
 

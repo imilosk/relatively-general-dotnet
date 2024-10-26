@@ -111,6 +111,18 @@
 </header>
 <main id="main">
     <section aria-label="Blog post list">
+        <a href="https://ayende.com/blog/157217/awesome-ravendb-feature-of-the-day-eval-patching-part-ii-denormalized-references" target="_blank"><h1 class="title mb-6">Awesome RavenDB Feature of the day</h1></a>
+        <p class="mb-2">by Oren Eini</p>
+        <p class="mb-6 flex gap-1.5">
+                    <span>
+                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg"><path
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+            posted on: July 26, 2012
+        </p>
+        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned yesterday that I am keeping the best for today. What I am going to show you is how you can use Eval Patching for keeping track of denormalized references. In this case, we have Users &amp; Posts. Each Post contains a UserName property as well as the user id. When the user changes his name, we need to update all of the relevant posts. Here is how you can do this: store.DatabaseCommands.UpdateByIndex(&quot;Posts/ByUser&quot;,&#xA;    new IndexQuery{Query = &quot;UserId:&quot; &#x2B; userId},&#xA;    new AdvancedPatchRequest&#xA;        {&#xA;            Script = @&quot;&#xA;var user = LoadDocument(this.UserId);&#xA;this.UserName = user.Name;&#xA;&quot;&#xA;        });&#xA;&#xA;&#xA;And this is a really simple scenario, the options that this opens, the ability to load a separate document and modify the current document based on its value is really powerful.</p>
         <a href="https://ayende.com/blog/157377/silverlight-streaming-the-race-condition-is-already-included" target="_blank"><h1 class="title mb-6">Silverlight streaming - the race condition is already included</h1></a>
         <p class="mb-2">by Oren Eini</p>
         <p class="mb-6 flex gap-1.5">
@@ -219,18 +231,6 @@
             posted on: July 17, 2012
         </p>
         <p class="max-w-full w-full line-clamp-5 text-justify mb-20">At the moment (18 July 2012) if you install the NuGet package structuremap.MVC4, it will not compile due to breaking changes in the ASP.NET&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/157057/implications-of-design-decisions-read-striping" target="_blank"><h1 class="title mb-6">Implications of design decisions: Read Striping</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
-                    <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-            posted on: July 17, 2012
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When using RavenDB replication, you have the option to do something that is called &#x201C;Read Striping&#x201D;. Instead of using replication only for High Availability and Disaster Recovery, we can also spread our reads among all the replicating servers. The question then becomes, how would you select which server to use for which read request? The obvious answer is to do something like this:  Request Number % Count of Servers = current server index. This is simple to understand, easy to implement and oh so horribly wrong in a subtle way that it is scary. Let us look at the following scenario, shall we?   Session #1 loads users/3 from Server A Session #1 then query (with non stale results) from Server B The users/3 document hasn&#x2019;t been replicated to Server B yet, so Server B sends back a reply &#x201C;here are my (non stale) results)&#x201D; Session #1 assumes that users/3 must be in the results, since they are non stale, and blows up as a result.  We want to avoid such scenarios. Werner Vogels, Amazon&#x2019;s CTO, has the following consistency definitions:  Causal consistency. If process A has communicated to process B that it has updated a data item, a subsequent access by process B will return the updated value and a write is guaranteed to supersede the earlier write. Access by process C that has no causal relationship to process A is subject to the normal eventual consistency rules.  Read-your-writes consistency. This is an important model where process A after it has updated a data item always accesses the updated value and never will see an older value. This is a special case of the causal consistency model.  Session consistency. This is a practical version of the previous model, where a process accesses the storage system in the context of a session. As long as the session exists, the system guarantees read-your-writes consistency. If the session terminates because of certain failure scenarios a new session needs to be created, and the guarantees do not overlap the sessions.  Monotonic read consistency. If a process has seen a particular value for the object any subsequent accesses will never return any previous values.  Monotonic write consistency. In this case the system guarantees to serialize the writes by the same process. Systems that do not guarantee this level of consistency are notoriously hard to program. What is the consistency model offered by this?  Request Number % Count of Servers = current server index. As it turned out, it is pretty much resolves into &#x201C;none&#x201D;. Because each request may be re-directed into a different server, there is no consistency guarantees that we can make.&#xA0; That can make reasoning about the system really hard. Instead, RavenDB choose to go another route, and we use the following formula to calculate which server we will use.  Session Number % Count of Servers = current server index. By using a session, rather than a request, counter to decide which server we will use when spreading reads, we ensure that all of the requests made within a single session are always going to the same server, ensuring we have session consistency. Within the scope of a single session, we can rely on that consistency, instead of the chaos of no consistency at all. It is funny, how such a small change can have such profound implication.</p>
         <div class="button flex justify-between">
             <a href="430.html"><span class="back arrow"></span></a>
 
