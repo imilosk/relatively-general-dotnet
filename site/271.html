@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0, shrink-to-fit=no" name="viewport">
     <meta content="IE=edge" http-equiv="X-UA-Compatible">
-    <title>Home • Relatively General .NET</title>
+    <title>Page 271 • Relatively General .NET</title>
     <link href="favicon.ico" rel="icon" sizes="any">
     <link href="images/apple-touch-icon.png" rel="apple-touch-icon">
     <meta content="hsl()" name="theme-color">
@@ -109,128 +109,168 @@
         </button>
     </mobile-button>
 </header>
-<main id="main">
+<main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
-        <a href="https://ayende.com/blog/176931/ravendb-conference-videos-delving-into-documents-with-data-subscriptions" target="_blank"><h1 class="title mb-6">RavenDB Conference Videos</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
+        <article id="article-2701">
+            <a href="https://ayende.com/blog/177089/low-level-voron-optimizations-primitives-abstraction-levels" target="_blank">
+                <h2 class="title mb-6" id="article-2701">Low level Voron optimizations</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
                     <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: March 01, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this talk from the RavenDB conference, Kijana Woodard is talking about using subscriptions to process data reliably.  You&#x27;ve got documents coming in fast. There&#x27;s long running processing that needs to happen, but you don&#x27;t want users to have to wait when they submit data. Don&#x27;t worry! Data Subscriptions provide a way to reliably process documents asynchronously from the rest of your application. In this talk, we&#x27;ll cover the basics of Data Subscriptions to get your processing jobs running quickly and efficiently.</p>
-        <a href="https://ayende.com/blog/177059/low-level-voron-optimizations-transaction-lock-handoff" target="_blank"><h1 class="title mb-6">Low level Voron optimizations</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
+                posted on: March 02, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that I noticed with the recent spate of work we have been doing is that we are doing things that we have already tried, and failed. But suddenly we are far more successful. What is the difference? Case in point, transaction merging and early lock release. Those links both go to our initial implementation that was written in 2013. That is four years ago. Yes, today I can tell you that transaction merging was able to give us two orders of magnitude improvement and early lock release gave us 45% boost in performance. But looking at the timeline, we rolled back early lock release in early 2014. The complexity of the feature is certainly non trivial, but the major point that led to its removal in 2014 was that it wasn&#x2019;t worth it. That is, it didn&#x2019;t pay enough to be worth the complexity it brought. When we sat down to design Voron for RavenDB 4.0, one of the first areas that we sought to eliminate was the transaction merging. We wanted Voron to be single threaded, by design.  And I still very much stand by those decisions. So how can I reconcile both statements? The core difference between them is where those are located, and what this means.  Transaction merging now is not done by Voron, instead, this is something that RavenDB does on top of Voron. But why? When we had transaction merging in Voron, it meant that we had to submit transactional work to Voron in a format that it could understand. And Voron is a very low level library, so it doesn&#x2019;t really understand much. This gave us very small &#x201C;vocabulary&#x201D; to work with. More than that, it also meant that we had to deal with such features as explicit concurrency (at the Voron level, on top of the concurrency primitives exposed by RavenDB). Let us take the simplest example. We have two threads that want to write to the same document.  That means that we have to build the buffer we want to write in memory, then submit it to Voron, with the right concurrency setting at the Voron level. This is after we already checked the concurrency semantics at the RavenDB level, and with double cost to ensure that a concurrency conflicts at all levels are properly handled. From the point of view of Voron, that meant much more common merged transaction failing (which kills perfromance) and much higher complexity overall when using it. Alongside that, we also have much higher memory usage, because we have to allocate buffers to hold the data we need to write, then submit it to Voron, so the rate of allocations was much higher. We still saw performance improvement over not using it, but nothing that was really major as two orders of magnitude that we see today. Another aspect of this is that when we built Voron, we built it to fit our existing architecture (which was built on top of Esent), so it reflect a lot of design decisions coming from there. With RavenDB 4.0, we took a few giant steps back and decided to design the whole system as a single integrated piece. In fact, that meant that any attempt to do concurrency at the Voron level was abandoned. That meant that the moment you had a write transaction, you were safe from concurrency, you didn&#x2019;t have to worry about anyone modify the data you were looking at. There was no need to allocate special buffers and hold them, because we are always writing directly to Voron, instead of buffering in memory.  This was a dramatic simplification of the API and its usage, and it meant that the code is much more approachable and easy to understand, work with and make performant. Of course, it also meant that we had a serial lock, which is where the transaction merger became such a huge deal. But the point here is that this kind of transaction merging isn&#x2019;t done at the Voron level, but at the RavenDB level, and instead of submitting primitive operations we can submit full fledge work items, including logic. So writing a document is now done by the request thread parsing the document, preparing a MergedPutCommand class and submitting it to the transaction merger.  The transaction merger will then execute the command under a write transaction, and it will directly manipulate Voron. This means that we get both high concurrency and safety from concurrency issues at the same time.&#xA0; Early lock release plays into that as well, we had to modify Voron to allow that, but what we did was to build low level primitives that can be used by higher levels, without making assumptions on their usage.  On the Voron side of things, we just have the notion of async commit (with a list of requirements that happen to be exactly fit what is going on in the transaction merging portion in RavenDB), and the actual transaction lock handoff / early lock released is handled at a higher layer, with a lot more information about the system.</p>
+        </article>
+        <article id="article-2702">
+            <a href="https://ayende.com/blog/176931/ravendb-conference-videos-delving-into-documents-with-data-subscriptions" target="_blank">
+                <h2 class="title mb-6" id="article-2702">RavenDB Conference Videos</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
                     <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 28, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There are some features that on completion, just made my day/week/month. This is one of them. I&#x2019;ve only just started recovering from the marathon of build this feature (this is written on Friday, the feature was completed on Sunday, around 11 AM, after about 12 hours or so of work).&#xA;Why am I so excited, and why did it merit such efforts? Transaction lock handoff is a more accurate name to our version of early lock release, which is a feature that I have been wanting for over four years.&#xA;Let me try to explain why this is important. Voron is a single writer storage engine, which means that there can only be a single write transaction at any given point in time. A lot of that is mitigated by transaction merging, which means that we can do a lot of the preparation work ahead of time, and only send the processed work to be done as part of the transaction. But it does mean that there a single write transaction, and under load, it means that we have the following pattern:&#xA;&#xA;The wavy line is # of writes / sec, and you can see that it is going up &amp; down like crazy. The reason for that is that whenever we actually need to commit a transaction, we can&#x2019;t continue processing requests. They have to wait for the next transaction to start . And that means that the old one has to complete, which require us to finish doing a write all the way to the disk.&#xA;So basically, the drops in performance happens whenever we have to wait for I/O. But we have to wait for the transaction to complete before we can start the next one, so we are effectively bottlenecked.&#xA;Early lock release is a technique which alleviate the problem. In effect, instead of waiting for the I/O to complete before starting the next transaction, we start it immediately, in parallel with the I/O work required to commit the previous transaction. The key part here is that we don&#x2019;t report success on the first transaction until the commit has been successful, and that the 2nd transaction may fail because the first one had (this sounds bad, until you realize that failure to write to disk is pretty much always catastrophic for a database).&#xA0;&#xA;If you look at the previous post (from Jan 2014!) about this, you&#x2019;ll see that we actually implement that at the time, and rolled it back because it wasn&#x2019;t doing much for us. I&#x2019;ll have another post to explain what we are doing different now that allows us to take full advantage of this.&#xA;The idea with early lock release is that the transaction will free its lock as soon as it is done, and allow additional transactions to hold that lock while waiting for I/O. This isn&#x2019;t actually what we have done.&#xA;The idea of transaction merging is deeply rooted into the design of RavenDB 4.0, and it isn&#x2019;t something that we can (or want) to change. About 98% of all write work in RavenDB will always go through the transaction merger. That means that just releasing the lock isn&#x2019;t really going to do much for us. The transaction merger thread will be busy waiting for the I/O to complete and then start a new transaction (re-acquiring the lock), so there isn&#x2019;t actually any benefit here.&#xA;Instead, we implemented a different system. When a transaction (let&#x2019;s call it tx #1) is over, it checks whatever there is additional work pending, and it there is, tx #1 generate a new transaction (tx #2). The second transaction has the same in memory state as tx #1, including all the modifications that tx #1 has made. More crucially, tx #1 also hand off all of the locks that it holds to tx #2, and then triggers the async process of writing tx #1 data to the journal.&#xA;In the meantime, tx #@ gets to run and operate (and doesn&#x2019;t have to compete for any locks). Tx #2 will process work until tx #1 has completed its I/O work. At that point, tx #2 will call back into tx #1, letting it complete its commit process, and then we can&#xA0; the cycle repeats, if there is even more work pending, tx #2 will generate tx #3, transfer the lock to it and initiate an async process of writing to the journal. Tx #3 will run until tx #2 is done with its I/O, and so forth.&#xA;Here it what this looks like:&#xA;&#xA;The thread on the left is the transaction merger, processing incoming write requests. The thread on the right is the one doing the async write process. It is interesting to note that while we call it an async write process, the actual time we spend writing to disk is relatively low, we spend most of our time actually preparing to write. That involves running diffs against old version, compressing the data, etc.&#xA;The end result is that we get several very important properties:&#xA;&#xA;We split the transaction processing work and the writes.&#xA;We get automatic adjustment of the system based on actual load (if the disk is slow, we&#x2019;ll try to do more work and have larger merged transactions, for example).&#xA;The transaction merger doesn&#x2019;t have to compete for the transaction lock.&#xA;We have managed to increase parallelism in a previously highly serial process.&#xA;&#xA;The details of the change are gnarly, because we had to make sure that pieces of the code that assumed that we are running in a serial fashion can run concurrently, but the performance boost is over 45% under heavy load, and the behavior will auto adjust to handle the specific circumstances at hand, trying to keep all pieces of the system running at full throttle.</p>
-        <a href="https://andrewlock.net/using-routing-datatokens-in-asp-net-core/" target="_blank"><h1 class="title mb-6">Using routing DataTokens in ASP.NET Core</h1></a>
-        <p class="mb-2">by Andrew Lock</p>
-        <p class="mb-6 flex gap-1.5">
+                posted on: March 01, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this talk from the RavenDB conference, Kijana Woodard is talking about using subscriptions to process data reliably.  You&#x27;ve got documents coming in fast. There&#x27;s long running processing that needs to happen, but you don&#x27;t want users to have to wait when they submit data. Don&#x27;t worry! Data Subscriptions provide a way to reliably process documents asynchronously from the rest of your application. In this talk, we&#x27;ll cover the basics of Data Subscriptions to get your processing jobs running quickly and efficiently.</p>
+        </article>
+        <article id="article-2703">
+            <a href="https://ayende.com/blog/177059/low-level-voron-optimizations-transaction-lock-handoff" target="_blank">
+                <h2 class="title mb-6" id="article-2703">Low level Voron optimizations</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
                     <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 28, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post takes a look at data tokens and how to use them to provide route information in your apps, but generally I recommend avoiding them if you can.&#x2026;</p>
-        <a href="https://ayende.com/blog/176930/ravendb-conference-videos-building-codealike-a-journey-into-the-developers-analytics-world" target="_blank"><h1 class="title mb-6">RavenDB Conference videos</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
+                posted on: February 28, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There are some features that on completion, just made my day/week/month. This is one of them. I&#x2019;ve only just started recovering from the marathon of build this feature (this is written on Friday, the feature was completed on Sunday, around 11 AM, after about 12 hours or so of work).&#xA;Why am I so excited, and why did it merit such efforts? Transaction lock handoff is a more accurate name to our version of early lock release, which is a feature that I have been wanting for over four years.&#xA;Let me try to explain why this is important. Voron is a single writer storage engine, which means that there can only be a single write transaction at any given point in time. A lot of that is mitigated by transaction merging, which means that we can do a lot of the preparation work ahead of time, and only send the processed work to be done as part of the transaction. But it does mean that there a single write transaction, and under load, it means that we have the following pattern:&#xA;&#xA;The wavy line is # of writes / sec, and you can see that it is going up &amp; down like crazy. The reason for that is that whenever we actually need to commit a transaction, we can&#x2019;t continue processing requests. They have to wait for the next transaction to start . And that means that the old one has to complete, which require us to finish doing a write all the way to the disk.&#xA;So basically, the drops in performance happens whenever we have to wait for I/O. But we have to wait for the transaction to complete before we can start the next one, so we are effectively bottlenecked.&#xA;Early lock release is a technique which alleviate the problem. In effect, instead of waiting for the I/O to complete before starting the next transaction, we start it immediately, in parallel with the I/O work required to commit the previous transaction. The key part here is that we don&#x2019;t report success on the first transaction until the commit has been successful, and that the 2nd transaction may fail because the first one had (this sounds bad, until you realize that failure to write to disk is pretty much always catastrophic for a database).&#xA0;&#xA;If you look at the previous post (from Jan 2014!) about this, you&#x2019;ll see that we actually implement that at the time, and rolled it back because it wasn&#x2019;t doing much for us. I&#x2019;ll have another post to explain what we are doing different now that allows us to take full advantage of this.&#xA;The idea with early lock release is that the transaction will free its lock as soon as it is done, and allow additional transactions to hold that lock while waiting for I/O. This isn&#x2019;t actually what we have done.&#xA;The idea of transaction merging is deeply rooted into the design of RavenDB 4.0, and it isn&#x2019;t something that we can (or want) to change. About 98% of all write work in RavenDB will always go through the transaction merger. That means that just releasing the lock isn&#x2019;t really going to do much for us. The transaction merger thread will be busy waiting for the I/O to complete and then start a new transaction (re-acquiring the lock), so there isn&#x2019;t actually any benefit here.&#xA;Instead, we implemented a different system. When a transaction (let&#x2019;s call it tx #1) is over, it checks whatever there is additional work pending, and it there is, tx #1 generate a new transaction (tx #2). The second transaction has the same in memory state as tx #1, including all the modifications that tx #1 has made. More crucially, tx #1 also hand off all of the locks that it holds to tx #2, and then triggers the async process of writing tx #1 data to the journal.&#xA;In the meantime, tx #@ gets to run and operate (and doesn&#x2019;t have to compete for any locks). Tx #2 will process work until tx #1 has completed its I/O work. At that point, tx #2 will call back into tx #1, letting it complete its commit process, and then we can&#xA0; the cycle repeats, if there is even more work pending, tx #2 will generate tx #3, transfer the lock to it and initiate an async process of writing to the journal. Tx #3 will run until tx #2 is done with its I/O, and so forth.&#xA;Here it what this looks like:&#xA;&#xA;The thread on the left is the transaction merger, processing incoming write requests. The thread on the right is the one doing the async write process. It is interesting to note that while we call it an async write process, the actual time we spend writing to disk is relatively low, we spend most of our time actually preparing to write. That involves running diffs against old version, compressing the data, etc.&#xA;The end result is that we get several very important properties:&#xA;&#xA;We split the transaction processing work and the writes.&#xA;We get automatic adjustment of the system based on actual load (if the disk is slow, we&#x2019;ll try to do more work and have larger merged transactions, for example).&#xA;The transaction merger doesn&#x2019;t have to compete for the transaction lock.&#xA;We have managed to increase parallelism in a previously highly serial process.&#xA;&#xA;The details of the change are gnarly, because we had to make sure that pieces of the code that assumed that we are running in a serial fashion can run concurrently, but the performance boost is over 45% under heavy load, and the behavior will auto adjust to handle the specific circumstances at hand, trying to keep all pieces of the system running at full throttle.</p>
+        </article>
+        <article id="article-2704">
+            <a href="https://andrewlock.net/using-routing-datatokens-in-asp-net-core/" target="_blank">
+                <h2 class="title mb-6" id="article-2704">Using routing DataTokens in ASP.NET Core</h2>
+            </a>
+            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-6 flex gap-1.5">
                     <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 27, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this talk from the RavenDB conference, Federico Lois is discussing building Codealike,a collaborative platform for developers analytics. Codealike plugins in Visual Studio, Eclipse and Chrome, track developers while they code and perform analytic calculations at the millisecond level. For such write heavy workloads and using RavenDB as the main and only database was not without challenge. In this talk, we will reveal how we built and scaled such a solution, how we were able to improve performance with Voron and glance at our own mistakes and architectural choices down the line.</p>
-        <a href="https://www.meziantou.net/get-the-localization-and-time-zone-of-your-visitors.htm" target="_blank"><h1 class="title mb-6">Get the localization and time zone of your visitors</h1></a>
-        <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-        <p class="mb-6 flex gap-1.5">
+                posted on: February 28, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post takes a look at data tokens and how to use them to provide route information in your apps, but generally I recommend avoiding them if you can.&#x2026;</p>
+        </article>
+        <article id="article-2705">
+            <a href="https://ayende.com/blog/176930/ravendb-conference-videos-building-codealike-a-journey-into-the-developers-analytics-world" target="_blank">
+                <h2 class="title mb-6" id="article-2705">RavenDB Conference videos</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
                     <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 27, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Knowing the time zone of your customers is very important when your application needs to deal with date and time. Indeed, sending an email at 3PM is not the same for someone in USA or someone in France. This is more complicated; a country can span across many different time zones. For instance, USA</p>
-        <a href="https://www.stevejgordon.co.uk/things-ive-learnt-week-26th-february" target="_blank"><h1 class="title mb-6">Things I&#x2019;ve Learnt This Week (26th February)</h1></a>
-        <p class="mb-2">by Steve Gordon</p>
-        <p class="mb-6 flex gap-1.5">
+                posted on: February 27, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this talk from the RavenDB conference, Federico Lois is discussing building Codealike,a collaborative platform for developers analytics. Codealike plugins in Visual Studio, Eclipse and Chrome, track developers while they code and perform analytic calculations at the millisecond level. For such write heavy workloads and using RavenDB as the main and only database was not without challenge. In this talk, we will reveal how we built and scaled such a solution, how we were able to improve performance with Voron and glance at our own mistakes and architectural choices down the line.</p>
+        </article>
+        <article id="article-2706">
+            <a href="https://www.meziantou.net/get-the-localization-and-time-zone-of-your-visitors.htm" target="_blank">
+                <h2 class="title mb-6" id="article-2706">Get the localization and time zone of your visitors</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
                     <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 26, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Week 5 of my series, sharing things I&#x2019;ve learnt, read, watched and listened to, in the pursuit of expanding my knowledge&#xA0;about software development. I spent much of the week wiped out with a bad cold / flu bug so very little time spent in front of screens. I did manage to watch some NDC videos [&#x2026;]</p>
-        <a href="https://ardalis.com/how-to-start-multiple-projects-in-visual-studio/" target="_blank"><h1 class="title mb-6">How to Start Multiple Projects in Visual Studio</h1></a>
-        <p class="mb-2">by Ardalis</p>
-        <p class="mb-6 flex gap-1.5">
+                posted on: February 27, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Knowing the time zone of your customers is very important when your application needs to deal with date and time. Indeed, sending an email at 3PM is not the same for someone in USA or someone in France. This is more complicated; a country can span across many different time zones. For instance, USA</p>
+        </article>
+        <article id="article-2707">
+            <a href="https://www.stevejgordon.co.uk/things-ive-learnt-week-26th-february" target="_blank">
+                <h2 class="title mb-6" id="article-2707">Things I&#x2019;ve Learnt This Week (26th February)</h2>
+            </a>
+            <p class="mb-2">by Steve Gordon</p>
+            <p class="mb-6 flex gap-1.5">
                     <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 25, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you have multiple projects that need to interact with one another, you can configure Visual Studio to launch multiple projects whenever&#x2026;Keep Reading &#x2192;</p>
-        <a href="https://ayende.com/blog/177058/how-did-the-milk-get-to-the-fridge" target="_blank"><h1 class="title mb-6">How did the milk get to the fridge?</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
+                posted on: February 26, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Week 5 of my series, sharing things I&#x2019;ve learnt, read, watched and listened to, in the pursuit of expanding my knowledge&#xA0;about software development. I spent much of the week wiped out with a bad cold / flu bug so very little time spent in front of screens. I did manage to watch some NDC videos [&#x2026;]</p>
+        </article>
+        <article id="article-2708">
+            <a href="https://ardalis.com/how-to-start-multiple-projects-in-visual-studio/" target="_blank">
+                <h2 class="title mb-6" id="article-2708">How to Start Multiple Projects in Visual Studio</h2>
+            </a>
+            <p class="mb-2">by Ardalis</p>
+            <p class="mb-6 flex gap-1.5">
                     <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 24, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is probably very much related to this post. Our office manager has been sick for about a week a while back, and that led to an interesting observation on my part. There was milk in the office fridge.&#xA;Now, one of the (minor) things that she does is make sure that there are such essential things as coffee and milk are stocked.&#xA;She was sick for a week, and yet there was still milk in the fridge.&#xA;I&#x2019;m not sure how it got there, I assume that the milk didn&#x2019;t develop self awareness and the desire to be consumed in large quantities (those two seems to be quite unlikely to develop at the same time) and therefore manage to snick into our fridge.&#xA0; So someone must have made that happen, but the really nice thing about it is that I have no idea how, or who.&#xA;I can guess the why, and I&#x2019;m deeply appreciative (see attached image ).&#xA;But I do wonder if I need to find out who got the milk, or decide that if it works and you don&#x2019;t know how, write a unit test that confirms it will continue to work and move to the next bug?</p>
-        <a href="https://ayende.com/blog/176929/ravendb-conference-videos-implementing-cqrs-and-event-sourcing-with-ravendb" target="_blank"><h1 class="title mb-6">RavenDB Conference videos</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
+                posted on: February 25, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you have multiple projects that need to interact with one another, you can configure Visual Studio to launch multiple projects whenever&#x2026;Keep Reading &#x2192;</p>
+        </article>
+        <article id="article-2709">
+            <a href="https://ayende.com/blog/177058/how-did-the-milk-get-to-the-fridge" target="_blank">
+                <h2 class="title mb-6" id="article-2709">How did the milk get to the fridge?</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
                     <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 23, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this talk from the RavenDB conference, Elemar J&#xFA;nior is talking about CQRS and using RavenDB for event souring.  CQRS stands for Command Query Responsibility Segregation. That is, that command stack and query stack are designed separately. This leads to a dramatic simplification of design and potential enhancement of scalability.  Events are a new trend in software industry. In real-world, we perform actions and these actions generate a reaction. Event Sourcing is about persisting events and rebuilding the state of the aggregates from recorded events.  In this talk I will share a lot of examples about how to effective implementing CQRS and Event Sourcing with RavenDB</p>
-        <a href="https://ayende.com/blog/177057/feature-intersection-bugs-are-the-hardest-to-predict" target="_blank"><h1 class="title mb-6">Feature intersection bugs are the hardest to predict</h1></a>
-        <p class="mb-2">by Oren Eini</p>
-        <p class="mb-6 flex gap-1.5">
+                posted on: February 24, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is probably very much related to this post. Our office manager has been sick for about a week a while back, and that led to an interesting observation on my part. There was milk in the office fridge.&#xA;Now, one of the (minor) things that she does is make sure that there are such essential things as coffee and milk are stocked.&#xA;She was sick for a week, and yet there was still milk in the fridge.&#xA;I&#x2019;m not sure how it got there, I assume that the milk didn&#x2019;t develop self awareness and the desire to be consumed in large quantities (those two seems to be quite unlikely to develop at the same time) and therefore manage to snick into our fridge.&#xA0; So someone must have made that happen, but the really nice thing about it is that I have no idea how, or who.&#xA;I can guess the why, and I&#x2019;m deeply appreciative (see attached image ).&#xA;But I do wonder if I need to find out who got the milk, or decide that if it works and you don&#x2019;t know how, write a unit test that confirms it will continue to work and move to the next bug?</p>
+        </article>
+        <article id="article-2710">
+            <a href="https://ayende.com/blog/176929/ravendb-conference-videos-implementing-cqrs-and-event-sourcing-with-ravendb" target="_blank">
+                <h2 class="title mb-6" id="article-2710">RavenDB Conference videos</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
                     <span>
-                                    <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                                         xmlns="http://www.w3.org/2000/svg"><path
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-            posted on: February 22, 2017
-        </p>
-        <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is the story of RavenDB-6230, or as it is more commonly known as: &#x201C;Creating auto-index on non-existent field breaks querying via Id&#x201D;. It isn&#x2019;t a big or important bug, and it has very little real world impact. But it is an interesting story because it shows one of the hardest things that we deal with, not an issue with a specific feature, but the behavior of the system as a whole, especially when we have multiple things that may affect the end result. Let us see what the bug actually is. We have the following query:  And this works and gets you the right results. Under the cover, it will select the appropriate index (and create one if it isn&#x2019;t there) to query and get the right results. Now, issue the following query on a non existent field:  And issue the first query again. You&#x2019;ll get no results.  That is a bit surprising, I&#x2019;ll admit, but it makes absolute sense when you break it up to component parts.  First, a query by id can be answered by any index, but if you don&#x2019;t have an index, one will be created for you. In this case, it will be on the &#x201C;__document_id&#x201D; field, since we explicitly queried on that. This isn&#x2019;t typically done explicitly, which is important to understand the bug. Then, we have another query, on another field, so we generate an index on that as well. We do that while taking into account the historical behavior of the queries on the server. However, we ignore the &#x201C;__document_id&#x201D; field because all indexes already contain it, so it is superfluous. That means that we have an index with one explicit field (Nice_Doggy_Nice, in this case) and an implicit one (__document_Id). Which works great, even though in one case it is implicit and the other explicit, there is no actual difference in how we treat them. So what is the problem? The problem is that the field Nice_Doggy_Nice doesn&#x2019;t actually exists. So when it comes the time to actually index documents using this index, we read the document and index that, but find that we have nothing to index. At this point, we have only a single field to index, just the document id, but as it is an implicit field, and we have nothing else, we skip indexing that document entirely.&#xA0; The example I used in the office is that you can&#x2019;t get an answer for &#x201C;when was the last time you had given birth&#x201D; if you ask a male (except Schwarzenegger, in which case the answer is 1994).  So far, it all makes sense. But we need to introduce another feature into the mix. The RavenDB query optimizer. That component is responsible for routing dynamic queries to the most relevant index, and it is doing that with the idea that we should direct work to the biggest index around, because that would make it the most active, at which point we can retire the smaller indexes (which are superfluous once the new wider index is up to date).  All features are working as intended so far. The problem is that the query optimizer indeed selects the wider index, and it is an index that has filtered all the results, so the query by id returns nothing.  Everything works as designed, and yet the user is surprised. In practice, there are several mitigating factors here. The only way you can get this issue is if you never made any queries on any other (valid) fields on the documents in question. If you have made even a single such query, you&#x2019;ll not be able to reproduce it. So you have to really work hard at it to get it to fail. But the point isn&#x2019;t so much the actual bug, but pointing how how multiple unrelated behaviors can combine to cause a bit of a problem. Highly recommended reading: How Complex Systems Fail &#x2013; Cook 2000</p>
+                posted on: February 23, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this talk from the RavenDB conference, Elemar J&#xFA;nior is talking about CQRS and using RavenDB for event souring.  CQRS stands for Command Query Responsibility Segregation. That is, that command stack and query stack are designed separately. This leads to a dramatic simplification of design and potential enhancement of scalability.  Events are a new trend in software industry. In real-world, we perform actions and these actions generate a reaction. Event Sourcing is about persisting events and rebuilding the state of the aggregates from recorded events.  In this talk I will share a lot of examples about how to effective implementing CQRS and Event Sourcing with RavenDB</p>
+        </article>
         <div class="button flex justify-between">
             <a href="270.html"><span class="back arrow"></span></a>
 
@@ -270,7 +310,7 @@
             class="px-4 py-2 sm:py-0 sm:hover:text-textColor sm:hover:underline" href="/about/"> About </a>
     </nav>
 </footer>
-<script src="js/script.js"></script>
+<script src="js/script.js?id=0441ad4f65d54589aea5"></script>
 <script src="pagefind/pagefind-ui.js"></script>
 </body>
 </html>
