@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-571">
+            <a href="https://www.meziantou.net/using-a-custom-build-pipeline-with-azure-static-web-apps.htm" target="_blank">
+                <h2 class="title mb-6" id="article-571">Using a custom build pipeline with Azure Static Web Apps</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 08, 2022
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Azure Static Web Apps allows to host static web sites and their API. They also provide a GitHub action to build and deploy your application. The GitHub action automatically detects the kind of project from the sources and builds it. It currently supports many JavaScript frameworks and static site g</p>
+        </article>
+        <article id="article-572">
             <a href="https://ayende.com/blog/197953-A/production-postmortem-the-allocating-query" target="_blank">
-                <h2 class="title mb-6" id="article-571">Production postmortem</h2>
+                <h2 class="title mb-6" id="article-572">Production postmortem</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A customer was experiencing large memory spikes in some cases, and we were looking into the allocation patterns of some of the queries that were involved. One of the things that popped up was a query that allocated just under 30GB of managed memory during its processing.&#xA;Let me repeat that, because it bears repeating. That query allocated 30(!) GB(!) during its execution. Now, that doesn&#x2019;t mean that it was consuming 30 GB, it was just the allocations involved. Most of that memory was immediately discarded during the operation. But 30 GB of garbage to cleanup puts a lot of pressure on the system. We took a closer look at the offensive query. It looked something like this:&#xA;&#xA;from index &#x201C;Notifications/RoutingAndPriority&#x201D; where startsWith(Route, $routeKeyPrefix) order by Priority desc&#xA;&#xA;That does not seem like a query that should be all that expensive. But details matter, so we dove into this. For this particular query, the routes are hierarchical structures that are unique for each message. Something like:&#xA;&#xA;notifications/traffic/new-york-city/67a81019-941b-4d04-a0db-0559ed45343c&#xA;notifications/emergency/las-vegas/0a8e18fb-563b-4b6a-8e93-e10e08239656&#xA;&#xA;And the queries that were generated were using the city &amp; topic to filter the information that they were interested in.&#xA;The customer in question had a lot of notifications going on at all times. And each one of their Routes was unique. Internally, RavenDB uses Lucene (currently  ) to handle searches, and Lucene is using an inverse index to execute queries.&#xA;The usual way to think about is like this:&#xA;&#xA;We have a list of terms (Brown, Green &amp; Purple) and each of them has a list of the matching documents that contain the particular term.&#xA;The process of issuing a prefix query then is easy, scan all entries that match the prefix and return their results. This is indeed what Lucene is doing. However&#x2026; while it is doing that, it will do something like this:&#xA;&#xA;&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          var termsEnum = GetTermsEnum();&#xA;        &#xA;        &#xA;          &#xA;          foreach(string term in termsEnum.Prefix(&quot;notifications/traffic/new-york-city/&quot;))&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              foreach(int match in docsEnum.ForTerm(term))&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                   yield return match;&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          prefix.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;&#xA;&#xA;Pay close attention to what is actually happening here. There are two enumerators that we work with. One for the terms for the field and one for the documents for a specific term.&#xA;All of this is perfectly reasonable, but there is an issue. What happens when you have a lot of unique values? Well, then Lucene will have a lot of iterations of the loop. In this case, each term has just a single match, and Lucene is pretty good at optimizing search by specific term.&#xA;The actual problem is that Lucene allocates a string instance for each term. If we have 30 million notifications for New York&#x2019;s traffic, that means that we&#x2019;ll allocate 30 million strings during the processing of the query. We aren&#x2019;t retaining these strings, mind. They&#x2019;ll be cleaned up by the GC quickly enough, but that is an additional cost that we don&#x2019;t actually want.&#xA;Luckily, in this case, there is a much simple solution. Given that the pattern of the route is known, we can skip the unique portion of the route. That means that in our index, we&#x2019;ll do something similar to:&#xA;&#xA;Route = doc.Route.Substring(0, doc.Route.LastIndexOf(&#x27;/&#x27;) &#x2B; 1)&#xA;&#xA;Once that is done, the number of unique matches there would be negligible. There would be no more allocations galore to observe and overall system performance is much improved.&#xA;We looked into whether&#xA0;there is something that we can do with Lucene to avoid this allocations issue, but it is endemic to the way the API works. The longer term plan is to fix that completely, of course. We are making great strides there already .&#xA;In short, if you are doing startsWith() queries or similar, pay attention to the number of unique terms that you have to go through. A simple optimization on the index like the one above can bring quite a bit of dividends.</p>
         </article>
-        <article id="article-572">
+        <article id="article-573">
             <a href="https://ardalis.com/unsupported-audio-format-set-audio-output-pcm/" target="_blank">
-                <h2 class="title mb-6" id="article-572">Solved: Unsupported audio format set the audio output to pulse code modulation PCM</h2>
+                <h2 class="title mb-6" id="article-573">Solved: Unsupported audio format set the audio output to pulse code modulation PCM</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Solved! My dell monitor had started showing an annoying error every 30 seconds or so saying &#x27;Unsupported audio format. Set the audio output&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-573">
+        <article id="article-574">
             <a href="https://andrewlock.net/replacing-disqus-with-github-discussions-using-giscus/" target="_blank">
-                <h2 class="title mb-6" id="article-573">Replacing Disqus with GitHub discussions using giscus</h2>
+                <h2 class="title mb-6" id="article-574">Replacing Disqus with GitHub discussions using giscus</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently replaced Disqus with giscus for comments on this blog. In this post I describe the process I took&#x2026;</p>
         </article>
-        <article id="article-574">
+        <article id="article-575">
             <a href="https://www.meziantou.net/faster-and-safer-nuget-restore-using-source-mapping-and-lock-files.htm" target="_blank">
-                <h2 class="title mb-6" id="article-574">Faster and Safer NuGet restore using Source Mapping and Lock files</h2>
+                <h2 class="title mb-6" id="article-575">Faster and Safer NuGet restore using Source Mapping and Lock files</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Using NuGet packages is very common. Some options may help get better performance and security when restoring packages.#Lock FilesWhen restoring packages, NuGet creates a dependency graph. This graph includes all declared packages and the transitive packages. This dependency graph is then used to d</p>
         </article>
-        <article id="article-575">
+        <article id="article-576">
             <a href="https://ayende.com/blog/197921-A/webinar-recording-ravendb-messaging-transactions" target="_blank">
-                <h2 class="title mb-6" id="article-575">Webinar Recording</h2>
+                <h2 class="title mb-6" id="article-576">Webinar Recording</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In RavenDB 5.4, we&#x2019;re introducing new ELT features for Kafka and RabbitMQ. Now, instead of your documents just sitting there in your database, you can involve them in your messaging transactions. In this webinar, RavenDB CEO Oren Eini explains how these ETL tasks open up a whole new world of architectural patterns, and how they spare you from a lot of complexity when you want to involve your data in pub/sub or other messaging patterns.</p>
         </article>
-        <article id="article-576">
+        <article id="article-577">
             <a href="https://andrewlock.net/considering-replacing-disqus-with-giscus/" target="_blank">
-                <h2 class="title mb-6" id="article-576">Considering replacing Disqus with Giscus</h2>
+                <h2 class="title mb-6" id="article-577">Considering replacing Disqus with Giscus</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I&#x27;m soliciting opinions-should I pay to keep using Disqus for comments, or should I switch to an open-source alternative that uses GitHub&#x2026;</p>
         </article>
-        <article id="article-577">
+        <article id="article-578">
             <a href="https://ayende.com/blog/197889-A/recording-build-your-own-database-at-cloud-lunch-learn" target="_blank">
-                <h2 class="title mb-6" id="article-577">Recording</h2>
+                <h2 class="title mb-6" id="article-578">Recording</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I spoke at Cloud Lunch &amp; Learn about the basics of building a database from scratch. We took a storage engine and created a simple database within the span of an hour.&#xA;Covered in the talk are the details of how you can build the database, using indexes to speed up queries and the manner in which a database interacts with its storage engine. I think it was a great talk, but let me know your feedback:</p>
         </article>
-        <article id="article-578">
+        <article id="article-579">
             <a href="https://www.meziantou.net/running-lighthouse-ci-when-deploying-azure-swa.htm" target="_blank">
-                <h2 class="title mb-6" id="article-578">Running Lighthouse CI when deploying Azure SWA</h2>
+                <h2 class="title mb-6" id="article-579">Running Lighthouse CI when deploying Azure SWA</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When you add new features to a web application, it&#x27;s important to ensure there is no regression in terms of performance. LightHouse CI is a tool that helps you to run a Lighthouse analysis on your web application. If you don&#x27;t know lighthouse, it&#x27;s a tool that analyzes web apps and web pages and ge</p>
         </article>
-        <article id="article-579">
+        <article id="article-580">
             <a href="https://ayende.com/blog/197825-C/production-postmortem-efficiency-all-the-way-to-out-of-memory-error" target="_blank">
-                <h2 class="title mb-6" id="article-579">Production postmortem</h2>
+                <h2 class="title mb-6" id="article-580">Production postmortem</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: July 22, 2022
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB is written in C#, and as such, uses managed memory. As a database, however, we need granular control of our memory, so we also do manual memory management.&#xA;One of the key optimizations that we utilize to reduce the amount of overhead we have on managing our memory is using&#xA0;an arena allocator. That is a piece of memory that we allocate in one shot from the operating system and operate on. Once a particular task is done, we can discard that whole segment in one shot, rather than try to work out exactly what is going on there. That gives us a proper scope for operations, which means that missing a free in some cases isn&#x2019;t the end of the world.&#xA;It also makes the code for RavenDB memory allocation super simple. Here is what this looks like:&#xA;&#xA;Whenever we need to allocate more memory, we&#x2019;ll just bump the allocator up. Initially, we didn&#x2019;t even implement freeing memory, but it turns out that there are a lot of long running processes inside of RavenDB, so we needed to reuse the memory inside the same operation, not just between operations.&#xA;The implementation of freeing memory is pretty simple, as well. If we return the last item that we allocated, we can just drop the next allocation position by how many bytes were allocated. For that matter, it also allows us to do incremental allocations. We can ask for some memory, then increase the allocation amount on the fly very easily.&#xA;Here is a (highly simplified) example of how this works:&#xA;&#xA;&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          typedef struct arena {&#xA;        &#xA;        &#xA;          &#xA;            void* mem;&#xA;        &#xA;        &#xA;          &#xA;            size_t allocated;&#xA;        &#xA;        &#xA;          &#xA;            size_t next_alloc;&#xA;        &#xA;        &#xA;          &#xA;          } arena;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          void* arena_alloc(arena* arena, size_t size) {&#xA;        &#xA;        &#xA;          &#xA;            void* result = arena-&gt;mem &#x2B; arena-&gt;next_alloc;&#xA;        &#xA;        &#xA;          &#xA;            if(end &#x2B; size &gt; arena-&gt;mem &#x2B; arena-&gt;allocated)&#xA;        &#xA;        &#xA;          &#xA;              return NULL;&#xA;        &#xA;        &#xA;          &#xA;            arena-&gt;next_alloc &#x2B;= size;&#xA;        &#xA;        &#xA;          &#xA;            return result;&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          bool arean_realloc_in_place(arena* arena, void* p, size_t old_size, size_t new_size) {&#xA;        &#xA;        &#xA;          &#xA;            if(p &#x2B; old_size != arena-&gt;mem &#x2B; arena-&gt;next_alloc)&#xA;        &#xA;        &#xA;          &#xA;              return false; // not at the top of the buffer&#xA;        &#xA;        &#xA;          &#xA;            if(p &#x2B; new_size &gt; arena-&gt;mem &#x2B; arena-&gt;allocated)&#xA;        &#xA;        &#xA;          &#xA;              return false; // too big&#xA;        &#xA;        &#xA;          &#xA;            arena-&gt;next_alloc &#x2B;= new_size - old_size;&#xA;        &#xA;        &#xA;          &#xA;            return true;&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          void arena_free(arena* arena, void* p, size_t size) {&#xA;        &#xA;        &#xA;          &#xA;            if(p &#x2B; old_size != arena-&gt;mem &#x2B; arena-&gt;next_alloc)&#xA;        &#xA;        &#xA;          &#xA;              return; // can&#x27;t just bump down&#xA;        &#xA;        &#xA;          &#xA;            arena-&gt;next_alloc -= size; // memory will be available again&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          arena.c&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;&#xA;&#xA;As you can see, there isn&#x2019;t much there. A key requirement here is that you need to return the memory back in the reverse order of how you allocated it. That is usually how it goes, but what if it doesn&#x2019;t happen?&#xA;Well, then we can&#x2019;t reuse the memory directly. Instead, we&#x2019;ll place them in a free list. The actual allocations are done on powers of two, so that makes things easier. Here is what this actually looks like:&#xA;&#xA;So if we free, but not from the top, we remember the location and can use it again. Note that for 2048 in the image above, we don&#x2019;t have any free items.&#xA;I&#x2019;m quite fond of this approach, since this is simple, easy to understand and has a great performance profile.&#xA0; But I wouldn&#x2019;t be writing this blog post if we didn&#x2019;t run into issues, now would I?&#xA;A customer reported high memory usage (to the point of memory exhaustion) when doing a certain set of operations. That&#x2026; didn&#x2019;t make any sense, to be honest. That was a well traveled code path, any issue there should have been long found out.&#xA;They were able to send us a reproduction and the support team was able to figure out what is going on. The problem was that the code in question did a couple of things, which altogether led to an interesting issue.&#xA;&#xA;It allocated and deallocated memory, but not always in the same order &#x2013; this is fine, that is why we have the free list, after all.&#xA;It extended the memory allocation it used on the fly &#x2013; perfectly fine and an important optimization for us.&#xA;&#xA;Give it a moment to consider how could these two operations together result in a problem&#x2026;&#xA;Here is the sequence of events:&#xA;&#xA;Loop:&#xA;&#xA;Allocate(1024) -&gt; $1&#xA;Allocate(256) -&gt; $2&#xA;Grow($1, 4096) -&gt; Success&#xA;Allocate(128) -&gt; $3&#xA;Free($1) (4096)&#xA;Free($3) (128)&#xA;Free($2) (256)&#xA;&#xA;&#xA;What is going on here?&#xA;Well, the issue is that we are allocating a 1KB buffer, but return a 4KB buffer. That means that we add the returned buffer to the 4KB free list, but we cannot pull from that free list on allocation.&#xA;Once found, it was an easy thing to do (detect this state and handle it), but until we figured it out, it was quite a mystery.</p>
-        </article>
-        <article id="article-580">
-            <a href="https://ayende.com/blog/197857-C/benchmarking-slow-is-fast-fast-is-slow" target="_blank">
-                <h2 class="title mb-6" id="article-580">Benchmarking: Slow is fast, fast is slow</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 21, 2022
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m trying to compare indexing speed of Corax vs. Lucene. Here is an interesting result:&#xA;&#xA;We have two copies of the same index, running in parallel on the same data. And we can clearly see that Lucene is faster. Not by a lot, but enough to warrant investigation.&#xA;Here is the core of the work for Lucene:&#xA;&#xA;And here it is for Corax:&#xA;&#xA;If you look at the results, you&#x2019;ll see something really interesting.&#xA;For the Corax version, the MapItems.Execute() is almost 5% slower than the Lucene version.&#xA;And that really pisses me off. That is just flat out unreasonable to see.&#xA;And the reason for that is that the MapItems.Execute() is identical in both cases. The exact same code, and there isn&#x2019;t any Corax or Lucene code there. But it is slower.&#xA;Let&#x2019;s dig deeper, and we can see this interesting result. This is the Lucene version, and the highlighted portion is where we are reading documents for the indexing function to run:&#xA;&#xA;And here is the Corax version:&#xA;&#xA;And here it is two thirds more costly? Are you kidding me? That is the same freaking code and is utterly unrelated to the indexing.&#xA;Let&#x2019;s dig deeper, shall we? Here is the costs breakdown for Lucene, I highlighted the important bits:&#xA;&#xA;And here is the cost breakdown for Corax&#xA;&#xA;I have to explain a bit about what is going on here. RavenDB doesn&#x2019;t trust the disk and will validate the data it reads from it the first time it loads a page.&#xA;That is what the UnlikelyValidatePage is doing.&#xA;What we are seeing in the profiler results is that both Corax and Lucene are calling GetPageInternal() a total of 3.69 million times, but Corax is actually paying the cost of page validation for the vast majority of them.&#xA;Corax validated over 3 million pages while Lucene validated only 650 thousand pages. The question is why?&#xA;And the answer is that Corax is faster than Lucene, so it is able to race ahead. When it races ahead, it will encounter pages first, and validate them. When Lucene comes around and tries to index those documents, they were already validated.&#xA;Basically, Lucene is surfing all the way forward on the wavefront of Corax&#x2019;s work, and ends up doing a lot less work as a result.&#xA;What this means, however, is that we need to test both scenarios separately, on cold boot. Because otherwise they will mess with each other results.</p>
         </article>
         <div class="button flex justify-between">
             <a href="57.html"><span class="back arrow"></span></a>
