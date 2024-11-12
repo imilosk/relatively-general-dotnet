@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5921">
+            <a href="https://ayende.com/blog/3896/schema-less-databases" target="_blank">
+                <h2 class="title mb-6" id="article-5921">Schema-less databases</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 08, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post about how Friend Feed is using schema-less storage for most of their work is fascinating. In the ALT.Net Seattle there was a session about that, which generated a lot of interest.  My next post will have more details about the actual implementation details of doing something like that in a manner easily accessible in .Net, but just reading the post is very interesting. Another item that I found that was an interesting read, although it is far harder to read is: http://highscalability.com/how-i-learned-stop-worrying-and-love-using-lot-disk-space-scale</p>
+        </article>
+        <article id="article-5922">
             <a href="https://ayende.com/blog/3895/application-structure-concepts-features" target="_blank">
-                <h2 class="title mb-6" id="article-5921">Application structure: Concepts &amp; Features</h2>
+                <h2 class="title mb-6" id="article-5922">Application structure: Concepts &amp; Features</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I spoke about this topic quite a bit in ALT.Net Seattle. This is mostly relating to application architecture and how you structure your application. This is the logical result of applying the Open Closed and Single Responsibility Principles.  Feature may not be as overloaded a term in our industry as a service, but it still important to define exactly what I mean. A feature, in my eyes, is a discrete part of the application that perform some operation. That is pretty vague, I know, but I hope that the examples I am going to go through later would make it clearer. So far, it is pretty much the standard fare, but I have a few rules about a feature, the most important of them is:     A feature creation may not involve any design activity.   That is probably something that would raise a few eyebrows, but the idea is very simple. In any application, we tend to have very small number of concepts, and a far larger number of features, each applying to a concept. All design activity occur at the concept level. As a matter of fact, most of the work is getting the concepts right, after that, it is pretty much&#xA0; boring, following a very clear checklist about what we should do to get something working.  Let us take NH Prof as a good example. We have very few concepts in the application:     Session &amp; statements    Stack trace    Loaded entities    Reports    Alerts    Filtering   That is it.   As for features? We have several dozens of them. Each alert is a feature, being able to see query duration is a feature, returned row count is a feature, every report is a feature.  Remember that a feature involves no design? In order to facilitate that, we have to create an environment in which building a feature is a very predictable operation. This is done at the concept building phase, where we try to figure out what all the different parts of a feature is, and smooth them out. Building a feature is easy, all the hard work was already done, and now you need to fill in the details.  We can get to this situation by paying attention to friction points, applying the Open Close Principle and utilizing conventions. The end result is a very structured approach to building each feature.  A real world example would be NH Prof&#x2019;s alerts. Adding a new alert is composed of several stages, the first is, of course, determining what we want to alert on. The second is figuring out how we can actually detect this, and finally actually generating the alert. That is all a bunch of fast talk, so let me drill down even further.  Let us say that we want to give an alert about too many joins. That seems like a good alert, doesn&#x2019;t it? Let us see, how can we detect this?  Well, simply counting the number of occurrences of the string &#x201C;join&#x201D; in the statement would give us good results, so we will go with that. The architecture of NH Prof is set up to make this easy, all we really have to do is add this class:                 public class TooManyJoins : AbstractStatementProcessor&#xA;&#xA;      {&#xA;&#xA;          private readonly Regex joinFinder = new Regex(&quot;join&quot;, RegexOptions.Compiled | RegexOptions.IgnoreCase);&#xA;&#xA;      &#xA0;&#xA;&#xA;          public override void BeforeAttachingToSession(SessionInformation sessionInformation, FormattedStatement statement)&#xA;&#xA;          {&#xA;&#xA;          }&#xA;&#xA;      &#xA0;&#xA;&#xA;          public override void AfterAttachingToSession(SessionInformation sessionInformation, FormattedStatement statement, OnNewAction newAction)&#xA;&#xA;          {&#xA;&#xA;              if(joinFinder.Matches(statement.RawSql).Count&lt;7)&#xA;&#xA;                  return;&#xA;&#xA;      &#xA0;&#xA;&#xA;              newAction(new ActionInformation&#xA;&#xA;              {&#xA;&#xA;                  HelpTopic = &quot;TooManyJoins&quot;,&#xA;&#xA;                  Severity = Severity.Warning,&#xA;&#xA;                  Title = &quot;Too many joins in query&quot;&#xA;&#xA;              });&#xA;&#xA;          }&#xA;&#xA;      &#xA0;&#xA;&#xA;          public override void ProcessTransactionStatement(TransactionMessageBase tx)&#xA;&#xA;          {&#xA;&#xA;          }&#xA;&#xA;      }&#xA;    &#xA;  &#xA;&#xA;&#xA;To be frank, I am not sure that I like this, because we still have two empty methods, and there are other things there that reflect some historic choices that I made, but it works for now, and it is not too painful.&#xA;&#xA;Adding this class means that NH Prof will:&#xA;&#xA;&#xA;  Pick it up and instantiate it&#xA;&#xA;  Invoke it at the appropriate times&#xA;&#xA;  When an alert is generated, it will show it in the UI&#xA;&#xA;&#xA;That is almost it. We probably need to add configuration (the configuration object is injected to the base class and is accessible to us, so there is no work there, but we still need to worry about adding this to the configuration UI, and of course we must document the alert.&#xA;&#xA;All in all, there is very little actual thought involved in adding a new feature for NH Prof. That is explicitly and by design. This flows to the UI side as well, since we want to maintain the same level of velocity for backend and frontend changes. Adding something new to the UI is pretty easy, and there is a whole bunch of infrastructure to help you ( I mean, I can do this, so it is very easy).&#xA;&#xA;Now, adding a concept, however, is a much more complex scenario. NH Prof&#x2019;s filtering story, for example, is a concept that we had to add (you can&#x2019;t see it yet, but it will be there soon). But the filtering story is built by applying a pipeline to the application model. Adding a new filtering operation is very easy, because all the work was already done.&#xA;&#xA;I put up a non conclusive list of things that I believe are part of this design principle. Those are not hard and fast rules, but they are good guidelines.&#xA;&#xA;&#xA;  All design work is done in the concept level.&#xA;&#xA;  Building a feature doesn&#x2019;t involve any meaningful design work.&#xA;&#xA;  Work should be structured on repeated addition of features.&#xA;&#xA;  A feature is a testing boundary.&#xA;&#xA;  Adding a feature is easy, fast and painless.&#xA;&#xA;  A feature is complete, that means UI, documentation, configuration and schema are all part of a feature. &#xA;&#xA;  Building a feature is a structured operation.&#xA;&#xA;  Testing a feature is a structured operation.&#xA;&#xA;  All the work required for a feature should be directly and closely related to that feature.&#xA;&#xA;&#xA;The funny part about NH Prof that Christopher, Rob and me has reached pretty much the same approach, even while working in graphically disparate manner and without a lot of tight communication between us. Well, it is not really funny, because that is the only way we could actually get things to work. Anything else would be ridiculously complicated and require too much synchronization between us.&#xA;&#xA;There are other things that are related to this, mostly about reducing friction and identifying pain points and removing them. It is something that can be applied in isolation, but it usually preferable to deal with it at both project and architecture level.</p>
         </article>
-        <article id="article-5922">
+        <article id="article-5923">
             <a href="https://ayende.com/blog/3894/alt-net-alienation-by-adoption" target="_blank">
-                <h2 class="title mb-6" id="article-5922">Alt.net</h2>
+                <h2 class="title mb-6" id="article-5923">Alt.net</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last week I participated in ALT.Net Seattle, which was quite interesting. It used the same open spaces format as most ALT.Net conference, and I can honestly say that it was a good experience to most of the attendees.  It did not, however, had the same style of interaction. One of the things that I really enjoyed in the previous ALT.Net conferences is the level of interaction and participation. In this instance, I think that a majority of the people arrived mostly to soak in the information. That changed the dynamics of the conference, and it was quite visible in all the sessions that I was part of.  Just to be clear, I am not saying that it was bad, or that you must participate, I am pointing out a difference between the current conference and the previous ones.  I think that something like that is inevitable as the community grows, because at this stage in the game we are moving from the early adopters to the pragmatists. The problem is that we are currently in that gap, where the ideas only begin to go through:         It is my hope that when we finish cross this chasm, we will be able to return back to the same style of interaction that we have had in the past. The problem is, as I see it, that currently too many of the attendees felt uncomfortable to speak. Once again it was the case of the best conversations happening in the hallways and at dinners, when people could relax.  I think that as we see the people in the wider community gain experience and confidence, we will go back into the same vibrant discussions and learning. In the meanwhile, I intend to do my best to push the community forward toward that time.  It was a good conference, even if the highlight for me was the air hockey table talk.</p>
         </article>
-        <article id="article-5923">
+        <article id="article-5924">
             <a href="https://ayende.com/blog/3893/closed-source" target="_blank">
-                <h2 class="title mb-6" id="article-5923">Closed source?</h2>
+                <h2 class="title mb-6" id="article-5924">Closed source?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Some interesting observations about my experience in shipping commercial software. It seems like the notion of closed source isn&#x2019;t really working.  Torkel has developed an application using the NH Prof architecture, peeked via reflector. And no, I don&#x2019;t really mind.  The part that really blew me away was when I started getting patches for NH Prof. No, they didn&#x2019;t have the code, but they were able to:     Follow a pretty complex internal interaction    Isolate the actual part that caused their problem    Provide a solution and send it to me   From my part, I was able to just take their solution, apply it and commit, resulting in a build that they could download in a very short time.  So far, it seems to be working.</p>
         </article>
-        <article id="article-5924">
+        <article id="article-5925">
             <a href="https://ardalis.com/visual-studio-silent-crash-with-designer/" target="_blank">
-                <h2 class="title mb-6" id="article-5924">Visual Studio Silent Crash with Designer</h2>
+                <h2 class="title mb-6" id="article-5925">Visual Studio Silent Crash with Designer</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;re encountered an issue where Visual Studio 2008 SP1 crashes silently whenever you try to open a web form or master page (which by&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5925">
+        <article id="article-5926">
             <a href="https://ardalis.com/some-code-quality-links/" target="_blank">
-                <h2 class="title mb-6" id="article-5925">Some Code Quality Links</h2>
+                <h2 class="title mb-6" id="article-5926">Some Code Quality Links</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Caught a couple of nice links from @unclebobmartin via twitter this morning that I thought were worth sharing. The first one is a very nice&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5926">
+        <article id="article-5927">
             <a href="https://ardalis.com/asp-net-control-panel/" target="_blank">
-                <h2 class="title mb-6" id="article-5926">ASP.NET Control Panel</h2>
+                <h2 class="title mb-6" id="article-5927">ASP.NET Control Panel</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Something I think would be a nice addition to ASP.NET (ideally shipping in 4.0 or N.0, but a community effort would also work) is a control&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5927">
+        <article id="article-5928">
             <a href="https://ardalis.com/azure-tooling-suggestion-for-web-roles/" target="_blank">
-                <h2 class="title mb-6" id="article-5927">Azure Tooling Suggestion for Web Roles</h2>
+                <h2 class="title mb-6" id="article-5928">Azure Tooling Suggestion for Web Roles</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">With Azure today, there are two projects, you can create a Web Role which is basically an ASP.NET Web Application that is configured to&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5928">
+        <article id="article-5929">
             <a href="https://ayende.com/blog/3892/building-domain-specific-languages-with-boo-full-book-now-available" target="_blank">
-                <h2 class="title mb-6" id="article-5928">Building Domain Specific Languages with Boo &#x2013; Full book now available</h2>
+                <h2 class="title mb-6" id="article-5929">Building Domain Specific Languages with Boo &#x2013; Full book now available</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Building Domain Specific Languages with Boo  Another big milestone, early access subscribers can now read the entire book, all 13 chapters and both appendixes.  Not edited yet, but much closer to completion.</p>
         </article>
-        <article id="article-5929">
+        <article id="article-5930">
             <a href="https://ayende.com/blog/3891/ideal-deployment-disaster" target="_blank">
-                <h2 class="title mb-6" id="article-5929">Ideal deployment disaster</h2>
+                <h2 class="title mb-6" id="article-5930">Ideal deployment disaster</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: February 27, 2009
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today we botched deployment for production. We discovered an unforeseen complication related to the production network topography which means that (to simplify) transactions wouldn&#x2019;t work.  I am happy about this. Not because of the failed production deployment, but because of how it happened. We worked on deploying the app for half an hour, found the problem, then spent the next few hours trying to figure out the exact cause and options to fix it. We actually came up with four ways of resolving the issue, from the really hackish to what I believe that would be appropriate, but would take some time to do using the proper process for production changes.   So, why am I happy?  We spent time on that from noon to 3 PM (look Ma, no midnight deployment), and we actually aren&#x2019;t going live any time soon. The reason for deploying for production was to practice, to see what strange new things would show up in production. They did show up, we will fix them, at our leisure, without trying to solve a hairy problem while staring at the screen with blood shot eyes and caffeine positioning.&#xA0; At no time there was someone breathing down our neck, or the IT guys to argue with, or emergency change request or any of the usual crap that usually comes with deploying to production if you aren&#x2019;t being careful.  Practice the way you play, and since pushing to production is usually such a mess anyway, you want to practice this as soon as possible. And not just deploying to another environment (we already did that last week) to test your deployment process. You want to deploy to the actual production environment, so you can get permissions, firewalls, subnets and all the rest sorted out up front.</p>
-        </article>
-        <article id="article-5930">
-            <a href="https://ayende.com/blog/3890/looking-for-php-developer" target="_blank">
-                <h2 class="title mb-6" id="article-5930">Looking for PHP Developer</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 25, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My client needs a PHP developer to work on a Cake PHP application.  This is probably a full time position, but I think that a part time position is also available.   If you are interested, please contact me.</p>
         </article>
         <div class="button flex justify-between">
             <a href="592.html"><span class="back arrow"></span></a>

@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4991">
+            <a href="https://ayende.com/blog/4692/tpl-composing-tasks" target="_blank">
+                <h2 class="title mb-6" id="article-4991">TPL: Composing tasks</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: November 16, 2010
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">What happens when you want to compose two distinct async operations into a single Task?   For example, let us imagine that we want to have a method that looks like this:     public void ConnectToServer()&#xA;{&#xA;    var connection = ServerConnection.CreateServerConnection(); // tcp connect&#xA;    connection.HandShakeWithServer(); // application level handshake&#xA;}&#xA;  &#xA;&#xA;Now, we want to make this method async, using TPL. We can do this by changing the methods to return Task, so the API we have now is:&#xA;&#xA;&#xA;  Task&lt;ServerConnection&gt; CreateServerConnectionAsync();&#xA;Task HandShakeWithServerAsync(); // instance method on ServerConnection&#xA;  &#xA;&#xA;And we can now write the code like this:&#xA;&#xA;&#xA;  public Task ConnectToServerAsync()&#xA;{&#xA;   return ServerConnection.CreateServerConnectionAsymc()&#xA;                 .ContinueWith(task =&gt; task.Result.HandShakeWithServerAsync());&#xA;}&#xA;  &#xA;&#xA;There is just one problem with this approach, the task that we are returning is the first task, because the second task cannot be called as a chained ContinueWith.&#xA;&#xA;We are actually returning a Task&lt;Task&gt;, so we can use task.Result.Result to wait for the final operation, but that seems like a very awkward API. &#xA;&#xA;The challenge is figuring a way to compose those two operations in a way that expose only a single task.</p>
+        </article>
+        <article id="article-4992">
             <a href="https://ayende.com/blog/4691/aysnc-read-challenge" target="_blank">
-                <h2 class="title mb-6" id="article-4991">Aysnc Read Challenge</h2>
+                <h2 class="title mb-6" id="article-4992">Aysnc Read Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 11/11/2010Here is how you are supposed to read from a stream:     var buffer = new byte[bufferSize];&#xA;int read = -1;&#xA;int start = 0;&#xA;while(read != 0)&#xA;{&#xA;   read = stream.Read(buffer, start, buffer.Length - start);&#xA;   start &#x2B;= read;&#xA;}&#xA;  &#xA;&#xA;The reason that we do it this way is that the stream might not have all the data available for us, and might break the read requests midway.&#xA;&#xA;The question is how to do this in an asynchronous manner. Asynchronous loops are&#x2026; tough, to say the least. Mostly because you have to handle the state explicitly. &#xA;&#xA;Here is how you can do this using the new Async CTP in C# 5.0:&#xA;&#xA;&#xA;  private async static Task&lt;Tuple&lt;byte[], int&gt;&gt; ReadBuffer(Stream s, int bufferSize)&#xA;{&#xA;    var buffer = new byte[bufferSize];&#xA;    int read = -1;&#xA;    int start = 0;&#xA;    while (read != 0)&#xA;    {&#xA;        read = await Task.Factory.FromAsync&lt;byte[],int,int, int&gt;(&#xA;            s.BeginRead, &#xA;            s.EndRead, &#xA;            buffer, &#xA;            start, &#xA;            buffer.Length -1, &#xA;            null);&#xA;        start &#x2B;= read;&#xA;    }&#xA;    return Tuple.Create(buffer, start);&#xA;}&#xA;  &#xA;&#xA;Now, what I want to see is using just the TPL API, and without C# 5.0 features, can you write the same thing?</p>
         </article>
-        <article id="article-4992">
+        <article id="article-4993">
             <a href="https://ayende.com/blog/4690/what-is-wrong-with-this-api-answer" target="_blank">
-                <h2 class="title mb-6" id="article-4992">What is wrong with this API? Answer</h2>
+                <h2 class="title mb-6" id="article-4993">What is wrong with this API? Answer</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 11/11/2010The reason that I don&#x2019;t like this API is that I think it provides a piss poor usability:     In short, it doesn&#x2019;t provide me with any reasonable way to tell the user why I rejected a message.  Here is the proper way of doing this:     MessageVeto also contains a reason string, which provide a much better experience all around.</p>
         </article>
-        <article id="article-4993">
+        <article id="article-4994">
             <a href="https://ardalis.com/zen-and-the-art-of-software-craftsmanship/" target="_blank">
-                <h2 class="title mb-6" id="article-4993">Zen and the Art of Software Craftsmanship</h2>
+                <h2 class="title mb-6" id="article-4994">Zen and the Art of Software Craftsmanship</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Not long ago, I (finally) read Zen and the Art of Motorcycle Maintenance, which I&#x2019;d had recommended to me since I was a teenager. It&#x2019;s a&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4994">
+        <article id="article-4995">
             <a href="https://ayende.com/blog/4689/what-is-wrong-with-this-api" target="_blank">
-                <h2 class="title mb-6" id="article-4994">What is wrong with this API?</h2>
+                <h2 class="title mb-6" id="article-4995">What is wrong with this API?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 11/11/2010This is part of a base class, and we need to provide a way to veto messages for extensions.     Can you figure out what is wrong with this API?</p>
         </article>
-        <article id="article-4995">
+        <article id="article-4996">
             <a href="https://ardalis.com/verify-a-list-of-urls-in-c-asynchronously/" target="_blank">
-                <h2 class="title mb-6" id="article-4995">Verify a List of URLs in C# Asynchronously</h2>
+                <h2 class="title mb-6" id="article-4996">Verify a List of URLs in C# Asynchronously</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently I wanted to test a bunch of URLs to see whether they were broken/valid. In my scenario, I was checking on URLs for advertisements&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4996">
+        <article id="article-4997">
             <a href="https://ayende.com/blog/4688/raven-mq-client-api-design" target="_blank">
-                <h2 class="title mb-6" id="article-4996">Raven MQ &#x2013; Client API Design</h2>
+                <h2 class="title mb-6" id="article-4997">Raven MQ &#x2013; Client API Design</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There are only two topics that remains in the Raven MQ server (replication &amp; point to point messaging), but I decided to stop for a while and focus on the client API. My experience have shown that it is so much more important than anything else to gain acceptance for the project.  One thing that I want to make clear is that this is the high level API, which has very little to do with how this is actually implemented.  The first thing to be aware of is that Raven MQ is transactional. That is, all operations either complete successfully or fail as a single unit. That makes it very easy to work with it for a set of scenarios. It is not an accident that the API is very similar to the one that you get from Rhino Service Bus or NServiceBus, although Raven MQ client API is drastically more modest in what it is trying to do.  Getting started:     var raveMQEndpoint = new RavenMQEndpoint&#xA;{&#xA;    Url = &quot;http://localhost:8181&quot;&#xA;};&#xA;raveMQEndpoint.Start();&#xA;  &#xA;&#xA;Subscribing (methods):&#xA;&#xA;&#xA;  raveMQEndpoint.Subscribe(&quot;/streams/system/notifications&quot;, (ctx, untypedMsg) =&gt;&#xA;{&#xA;    // do something with the msg&#xA;});&#xA;&#xA;raveMQEndpoint.Subscribe&lt;LoginAboutToExpire&gt;(&quot;/streams/user/1234&quot;, (ctx, msg) =&gt;&#xA;{&#xA;    // do something with the msg&#xA;});&#xA;&#xA;raveMQEndpoint.Subscribe&lt;LoginExpired&gt;(&quot;/streams/user/1234&quot;, (ctx, msg) =&gt;&#xA;{&#xA;    // do something with the msg&#xA;});&#xA;  &#xA;&#xA;This allows you to handle untyped messaged, or to select specific types of messages that will be handled from the stream (ignoring messages not of this type). I&#x2019;ll discuss the ctx parameter at a later stage, for now, you can ignore it. What you can&#x2019;t see here is that the Subscribe methods here returns an IDisposable instance, which allows you to remove the subscription. Useful for temporary subscriptions, which is something that is pretty common for the scenarios that we see Raven MQ used for.&#xA;&#xA;Subscribing (classes):&#xA;&#xA;&#xA;  raveMQEndpoint.Subscribe(&quot;/streams/user/1234&quot;, () =&gt; new LoginExpiredConsumer());&#xA;&#xA;raveMQEndpoint.Subscribe(&quot;/streams/user/1234&quot;, mefContainer);&#xA;  &#xA;&#xA;Instead of registering a single method, you can register a factory method, or a MEF container, both of which will create a consumer class for handling the messages.&#xA;&#xA;Serialization:&#xA;&#xA;Raven MQ doesn&#x2019;t care about the serialization format, you can it messages using whatever format you like, but the client API used JSON/BSON to store the data. &#xA;&#xA;Sending messages:&#xA;&#xA;Remember that I talked about the ctx parameter? The RavenMQEndpoint doesn&#x2019;t offer a Send() method, that is handled by the ctx paratemer, which stands for Context, obviously. The idea is quite simple, we want to make message sending transactional, so we always use a context to send them, and only if the context completed successfully can we truly consume the message and send all the messages to the server. You can think of the Context as the Raven MQ transaction.&#xA;&#xA;For sending messages outside of processing an existing message, you can use:&#xA;&#xA;&#xA;  ravenMQEndpoint.Transaction(ctx=&gt; ctx.Send(&quot;/queues/customers/1234&quot;, updateCustomerAddress));&#xA;  &#xA;&#xA;This gives us a very easy way of scoping multiple messages in a single transaction without awkward APIs.&#xA;&#xA;Thoughts?</p>
         </article>
-        <article id="article-4997">
+        <article id="article-4998">
             <a href="https://ardalis.com/on-software-quality-at-cleveland-net-sig/" target="_blank">
-                <h2 class="title mb-6" id="article-4997">On Software Quality at Cleveland .NET SIG</h2>
+                <h2 class="title mb-6" id="article-4998">On Software Quality at Cleveland .NET SIG</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last night I led a discussion on software quality at the Cleveland area .NET SIG. Thanks to everyone who came and especially to those of you&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4998">
+        <article id="article-4999">
             <a href="https://ayende.com/blog/4687/raven-mq-principles" target="_blank">
-                <h2 class="title mb-6" id="article-4998">Raven MQ &#x2013; Principles</h2>
+                <h2 class="title mb-6" id="article-4999">Raven MQ &#x2013; Principles</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 11/9/2010Raven MQ is a new project that I am working on. As you can guess from the name, this is a queuing system, but it is a queuing system with a few twists.&#xA0; I already wrote a queuing system in the past (Rhino Queues), why write another one?  Raven MQ builds upon the experience in building Rhino Queues, but it also targets a different set of usage scenarios. Like Rhino Queues, Raven MQ can be xcopy deployed, but it is not usually used in a traditional point to point messaging system. Instead, Raven MQ is a queuing system for the web. What do I mean by that? Raven MQ has a different set of design decisions, focused on making some things that are traditionally expensive in queuing systems cheap:     Unlike in most queuing systems, queues are cheap. That allows you to create an unlimited amount of queues. Typical deployment of Raven MQ will have at least one queue per client.    Which leads to the next point, Raven MQ is designed to support literally thousands of clients.   The model isn&#x2019;t the traditional queuing one you might be familiar with from MSMQ:     Instead, the model uses a central server to hold all the information:     &#xA0;      The reasoning behind this is actually pretty simple. Unlike in traditional queuing systems, where we have a node of the queuing system running on each end point, Raven MQ makes the assumption that most of the clients connect to it are actually web clients, using JavaScript on the page or maybe Silverlight applications.   The decision to directly support those clients is what makes Raven MQ unique.  Transport models  Raven MQ offers two distinct models for transporting messages. The first is the traditional queue model, where each message can only be consumed by a single consumer. This is not a very interesting model.  A much more interesting model is the message stream. A message stream in Raven MQ is a set of messages sent to a particular queue. But unlike a queue, reading a message from the stream does not consume it. That means that multiple consumers can read the messages on the stream. Moreover, clients that arrive after the message was sent can still read the message (as long as its time to live is in effect).  Usage model  The previous section is probably hard to understand. As usual, an example will makes all the difference in the world.  Let us imagine that we are building a CRM system, and we are currently viewing a customer screen. At that point, we are subscribe to the following streams:     /streams/system/notifications &#x2013; Global system notifications    /streams/customers/1234 &#x2013; Updates about customer 1234    /streams/users/4321 &#x2013; Updates about our logged on user   And the following queue:     /queues/mailboxes/1234 &#x2013; Replies to our particular client   The idea is pretty simple, actually. When we read the customer data, we are loading it from the view model store, but we also need to be able to efficiently get updates about changes that happen to the customer when we are looking at it. We are doing that by subscribing to the appropriate stream. Another user who is also looking at the same user is also subscribed to the same stream. Even more importantly, a user that opened the customer after some changes have been made (but before they were written to the view model store) will also get those updates, and will be able to reconstruct the current state in an seamless manner.  This approach drastically simplifies the update problem in complex systems.   Why call them streams and not topics?   Topics are a routing mechanism, but with Raven MQ, streams aren&#x2019;t used for routing. They are used to hold a set of messages, that is all. The problem with routing is that you can&#x2019;t join up later and receive previously sent messages, and (much worse) you can&#x2019;t really use routing on the web, because when you have potentially thousands of clients, all coming &amp; going at will, you can&#x2019;t setup a queue for each of them, it is too expensive.  The stream/notification model solve that problem rather neatly, even if I say so myself.  What I did not discussed?  Please note that I am discussing the system at a very high level right now. I didn&#x2019;t talk about the API or the actual distribution model. That is intentional, I&#x2019;ll cover that in a future post.</p>
         </article>
-        <article id="article-4999">
+        <article id="article-5000">
             <a href="https://ayende.com/blog/4686/raven-munin" target="_blank">
-                <h2 class="title mb-6" id="article-4999">Raven.Munin</h2>
+                <h2 class="title mb-6" id="article-5000">Raven.Munin</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: November 08, 2010
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Raven.Munin is the actual implementation of a low level managed storage for RavenDB. I split it out of the RavenDB project because I intend to make use of it in additional projects.   At its core, Munin provides high performance transactional, non relational, data store written completely in managed code. The main point in writing it was to support the managed storage in RavenDB, but it is going to be used for Raven MQ as well, and probably a bunch of other stuff as well. I&#x2019;ll post about Raven MQ in the future, so don&#x2019;t bother asking about it.  Let us look at a very simple API example. First, we need to define a database:     public class QueuesStorage : Database&#xA;{&#xA;    public QueuesStorage(IPersistentSource persistentSource) : base(persistentSource)&#xA;    {&#xA;        Messages = Add(new Table(key =&gt; key[&quot;MsgId&quot;], &quot;Messages&quot;)&#xA;        {&#xA;            {&quot;ByQueueName&quot;, key =&gt; key.Value&lt;string&gt;(&quot;QueueName&quot;)},&#xA;            {&quot;ByMsgId&quot;, key =&gt; new ComparableByteArray(key.Value&lt;byte[]&gt;(&quot;MsgId&quot;))}&#xA;        });&#xA;&#xA;        Details = Add(new Table(&quot;Details&quot;));&#xA;    }&#xA;&#xA;    public Table Details { get; set; }&#xA;&#xA;    public Table Messages { get; set; }&#xA;}&#xA;  &#xA;&#xA;This is a database with two tables, Messages and Details. The Messages table has a primary key of MsgId, and two secondary indexes by queue name and by message id. The Details table is sorted by the key itself.&#xA;&#xA;It is important to understand one very important concept about Munin. Data stored in it is composed of two parts. The key and the data. It is easier to explain when you look at the API:&#xA;&#xA;&#xA;  bool Remove(JToken key);&#xA;Put(JToken key, byte[] value);&#xA;ReadResult Read(JToken key);&#xA;&#xA;public class ReadResult&#xA;{&#xA;    public int Size { get; set; }&#xA;    public long Position { get; set; }&#xA;    public JToken Key { get; set; }&#xA;    public Func&lt;byte[]&gt; Data { get; set; }&#xA;}&#xA;  &#xA;&#xA;Munin doesn&#x2019;t really care about the data, it just saves it. But the key is important. In the Details table case, the table would be sorted by the full key. In the Messages table case, things are different. We use the lambda to extract the primary key from the key for each item, and we use additional lambdas to extract secondary indexes. Munin can build secondary indexes only from the key, not from the value. It is only the secondary indexes that allow range queries, the PK allow only direct access, which is why we define both the primary key and a secondary index on MsgId.&#xA;&#xA;Let us see how we can save a new message:&#xA;&#xA;&#xA;  public void Enqueue(string queue, byte[]data)&#xA;{&#xA;    messages.Put(new JObject&#xA;    {&#xA;        {&quot;MsgId&quot;, uuidGenerator.CreateSequentialUuid().ToByteArray()},&#xA;        {&quot;QueueName&quot;, queue},&#xA;    }, data);&#xA;}&#xA;  &#xA;&#xA;And now we want to read it:&#xA;&#xA;&#xA;  public Message Dequeue(Guid after)&#xA;{&#xA;    var key = new JObject { { &quot;MsgId&quot;, after.ToByteArray()} };&#xA;    var result = messages[&quot;ByMsgId&quot;].SkipAfter(key).FirstOrDefault();&#xA;    if (result == null)&#xA;        return null;&#xA;&#xA;    var readResult = messages.Read(result);&#xA;&#xA;    return new Message&#xA;    {&#xA;        Id = new Guid(readResult.Key.Value&lt;byte[]&gt;(&quot;MsgId&quot;)),&#xA;        Queue = readResult.Key.Value&lt;string&gt;(&quot;Queue&quot;),&#xA;        Data = readResult.Data(),&#xA;    };&#xA;}&#xA;  &#xA;&#xA;We do a bunch of stuff here, we scan the secondary index for the appropriate value, then get it from the actual index, load it into a DTO and return it.&#xA;&#xA;Transactions&#xA;&#xA;Munin is fully transactional, and it follows an append only, MVCC, multi reader single writer mode. The previous methods are run in the context of:&#xA;&#xA;&#xA;  using (queuesStroage.BeginTransaction())&#xA;{&#xA;    // use the storage&#xA;    queuesStroage.Commit();&#xA;}&#xA;&#xA;&#xA;Storage on disk&#xA;&#xA;Munin can work with either a file or in memory (which makes unit testing it a breeze). It uses an append only model, so on the disk it looks like this: &#xA;&#xA;Each of the red rectangle represent a separate transaction. &#xA;&#xA;In memory data&#xA;&#xA;You might have noted that we don&#x2019;t keep any complex data structures on the disk. This is because all the actual indexing for the data is done in memory. The data on the disk is used solely for building the index in memory. Do note that the actual values are not held, only the keys. That means that search Munin indexes is lightning fast, since we never touch the disk for the search itself.&#xA;&#xA;The data is actually held in an immutable binary tree, which gives us the ability to do MVCC reads, without any locking.&#xA;&#xA;Compaction&#xA;&#xA;Because Munin is using the append only model, it require periodic compaction. It does so automatically in RavenDB, waiting for periods of inactivity to do so. &#xA;&#xA;Summary&#xA;&#xA;Munin is a low level api, not something that you are likely to use directly. And it was explicitly modeled to give me an interface similar in capability to what Esent gives me, but in purely managed code.&#xA;&#xA;Please note that is is released under the same license as RavenDB, AGPL.</p>
-        </article>
-        <article id="article-5000">
-            <a href="https://ayende.com/blog/4685/those-are-the-rules-even-when-you-dont-like-them" target="_blank">
-                <h2 class="title mb-6" id="article-5000">Those are the rules, even when you don&#x2019;t like them</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 05, 2010
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 11/4/2010Recently I had an interesting support call for NHibernate. The problem was a bit complex when explained to me, but we got it simplified to something like:     When we have a component that contains a set, that component is not null, even when all the members are null.   The problem is actually an intersection of two separate rules in NHibernate:     When all the members of a component are null, the component itself will be null.    A set is never null, an empty set is still a valid instance of a set.   When you add a set to a component, you add something that is never null. Hence, the behavior of NHibernate in this case is also valid, since we have a non null member value, there will be an instance of that component.  The problem is that the users conceptually thought of the empty set as null as well. I had some hard time explaining that sets are never null, and that no, this isn&#x2019;t a bug or unexpected combination of the two features. Both behave exactly as expected, and the intersection of both worked as expected. In fact, trying to make it not work in this fashion would introduced a lot of work, complexity and additional queries.</p>
         </article>
         <div class="button flex justify-between">
             <a href="499.html"><span class="back arrow"></span></a>
