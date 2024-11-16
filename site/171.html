@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1701">
+            <a href="https://ayende.com/blog/187073-C/reviewing-sled-part-iii" target="_blank">
+                <h2 class="title mb-6" id="article-1701">Reviewing Sled</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: April 23, 2019
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Unusually for me, I had a bit of a pause in reviewing Sled. As a reminder, Sled is an embedded database engine written in Rust. I last stopped looking at the buffer management, but I still don&#x2019;t really have a good grasp of what is going on.The next file is the iterator. It looks like it translates between segments and messages in these segments. Here is the struct:As you can see, the log iterator holds an iterator of segments, and iterating over it looks like it will go over all the messages in the segments in order. Yep, here is the actual work being done:The next() method is fairly straightforward, I found. But I have to point out this:First, the will need call is really interesting. Mostly because you have a pretty obvious way to do conditional compiling that doesn&#x2019;t really sucks. #if is usually much more jarring in the code.Second, I think that the style of putting really important functions inside an if result in a pretty dense code. Especially since the if is entered only on error. I would have preferred to have it as a stand alone variable, and then check if it failed. What I don&#x2019;t understand is the read_segment call. Inside that method, we have:There are also similar calls on segment trailer. It looks like we have a single file for the data, but stuff that is too large is held externally, in the blob files. We then get to this guy, which I find really elegant way to handle all the different states.That is about it for interesting bits in the iterator, the next fun bit is the Log. I do have to admit that I don&#x2019;t like the term log. It is too easy to get it confused with a debug log. In Voron, I used the term Journal or Write Ahead Journal (OH in the office: &#x201C;did we waj it yet?&#x201D;). The fact that you need to figure out where to get the offset of the data you are about to write is really interesting. This is the method that does the bulk of the work:Note that it just reserve and complete the operation. This also does not flush the data to disk. That is handled by the flusher or by explicit call. The reserve() method calls to reserve_internal() and there we find this gem:I know what it does (conditional compilation), but I find it really hard to follow. Especially because it looks like a mistake, with buf being defined twice. This is actually a case where an #if statement would be better, in my eyes.Most of the code in there is to manage calls to the iobuf, which I already reviewed. So I&#x2019;m going to skip ahead and look at something that is going to be more interesting, the page cache. Sled has an interesting behavior, in that it can shred a page into multiple location, requiring some logic to bring it all back together. That is going to be really interesting to look at, I hope.The file stats with this:And this&#x2026; takes a while to unpack.&#xA0; Remember that epoch is manual GC pattern for concurrent data structure without GC.The cached_ptr value is a shared pointer to a Node (inside a lock free stack) that holds a CacheEntry with static lifetime and thread safe to a generic argument that must have static lifetime and be thread safe. And there is a unsigned long there as well.No idea yet what is going on. But here is the first method on this struct:That is&#x2026; a lot. The cache entry is a discriminated union with the following options:There are some awesome documentation comments here, including full blown sample code that really help understand what is going on in the code.There seems to be a few key methods that are involved here:allocate(val) &#x2013; create a new page and write an initial value, gets back a page id.link(id, val) &#x2013; make a write to a page id. Which simply write a value out.get(id) &#x2013; read all the values for a page id, and uses a materializer to merge them all to a single value.replace(id, val) &#x2013; set the page id to the new value, removing all the other values it had.The idea here, as I gather. Is to allow sequential writes to the data, but allow fast reads, mostly by utilizing SSD&#x2019;s random read feature.I&#x2019;m trying to follow the code, but it is a bit complicated. In particular, we have:This try to allocate either a free page or allocate a new one. One of the things that really mess with me here is that the use of the term Page. I&#x2019;m using to B&#x2B;Tree, where a page is literally some section of memory. Here it refers to something more nebulous. Key point here, I don&#x2019;t see where the size is specified. But given that you can link items to page, that sort of make sense. I just need to get used to Pages != storage. The fact that all of this is generic also make it hard to follow what is actually going on.&#xA0; I&#x2019;m getting lost in here, so I think that I&#x2019;ll stop for now.</p>
+        </article>
+        <article id="article-1702">
             <a href="https://andrewlock.net/strongly-typed-ids-in-ef-core-using-strongly-typed-entity-ids-to-avoid-primitive-obsession-part-4/" target="_blank">
-                <h2 class="title mb-6" id="article-1701">Strongly-typed IDs in EF Core (Revisited)</h2>
+                <h2 class="title mb-6" id="article-1702">Strongly-typed IDs in EF Core (Revisited)</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Using strongly-typed entity IDs to avoid primitive obsession - Part 4</p>
         </article>
-        <article id="article-1702">
+        <article id="article-1703">
             <a href="https://ayende.com/blog/187105-C/rip-joe-armstrong" target="_blank">
-                <h2 class="title mb-6" id="article-1702">RIP Joe Armstrong</h2>
+                <h2 class="title mb-6" id="article-1703">RIP Joe Armstrong</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Over the weekend, I learned that Joe Armstrong has passed away. I have been thinking about through all of yesterday, because I have met Joe and had a few discussions with him, but I never had the chance to actually know him. Which is a shame, in a way, he changed my life. One of the advantages of having a blog is that I can go back in time and trace things. In Sep 2007, I run into Joe for the first time. It was in the JAOO conference in Aarhus. I sat in his talk and was quite impressed. This is what I had to say at the time:I was at the Erlang talk, which is quite probably the best one that will be here. Joe has created the language and wrote the book about it, so he certainly knows his stuff, and he is a Character with a capital C. I am not sure if it is a show or not, but it was amazingly amusing.Bought the Erlang book, it is a weird language compare to those I know, but I really need to learn a new language this year, and Erlang gets me both functional and concurrent aspects for the &quot;price&quot; of one.A couple of years later I was at the same conference and wrote:I remember sitting at a session with Joe Armstrong talking about Erlang and finally getting things that were annoying just beyond my grasp.Even since, whenever we were in the same conferences, I made sure to sit in his talk. He was an amazing speaker and I still carry with me his advice on system design and distributed architecture. I never really liked the Erlang syntax, but the concepts were very attractive to me. It took a while for this to percolate, but after reading some more about Erlang, I looked for an OSS project in Erlang that I could read, to actually grok what it is like to write in Erlang. I chose to read the CouchDB source code.This was the first time that I really dove down into NoSQL and I remember running into all sort of things inside the CouchDB source code and thinking: &#x201C;That isn&#x2019;t how I would do it.&#x201D; That code review ended up giving me so many ideas that I had to put them on paper (on keyboard, actually, I guess) and I wrote a whole series of blog posts on how to design a document database.Just writing about it didn&#x2019;t help, so I sat down and wrote some code. Some code turned into a lot of code, and that ended up being RavenDB.And I can trace it all back to sitting in a conference room in JAOO, listening to Joe speak and being blown away.Thank you, Joe.</p>
         </article>
-        <article id="article-1703">
+        <article id="article-1704">
             <a href="https://ayende.com/blog/187074-C/ravendb-clients-lessons-learned" target="_blank">
-                <h2 class="title mb-6" id="article-1703">RavenDB Clients: Lessons learned</h2>
+                <h2 class="title mb-6" id="article-1704">RavenDB Clients: Lessons learned</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Krzysztof has been working on our RavenDB Go Client for almost a year, and we are at the final stretch (docs, tests, deployment, etc). He has written a blog post detailing the experience of porting over 50,000 lines of code from Java to Go.I wanted to point out a few additional things about the porting effort and the Go client API that he didn&#x2019;t get to.From the perspective of RavenDB, we want to have as many clients as possible, because the more clients we have, the more approachable we are for developers. There are over million Go developers, so that is certainly something that we want to enable. More important, Go is a great language for server side work and primary used for just the kind of applications that can be helped from using RavenDB.RavenDB currently have clients for:.NET&#xA0; / CLR &#x2013; C#, VB.Net, F#, etc.JVM &#x2013; Java, Kotlin, Clojure, etc.Node.jsPythonGo &#x2013; finalization stageC&#x2B;&#x2B; &#x2013; alpha stageWe also have a Ruby client under wraps and wouldn&#x2019;t object to having a PHP one.We used to only run on Windows and really only pay attention to the C# client. That has changed toward the end of 2015, when we started the work on the 4.0 release of RavenDB. We knew that we were going to be cross platform and we knew that we were going to target additional languages and runtimes. That meant that we had to deal with a pretty tough choice. Previously, when we had just a single client, we could do quite a lot in it. That meant that a lot of the&#xA0; functionality and the smarts could reside in the client. But we now have 6&#x2B; clients that we need to maintain, which means that we are in a very different position.For reference, the RavenDB Server alone is 225 KLOC, the .NET client is 62 KLOC and the other clients are about 50 KLOC each (Linq support is quite costly for .NET, in terms of LOC and overall complexity). One of the design guidelines for RavenDB 4.0 was that we want to move, as much as possible, responsibility from the client side to the server side. We have done a lot of stuff to make this happen, but the RavenDB client is still a pretty big chunk of code. With 50 KLOC, you can do quite a lot, so what is actually going on in there?The RavenDB client core responsibilities are:Commands on the server / documents &#x2013; About 12 KLOC. This provide strongly typed access to commands, including specific command error handling and handling.Caching, Failover &amp; request processing &#x2013; About 3 KLOC. Handles failover and recovery, topology handling and the client side portion of RavenDB&#x2019;s High Availability features by implementing transparent failover if there is a failure. Also handles request caching as well as aggressive caching.JSON handling. About 3 KLOC. Type convertors, serialization helpers and other stuff related to handling JSON that we need client side.Exceptions &#x2013; 1.5 KLOC. Type safe exceptions for various errors takes a lot of bit of code, mostly because we try hard to get good errors to the user.But by far, the most complex part of the RavenDB client is the session. The session is the typical API you have for working with RavenDB and it is how you&#x2019;ll usually interact with it. You can see the Go client above using the session to store a document and save it to the database.The sessions is about 20 KLOC or so. By far the biggest single component that we have. But why it is to big? Especially since I just told you that we spent a lot of time moving responsibilities away from the client. Because the session implements a lot of really important behaviors for the client. Without any particular order, and off the top of my head, we have:Unit of WorkChange TrackingIdentity MapQueriesPatchingLazy operationsThe surface area of RavenDB&#x2019;s client API is very important to me. I think that giving you a high level API is quite important to reduce the complexity that you have to deal with and making it easy for you to get things done. And that end up taking quite a lot of code to implement. The good news is that once we have a client, keeping it up to date is relatively simple. And having the taken the onus of complexity upon ourselves, we free you from having to manage that. The overall experience of building application using RavenDB is much better, to the point where you can pretty much ignore the database, because it will Just Work.</p>
         </article>
-        <article id="article-1704">
+        <article id="article-1705">
             <a href="https://www.stevejgordon.co.uk/demystifying-httpclient-internals-httpresponsemessage" target="_blank">
-                <h2 class="title mb-6" id="article-1704">Demystifying HttpClient Internals: HttpResponseMessage</h2>
+                <h2 class="title mb-6" id="article-1705">Demystifying HttpClient Internals: HttpResponseMessage</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the previous post in my demystifying HttpClient series, I looked at the internals of HttpRequestMessage. I want to continue the series by investigating the HttpResponseMessage. This class is mostly a property holder, with little internal logic but there are a few behaviours and best practices to watch out for. If you&#x2019;ve read my previous [&#x2026;]</p>
         </article>
-        <article id="article-1705">
+        <article id="article-1706">
             <a href="https://ayende.com/blog/187041-C/my-june-london-visit" target="_blank">
-                <h2 class="title mb-6" id="article-1705">My June London visit</h2>
+                <h2 class="title mb-6" id="article-1706">My June London visit</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m going to be in London at the beginning of June. I&#x2019;ll be giving a keynote at Skills Matters as well as visiting some customers.I have a half day and a full day slots available for consulting (RavenDB, databases and overall architecture). Drop me a line if you are interested.I also should have an evening or two free is there is anyone who wants to sit over a beer and chat.</p>
         </article>
-        <article id="article-1706">
+        <article id="article-1707">
             <a href="https://ayende.com/blog/187009-C/using-technical-limits-as-complexity-barriers" target="_blank">
-                <h2 class="title mb-6" id="article-1706">Using technical limits as complexity barriers</h2>
+                <h2 class="title mb-6" id="article-1707">Using technical limits as complexity barriers</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In a previous post about authorization in a microservice environment, I wrote that one option is to generate an authorization token and have it hold the relevant claims for the application. I was asked how I would handle a scenario in which the security claim is over individual categories of orders and a user may have too many categories to fit the token.This is a great question, because it showcase a really important part of such a design. An inherent limit to complexity.&#xA0; The fact that having a user with a thousand individual security claims is hard isn&#x2019;t a bug in the system, it is a feature.For many such cases, it really doesn&#x2019;t make sense to setup security in such a manner. How can you ever audit or reason about such a system? It just doesn&#x2019;t work this way in the real world. An agent may be authorized to a dozen customers, and her manager will be allowed access to them as well. But attaching each individual customer to the manager doesn&#x2019;t work. Instead, you would create a group and attach the customers to the group, then allow the manager to access the group. Such a system is much easier to work with and review. It also match a lot more closely how the real world works.Some of the problems here are derived from the fact that it seems like, when we use a computer, we can build such a system. But in most cases, this is a false premise. Not because of actual technical limitations, but because of management overhead. Building the system upfront so the things that should be hard are actually hard is going to be a lot better in the long run.</p>
         </article>
-        <article id="article-1707">
+        <article id="article-1708">
             <a href="https://andrewlock.net/using-strongly-typed-entity-ids-to-avoid-primitive-obsession-part-3/" target="_blank">
-                <h2 class="title mb-6" id="article-1707">Using strongly-typed entity IDs with EF Core</h2>
+                <h2 class="title mb-6" id="article-1708">Using strongly-typed entity IDs with EF Core</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Using strongly-typed entity IDs to avoid primitive obsession - Part 3</p>
         </article>
-        <article id="article-1708">
+        <article id="article-1709">
             <a href="https://enterprisecraftsmanship.com/posts/cqrs-exception-handling/" target="_blank">
-                <h2 class="title mb-6" id="article-1708">CQRS and exception handling</h2>
+                <h2 class="title mb-6" id="article-1709">CQRS and exception handling</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this article, I&#x2019;d like to discuss one particular aspect of exception handling relevant to CQRS and the decorator pattern.</p>
         </article>
-        <article id="article-1709">
+        <article id="article-1710">
             <a href="https://ayende.com/blog/186977-C/on-microservice-architecture-and-18-wheelers" target="_blank">
-                <h2 class="title mb-6" id="article-1709">On Microservice Architecture and 18 wheelers</h2>
+                <h2 class="title mb-6" id="article-1710">On Microservice Architecture and 18 wheelers</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: April 15, 2019
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I talked a bit about microservices architecture in the past few weeks, but I think that there is a common theme to those posts that is missed in the details.A microservices architecture, just like Domain Driven Design or Event Source and CQRS are architectural patterns that are meant to manage complexity. In the realms of operations, Kubernetes is another good example of a tool that is meant to manage complexity.I feel that this is a part that is all too often getting lost. The law of leaky abstractions means that you can&#x2019;t really reduce complexity, you can only manage it. This means that tools and architectures that are meant to deal with complexity are themselves complex, by necessity. The problem is when you try to take a solution that was successfully applied to solve a complex problem, and&#xA0; apply that to something that isn&#x2019;t of equal complexity.Keep the following formula in mind:Solution Complexity = Architecture Complexity &#x2B; ( Problem Complexity / Architecture Factor )Let&#x2019;s try to solve this formula for a couple of projects. One would be managing a little league soccer website and the other would be the standard online shop. Here are the results&#xA;&#xA;&#xA;Cost / Benefit of Architecture&#xA;Little League&#xA;Online Shop&#xA;&#xA;&#xA;Architecture Complexity&#xA;10&#xA;10&#xA;&#xA;&#xA;Problem Complexity&#xA;2&#xA;20&#xA;&#xA;&#xA;Architecture Factor&#xA;3&#xA;3&#xA;&#xA;&#xA;Solution Complexity&#xA;10.6&#xA;16.6&#xA;&#xA;&#xA;&#xA;&#xA;By the way, the numbers are arbitrary, I&#x2019;m trying to show a point, and showing it with numbers make it easier to get the point across. The formula is real, though, based on my experience.The idea behind the formula and the table above is simple. Every architecture you make can be ranked along two axes. One is the architectural complexity and the second is the architecture factor. The architectural complexity is a fixed (usually) number that ranks how complex it is to use the architecture. The architectural factor is how much this architecture help you deal with the overall problem complexity.You can see above that applying the same architecture for two different problem can result in very different results. The overall solution complexity for the little league website is less than the online shop, as expected. But you can also see that there are huge fixed costs here that drive the overall complexity far higher. Using a different architecture, which will have a much smaller architectural factor, but also much lower fixed complexity, will allow you to deliver a solution that has much lower complexity (and get it faster, with less bugs, etc).Choosing a microservice architecture implies that you are going to have a net benefit here. The additional complexity of using microservices is offset by the fact that the architectural factor is going to reduce your overall complexity. Otherwise, it just doesn&#x2019;t make sense.An 18 wheelers is a great thing to have, if you need to ship a whole bunch of stuff. It is the Wrong Tool For The Job if you need to commute to work.In most cases, people select the architecture that sounds right for their project, mostly because they focus on the architectural factor. Without taking into account the fixed complexity cost. When they run into that, they either re-evaluate or strive forward regardless. Let&#x2019;s assume that you run into a project where they chose the microservice architecture, and then they realize that some parts of it are complex, so they cut some corners. I&#x2019;m thinking about something like what is shown here. Let&#x2019;s analyze what you end up with?Architecture Complexity &#x2013; 10, Architecture Factor &#x2013; 1, Problem Complexity &#x2013; 8 = Overall Complexity = 18And that is for the good case where your architectural factor isn&#x2019;t actually below 1, which I would argue is actually going to be in the kind of architecture that these kind of solutions reach. A Distributed Monolith has an architecture complexity of 10 and a factor of 0.75. So trying to solve a problem that has a complexity of 8 here will result in overall complexity of 20.6. I don&#x2019;t actually have real numbers to evaluate different architectures and solution complexities. That would probably require rigorous study, but empirical evidence can give good off the cuff numbers for most of the common architectures. I&#x2019;m going to leave it up to the comments, if someone want to take this challenge. Keep this in mind when you are choosing your architecture, for both green fields and brown fields projects. That can save you a lot of trouble.</p>
-        </article>
-        <article id="article-1710">
-            <a href="https://www.meziantou.net/creating-a-fontawesome-bundle-with-only-the-icons-you-use.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1710">Creating a FontAwesome bundle with only the icons you use</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 15, 2019
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">FontAwesome contains thousands of icons, but you often use a very small subset of those icons. For instance, I only use 15 icons on this website. So, why do you want your visitors to download hundreds of icons they won&#x27;t use. One solution is to create a custom bundle that contains only the icons yo</p>
         </article>
         <div class="button flex justify-between">
             <a href="170.html"><span class="back arrow"></span></a>

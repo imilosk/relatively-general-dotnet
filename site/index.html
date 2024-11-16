@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1">
+            <a href="https://ayende.com/blog/201761-C/fun-with-bugs-advanced-dictionary-api" target="_blank">
+                <h2 class="title mb-6" id="article-1">Fun with bugs: Advanced Dictionary API</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: November 15, 2024
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In RavenDB, we really&#xA0;care about performance. That means that our typical code does not&#xA0;follow idiomatic C# code. Instead, we make use of everything that the framework and the language give us to eke out that additional push for performance. Recently we ran into a bug that was quite puzzling. Here is a simple reproduction of the problem:using System.Runtime.InteropServices;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;var counts = new Dictionary&lt;int, int&gt;();&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;var totalKey = 10_000;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;ref var total = ref CollectionsMarshal.GetValueRefOrAddDefault(&#xD;&#xA;                               counts, totalKey, out _);&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;for (int i = 0; i &lt; 4; i&#x2B;&#x2B;)&#xD;&#xA;{&#xD;&#xA;    var key = i % 32;&#xD;&#xA;    ref var count = ref CollectionsMarshal.GetValueRefOrAddDefault(&#xD;&#xA;                               counts, key, out _);&#xD;&#xA;    count&#x2B;&#x2B;;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    total&#x2B;&#x2B;;&#xD;&#xA;}&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;Console.WriteLine(counts[totalKey]);What would you expect&#xA0;this code to output? We are using two important features of C# here:Value types (in this case, an int, but the real scenario was with a struct)CollectionMarshal.GetValueRefOrAddDefault()The latter method is a way to avoid performing two lookups in the dictionary to get the value if it exists and then add or modify it. If you run the code above, it will output the number 2. That is not&#xA0;expected, but when I sat down and thought about it, it made sense.We are keeping track of the reference to a value in the dictionary, and we are mutating&#xA0;the dictionary.The documentation for the method very clearly explains that this is a Bad Idea.&#xA0;It is an easy mistake to make, but still a mistake. The challenge here is figuring out why&#xA0;this is happening. Can you give it a minute of thought and see if you can figure it out?A dictionary is basically an array that you access using an index (computed via a hash function), that is all. So if we strip everything away, the code above can be seen as:var buffer = new int[2];&#xD;&#xA;ref var total = ref var buffer[0];We simply have a reference to the first element in the array, that&#x2019;s what this does behind the scenes. And when we insert items into the dictionary, we may need to allocate a bigger backing array for it, so this becomes:var buffer = new int[2];&#xD;&#xA;ref var total = ref var buffer[0];&#xD;&#xA;var newBuffer = new int[4];&#xD;&#xA;buffer.CopyTo(newBuffer);&#xD;&#xA;buffer = newBuffer;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;total = 1;&#xD;&#xA;var newTotal = buffer[0]In other words, the total&#xA0;variable is pointing to the first element in the two-element array, but we allocated a new&#xA0;array (and copied all the values). That is the reason why the code above gives the wrong result. Makes perfect sense, and yet, was quite puzzling to figure out.</p>
+        </article>
+        <article id="article-2">
             <a href="https://www.meziantou.net/stop-using-diagnostic-verbosity-in-msbuild.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1">Stop using diagnostic verbosity in MSBuild</h2>
+                <h2 class="title mb-6" id="article-2">Stop using diagnostic verbosity in MSBuild</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">On CI, some projects use the msbuild diagnostic verbosity to get more information about the build. This is useful to troubleshoot build issues. However, this verbosity level has some drawbacks. In this post, I describe how to use the binary log feature of MSBuild to get the same information in a mo</p>
         </article>
-        <article id="article-2">
+        <article id="article-3">
             <a href="https://www.stevejgordon.co.uk/how-dotnet-muxer-resolves-and-loads-the-hostfxr-library" target="_blank">
-                <h2 class="title mb-6" id="article-2">How dotnet.exe resolves and loads the hostfxr library &#x2013; Exploring the .NET muxer</h2>
+                <h2 class="title mb-6" id="article-3">How dotnet.exe resolves and loads the hostfxr library &#x2013; Exploring the .NET muxer</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, we will continue our journey into the functionality and implementation of dotnet.exe, specifically focusing on how the hostfxr library is resolved and loaded. This post follows part one of this series, &#x201C;A Brief Introduction to the .NET Muxer (aka dotnet.exe)&#x201C;. Note: These posts are a deep dive into .NET internals and won&#x2019;t [&#x2026;]</p>
         </article>
-        <article id="article-3">
+        <article id="article-4">
             <a href="https://andrewlock.net/recent-updates-for-netescapades-enumgenerators-interceptors/" target="_blank">
-                <h2 class="title mb-6" id="article-3">Recent updates for NetEscapades.EnumGenerators: interceptors!</h2>
+                <h2 class="title mb-6" id="article-4">Recent updates for NetEscapades.EnumGenerators: interceptors!</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe the experimental interceptor support in NetEscapades.EnumGenerators that replaces ToString() calls with ToStringFast() automatically&#x2026;</p>
         </article>
-        <article id="article-4">
+        <article id="article-5">
             <a href="https://www.meziantou.net/how-to-copy-a-docker-image-from-one-registry-to-another.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4">How to copy a docker image from one registry to another</h2>
+                <h2 class="title mb-6" id="article-5">How to copy a docker image from one registry to another</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Moving a docker image from one registry to another one can be useful to migrate images between different environments, for instance between staging and production. In this post, I describe how to copy a docker image from one registry to another using buildx.An easy way would be to use the following</p>
         </article>
-        <article id="article-5">
+        <article id="article-6">
             <a href="https://andrewlock.net/working-with-the-result-pattern-part-4-is-the-result-pattern-worth-it/" target="_blank">
-                <h2 class="title mb-6" id="article-5">Is the result pattern worth it?</h2>
+                <h2 class="title mb-6" id="article-6">Is the result pattern worth it?</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Working with the result pattern - Part 4</p>
         </article>
-        <article id="article-6">
+        <article id="article-7">
             <a href="https://www.meziantou.net/listing-all-cloud-folders-in-windows-using-dotnet.htm" target="_blank">
-                <h2 class="title mb-6" id="article-6">Listing all cloud folders in Windows using .NET</h2>
+                <h2 class="title mb-6" id="article-7">Listing all cloud folders in Windows using .NET</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Windows allows to list the OneDrive folders or folders from other cloud providers. This is done by using the StorageProviderSyncRootManager class. The StorageProviderSyncRootManager class provides a static method called GetCurrentSyncRoots that returns a list of StorageProviderSyncRoot objects, whi</p>
         </article>
-        <article id="article-7">
+        <article id="article-8">
             <a href="https://www.stevejgordon.co.uk/a-brief-introduction-to-the-dotnet-muxer" target="_blank">
-                <h2 class="title mb-6" id="article-7">A Brief Introduction to the .NET Muxer (aka dotnet.exe)</h2>
+                <h2 class="title mb-6" id="article-8">A Brief Introduction to the .NET Muxer (aka dotnet.exe)</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post marks the start of what I expect will be a long-term effort to explore the inner workings of .NET, expose the &#x201C;magic&#x201D; behind the scenes, and explain the mechanisms and underlying components of the .NET execution model. Today, we begin with a brief introduction to the .NET muxer (dotnet.exe). Note: These posts are [&#x2026;]</p>
         </article>
-        <article id="article-8">
+        <article id="article-9">
             <a href="https://andrewlock.net/working-with-the-result-pattern-part-3-adding-more-extensions/" target="_blank">
-                <h2 class="title mb-6" id="article-8">Adding more extensions to Result&lt;T&gt;</h2>
+                <h2 class="title mb-6" id="article-9">Adding more extensions to Result&lt;T&gt;</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Working with the result pattern - Part 3</p>
         </article>
-        <article id="article-9">
+        <article id="article-10">
             <a href="https://www.meziantou.net/how-to-remove-diacritics-from-a-string-in-dotnet.htm" target="_blank">
-                <h2 class="title mb-6" id="article-9">How to remove diacritics from a string in .NET</h2>
+                <h2 class="title mb-6" id="article-10">How to remove diacritics from a string in .NET</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: October 21, 2024
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is part of the series &#x27;Strings in .NET&#x27;. Be sure to check out the rest of the blog posts of the series!String comparisons are harder than it seemsHow to correctly count the number of characters of a stringCorrectly converting a character to lower/upper caseHow not to read a string from an</p>
-        </article>
-        <article id="article-10">
-            <a href="https://andrewlock.net/working-with-the-result-pattern-part-2-safety-and-simplicity-with-linq/" target="_blank">
-                <h2 class="title mb-6" id="article-10">Safety and simplicity with LINQ</h2>
-            </a>
-            <p class="mb-2">by Andrew Lock</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 15, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Working with the result pattern - Part 2</p>
         </article>
         <div class="button flex justify-between">
             <span class="back invisible arrow"></span>

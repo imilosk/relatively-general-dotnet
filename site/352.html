@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3511">
+            <a href="https://ayende.com/blog/169377/the-bug-that-ruined-my-weekend" target="_blank">
+                <h2 class="title mb-6" id="article-3511">The bug that ruined my weekend</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: November 29, 2014
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is bloody strange. I have a test failing in our unit tests, which isn&#x2019;t an all too uncommon occurrence after a big work. The only problem is that this test shouldn&#x2019;t fail, no one touched this part. For reference, here is the commit where this is failing. You can reproduce this by running the Raven.Tryouts console project. Note that it has to be done in Release mode. When that happens, we consistently get the following error:  Unhandled Exception: System.NullReferenceException: Object reference not set to an instance of an object.   at Raven.Client.Connection.MultiGetOperation.&lt;TryResolveConflictOrCreateConcurrencyException&gt;d__b.MoveNext() in c:\Work\ravendb\Raven.Client.Lightweight\Connection\MultiGetOperation.cs:line 156--- End of stack trace from previous location where exception was thrown ---   at System.Runtime.CompilerServices.TaskAwaiter.ThrowForNonSuccess(Task task)   at System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)&#xA;Here is the problem with this stack trace:&#xA;&#xA;Now, this only happens in release mode, but it happens there consistently. Now, I&#x2019;ve verified that this isn&#x2019;t an issue of me running old version of the code. So this isn&#x2019;t possible. There is no concurrency going on, all the data this method is touching is only touched by this thread. &#xA;What is more, the exception is not thrown from inside the foreach loop in line 139. I&#x2019;ve verified that by putting a try catch around the inside of the loop and still getting the NRE when thrown outside it. In fact, I have tried to figure it out in pretty much any way I can. Attaching a debugger make the problem disappear, as does disabling optimization, or anything like that.&#xA;In fact, at this point I&#x2019;m going to throw up my hands in disgust, because this is not something that I can figure out. Here is why, this is my &#x201C;fix&#x201D; for this issue. I replaced the following failing code:&#xA;&#xA;With the following passing code:&#xA;&#xA;And yes, this should make zero difference to the actual behavior, but it does. I&#x2019;m suspecting a JIT issue.</p>
+        </article>
+        <article id="article-3512">
             <a href="https://ayende.com/blog/169154/solve-this-bug" target="_blank">
-                <h2 class="title mb-6" id="article-3511">Solve this bug!</h2>
+                <h2 class="title mb-6" id="article-3512">Solve this bug!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This took some head scratching before I figured it out.  And here is the relevant code:</p>
         </article>
-        <article id="article-3512">
+        <article id="article-3513">
             <a href="https://ayende.com/blog/169153/beyond-ravendb-3-0-the-future-road-map-for-ravendb" target="_blank">
-                <h2 class="title mb-6" id="article-3512">Beyond RavenDB 3.0: The future road map for RavenDB</h2>
+                <h2 class="title mb-6" id="article-3513">Beyond RavenDB 3.0: The future road map for RavenDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are pretty much done with RavenDB 3.0, we are waiting for fixes to internal apps we use to process orders and support customers, and then we can actually make a release. In the meantime, that means that we need to start looking beyond the 3.0 release. We had a few people internally focus on post 3.0 work for the past few months, and we have a rough outline for what we done there. Primarily we are talking about better distribution and storage models.  Storage models &#x2013; the polyglot database Under this umbrella we put dedicated database engines to support specific needs. We are talking about distributed counters (high scale out, rapid throughput), time series and event store as the primary areas that we are focused on. For example, the counters stuff is pretty much complete, but we didn&#x2019;t have time to actually make that into a fully mature product. I talked about this several times in the past, so I&#x2019;ll not get into too many details here. Distribution models We have been working on a Raft implementation for the past few months, and it is now in the stage where we are starting to integrate it into the rest of our software. Raft is planned to be the core replication protocol for the time series and events databases. But you are probably going to see if first as topology super layer for RavenDB and RavenFS. Distributed topology management Replication support in RavenDB and RavenFS follow the multi master system. You can write to any node, and your write will be distributed by the server to all the nodes. This has several advantages, in particular, the fact that we can operate in disconnected or partially disconnected manner, and that we need little coordination between clients to get everything working. It also has the disadvantage of allow conflicts. In fact, if you are writing to multiple replicating nodes, and aren&#x2019;t careful about how you are splitting writes, you are pretty much guaranteed to have conflicts. We have repeatedly heard that this is both a good thing and something that customers really don&#x2019;t want to deal with.  It is a good thing because we don&#x2019;t have data loss, it is a bad thing because if you aren&#x2019;t ready to handle this, some of your data is inaccessible because of the conflict until it is resolved.  Because of that, we are considering implementing a server side topology management system. The actual replication mechanics are going to remain the same. But the difference is how we are going to decide how to work with it. A cluster (in this case, a set of RavenDB servers and all databases and file systems on them)&#xA0; is composed of cooperating nodes. The cluster is managed via Raft, which is used to store the topology information of the cluster. Topology include each of the nodes in the system, as well as any of the databases and file systems on the cluster. The cluster will select a leader, and that leader will also be the primary node for writes for all databases. In other words, assume we have a 3 node cluster, and 5 databases in the cluster. All the databases are replicated to all three nodes, and a single node is going to serve as the write primary for all operations. During normal operations, clients will query any server for the replication topology (and cache that) every 5 minutes or so. If a node is down, we&#x2019;ll switch over to an alternative node. If the leader is down, we&#x2019;ll query all other nodes to try to find out who the new leader is, then continue using that leader&#x2019;s topology from now on. This give us the advantage that a down server cause clients to switch over and stay switched. That avoid an operational hazard when you bring a down node back up again. Clients will include the topology version they have in all communication with the server. If the topology version doesn&#x2019;t match, the server will return an error, and the client will query all nodes it knows about to find the current topology version. It will always chose the latest topology version, and continue from there. Note that there are still a chance for conflicts, a leader may become disconnected from the network, but not be aware of that, and accept writes to the database. Another node will take over as the cluster leader and clients will start writing to it. There is a gap where a conflict can occur, but it is pretty small one, and we have good mechanisms to deal with conflicts, anyway. We are also thinking about exposing a system similar to the topology for clients directly. Basically, a small distributed and consistent key/value store. Mostly meant for configuration. Thoughts?</p>
         </article>
-        <article id="article-3513">
+        <article id="article-3514">
             <a href="https://www.meziantou.net/jquery-unobstrusive-validation-and-bootstrap.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3513">jQuery Unobstrusive Validation and Bootstrap</h2>
+                <h2 class="title mb-6" id="article-3514">jQuery Unobstrusive Validation and Bootstrap</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">jQuery Validation verifies the validity of client-side user entries (in the browser). This has two purposes:Avoid unnecessary round trips between the client and the server when the data is invalidImprove the user experience by providing immediate visual feedback when the user enters datajQuery Unob</p>
         </article>
-        <article id="article-3514">
+        <article id="article-3515">
             <a href="https://ayende.com/blog/169122/ravendb-wow-features-presentation" target="_blank">
-                <h2 class="title mb-6" id="article-3514">RavenDB Wow! Features presentation</h2>
+                <h2 class="title mb-6" id="article-3515">RavenDB Wow! Features presentation</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In Oredev, beside sitting in a booth and demoing why RavenDB is cool for about one trillion times, I also gave a talk. I intended it to be a demo packed 60 minutes, but then I realized that I only have 40 minutes for the entire thing. The only thing to do was to speed things out, I think I breathed twice throughout the entire presentation. And I think it went great.  RAVENDB: WOW! FEATURES - THE THINGS THAT YOU DIDN&#x27;T KNOW THAT YOUR DATABASE CAN DO FOR YOU from &#xD8;redev Conference on Vimeo.</p>
         </article>
-        <article id="article-3515">
+        <article id="article-3516">
             <a href="https://ayende.com/blog/169313/ravendb-3-0-rtm" target="_blank">
-                <h2 class="title mb-6" id="article-3515">RavenDB 3.0 RTM!</h2>
+                <h2 class="title mb-6" id="article-3516">RavenDB 3.0 RTM!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB 3.0 is out and about!&#xA;&#xA;&#x9;&#xA;&#xA;&#x9;It is available on out downloads page and on Nuget. You can read all about what is new with RavenDB 3.0 here.&#xA;&#xA;&#x9;This is a stable release, fully supported. It is the culmination of over a year and a half of work, a very large team and enough improvements to make you dance a jig.&#xA;&#xA;&#x9;You can play with the new version here, and all of our systems has been running on 3.0 for a while now, of course.&#xA;&#xA;&#x9;And with that, I&#x2019;m exhausted, thrilled and very excited. Have fun playing with 3.0, and check by tomorrow to see some of the cool Wow features.</p>
         </article>
-        <article id="article-3516">
+        <article id="article-3517">
             <a href="https://ayende.com/blog/169281/the-road-to-ravendb-3-0-stable-release" target="_blank">
-                <h2 class="title mb-6" id="article-3516">The road to RavenDB 3.0 stable release</h2>
+                <h2 class="title mb-6" id="article-3517">The road to RavenDB 3.0 stable release</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are currently busy shouting at the build cluster to hurry up and finish (it is not impressed by us and keep chugging on our test suite), but I was quite amused by the following:  This is the merge from the 3.0 development branch to the stable branch. That is a lot of goodness coming your way&#x2026;</p>
         </article>
-        <article id="article-3517">
+        <article id="article-3518">
             <a href="https://ayende.com/blog/169092/large-scale-distributed-consensus-approaches-concurrent-consistent-decisions" target="_blank">
-                <h2 class="title mb-6" id="article-3517">Large scale distributed consensus approaches</h2>
+                <h2 class="title mb-6" id="article-3518">Large scale distributed consensus approaches</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So far we tackled the idea of large compute cluster, and a large storage cluster. I mentioned that the problem with the large storage cluster is that it doesn&#x2019;t handle consistency within itself. Two concurrent requests can hit two storage nodes and make concurrent operations that aren&#x2019;t synchronized between themselves. That is usually a good thing, since that is what you want for high throughput system. The less coordination you can get away with, the more you can actually do. So far, so good, but that isn&#x2019;t always suitable. Let us consider a case where we need to have a consistent approach, for some business reason. The typical example would be transactions in a bank, but I hate this example, because in the real world banks deal with inconsistency all the time, this is an explicit part of their business model. Let us talk about auctions and bids, instead. We have an auction service, which allow us to run a large number of auctions.  For each auction, users can place bids, and it is important for us that bids are always processed sequentially per auction, because we have to know who place a bid that is immediately rejected ($1 commission) or a wining bid that was later overbid (no commission except for the actual winner). We&#x2019;ll leave aside the fact that this is something that we can absolutely figure out from the auction history and say that we need to have it immediate and consistent. How do we go about doing this? Remember, we have enough load on the system that we are running a cluster with a hundred nodes in it. The rough topology is still this:  We have the consensus cluster, which decide on the network topology. In other words, it decide which set of servers is responsible for which auction. What happens next is where it gets interesting. Instead of just a set of cooperating nodes that share the data between them and each of which can accept both reads and writes, we are going to twist things a bit. Each set of servers is their own consensus cluster for that particular auction. In other words, we first go to the root consensus cluster to get the topology information, then we add another command to the auction&#x2019;s log. That command go through the same distributed consensus algorithm between the three nodes. The overall cluster is composed of many consensus clusters for each auction.  This means that we have a fully consistent set of operations across the entire cluster, even in the presence of failure. Which is quite nice. The problem here is that you have to have a good way to distinguish between the different consensuses. In this case, an auction is the key per consensus, but it isn&#x2019;t always so each to make such distinction, and it is important that an auction cannot grow large enough to overwhelm the set of servers that it is actually using. In those cases, you can&#x2019;t really do much beyond relax the constraints and go in a different manner. For optimization purposes, you usually don&#x2019;t run an independent consensus for each of the auctions. Or rather, you do, but you make sure that you&#x2019;ll share the same communication resources, so for auctions/123 the nodes are D,E,U with E being the leader, while for auctions/321 the nodes are also D,E,U but U is the leader. This gives you the ability to spread processing power among the cluster, and the communication channels (TCP connections, for example) are shared between both auctions consensuses.</p>
         </article>
-        <article id="article-3518">
+        <article id="article-3519">
             <a href="https://ayende.com/blog/169250/ravendb-3-0-rc-discount-ends-in-two-days" target="_blank">
-                <h2 class="title mb-6" id="article-3518">RavenDB 3.0 RC discount ends in two days</h2>
+                <h2 class="title mb-6" id="article-3519">RavenDB 3.0 RC discount ends in two days</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I forgot the mention this explicitly, but we are currently giving 20% discount for RavenDB 3.0 licenses for the release candidate. This discount is going to be discontinued with the release of RavenDB 3.0 in two days, so if you are counting it, hurry up .</p>
         </article>
-        <article id="article-3519">
+        <article id="article-3520">
             <a href="https://enterprisecraftsmanship.com/posts/read-only-collections-and-lsp/" target="_blank">
-                <h2 class="title mb-6" id="article-3519">C# Read-Only Collections and LSP</h2>
+                <h2 class="title mb-6" id="article-3520">C# Read-Only Collections and LSP</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: November 22, 2014
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I often see programmers saying that .NET read-only collections violate Liskov Substitution Principle. Do they? The quick answer is no but let&#x2019;s go through the whole story first.</p>
-        </article>
-        <article id="article-3520">
-            <a href="https://ayende.com/blog/169186/ravendb-3-0-release-date-25-nov-2014" target="_blank">
-                <h2 class="title mb-6" id="article-3520">RavenDB 3.0 Release date: 25 Nov, 2014</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 21, 2014
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Barring anything major, we&#x2019;ll be releasing RavenDB 3.0 in 5 days . It will be&#xA0; a stable release and you&#x2019;re encourage to move to it as soon as it is available, using the Esent database. The Voron database is still in RC mode (mostly because we&#x2019;re paranoid and want to have more real world experience before we go full forward with this), but it is going to be fully supported.  Upgrading instances will use Esent, and new databases will default to Esent unless you explicitly select Voron.</p>
         </article>
         <div class="button flex justify-between">
             <a href="351.html"><span class="back arrow"></span></a>
