@@ -112,88 +112,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5941">
-            <a href="https://ayende.com/blog/3884/unmanaged-api-fun-finding-out-msmq-subqueues-names-in-c" target="_blank">
-                <h2 class="title mb-6" id="article-5941">Unmanaged API &#x201C;fun&#x201D;, finding out MSMQ subqueues names in C#</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 21, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I needed to get a list of subqueues of a queue, and there is no way of actually doing that in managed code. I decided that I can still use P/Invoke and just make the appropriate unmanaged calls. In hindsight, it would have been significantly simpler to just build an unmanaged DLL in C&#x2B;&#x2B;/CLR, but I was already too deep, and I can never remember how to properly compile a C&#x2B;&#x2B; app anymore.  I finally had to slap myself a couple of times and remind me that I was a C&#x2B;&#x2B; developer for a long time, and I damn well should remember how to treat memory like it was something both sacred and abused. I had tested that on a Windows 2008 64 bits machine. During this project, I also found out that there is basically no information at all about this sort of thing, so I am putting the code here.          public class MsmqUtil&#xA;&#xA;    {&#xA;&#xA;        internal const int PROPID_MGMT_QUEUE_SUBQUEUE_NAMES = 27;&#xA;&#xA;        internal const ushort VT_NULL = 1;&#xA;&#xA;    &#xA0;&#xA;&#xA;        public static unsafe string[] GetMsmqSubQueueNames(string queueFormatName)&#xA;&#xA;        {&#xA;&#xA;            var props = new MQMGMTPROPS {cProp = 1};&#xA;&#xA;            var variant = new MQPROPVariant {vt = VT_NULL};&#xA;&#xA;            try&#xA;&#xA;            {&#xA;&#xA;                props.aPropID = Marshal.AllocHGlobal(sizeof (int));&#xA;&#xA;                Marshal.WriteInt32(props.aPropID, PROPID_MGMT_QUEUE_SUBQUEUE_NAMES);&#xA;&#xA;    &#xA0;&#xA;&#xA;                props.aPropVar = Marshal.AllocHGlobal(Marshal.SizeOf(typeof (MQPROPVariant)));&#xA;&#xA;                Marshal.StructureToPtr(new MQPROPVariant {vt = VT_NULL}, props.aPropVar, false);&#xA;&#xA;    &#xA0;&#xA;&#xA;                props.status = Marshal.AllocHGlobal(sizeof (int));&#xA;&#xA;                Marshal.WriteInt32(props.status, 0);&#xA;&#xA;    &#xA0;&#xA;&#xA;                var result = MQMgmtGetInfo(null, &quot;queue=&quot; &#x2B; queueFormatName, ref props);&#xA;&#xA;                if (result != 0)&#xA;&#xA;                    throw new Win32Exception(result);&#xA;&#xA;    &#xA0;&#xA;&#xA;                if (Marshal.ReadInt32(props.status) != 0)&#xA;&#xA;                {&#xA;&#xA;                    return null;&#xA;&#xA;                }&#xA;&#xA;    &#xA0;&#xA;&#xA;                variant = (MQPROPVariant) Marshal.PtrToStructure(props.aPropVar, typeof (MQPROPVariant));&#xA;&#xA;    &#xA0;&#xA;&#xA;                var subQueues = new List&lt;string&gt;();&#xA;&#xA;                for (int i = 0; i &lt; variant.Val.calpwstr.cElems; i&#x2B;&#x2B;)&#xA;&#xA;                {&#xA;&#xA;                    var item = new string(variant.Val.calpwstr.pElems[i]);&#xA;&#xA;                    subQueues.Add(item);&#xA;&#xA;                }&#xA;&#xA;                return subQueues.ToArray();&#xA;&#xA;            }&#xA;&#xA;            finally&#xA;&#xA;            {&#xA;&#xA;                if (variant.vt != VT_NULL)&#xA;&#xA;                {&#xA;&#xA;                    for (var i = 0; i &lt; variant.Val.calpwstr.cElems; i&#x2B;&#x2B;)&#xA;&#xA;                    {&#xA;&#xA;                        MQFreeMemory(variant.Val.calpwstr.pElems[i]);&#xA;&#xA;                    }&#xA;&#xA;                    MQFreeMemory(variant.Val.calpwstr.pElems);&#xA;&#xA;                }&#xA;&#xA;                Marshal.FreeHGlobal(props.aPropID);&#xA;&#xA;                Marshal.FreeHGlobal(props.aPropVar);&#xA;&#xA;                Marshal.FreeHGlobal(props.status);&#xA;&#xA;            }&#xA;&#xA;        }&#xA;&#xA;    &#xA0;&#xA;&#xA;        [DllImport(&quot;mqrt.dll&quot;)]&#xA;&#xA;        internal static extern int MQMgmtGetInfo([MarshalAs(UnmanagedType.BStr)] string computerName,&#xA;&#xA;                                                 [MarshalAs(UnmanagedType.BStr)] string objectName,&#xA;&#xA;                                                 ref MQMGMTPROPS mgmtProps);&#xA;&#xA;    &#xA0;&#xA;&#xA;        [DllImport(&quot;mqrt.dll&quot;)]&#xA;&#xA;        internal static extern unsafe int MQFreeMemory(void* queue);&#xA;&#xA;    &#xA0;&#xA;&#xA;        [StructLayout(LayoutKind.Sequential)]&#xA;&#xA;        internal struct CALPWSTR&#xA;&#xA;        {&#xA;&#xA;            public uint cElems;&#xA;&#xA;            public unsafe char** pElems;&#xA;&#xA;        }&#xA;&#xA;    &#xA0;&#xA;&#xA;        [StructLayout(LayoutKind.Sequential)]&#xA;&#xA;        internal struct MQMGMTPROPS&#xA;&#xA;        {&#xA;&#xA;            public uint cProp;&#xA;&#xA;            public IntPtr aPropID;&#xA;&#xA;            public IntPtr aPropVar;&#xA;&#xA;            public IntPtr status;&#xA;&#xA;        }&#xA;&#xA;    &#xA0;&#xA;&#xA;        [StructLayout(LayoutKind.Sequential, Size = 16)]&#xA;&#xA;        internal struct MQPROPVariant&#xA;&#xA;        {&#xA;&#xA;            public ushort vt;&#xA;&#xA;            public ushort wReserved1;&#xA;&#xA;            public ushort wReserved2;&#xA;&#xA;            public ushort wReserved3;&#xA;&#xA;            public UnionedVariant Val; //8&#xA;&#xA;        }&#xA;&#xA;    &#xA0;&#xA;&#xA;        [StructLayout(LayoutKind.Explicit, Size = 8)]&#xA;&#xA;        internal struct UnionedVariant&#xA;&#xA;        {&#xA;&#xA;            [FieldOffset(0)] public uint ulVal; /* VT_UI4    */&#xA;&#xA;            [FieldOffset(0)] public CALPWSTR calpwstr; /* VT_VECTOR | VT_LPWSTR  */&#xA;&#xA;        }&#xA;&#xA;    }</p>
-        </article>
-        <article id="article-5942">
-            <a href="https://ayende.com/blog/3883/challange-the-sample-legacy-database-from-hell" target="_blank">
-                <h2 class="title mb-6" id="article-5942">Challange</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 18, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I need a legacy database for my NHibernate course. I can take some of the creepy ones in the NHibernate test suite, but I think that would be evil to the students.&#xA;Anyone can come up with a good (um, bad) legacy database that is also small enough to be a good example?</p>
-        </article>
-        <article id="article-5943">
-            <a href="https://ayende.com/blog/3882/challenge-write-a-self-extracting-program" target="_blank">
-                <h2 class="title mb-6" id="article-5943">Challenge</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 18, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I had to do this yesterday, and it was fun enough to post about it. Not only that, but the solution that I came up with is enough of a twist that I think would make this hard for many people.  Here is the challenge:     Given a zip file, produce an executable that when run on another machine, will unzip the content of the zip file on that machine. (nitpicker corner: yes, there are many ways to cheat this, but don&#x2019;t try to cheat). You may use any library and process that you want, but the end result must be a standalone file that can be copied to an separate machine and when execute will extract the content of the zip file.    You can assume that on that separate machine you will have the .Net framework installed, but you cannot depend on the presence of external libraries. I&#x2019;ll note that the default compression streams in the .Net framework are not applicable here, since they can&#x2019;t handle zip files (which contains a directory structure), they can only handle zip streams.   I took me roughly 30 minutes, most of which were spent dealing with ICSharpCode.SharpZipLib API, which is not something that I dealt with before.</p>
-        </article>
-        <article id="article-5944">
-            <a href="https://ayende.com/blog/3881/production-errors-best-practices" target="_blank">
-                <h2 class="title mb-6" id="article-5944">Production Errors Best Practices</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 18, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have been practicing deployment lately, and today we have gotten everything squared away very nicely, only to be confronted with a failure when we actually run the app.  The error was: KeyNotFoundException, because we forgot to move some data to the QA database.&#xA0; We fixed the error, but I also change the error message that we were getting.  Now, we get the following error for this scenario:     Rhino.ServiceBus.Exceptins.InvalidDeploymentException: ERROR_ORDER_ATTRIB_NOT_FOUND: Could not find order attribute with the name: CorrelationId     This is usually an indication that the database has not been properly prepared for the deployment.      You need to add the order attribute to the appropriate table.      Important! If the order attribute &#x27;CorrelationId&#x27; is missing, it is likely that other required order attributes are also missing.      Please refer to the deployment guide about the required attributes. If you don&#x27;t find the required attributes in the deployment guide, please shout at the developer, preferably at 2 AM.   There are a couple of important things that I want to discuss about this error:     It is very explicit about what is going on.    It contains the information about how to fix the error.    It warns about additional problems that this may relate to.    It contains a uniquely identifying string that can be used to clearly communicate the error, placed in Google or put in a knowledge base.</p>
-        </article>
-        <article id="article-5945">
-            <a href="https://ayende.com/blog/3880/resolving-graphics-problems-with-nh-prof" target="_blank">
-                <h2 class="title mb-6" id="article-5945">Resolving graphics problems with NH Prof</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 17, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Christopher has good coverage on how we solved and isolated a problem that we&#xA0; run into using NH Prof. In essence, the issue was messed up text being reported by some of the users.  To be frank, it was a very frustrating issue, because none of us could come up with a repro, and the only thing that sometimes seemed to help is updating the graphic drivers. Having to update your graphic drivers to use NH Prof isn&#x2019;t something that I consider appropriate. It reminded me of the time that to deploy a system that I built, we had to replace the organization domain controller. It is&#x2026; not a place where you want to be.   We had accidently reproduced it in a SharedView session, and I got to see Christopher and Rob get to the root of the issue in a matter of minutes. It is not an area that I have any sort of expertise on, and it was fascinating to watch.   And, of course, we got rid of the problem that NH Prof had.</p>
-        </article>
-        <article id="article-5946">
-            <a href="https://ardalis.com/lost-in-texas/" target="_blank">
-                <h2 class="title mb-6" id="article-5946">Lost in Texas</h2>
+            <a href="https://ardalis.com/visual-studio-silent-crash-with-designer/" target="_blank">
+                <h2 class="title mb-6" id="article-5941">Visual Studio Silent Crash with Designer</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -203,13 +123,93 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: February 16, 2009
+                posted on: March 03, 2009
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last year Brendan and I had the privilege of attending Jeffrey Palermo&#x27;s agile bootcamp, put on by HeadSpring Systems in Austin, Texas. It&#x27;s&#x2026;Keep Reading &#x2192;</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;re encountered an issue where Visual Studio 2008 SP1 crashes silently whenever you try to open a web form or master page (which by&#x2026;Keep Reading &#x2192;</p>
+        </article>
+        <article id="article-5942">
+            <a href="https://ardalis.com/some-code-quality-links/" target="_blank">
+                <h2 class="title mb-6" id="article-5942">Some Code Quality Links</h2>
+            </a>
+            <p class="mb-2">by Ardalis</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 03, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Caught a couple of nice links from @unclebobmartin via twitter this morning that I thought were worth sharing. The first one is a very nice&#x2026;Keep Reading &#x2192;</p>
+        </article>
+        <article id="article-5943">
+            <a href="https://ardalis.com/asp-net-control-panel/" target="_blank">
+                <h2 class="title mb-6" id="article-5943">ASP.NET Control Panel</h2>
+            </a>
+            <p class="mb-2">by Ardalis</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 03, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Something I think would be a nice addition to ASP.NET (ideally shipping in 4.0 or N.0, but a community effort would also work) is a control&#x2026;Keep Reading &#x2192;</p>
+        </article>
+        <article id="article-5944">
+            <a href="https://ardalis.com/azure-tooling-suggestion-for-web-roles/" target="_blank">
+                <h2 class="title mb-6" id="article-5944">Azure Tooling Suggestion for Web Roles</h2>
+            </a>
+            <p class="mb-2">by Ardalis</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 03, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">With Azure today, there are two projects, you can create a Web Role which is basically an ASP.NET Web Application that is configured to&#x2026;Keep Reading &#x2192;</p>
+        </article>
+        <article id="article-5945">
+            <a href="https://ayende.com/blog/3892/building-domain-specific-languages-with-boo-full-book-now-available" target="_blank">
+                <h2 class="title mb-6" id="article-5945">Building Domain Specific Languages with Boo &#x2013; Full book now available</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 02, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Building Domain Specific Languages with Boo  Another big milestone, early access subscribers can now read the entire book, all 13 chapters and both appendixes.  Not edited yet, but much closer to completion.</p>
+        </article>
+        <article id="article-5946">
+            <a href="https://ayende.com/blog/3891/ideal-deployment-disaster" target="_blank">
+                <h2 class="title mb-6" id="article-5946">Ideal deployment disaster</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 27, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today we botched deployment for production. We discovered an unforeseen complication related to the production network topography which means that (to simplify) transactions wouldn&#x2019;t work.  I am happy about this. Not because of the failed production deployment, but because of how it happened. We worked on deploying the app for half an hour, found the problem, then spent the next few hours trying to figure out the exact cause and options to fix it. We actually came up with four ways of resolving the issue, from the really hackish to what I believe that would be appropriate, but would take some time to do using the proper process for production changes.   So, why am I happy?  We spent time on that from noon to 3 PM (look Ma, no midnight deployment), and we actually aren&#x2019;t going live any time soon. The reason for deploying for production was to practice, to see what strange new things would show up in production. They did show up, we will fix them, at our leisure, without trying to solve a hairy problem while staring at the screen with blood shot eyes and caffeine positioning.&#xA0; At no time there was someone breathing down our neck, or the IT guys to argue with, or emergency change request or any of the usual crap that usually comes with deploying to production if you aren&#x2019;t being careful.  Practice the way you play, and since pushing to production is usually such a mess anyway, you want to practice this as soon as possible. And not just deploying to another environment (we already did that last week) to test your deployment process. You want to deploy to the actual production environment, so you can get permissions, firewalls, subnets and all the rest sorted out up front.</p>
         </article>
         <article id="article-5947">
-            <a href="https://ayende.com/blog/3879/reducing-the-cost-of-getting-a-stack-trace" target="_blank">
-                <h2 class="title mb-6" id="article-5947">Reducing the cost of getting a stack trace</h2>
+            <a href="https://ayende.com/blog/3890/looking-for-php-developer" target="_blank">
+                <h2 class="title mb-6" id="article-5947">Looking for PHP Developer</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -219,15 +219,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: February 16, 2009
+                posted on: February 25, 2009
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am trying to find ways to reduce the cost of the stack trace used in NH Prof. The access to the stack trace is extremely valuable, but there is a significant cost of using it, so we need a better way of handling this. I decided to run a couple of experiment running this.  All experiments were run 5,000 times, on a stack trace of 7 levels.     new StackTrace(true) - ~600ms    new StackTrace(false) - ~150ms   So right there, we have a huge cost saving, but let us continue a bit.     throwing exception - ~400ms   That is not so good, I have to say.  Well, when in doubt, cheat!  Using reflector and some _really_ nasty stuff, I came up with this:                 var stackFrameHelperType = typeof(object).Assembly.GetType(&quot;System.Diagnostics.StackFrameHelper&quot;);&#xA;&#xA;      var GetStackFramesInternal = Type.GetType(&quot;System.Diagnostics.StackTrace, mscorlib&quot;).GetMethod(&quot;GetStackFramesInternal&quot;,BindingFlags.Static|BindingFlags.NonPublic);&#xA;&#xA;      &#xA0;&#xA;&#xA;      var method = new DynamicMethod(&quot;GetStackTraceFast&quot;,typeof(object),new Type[0],typeof(StackTrace),true);&#xA;&#xA;      &#xA0;&#xA;&#xA;      var generator = method.GetILGenerator();&#xA;&#xA;      generator.DeclareLocal(stackFrameHelperType);&#xA;&#xA;      generator.Emit(OpCodes.Ldc_I4_0);&#xA;&#xA;      generator.Emit(OpCodes.Ldnull);&#xA;&#xA;      generator.Emit(OpCodes.Newobj, stackFrameHelperType.GetConstructor(new[] { typeof(bool), typeof(Thread) }));&#xA;&#xA;      generator.Emit(OpCodes.Stloc_0);&#xA;&#xA;      generator.Emit(OpCodes.Ldloc_0);&#xA;&#xA;      generator.Emit(OpCodes.Ldc_I4_0);&#xA;&#xA;      generator.Emit(OpCodes.Ldnull);&#xA;&#xA;      generator.Emit(OpCodes.Call, GetStackFramesInternal);&#xA;&#xA;      generator.Emit(OpCodes.Ldloc_0);&#xA;&#xA;      generator.Emit(OpCodes.Ret);&#xA;&#xA;      getTheStackTrace = (Func&lt;object&gt;)method.CreateDelegate(typeof(Func&lt;object&gt;));&#xA;    &#xA;  &#xA;&#xA;&#xA;Calling getTheStackTrace 5000 times with depth of 7 frames is&#x2026; 54ms. And now that is a horse of a different color indeed.&#xA;&#xA;And the best part is, I can use the StackFrameHelper as a key into cached stack traces.&#xA;&#xA;And yes, I am aware that if anyone from the CLR team is reading this, a ninja team will be dispatched to&#x2026; discuss with me the notion of supported operations vs. unsupported operation.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My client needs a PHP developer to work on a Cake PHP application.  This is probably a full time position, but I think that a part time position is also available.   If you are interested, please contact me.</p>
         </article>
         <article id="article-5948">
-            <a href="https://ayende.com/blog/3878/presenting-nh-prof-at-virtual-alt-net" target="_blank">
-                <h2 class="title mb-6" id="article-5948">Presenting NH Prof at Virtual ALT.Net</h2>
+            <a href="https://ardalis.com/entrepreneurs-and-the-economy/" target="_blank">
+                <h2 class="title mb-6" id="article-5948">Entrepreneurs and the Economy</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -235,15 +235,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: February 16, 2009
+                posted on: February 24, 2009
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">On Wednesday 18 Feb 21:00 (GMT-6) I will be joining the weekly VAN.&#xA;I am going to show off NH Prof in the context of a real application, discuss its features and how you can use it.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">ScottW pointed me to Entrepreneurs Can Lead Us Out of the Crisis, which has some very interesting ideas. As an entrepreneur and small&#x2026;Keep Reading &#x2192;</p>
         </article>
         <article id="article-5949">
-            <a href="https://ayende.com/blog/3877/pull-vs-push-models-for-ui-updates" target="_blank">
-                <h2 class="title mb-6" id="article-5949">Pull vs. Push models for UI updates</h2>
+            <a href="https://ardalis.com/brief-response-to-corey-on-software-craftsmanship/" target="_blank">
+                <h2 class="title mb-6" id="article-5949">Brief Response to Corey on Software Craftsmanship</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -251,15 +251,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: February 16, 2009
+                posted on: February 24, 2009
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I thought that I would give this topic a bit of discussion, because it seems to me that a lot of people are making false assumptions here.&#xA;Let us consider a push model for an application UI. Assuming that data binding works, and we have implemented INotifyPropertyChanged and INotifyCollectionChanged, push model is actually the easiest to work with. Change the model, and the UI is updated automatically.&#xA;Very often, this can look like magic. And it is a damn simple model to work with.&#xA;It also breaks down completely when the number of updates that you have to deal with goes up beyond what is humanly perceivable.&#xA;Let us imagine that we have to build a system that needs to provide the user with a real time view of a system that generate 5,000 events per second.&#xA;Guess what? There is a serious issue in the actual problem definition. No human can deal with 5,000 events per second. More than that, even if you are displaying an aggregation of the data, it is still not going to work. Having to deal with 5,000 UI updates will usually kill the system. It also means that the system is doing way too much work. Just processing those UI events is going to take a lot of time. Time that we could dedicate to actually making the UI work for the user.&#xA;A better model in this scenario is to split the work. We have a backend that deals with the data aggregation, and we have the UI poll the backend fora snapshot of the information periodically (every .2 - .5 seconds).&#xA;The advantage is that now we have far less UI work to do. More than that, we don&#x27;t have to go through all the work to show the current state.&#xA;Let us assume that we have 5,000 events per second, that we update the UI every .5 seconds and that only the last 500 events are actually relevant for the UI.&#xA;Using the push model, we would have to actually process all 5,000 changes. Using the pull model, every time we pull the new snapshot, we get the already processed data. So in this case, we throw away all the data that is not relevant to us (everything not in the last 500 events that showed up since the last batch. Trying to implement the same for a push model require a fairly complex system, especially if you have a rich model, and you don&#x27;t have a good way of telling what the implications of change would be.&#xA;The reason that this matters is that UI operations are expensive, while backend operations tend to be very cheap.&#xA;Add that to the human perception time lag, and you get a smoother user experience. And since now the UI work that needs to be done is so much less, and since the polling happens when the UI isn&#x27;t busy doing other things, we also have a more responsive UI.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Corey&#x2019;s blog&#x2019;s comment box is failing, so posting my response here. Read his response to my post for context. Below is simply cut-and-pasted&#x2026;Keep Reading &#x2192;</p>
         </article>
         <article id="article-5950">
-            <a href="https://ayende.com/blog/3876/typemock-open-aop" target="_blank">
-                <h2 class="title mb-6" id="article-5950">Typemock Open AOP</h2>
+            <a href="https://ardalis.com/craftsmanship-quality-dogma-and-pragmatism/" target="_blank">
+                <h2 class="title mb-6" id="article-5950">Craftsmanship, Quality, Dogma, and Pragmatism</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -267,9 +267,9 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: February 16, 2009
+                posted on: February 23, 2009
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just stumbled upon Typemock Open AOP, I know about as little as it is possible to know about this, but I am going to find out more, fast.&#xA;It looks like the idea solution for a number of problems that I am facing at the moment. I wanted the power that TypeMock has for a very long time, and it certainly looks like the ideal AOP story. From talking with Eli in 2007, the TypeMock approach impose an overhead of about 5%, which is quite reasonable, in most scenarios.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Craftsmanship In the last year or so, there has been an increasing amount of discussion on software craftsmanship, and what it means and&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="594.html"><span class="back arrow"></span></a>

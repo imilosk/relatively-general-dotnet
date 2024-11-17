@@ -112,10 +112,10 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-7251">
-            <a href="https://ardalis.com/caching-in-asp-net-show-on-dnrtv/" target="_blank">
-                <h2 class="title mb-6" id="article-7251">Caching in ASP.NET Show on dnrTV</h2>
+            <a href="https://ayende.com/blog/2831/refactoring-threading-code" target="_blank">
+                <h2 class="title mb-6" id="article-7251">Refactoring threading code</h2>
             </a>
-            <p class="mb-2">by Ardalis</p>
+            <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -123,15 +123,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: October 01, 2007
+                posted on: October 05, 2007
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m on dnrTV this week with a show about Caching in ASP.NET, one of my favorite topics. I think the whole show is a bit under an hour and I&#x2026;Keep Reading &#x2192;</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let us start by saying that threading is complex, hard and complicated. A while ago I was asked to do a code review of a JoinAll() method, it looked somewhat like this: public void JoinAll(IEnumerable&lt;Thread&gt; threads)&#xA;{&#xA;&#x9;foreach (Thread thread in threads)&#xA;&#x9;{&#xA;&#x9;&#x9;if(thread.Join(500)==false)&#xA;&#x9;&#x9;&#x9;thread.Abort();&#xA;&#x9;}&#xA;}&#xA;I was properly horrified by the use of thread.Abort(), but as you know, all rules have exceptions, so instead of commenting on the implementation details of the method, I asked to understand the entire scenario. This piece of code will probably easier than me trying to explain:&#xA;List&lt;Thread&gt; threads = new List&lt;Thread&gt;();&#xA;List&lt;string&gt; results = new List&lt;string&gt;();&#xA;&#xA;foreach (string urlParam in GetUrlsToQuery())&#xA;{&#xA;&#x9;string url = urlParam;&#xA;&#x9;Thread thread = new Thread(delegate()&#xA;&#x9;{&#xA;&#x9;&#x9;WebRequest wr = WebRequest.Create(url);&#xA;&#x9;&#x9;WebResponse response = wr.GetResponse();&#xA;&#x9;&#x9;using (Stream stream = response.GetResponseStream())&#xA;&#x9;&#x9;using (StreamReader sr = new StreamReader(stream))&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;string result = sr.ReadToEnd();&#xA;&#x9;&#x9;&#x9;lock (results)&#xA;&#x9;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;&#x9;results.Add(result);&#xA;&#x9;&#x9;&#x9;}&#xA;&#x9;&#x9;}&#xA;&#x9;});&#xA;&#x9;threads.Add(thread);&#xA;&#x9;thread.Start();&#xA;}&#xA;&#xA;foreach (Thread thread in threads)&#xA;{&#xA;&#x9;if(thread.Join(500)==false)&#xA;&#x9;&#x9;thread.Abort();&#xA;}&#xA;&#xA;ProcessResults(results);&#xA;That piece of code is in the Page_Load method of a page. The scenario was querying remote servers for information (15 - 20 of them, most often), and there was a time limit to how long we needed to wait before we need to display the results to the user.&#xA;The code above actually works, but it is tremendously wasteful of resources (creating a thread is expensive) and not really nice way to behave to a thread, it is entirely possible to get to a point where you break up the lock mechanism and remains with a broken app because of aborted threads that were in the middle of supposedly atomic operation. Not to mention that we are likely not going to cleanup the resources very well if we abort the thread.&#xA;The hard constraint that the page must be rendered in a second or so. But here, if even two of those servers are not playing well, it is not going to render fast enough.&#xA;In short, do write code like the above.&#xA;I took the code and change it a bit, instead of explicit threading, let us use the async API instead, so we get this piece of code:&#xA0;&#xA;List&lt;string&gt; results = new List&lt;string&gt;();&#xA;List&lt;WaitHandle&gt; waitHandles = new List&lt;WaitHandle&gt;();&#xA;foreach (string url in GetUrlToQuery())&#xA;{&#xA;&#x9;WebRequest wr = WebRequest.Create(url);&#xA;&#x9;IAsyncResult asyncResult = wr.BeginGetResponse(delegate(IAsyncResult ar)&#xA;&#x9;{&#xA;&#x9;&#x9;WebResponse response = wr.EndGetResponse(ar);&#xA;&#x9;&#x9;using (Stream stream = response.GetResponseStream())&#xA;&#x9;&#x9;using (StreamReader sr = new StreamReader(stream))&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;string result = sr.ReadToEnd();&#xA;&#x9;&#x9;&#x9;lock (results)&#xA;&#x9;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;&#x9;results.Add(result);&#xA;&#x9;&#x9;&#x9;}&#xA;&#x9;&#x9;}&#xA;&#x9;},null);&#xA;&#x9;waitHandles.Add(asyncResult.AsyncWaitHandle);&#xA;}&#xA;&#xA;WaitHandle.WaitAll(waitHandles.ToArray(), TimeSpan.FromMilliseconds(700),false);&#xA;string[] resultsCopy;&#xA;lock(results)&#xA;{&#xA;&#x9;resultsCopy  = results.ToArray();&#xA;}&#xA;ProcessResults(resultsCopy);&#xA;Now, instead of having a lot of blocked threads, we have moved it to the framework responsibility, we then gather all the wait handles and wait on all of them (remember, there aren&#x27;t more than 20, but if more than 64 are required, we can manage as well).&#xA;The important part comes when we decide that we want to give up, we make a copy of the results so far, and then start to process them. In the meantime, any request that was completed can go along its merry way and add the newly got result to the results list, but that is no longer relevant, because it got there too late.&#xA;If I wanted to get really deep into it, ASP.Net has the notions of the async request handling, which is very cool, but it doesn&#x27;t have an expiration time (that I know of, at least), and we didn&#x27;t want to get into it in the first place. &#xA;Anxiously awaiting your comments, telling me how wrong I am.</p>
         </article>
         <article id="article-7252">
-            <a href="https://ardalis.com/nice-products-for-developers/" target="_blank">
-                <h2 class="title mb-6" id="article-7252">Nice Products for Developers</h2>
+            <a href="https://ayende.com/blog/2830/a-good-days-work-cleaning-up-the-mail-pile" target="_blank">
+                <h2 class="title mb-6" id="article-7252">A good day&#x27;s work: cleaning up the mail pile</h2>
             </a>
-            <p class="mb-2">by Ardalis</p>
+            <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -139,13 +139,93 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: October 01, 2007
+                posted on: October 04, 2007
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We have a new intern starting with us at Lake Quincy Media today, and in the course of getting him set up, I thought I would mention of a&#x2026;Keep Reading &#x2192;</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For the last three months or so I have been in a race to keep up with my mail. I tend to star &amp; mark as unread as ways to remind me that I need to do something with them, but I am bothered if I have things to do that are marked in this fashion. Especially since some of those have rotted there since August. I kept meaning to do something about it, and more interesting things kept coming up. I dedicated today to handling this once and for all, I went from over 60 items that needed taking care of to 4. More importantly, I have no unread mails in my mailbox, which means that I am much happier. Oh, and if you sent me an email recently that I never replied to, that probably means that I won&#x27;t answer it unless you will ping me again.</p>
         </article>
         <article id="article-7253">
-            <a href="https://ardalis.com/case-sensitive-or-insensitive-sql-query/" target="_blank">
-                <h2 class="title mb-6" id="article-7253">Case Sensitive or Insensitive SQL Query</h2>
+            <a href="https://ayende.com/blog/2829/active-record-monorail-web-casts" target="_blank">
+                <h2 class="title mb-6" id="article-7253">Active Record &amp; MonoRail web casts</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 04, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here are the rehearsal sessions for Hammett &amp; me at JAOO. Hammett has just published them. Not anything really new, frankly, and the quality is all over the spectrum. I was having a nasty case of the flu, especially on the MR screen cast, and that one was recorded close to midnight. You can see me&#xA0;recording the screen cast, that is a weird movie, I tend to move a lot when I talk, but I don&#x27;t think Hammett&#x27;s laptop was very impressed. Ten points if you can find the part when I kicked it.</p>
+        </article>
+        <article id="article-7254">
+            <a href="https://ayende.com/blog/2828/redefining-if" target="_blank">
+                <h2 class="title mb-6" id="article-7254">Redefining If</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 04, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I had time today to sit on several Brail bugs. I keep getting more and more and more amazed by the power that Boo is giving me. In order to fix some of those bugs, I had to literally change the meaning of the if statement. (I defined my own nullable propagator, which&#xA0;I had to implement deeply into the language).  Damn, I love this language. Oh, and FYI,&#xA0;if 2&#x2B;2 == 4 will not do the expected thing anymore :-)</p>
+        </article>
+        <article id="article-7255">
+            <a href="https://ayende.com/blog/2827/microsoft-and-opening-the-code-damned-if-you-do-damned-if-you-dont" target="_blank">
+                <h2 class="title mb-6" id="article-7255">Microsoft and opening the code: damned if you do, damned if you don&#x27;t</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 04, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is another perspective&#xA0;of the results of making the source available. At that point, Microsoft really doesn&#x27;t have a good way to get out of it. People want to get the source (I am one of them), but at the same time, they are fearful of legal actions as a result of looking at the source and doing any sort of development (again, I am one of them). What is required is trust, and Microsoft is still paying for its actions of old (and its actions as of few months ago, patents &amp; OSS, for example) in that regard.</p>
+        </article>
+        <article id="article-7256">
+            <a href="https://ayende.com/blog/2826/book-review-making-money" target="_blank">
+                <h2 class="title mb-6" id="article-7256">Book Review</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 04, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have no idea how he does it, but Terry Prachett is so consistently funny, amusing and a very good writer. Making Money&#xA0;is a continuation to the Going Postal book, with the main hero being Moist, again thrust into an unwilling job description, and raising to the occasion. It was both hilarious and a good read, two distinct qualities, but Prachett is combining them masterfully. Highly recommended, and more than worth a second read, which I need to make time to. There is also the shred of a promise to have Moist as the tax collector for the city, which would make for an interesting story, considering he is a thief.</p>
+        </article>
+        <article id="article-7257">
+            <a href="https://ayende.com/blog/2825/look-dont-touch-clearing-the-misconceptions-about-opening-clr-libraries-sources" target="_blank">
+                <h2 class="title mb-6" id="article-7257">Look, don&#x27;t touch: Clearing the misconceptions about opening CLR libraries sources</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 04, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Important note: I am representing my own conclusions here, not anyone&#x27;s official position. First and foremost, the CLR libraries are not open source.  Let us talk about licenses, and what they gives us. By default, even if I have the source for a library, I can&#x27;t really do anything with it. That is because the authors of the library retain copyright and you don&#x27;t have any rights to do anything with it. Open Source explicitly gives you certain rights (usually modifications and redistribution rights) for the source.  The license that Microsoft is currently talking about is a Reference License. Jay Wren has more about the limitations, but I think that Miguel de Icaza has a better summary of what is going on. More specifically, here are the things that you cannot do with the source:  Fixing bugs - you can work around them, but you cannot fix and use it. Enhancing features - you know that feeling when it is almost there, it is going to remain almost. You cannot modify the code. Adding features - I would love to lie my hands on the assembly resolver code, I really want some hooks there, but that is not going possible either. The main scenario is to debug into the framework, which is of immense value, especially since the System.Web assembly is included, but that about it. If you want any of the above, you are not going to get it from the newly opened CLR libraries sources, the license does not allow it. You are better of browsing the Mono license, since that does explicitly allow you to do all of the above.</p>
+        </article>
+        <article id="article-7258">
+            <a href="https://ardalis.com/open-source-net-in-3-5/" target="_blank">
+                <h2 class="title mb-6" id="article-7258">Open Source .NET in 3.5</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -155,93 +235,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: September 30, 2007
+                posted on: October 03, 2007
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Suppose you need to perform a SQL query and you need for it to be case sensitive or case insensitive, an either your database is set up the&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-7254">
-            <a href="https://ayende.com/blog/2817/just-show-me-the-code" target="_blank">
-                <h2 class="title mb-6" id="article-7254">Just show me the code...</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 30, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am one of those who have really hard time talking generalities. Mainly because lacking a frame of reference usually cause me to try to spin in all directions at once, and Depends is a really bad way to formulate an argument. More often than not, a concrete example, hopefully backed with a code sample that can be dissected, is much more valuable, simply because it focuses the discussion on the subject at hand, instead of scattering it over all the possibility matrix. The other problem with just talking is that words are cheap, and it is fairly easy to speak in such general terms that&#xA0;the conversation will be meaningless. I got burned really bad on the real world with overly general discussions, and now I mostly tend to drive people crazy by asking more and more questions with regard to the implementation details. Strangely enough, I don&#x27;t have the issue of going from a mess of details to an overall view of how things are combined.</p>
-        </article>
-        <article id="article-7255">
-            <a href="https://ayende.com/blog/2816/skinny-controller-fat-model" target="_blank">
-                <h2 class="title mb-6" id="article-7255">Skinny Controller, Fat Model</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 30, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Scott Bellware has a post about Responsible SRP, he presents the Ruby&#x27;s idiom of skinny controller &amp; fat model vs. the .Net one of a service layer. He links to this post&#xA0;from Jamis Buck, which explains the Ruby concepts much better. This is also something that is annoying me about my current application, Rhino Igloo doesn&#x27;t really provide the same level of separation that I consider essential, and as a result my controllers are doing way more than I wish them to. I probably should have broken at least some of them up to services. I find myself troubled, because while I agree with all that Scott says in this post, and most certainly with Jamis about the overall direction, I can also see the scaling issues of this approach.  The problem is that when you have even a moderately large application and you keep pushing things to the model, it will go beyond fat, it will be obese. You can see some of the tricks to manage it here&#xA0;(I was surprised that I was able to follow them, actually, very neat), but this is most assuredly something that the RoR crowd has already reached. Let us take the example of the User model, and assume that I would structure my application this way, I don&#x27;t see it working. My IAuthorizationService has roughly 25 methods already (I am thinking of breaking it up, that is too much), and trying to put them, plus the IAuthenticationService and the various things that the User already does into the User model would create something that would be hard to follow. It certainly wouldn&#x27;t be in keeping of SRP. Another approach is to use mixins in Ruby to separate the functionality into different files and mixed it into the User model. I don&#x27;t really like it, but that is perhaps a matter of taste. Again, another matter of probably biased conceptions, but I truly like it much better when I can wire up another implementation rather than start modifying code when I need to make a change to the code. My ideal would be a lot of very small classes, all collaborating in order to get some result. This, to me, gives a lot of flexibly and power when I come to utilize them. I would be interested in getting response from the Ruby community, what happens when the model get too big? How do you break it up then?</p>
-        </article>
-        <article id="article-7256">
-            <a href="https://ayende.com/blog/2815/respect-should-be-a-given" target="_blank">
-                <h2 class="title mb-6" id="article-7256">Respect should be a given</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 30, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Leon is talking about the way Microsoft Regional Events are handled, interesting reading. We don&#x27;t have those in Israel, and in the last Microsoft conference ( I took part in it ), we built our own talks, from our own experiences.  When you are thinking about investing the time in coming to an event, there is nothing quite as annoying by being&#xA0;shown something from marketing. That is a waste of time for most people. The Israeli mind-set is such that 2,000 people can just leave&#xA0;the TechEd&#xA0;keynote talk if they feel that it is wasting their time.&#xA0;Marketing is a waste of time and it shows that your product is (a) lacking in concrete exciting features (b) you are not respecting the intelligence of the audience.</p>
-        </article>
-        <article id="article-7257">
-            <a href="https://ayende.com/blog/2814/summaries-of-jaoo-talks" target="_blank">
-                <h2 class="title mb-6" id="article-7257">Summaries of JAOO talks</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 30, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Soren seems to have detailed notes on a lot of the sessions, I already pointed out his coverage of my DSL talk, but he also covered the talks that Hamilton and I did.  JAOO 2007: Painless Persistence with ActiveRecord by Oren Eini and Hamilton Verissimo  JAOO 2007: MonoRail, Building Maintainable &amp; Testable Web Applications by Oren Eini and Hamilton Verissimo</p>
-        </article>
-        <article id="article-7258">
-            <a href="https://ayende.com/blog/2813/book-review-empire-of-ivory" target="_blank">
-                <h2 class="title mb-6" id="article-7258">Book Review</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 30, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Damn, but that is a good book. A different style than most of the other ones, with a lot more investment in characters than in actions, but very good nonetheless. Highly recommended. Finished it in one sitting, and already want more, but that would be out in 2008 :-(</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">ScottGu just made a very exciting announcement &#x2013; as of Visual Studio 2008 and .NET 3.5, the base class libraries will ship with source and&#x2026;Keep Reading &#x2192;</p>
         </article>
         <article id="article-7259">
-            <a href="https://ayende.com/blog/2812/enter-a-new-time-sink" target="_blank">
-                <h2 class="title mb-6" id="article-7259">Enter a new time sink...</h2>
+            <a href="https://ayende.com/blog/2824/time-sinks-are-selling-well-apparently" target="_blank">
+                <h2 class="title mb-6" id="article-7259">Time sinks are selling well, apparently</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -251,13 +251,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: September 29, 2007
+                posted on: October 03, 2007
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just bought Empire of Ivory, in both ebook and audio book format.  It came out four days ago, and I can&#x27;t believe that I let four days pass by without getting that.  Yes, it is that good. &#xA0; I was just getting ready to listen to&#xA0; Black Powder War, the third part of this series, but with changing times comes changing plans. Now I intend to read the ebook, hopefully this will take up the rest of the night only, and then listen to Black Powder War and then to Empire of Ivory as an audio book. I don&#x27;t have Throne of Jade as an audio book, the story was masterfully told, but I didn&#x27;t like all the PITA politics that went there, too realistic and far too close to stuff that I had to deal with in the past, so I am skipping that. I really enjoyed His Majesty Dragon as both an ebook and an audio book, however. I usually don&#x27;t re-read books at those intervals, but Naomi is a very talented writer. And I am looking forward to that. &#xA0; Right now I have finished listening to We Few from David Weber again (started on the flight, actually), and I am really wishing that this story had more books in it, there are at least two that I can think of. &#xA0; Now I just need to get through some Brail bugs before I can dedicate myself to truly masterful story telling...</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have hardly had time to read Empire of Ivory and listen to Black Powder War and two thirds of Empire of Ivory when I got Making Money from Terry Prachett. I have read Going Postal with great enjoyment, in fact, I just finished listening to it on the way back from JAOO. I also got several other books as well, but I have yet to open them at all, since that one has all but capture all my attention. We will see how fast I can go through that. &#xA0; &#xA0; &#xA0; &#xA0; &#xA0; &#xA0; . P.S: I noticed that I speak a lot more about other interests lately beside technology and programming, does it bother you?</p>
         </article>
         <article id="article-7260">
-            <a href="https://ayende.com/blog/2811/nhibernate-not-all-that-glitters-is-gold" target="_blank">
-                <h2 class="title mb-6" id="article-7260">NHibernate &#x2013; not all that glitters is gold</h2>
+            <a href="https://ayende.com/blog/2823/the-clr-sources" target="_blank">
+                <h2 class="title mb-6" id="article-7260">The CLR Sources</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -267,9 +267,9 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: September 29, 2007
+                posted on: October 03, 2007
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Manuel Abadia&#xA0;has some criticism on NHibernate that I wanted to respond to. First things first, though, it seems that I have been hasty in my response to a problem that Manuel reported, NH-1123. I really don&#x27;t like it when other people do it to me, and I would like to apologize to Manuel for treating him in a manner I don&#x27;t wish to be treated. &#xA0;As an aside, I have created a new bug&#xA0;on&#xA0;the JIRA,&#xA0;with&#xA0;a bit more focus on the underlying problem. This bug has now been fixed, and I would like to thank Manuel for (a) finding it, (b) persisting even after I wasn&#x27;t as attentive as I should. Interesting bug, by the way. He had several other things to say, which I want to respond to in details:  1)&#xA0;It is heavily tied to the java version (Hiberante), so a lot of the request and/or enhancements are ignored. If the java version is not going to add it, probably it will not be added to NHibernate. &#xA0;I wouldn&#x27;t say that, NHibernate is focused on bringing us up to par with Hibernate, but that is certainly not saying that we aren&#x27;t going to add things that Hibernate doesn&#x27;t have. Right now, MultiQuery and MultiCriteria are stuff that Hibernate doesn&#x27;t have and we do, and there are others. At the same time, if a feature request is something that we can either develop from scratch or port from Hibernate, we would rather bring it from Hibernate. The main reasons are to make it easier to use documentation, built on already fixed bugs, maintain knowledge, and more.  2)&#xA0;Hibernate was started in 2001, and was designed to overcome a lot of the ORM problems. During these years, it has solved a lot of those problems, but other still remain and they can&#x2019;t be fixed without heavily changing its design. There are certainly things that I would change with NHibernate/Hibernate if I were able. One of the things on the very top of the list would be to turn the entire internals to AST manipulation and delay the actual generation of SQL to just before executing the query / command. We are working on that, actually. And you are more than welcome to join in and help us do so. And yes, I do mean you, personally, dear reader. I would be interested to learn what the other problems are, by the way.  3)&#xA0;Even if it is extensible, the IInterceptor interface does not expose all the events that can be interesting to capture (For example, events after loading, updating or deleting data). The only way to handle that at the moment is to implement the ILifecycle interface by the entity itself, losing entity transparency. Fabio Maulo has been doing tremendous amount of work on this very topic, and NHibernate 2.0 will have the full power of events and listeners from Hibernate 3.0. Most of the world have been completed, and can be found on NHibernate trunk, it opens quite a bit of possibilities.  4)&#xA0;No paging support in some nontrivial scenarios. As I said, the bug was fixed, but even without that, I would still say that this is not correct. There are quite a few ways that you can do paging in NHibernate, the default approach is not always the best one.  5)&#xA0;There is no support for retrieving all the data at once for hierarchical queries Here is one example of how to do just that :-) Okay, that was cheating, since it used native SQL, but that did worked through NHibernate, and you got live entities back from it. No, NHibernate has not native support for doing hierarchical queries, and to support them we have the prerequisite of AST based internal, most probably. (At least the way I think about them) There is also multi queries, which is what I use to do hierarchies all over the place, mainly because they are far cheaper than a single hierarchical query in real world scenarios (7 tables representing hierarchy, in my case). To surmise, I would like to mention that NHibernate is an open source project. By its very nature, you are able to go into the code and fix things yourself! NHibernate&#x27;s codebase is fairly big, but it is also well partitioned, so you are going to find it much easier to work with it than you would expect by simple size estimates. If you have a problem, by all means, please report it, but do give a try at fixing it, that is going to be easier than you imagine.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have no idea why this isn&#x27;t in much wider circulation, but this is huge. ScottGu has announced that Microsoft is Releasing the Source Code for the .NET Framework Libraries.  I am disappointed to see that even in the tiny source code samples that he has in the post I have violent disagreements (they speak about sealing stuff, which I have serious objection to). This hopefully means a lot less ReflectorDebugging, although I am not sure about all the implication that this has.</p>
         </article>
         <div class="button flex justify-between">
             <a href="725.html"><span class="back arrow"></span></a>

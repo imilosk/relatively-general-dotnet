@@ -112,8 +112,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-9101">
-            <a href="https://ayende.com/blog/1186/least-favoiraite-bug-of-the-week" target="_blank">
-                <h2 class="title mb-6" id="article-9101">Least favoiraite bug of the week</h2>
+            <a href="https://ayende.com/blog/1201/saving-object-graphs-to-file-codegen-and-executable-graphs" target="_blank">
+                <h2 class="title mb-6" id="article-9101">Saving object graphs to file: CodeGen and Executable Graphs</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -123,13 +123,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: March 25, 2006
+                posted on: March 27, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Tracking a failing test through:&#xA;&#xA;&#xA; Mock objects with heavy use of constraints&#xA; Remoting&#xA; Three differenent exception handling policies&#xA;&#xA;&#xA;&#xA0;&#xA;&#xA;Nevertheless, stubbornness pays off in the end, and I get this lovely&#xA;picture. All green!&#xA;&#xA;Just to note, this is NHibernate Query Analyzer running against&#xA;NHibernate 1.0.2 on .Net 2.0! I had the devil of a time porting NQA from 0.9 to&#xA;1.0, mainly because of changes in the way queries were processed that I&#xA;couldn&#x27;t really track down. I finally found what the issue was (by single&#xA;stepping through the entire process[1]&#xA;and finding out what calls I needed to make and in what order. I then just used&#xA;some reflection tricks to do so (something I tried to avoid in the past). It&#xA;works like a charm.&#xA;&#xA;&#xA0;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;LLet&#xA;me tell you, the parser NHibernate has for queries is not&#xA;something you want to look at in your spare time. It&#x27;s a full blown parser that&#xA;looks to be hand-written. It&#x27;s filled with special cases and handling of stuff&#xA;in several different places.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I need to save and load an object graph to a file.&#xA0; A&#xA;pretty routine task, but this time I thought I would dedicate a little thought&#xA;to this. I need to support a flexible structure that allows saving objects that&#xA;I don&#x2019;t know about right now. I&#x2019;m mostly free to develop the&#xA;persistence layer any way I want it. My first thought was to try to use Active&#xA;Record to persist it all to a SQLite database. But I need to support objects&#xA;with inheritance that I don&#x2019;t know about in advance. I suppose that I can&#xA;solve this issue with Table Per Class approach, but I want to reserve this&#xA;approach for later, mainly because this would mean generating the schema&#xA;dynamically. I thought that XML Serialization would be easiest, but I run into&#xA;problems with generics and serializations of interfaces, which I tend to use&#xA;heavily.&#xA;&#xA;Another issue that I run into is object identity. Here is&#xA;the simplest example:&#xA;&#xA;&#xA; &#xA;  &#xA;  Before Serialization:&#xA;  &#xA;  &#xA;  After Serialization (bad &#x2013; disconnect in the graph):&#xA;  &#xA; &#xA; &#xA;  &#xA;  &#xA;  &#xA;  &#xA;  &#xA0;&#xA0; &#xA;  &#xA; &#xA; &#xA;  &#xA;  U0 and U2 points to the same&#xA;  instance of U1&#xA;  &#xA;  &#xA;  U0 and U2 points to different&#xA;  instances of U1&#xA;  &#xA; &#xA;&#xA;&#xA;I couldn&#x2019;t find a way to persist the first graph and&#xA;get it back without doing some work that I would rather avoid. I have done some&#xA;XML Serialization in the past, but I never done anything that cared about&#xA;object identity. Using Active Record would solve this problem, but this brings&#xA;me to the dynamic schema problem that I want to avoid if I can.&#xA;&#xA;&#xA0;&#xA;&#xA;Right now I&#x2019;m thinking about saving it in an&#xA;executable format. The idea is to generate (using Code DOM) the actions that&#xA;are needed to create the graph on save, and on load to compile and run the code&#xA;to get the live object graph. For instance, take this graph:&#xA;&#xA;&#xA0;&#xA;&#xA;&#xA;&#xA;&#xA0;&#xA;&#xA;This can be saved as this code:&#xA;&#xA;&#xA0;&#xA;&#xA;Node&#xA0;u0&#xA0;=&#xA0;new&#xA0;Node(),&#xA0;&#xA0;u1&#xA0;=&#xA0;new&#xA0;Node(),&#xA0;2&#xA0;=&#xA0;new&#xA0;Node();&#xA;u0.To(u1);&#xA;u0.To(u2);&#xA;u2.To(u1);&#xA;u1.To(u0);&#xA;&#xA;&#xA0;&#xA;&#xA;There is code generation in this project anyway, so&#xA;I&#x2019;m not introducing something completely foreign. This is an intriguing&#xA;concept for me, since it means that saving the file is quite complex, but the&#xA;richness of the file format is unparallel.</p>
         </article>
         <article id="article-9102">
-            <a href="https://ayende.com/blog/1185/resharper-rocks" target="_blank">
-                <h2 class="title mb-6" id="article-9102">ReSharper Rocks</h2>
+            <a href="https://ayende.com/blog/1200/with-notification-collection" target="_blank">
+                <h2 class="title mb-6" id="article-9102">With Notification: Collection</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -139,13 +139,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: March 25, 2006
+                posted on: March 27, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#xA;can confirm that most of my problems with ReSharper stemmed from having both&#xA;DXCore &amp; ReSharper installed. The moment I uninstalled DXCore it went back&#xA;to working just the way it should.&#xA;&#xA;And&#xA;now I get to explore all the great features without hungs or crashes. Check out&#xA;this:&#xA;&#xA;&#xA;&#xA;&#xA0;&#xA;&#xA;Quick,&#xA;do you think that you should use ClearPrivatePath and ClearShadowCopyPath? I&#xA;check the docs just to be sure, and they have been deprecated. But just from&#xA;the intellisense I could tell that something was wrong with them.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#xA;needed to create a class with a collectiont that would raise events when items&#xA;where added or removed to it. It was the work of a few minutes to add the events&#xA;and then write this code:&#xA;&#xA;outputs = new EntitySet&lt;IConnection&gt;(&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; delegate(IConnection connection) { Raise(OutputAdded,&#xA;connection); },&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; delegate(IConnection connection) { Raise(OutputRemoved,&#xA;connection); }&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; );&#xA;&#xA;Where&#xA;Raise() looks like this:&#xA;&#xA;private void Raise(EventHandler&lt;ConnectionEventArgs&gt; eventToRaise, IConnection connection)&#xA;&#xA;{&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ConnectionEventArgs args = new ConnectionEventArgs(connection);&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; if (eventToRaise != null)&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; eventToRaise(this, args);&#xA;&#xA;}&#xA;&#xA;It&#xA;starting too look like O/RM and frieds are the first tools that I pool out of&#xA;the toolbox.</p>
         </article>
         <article id="article-9103">
-            <a href="https://ayende.com/blog/1184/resharper-and-coderush" target="_blank">
-                <h2 class="title mb-6" id="article-9103">ReSharper and CodeRush</h2>
+            <a href="https://ayende.com/blog/1199/speaking-of-resharper" target="_blank">
+                <h2 class="title mb-6" id="article-9103">Speaking Of ReSharper</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -155,13 +155,109 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: March 25, 2006
+                posted on: March 26, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just got a hung from ReSharper, and I managed to get a stack trace, and it looks like it is some interaction thingie between the DXCore (CodeRush engine) and ReSharper. This would explain why this is happening only on my machines (since I installed CodeRush on both desktop and laptop).    I&#x27;m currently uninstalling the DXCore (CodeRush already expired) and I&#x27;m going to see if this is going to make a difference. If it is, then I&#x27;m going to back to business, with ReSharper handling all the menial tasks (like generating constructors or properties). But the thing I really missed was intelligent foreach behavior.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Looks like build #229&#xA0;is fresh out the oven. I&#x27;ll give it a spin tomorrow, and see if the stuff I run into has been fixed already.</p>
         </article>
         <article id="article-9104">
-            <a href="https://ayende.com/blog/1183/curious-bug-of-the-day" target="_blank">
-                <h2 class="title mb-6" id="article-9104">Curious bug of the day</h2>
+            <a href="https://ayende.com/blog/1198/working-with-vs-net-2003" target="_blank">
+                <h2 class="title mb-6" id="article-9104">Working with VS.Net 2003</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 26, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I had to do a two minutes task in Visual Studio 2003 today, and it took me exactly three seconds to run into something that doesn&#x27;t exist in 2003 that I&#x27;ve grown to like in 2005. I thought that I didn&#x27;t like VS.Net 2005, but it&#x27;s a great deal (better | slower) than VS.Net 2003. I also got ReSharper to work semi reliably on VS 2005, so that makes all the difference in the world in the amount of satisfaction that I get from work.    I had ReSharper generate a full blown class from an interface in a couple of seconds, including properties and simple constructor that would take many minutes to do without it. I showed it to a friend, and then did a couple more times, for the sheer pleasure of it. That is how it should be.</p>
+        </article>
+        <article id="article-9105">
+            <a href="https://ayende.com/blog/1197/hilarious-vs-net-ads" target="_blank">
+                <h2 class="title mb-6" id="article-9105">Hilarious VS.Net Ads</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 26, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just found this site, and it&#x27;s simply killing me.    I watched all the videos, and they are great. Check out #346 (flash, so no link). I nearly ruin the keyboard and a whole lot more because of this.</p>
+        </article>
+        <article id="article-9106">
+            <a href="https://ayende.com/blog/1196/boo-reference" target="_blank">
+                <h2 class="title mb-6" id="article-9106">Boo Reference</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 26, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It seems like this&#xA0;is a wiki-is-a-page about Boo. It looks promising, so check it out if you want to learn Boo.    I made a quick scan through it, and it looks like very good info.</p>
+        </article>
+        <article id="article-9107">
+            <a href="https://ayende.com/blog/1195/another-point-against-gui" target="_blank">
+                <h2 class="title mb-6" id="article-9107">Another Point Against GUI</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 26, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I posted about why doing GUI is hard. Now I can add another&#xA;thing, there are way too many&#xA;details that you have to get just&#xA;right for it to work.&#xA;&#xA;It looks like I spent all day today just trying to draw&#xA;several points on the screen, and handling all the 103 ways that the user can&#xA;interact with it. Add to that a custom (not inheriting from Control) control that&#xA;contains real controls and it&#x2019;s a mess of calls that has to come in the&#xA;exact order for it to work. It was fun finding out the order, too.&#xA;&#xA;A tedious day and all I got is a couple of points of the&#xA;screen. Sigh. Now I need to make it talk to the back end&#x2026;</p>
+        </article>
+        <article id="article-9108">
+            <a href="https://ayende.com/blog/1194/thread-safe-stop-watch" target="_blank">
+                <h2 class="title mb-6" id="article-9108">Thread Safe Stop Watch</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 26, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Joe Duffy posted about using the stop watch class from the 2.0 framework.    I liked his implementation of weak hash table, that I going to come handy later.</p>
+        </article>
+        <article id="article-9109">
+            <a href="https://ayende.com/blog/1193/1-5-billion-page-views-a-day" target="_blank">
+                <h2 class="title mb-6" id="article-9109">1.5 BILLION Page Views A Day</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 26, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">ScottGu&#xA0;got some interesting statistics&#xA0;about ASP.Net 2.0:                        MySpace.com is now processing 1.5 Billion page views per day                                         MySpace.com handles 2.3 million concurrent users during the day                                        MySpace.com&#x2019;s average server CPU utilization went from 85% to 27% after moving (from another technology) to ASP.NET 2.0                             Those are some awesome numbers. Suddenly I feel much better about my technology choice :-)    Oh, and to finish it:4 of the top 6 sites [most visited sites] (MySpace, MSN, Ebay and Hotmail) run on IIS and Windows. J</p>
+        </article>
+        <article id="article-9110">
+            <a href="https://ayende.com/blog/1192/rhino-mocks-in-the-user-groups" target="_blank">
+                <h2 class="title mb-6" id="article-9110">Rhino Mocks in the User Groups</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -173,103 +269,7 @@
                     </span>
                 posted on: March 25, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you throw an exception on the finalizer thread, expect bad things to happen.     I just run into this issue where both TestDriven.Net and ReSharper Test Runner doesn&#x27;t handle this issue. I would get a nasty error message from Windows telling me that this&#xA0;is a rouge application and none of my tests will continue to run.    The issue was that several of the tests were creating chain of objects, and the lower most object was a Component, which mean that it is disposable and finalizable. In the dispose method it called a dipose method on a mock object, but because the mock object was no longer in a valid state when the finalizer was called, an exception was thrown.    The fun part is that when I try to fix this, I find out that any exception from the test will cause the mock object to be invalid state and then the finalizer will kick in and dispose the object, which will call the mock, which will throw...    The really nice part is that running the test one by one will not expose this bug. It seems like the finalizer is not getting a chance to run in this case. But the moment you got several tests, it will kick in and kill the tests. It&#x27;s just two tests, and to fix this I would need to open up a chain of seams in the objects, so for now I&#x27;m just calling GC.WaitForPendingFinalizers(). This at least will crash the tests predictably :-)</p>
-        </article>
-        <article id="article-9105">
-            <a href="https://ardalis.com/15951/" target="_blank">
-                <h2 class="title mb-6" id="article-9105">Mini Microsoft Blog</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 24, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Just found the Mini-Microsoft blog&#x2013; definitely a good read. I&#x2019;ll be back.Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-9106">
-            <a href="https://ardalis.com/15952/" target="_blank">
-                <h2 class="title mb-6" id="article-9106">Get Date From DateTime In SQL</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 24, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Something I need to do from time to time is get just the date part of a datetime value in SQL. I found a cool way to do it on SQLJunkies&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-9107">
-            <a href="https://ayende.com/blog/1182/nhibernate-generics-update" target="_blank">
-                <h2 class="title mb-6" id="article-9107">NHibernate Generics Update</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 24, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just signed the assembly and marked it as CLS Complaint.    You can get it here</p>
-        </article>
-        <article id="article-9108">
-            <a href="https://ayende.com/blog/1181/resharper-227" target="_blank">
-                <h2 class="title mb-6" id="article-9108">ReSharper #227</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 24, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m testing Build 227 of Resharper now, and it&#x27;s just good. I got a couple of hunging bugs that for some reason I can&#x27;t repreduce, but I really like the experiance so far. The nicest new feature that I found is the Test Runner. It is just like TestDriven.Net, but with a really cool UI.    I got my pair back :-)</p>
-        </article>
-        <article id="article-9109">
-            <a href="https://ayende.com/blog/1180/the-curse-of-communities-help-vampires" target="_blank">
-                <h2 class="title mb-6" id="article-9109">The Curse of Communities: Help Vampires</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 24, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This&#xA0;is a good explanation on why some [technical] communities dies out under their own weight.    It is very accurate. Something to keep in mind.</p>
-        </article>
-        <article id="article-9110">
-            <a href="https://ayende.com/blog/1179/getting-to-the-right-decision" target="_blank">
-                <h2 class="title mb-6" id="article-9110">Getting to the right decision</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 24, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It&#x27;s not often that technical stuff makes me laugh (other than the Daily WTF, of course). But check out this snipe here:Which is easiest to read? You decide. (But if you decide anything other than &#x201C;the first one,&#x201D; well, you&#x2019;re wrong. And you should be eating your pizza with your hands.)</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It looks like there was a User Group presentation in Dayton&#xA0;about Test Driven Design that also included Rhino Mocks.    You can get the presentation and the code samples here. Very cool.</p>
         </article>
         <div class="button flex justify-between">
             <a href="910.html"><span class="back arrow"></span></a>

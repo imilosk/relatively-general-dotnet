@@ -112,8 +112,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-2521">
-            <a href="https://ayende.com/blog/178721/pr-review-avoid-too-many-parameters" target="_blank">
-                <h2 class="title mb-6" id="article-2521">PR Review</h2>
+            <a href="https://ayende.com/blog/178822/batch-processing-with-subscriptions-in-ravendb-4-0" target="_blank">
+                <h2 class="title mb-6" id="article-2521">Batch processing with subscriptions in RavenDB 4.0</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -123,45 +123,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 23, 2017
+                posted on: July 03, 2017
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">During code review I run into these two sections, which raised a flag. Can you tell why?The problem with this type of code is two fold. First, we add optional parameters, to reduce the number of breaking changes we have. The problem with that is that we already have parameters on the call, and eventually you&#x2019;ll get to something like this:Which is the queen of optional parameters method, and you can probably guess how it looks internally. In the first case, we can add the new optional parameter to the&#x2026; options variable that we are already sending this method. This way, we don&#x2019;t have to worry about breaking changes, and we already have a way to setup options, determine defaults, etc.In the second case, we are passing two bools to the method, and there isn&#x2019;t a preexisting parameters object. Instead of creating one, we can use a Flags enum, whose bits we can set to determine what exactly the behavior of this method should be. That is generally much easier to maintain in the long run.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Subscription is a somewhat neglected feature in RavenDB. It was created to handle a specific customer need and grew from there, but it had relatively little traction and was a bit of a pain to use. When we looked at the things we wanted to do in RavenDB 4.0 re-working how people use subscription was high enough in the list that it got a dedicated dev for about a year.&#xA;Here is how a subscription looks like in RavenDB 3.x.&#xA;&#xA;&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          var orders = store.Subscriptions.Open&lt;Order&gt;(ordersSubscription, new SubscriptionConnectionOptions());&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          orders.Subscribe(order =&gt;&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;          &#x9;GenerateInvoice(order);&#xA;        &#xA;        &#xA;          &#xA;          });&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          orders.Subscribe(order =&gt;&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;          &#x9;if(order.State == OrderState.Invalid)&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;MarkForManualProcessingBy(order.Employee);&#xA;        &#xA;        &#xA;          &#xA;          });&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          subscriptions.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;&#xA;&#xA;It is only available from code, and the model used is heavily influenced by Reactive Extensions. It give you reliable subscription to data, even if the client or server went down, it could recover on restart, but it was complex to do the more advanced things. There are events that you can register to respond to things that are happening, but there isn&#x2019;t a complete story. Other things, such as automatic failover or responding to deletes were flat out impossible.&#xA;With RavenDB 4.0, we decided to do things differently. I talked&#xA0;about this before several times, but recently we completed a major restructuring and simplification of the user visible behavior that I&#x2019;m really happy about. To start with, we ditched the Reactive Extensions and IObservable model. This is just not the right fit for the kind of things we want to do. Instead, we are going with full blown batch processing.&#xA;&#xA;&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          await subscription.Run( batch =&gt;&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;          &#x9;foreach(var item in batch.Items)&#xA;        &#xA;        &#xA;          &#xA;          &#x9;{&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;Order order = item.Result;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;// do something with this order&#xA;        &#xA;        &#xA;          &#xA;          &#x9;}&#xA;        &#xA;        &#xA;          &#xA;          });&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          subscriptions2.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;&#xA;&#xA;Instead of being called once per item, we are going to call you one per batch. This is actually how things are going over the wire, and exposing it directly to the user make our life a lot easier. It also means that you have much better model to actually do things in a batch mode. Such as applying modification to all the items in the batch and saving them back in a single operation.&#xA;Subscriptions in RavenDB 4.0 are also fault tolerant and highly available (both client &amp; server), allow to access versioned and deleted snapshots, allow to apply complex filtering and transformations on the server side and in general a lot more suitable for the task we intend them for.&#xA;Perhaps what is more exciting is that subscriptions are available to all the clients, and in some cases, it just make more sense to write them as a batch processing script. Consider:&#xA;&#xA;&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          #!/usr/bin/env python3&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          from pyravendb import RavenDB&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          def process_batch(batch):&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;with batch.open_session() as session:&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;for item in batch.items:&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;&#x9;customer = item.result&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;&#x9;if customer.WelcomeEmailSent:&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;&#x9;&#x9;continue&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;&#x9;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;&#x9;send_welcome_email(customer);&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;&#x9;customer.WelcomeEmailSent = True&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;&#x9;session.store(customer)&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;session.save_changes()&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          store = document_store (&#xA;        &#xA;        &#xA;          &#xA;          &#x9;urls = [&quot;http://rvn-srv-2:8080&quot;],&#xA;        &#xA;        &#xA;          &#xA;          &#x9;database = &quot;HelpDesk&quot;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;)&#xA;        &#xA;        &#xA;          &#xA;          store.initialize()&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          with store.subscriptions.open(&#xA;        &#xA;        &#xA;          &#xA;          &#x9;subscription_connection_options(&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;id = &quot;new-customers-welcome-email&quot;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;)) as subscription:&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;subscription.run(process_batch)&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          subscriptions.py&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;&#xA;&#xA;This is the kind of thing that can really make the operations team happy, because they can do targeted jobs with very little friction. I spend the whole of Chapter 5 talking about subscriptions, and I think it is well worth it.</p>
         </article>
         <article id="article-2522">
-            <a href="https://www.stevejgordon.co.uk/docker-for-dotnet-developers-part-5" target="_blank">
-                <h2 class="title mb-6" id="article-2522">Docker for .NET Developers (Part 5)</h2>
-            </a>
-            <p class="mb-2">by Steve Gordon</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 22, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So far in previous posts we&#x2019;ve been looking at basic demo dockerfiles which use the aspnetcore-build base image. This is okay for testing but does present some issues for actual deployment. One disadvantage of the build image is its size. Since it contains all of the elements needed to build .NET Core applications it is [&#x2026;]</p>
-        </article>
-        <article id="article-2523">
-            <a href="https://ayende.com/blog/178753/inside-ravendb-4-0-book-chapter-4-5-are-done" target="_blank">
-                <h2 class="title mb-6" id="article-2523">Inside RavenDB 4.0 book&#x2013;Chapter 4 &amp; 5 are done</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 22, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The RavenDB 4.0 book is going really well, this week I have managed to write about 20,000 words and the current page count is at 166. At this rate, it is going to turn into a monster in terms of how big it is going to be.The book so far covers the client API, how to model data in a document database and how to use batch processing in RavenDB with subscriptions. The full drafts are available here, and I would really appreciate any feedback you have. Next topic is to start talking about clustering and this is going to be real fun.I&#x2019;m also looking for a technical editor for the book. Someone who can both tell me that I missed a semi column in a code listing and tell me why my phrasing / spelling / grammar is poor (and likely all three at once and some other stuff that I don&#x2019;t even know). If you know someone, or better yet, interested and capable, send me a line.</p>
-        </article>
-        <article id="article-2524">
-            <a href="https://www.meziantou.net/cookie-authentication-in-asp-net-core-2-without-asp-net-identity.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2524">Cookie authentication in ASP.NET Core 2 without ASP.NET Identity</h2>
+            <a href="https://www.meziantou.net/entity-framework-core-generate-tracking-columns.htm" target="_blank">
+                <h2 class="title mb-6" id="article-2522">Entity Framework Core: Generate tracking columns</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -171,13 +139,45 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 22, 2017
+                posted on: July 03, 2017
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The default ASP.NET Core 2 web template provides lots of code to authenticate users. My screen is not big enough to display all the files in the solution explorer. The template offers lots of functionalities: users can log in using username/password or using an external provider such as Google or M</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Note: I use the preview version of Entity Framework Core 2.0 (2.0.0-preview2-final). Things may change after the final version is releasedWhen you design a database, you sometimes need to add columns to track when a record changed and who made the change. To clarify, you add the following columns:C</p>
+        </article>
+        <article id="article-2523">
+            <a href="https://ayende.com/blog/178821/we-wont-be-fixing-this-race-condition" target="_blank">
+                <h2 class="title mb-6" id="article-2523">We won&#x2019;t be fixing this race condition</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 30, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">During the work on restoring backup, the developer in charge came up with the following problematic scenario.Start restoring backup of database Northwind on node A, which can take quite some time for large databaseCreate a database named Northwind on node B while the restore is taking place.The problem is that during the restore the database doesn&#x2019;t exists in a proper form in the cluster until it is done restoring. During that time, if an administrator is attempting to create a database it will look like it is working, but it will actually create a new database on all the other nodes and fail on the node where the restore is going on.When the restore will complete, it will either remove the previously created database or it will join it and replicate the restored data to the rest of the nodes, depending exactly on when the restore and the new db creation happened. Now, trying to resolve this issue involve us coordinating the restore process around the cluster. However, that also means that we need to do heartbeats during the restore process (to the entire cluster), handle timeouts and recovery and effectively take upon us a pretty big burden of pretty complicated code. Indeed, the first draft of the fix for this issue suffered from the weakness that it would only work when running on a single node, and only work in a cluster mode in very specific cases. In this case, it is a very rare scenario that require an admin (not just a standard user) to do two things that you&#x2019;ll not usually expect them together, and the outcome of this is a bit confusing even if you managed, but there isn&#x2019;t any data loss. The solution was to document that during the restore process you shouldn&#x2019;t create a database with the same name but instead let RavenDB complete and then let the database span additional nodes. That is a much simpler alternative to going in to a distributed mode reasoning just for something that is an operator error in the first place.</p>
+        </article>
+        <article id="article-2524">
+            <a href="https://www.stevejgordon.co.uk/docker-dotnet-developers-part-6" target="_blank">
+                <h2 class="title mb-6" id="article-2524">Docker for .NET Developers (Part 6)</h2>
+            </a>
+            <p class="mb-2">by Steve Gordon</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 29, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In part 3 I discussed one of the first motivations which led our team to begin using Docker. That motivation was focused on making the workflow for our front end developers quicker and simpler. In this post I want to explore a second motivation which led to us fully embrace Docker on our project. Just [&#x2026;]</p>
         </article>
         <article id="article-2525">
-            <a href="https://ayende.com/blog/178689/pr-review-the-errors-should-be-nurtured" target="_blank">
-                <h2 class="title mb-6" id="article-2525">PR Review</h2>
+            <a href="https://ayende.com/blog/178820/bug-stories-the-memory-ownership-in-the-timeout" target="_blank">
+                <h2 class="title mb-6" id="article-2525">Bug stories</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -187,13 +187,45 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 21, 2017
+                posted on: June 29, 2017
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I run into the following in a PR I recently reviewed. Take a look and try to figure out why I&#x2019;m pointing this bits out:&#xA;&#xA;&#xA;Those are bad errors. In the sense that they are hiding information. Sure, in 90% of the cases the user just put it the backup location or the restore location, so they know what the application is referring to. But the other 10% is looking at the exception from the logs, having &#x201C;I got an error&#x201D; support call or all sort of weird stuff.&#xA;In particular, one of the most annoying things is when the user and the application disagree on a relative path. If the user believes that the relative path is based on one location and the application another, hilarity ensues. But not in a fun way.&#xA;A better way to prevent all of those would be to just include the actual locations (fully resolved, mind) in the error. It doesn&#x2019;t prevent support calls, but it does make them a lot easier to solve.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are running a lot of tests right now on RavenDB, in all sort of interesting configurations. Some of the more interesting results came from testing wildly heterogeneous systems. Put a node on a fast Windows machine, connect it to a couple of Raspberry PIs, a cheap Windows tablet over WiFi and a slow Linux machine and see how that kind of cluster is handling high load.This has turned out a number of bugs, the issue with the TCP read buffer corruption is one such example, but another is the reason for this post. In one of our test runs, the RavenDB process crashed with invalid memory access. That was interesting to see. Tracking down the issue led us to the piece of code that is handling incoming replication. In particular, the issue was possible if the following happened:Node A is significantly slower than node B, primarily with regards to disk I/O.Node B is being hit with enough load that it send large requests to node A.There is a Node C that is also trying to replicate the same information (because it noticed that node A isn&#x2019;t catching fast enough and is trying to help).The root cause was that we had a bit of code that looked like this:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          using (stats.For(ReplicationOperation.Incoming.Storage))&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              var replicationCommand = new MergedDocumentReplicationCommand(this, buffer, totalSize, lastEtag);&#xA;        &#xA;        &#xA;          &#xA;              var task = _database.TxMerger.Enqueue(replicationCommand);&#xA;        &#xA;        &#xA;          &#xA;              if (task.Wait(_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan) == false)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  var message = $&quot;Could not commit replication batch with size {totalSize/1024:#,#}kb after {_database.Configuration.Replication.ActiveConnectionTimeout.AsTimeSpan}, aborting&quot;;&#xA;        &#xA;        &#xA;          &#xA;                  if (_log.IsInfoEnabled)&#xA;        &#xA;        &#xA;          &#xA;                      _log.Info(message);&#xA;        &#xA;        &#xA;          &#xA;                  throw new TimeoutException(message);&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          ProcessIncomingDocs.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;Basically, we read the data from the network into a buffer, and now we hand it off to the transaction merger to run. However, if there is a lot of load on the server, it is possible that the transaction merger will not have a chance to return in time.&#xA0; We try to abort the connection here, since something is obviously wrong, and we do just that. The problem is that we sent a buffer to the transaction merger, and while it might not have gotten to processing our request yet (or haven&#x2019;t completed it, at least), there is no way for us to actually be able to pull the request out (it might have already started executing, after all). The code didn&#x2019;t consider that, and what happened when we did get a timeout is that the buffer was returned to the pool, and if it was freed in time, we would get an access violation exception if we were lucky, or just garbage in the buffer (that we previously validated, so we didn&#x2019;t check again) that would likely also cause a crash.The solution was to wait for the task to complete, but ping the other host to let it know that we are still alive, and that the connection shouldn&#x2019;t be aborted.</p>
         </article>
         <article id="article-2526">
-            <a href="https://ayende.com/blog/178500/reviewing-noise-search-engine-summary" target="_blank">
-                <h2 class="title mb-6" id="article-2526">Reviewing Noise Search Engine</h2>
+            <a href="https://www.meziantou.net/using-the-google-translate-api-in-dotnet-or-dotnet-core.htm" target="_blank">
+                <h2 class="title mb-6" id="article-2526">Using the Google Translate API in .NET or .NET Core</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 29, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the company I work, we use the Google Translate API to translate the documentation of our products from English to French and Spanish. To be honest, the translations are very very amazing! This doesn&#x27;t mean you won&#x27;t have to rephrase some sentences, but the quality of the translations are pretty</p>
+        </article>
+        <article id="article-2527">
+            <a href="https://enterprisecraftsmanship.com/posts/specification-pattern-in-c-pluralsight-course/" target="_blank">
+                <h2 class="title mb-6" id="article-2527">Specification Pattern in C# Pluralsight course</h2>
+            </a>
+            <p class="mb-2">by Vladimir Khorikov</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 28, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My new course Specification Pattern in C#&#xA0;for Pluralsight went live.&#xA; Specification Pattern in C# This is a fairly short course (about an hour) which will teach you everything about the Specification Pattern and how to apply it in C# in combination with modern ORMs.&#xA; From this course, you will learn:&#xA;   Use cases for the Specification Pattern.&#xA;  Common pitfalls people run into when implementing it.</p>
+        </article>
+        <article id="article-2528">
+            <a href="https://ayende.com/blog/178881/the-things-that-come-out-late-at-night" target="_blank">
+                <h2 class="title mb-6" id="article-2528">The things that come out late at night</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -203,13 +235,29 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 20, 2017
+                posted on: June 28, 2017
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After the last three parts, I think that I have a good high level understanding of what is going on in the Noise codebase, as a reminder, I&#x2019;m reviewing 48d808375e541eca383826ea928272976bce064d.I love reading code, especially stuff that I&#x2019;m not familiar with, such as a new platform or doing something novel. The Noise codebase is quite interesting, and it is a very early stage in the project. That said, when looking at what it is doing and comparing to what I&#x2019;m doing in my day job, a few things popped up.I couldn&#x2019;t help but think that this is a very similar model to the default Azure DocumentDB. All the data is indexed, and the values are shredded as they go in. The model you use was very similar. The nice thing about this kind of model is that it gives you a lot of freedom and flexibility, but the downside is that if you need more, there aren&#x2019;t any alternatives. Storing large JSON documents inside Noise is likely to cause problems, especially if you are typically working with the full document. If you are just throwing things into it and then pulling back pieces, especially if the documents you write are relatively small, this is likely to be much more suited. Noise is making some clever usage of the LSM nature of RocksDB to do cleanups, and I really like the elegance of the indexing engine. The query model is also interesting, in that it gives you a lot of freedom to operate. Select the right fields, define the appropriate aggregation, etc. But queries are limited (no computation) and aggregation queries are going to run with cost of O(N) with respect to their results. Given that this is intended to be embedded, and apparently into low end devices, that might very well be the right decision.A side affect of the shredding is that you need to reconstruct documents all the time, since they were broken into component parts. Things like scanning results by one field while returning another looks like they can generate O(N * log N) number of queries in RocksDB. I&#x2019;m not sure how much that can scale with regards to queries. On the one hand, there are very clear layers between the pieces of the code, which is great, but that also have some built in issues with regards to how much performance you can squeeze out of the system. I don&#x2019;t have a feeling for Rust code performance, nor do I think that the project is ready at this early stage for performance analysis, but it is a concern. Then again, I did just spent the past two years head down in a major performance work, so that might very well be the reason. And it is entirely possible that the code will perform significantly better when the project is done.One last thing to note, when I tried building a replacement to Lucene one of the annoying thing to pop up was that it is really hard to replace Lucene efficiently and still be better in term of time / space / complexity. Noise in particular is storing all the data at least twice (once as terms to be searched, once as the actual document data). This make is very easy to do certain operations (such as update a document), but it also means that the cost of updating a document is now doubled. We first need to index the new document, then we need to re-index old document, compare between the two and then write the changes. I guess that it is possible that reducing the amount work to be written would help matters, but the cost of indexing is likely to dominate. I would expect a Noise index to be significantly larger than the Lucene equivalent, because Lucene does a lot to reduce file size (in quite evil &amp; nasty ways, to be fair). Another thing that I don&#x2019;t think that is good is the reliance on a query language in an embedded solution. A much better idea in my option would be to expose the raw documents out and let the client handle it. If it is running in the same memory space, there is no extra cost. This is because the moment that this open up a huge number of features / issues. I&#x2019;m talking specifically about the notion of &#x201C;return&#x201D; here. The idea is really cool, you can project exactly what you want from the document, and that allows the engine to only pull the relevant data.At any rate, this is really getting late now, so I&#x2019;ll close with the note that Noise is a really cool codebase to read. Even if you don&#x2019;t know Rust, going ahead and reading something non trivial is a really good exercise in learning new things. And I&#x2019;m really interested in what Noise is going to do next.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The following is the opening paragraphs for discussion RavenDB 4.0 clustering and distribution model in the Inside RavenDB 4.0 book.&#xA;&#xA;You might be familiar with the term &quot;murder of crows&quot; as a way to refer to a group for crows[1]. It has been used in literature and arts many times. Of less reknown is the group term for ravens, which is &quot;unkindness&quot;. Personally, in the name of all ravens, I&#x27;m torn between being insulted and amused.&#xA;Professionally, setting up RavenDB as a cluster on a group of machines is a charming exercise (however, that term is actually reserved for finches) that bring a sense of exaltation (taken too, by larks) by how pain free this is. I&#x27;ll now end my voyage into the realm of ornithology&#x27;s etymology and stop speaking in tongues.&#xA;On a more serious note, the fact that RavenDB clustering is easy to setup is quite important, because it means that it is much more approachable.&#xA;&#xA;[1] If you are interested in learning why, I found this answer fascinating&#xA;&#xA;It was amusing to write, and it got me to actually start writing that part of the book. Although I&#x2019;m not sure if this will survive editing and actually end up in the book.</p>
         </article>
-        <article id="article-2527">
-            <a href="https://ardalis.com/why-delete-old-git-branches/" target="_blank">
-                <h2 class="title mb-6" id="article-2527">Why Delete Old Git Branches?</h2>
+        <article id="article-2529">
+            <a href="https://ayende.com/blog/178819/bug-stories-how-do-i-call-myself" target="_blank">
+                <h2 class="title mb-6" id="article-2529">Bug stories</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 28, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This bug is actually one of the primary reasons we had a Beta 2 release for RavenDB 4.0 so quickly. The problem is easy to state, we had a problem in any non trivial deployment setup where clients would be utterly unable to connect to us. Let us examine what I mean by non trivial setup, shall we? A trivial setup is when you are running locally, binding to &#x201C;http://localhost:8080&#x201D;. In this case, everything is simple, and you can bind to the appropriate interface and when a client connects to you, you let it know that your URL is &#x201C;http://localhost:8080&#x201D;. Hm&#x2026; this doesn&#x2019;t make sense. If a client just connected to us, why do we need to let it know what is the URL that it need to connect to us? Well, if there is just a single node, we don&#x2019;t. But RavenDB 4.0 allows you to connect to any node in the cluster and ask it where a particular database is located. So the first thing that happens when you connect to a RavenDB server is that you find out where you really need to go. In the case of a single node, the answer is &#x201C;you are going to talk to me&#x201D;, but in the case of a cluster, it might be some other node entirely. And this is where things begin to be a bit problematic. The problem is that we need to know what to call ourselves when a client connects to us. That isn&#x2019;t as easy as it might sound. Consider the case where the user configure the server url to be &#x201C;http://0.0.0.0:8080&#x201D;. We can&#x2019;t give that to the client, so we default to sending back the host name in that case. And this is where things started to get tricky. In many cases, the host name is not something that make sense.Oh, for internal deployments, you can usually rely on it, but if you are deploying to AWS, for example, the machine host name is of very little use in routing to that particular machine. Or, for that matter, a docker container host name isn&#x2019;t particularly useful when you consider it from the outside. The problem is that with RavenDB, we had a single configuration value that was used both for the binding to the network and for letting the user know how to connect to us. That didn&#x2019;t work when you had routers in the middle. For example, if my public docker IP is 10.0.75.2, that doesn&#x2019;t mean that this is the IP that I can bind to inside the container. And the same is true whenever you have any complex network topology (putting nginx in front of the server, for example). The resolution for that was pretty simple, we added a new configuration value that will separate the host that we bind to from the host that we report to the outside world. In this manner, you can bind to one IP but let the world know that you should be reached via another.</p>
+        </article>
+        <article id="article-2530">
+            <a href="https://ardalis.com/installing-additional-app-templates-for-dotnet-new/" target="_blank">
+                <h2 class="title mb-6" id="article-2530">Installing Additional App Templates for dotnet new</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -219,57 +267,9 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 20, 2017
+                posted on: June 28, 2017
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last updated: 13 October 2023 It&#x27;s a common housekeeping practice to delete git branches once they&#x27;re no longer used, but this practice isn&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-2528">
-            <a href="https://andrewlock.net/four-ways-to-dispose-idisposables-in-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-2528">Four ways to dispose IDisposables in ASP.NET Core</h2>
-            </a>
-            <p class="mb-2">by Andrew Lock</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 20, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post presents the options for disposing services in ASP.NET Core: manually; using the DI container; with RegisterForDispose; or IApplicationLifetime.&#x2026;</p>
-        </article>
-        <article id="article-2529">
-            <a href="https://www.stevejgordon.co.uk/docker-for-dotnet-developers-part-4" target="_blank">
-                <h2 class="title mb-6" id="article-2529">Docker for .NET Developers (Part 4)</h2>
-            </a>
-            <p class="mb-2">by Steve Gordon</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 19, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In Part 3 we looked at one of the motivations behind using Docker with ASP.NET Core to enable simpler developer processes. In this post we&#x2019;ll them look at using docker-compose files to define and run multi-container systems. I will take a look at how we can build a sample application, containing two services that are [&#x2026;]</p>
-        </article>
-        <article id="article-2530">
-            <a href="https://www.stevejgordon.co.uk/docker-for-dotnet-developers-part-3" target="_blank">
-                <h2 class="title mb-6" id="article-2530">Docker for .NET Developers (Part 3)</h2>
-            </a>
-            <p class="mb-2">by Steve Gordon</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 19, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the prior two posts in this series&#xA0;we took a look at the main Docker terminology and looked at creating a basic dockerfile to define a Docker image containing an ASP.NET Core API application. In this post I want to switch it up a bit and spend a little time&#xA0;sharing a specific practical reason that [&#x2026;]</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When you install the.NET Core SDK, you get the dotnet CLI (command line interface), which can be used for ahostofdifferentthings, including&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="252.html"><span class="back arrow"></span></a>

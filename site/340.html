@@ -112,8 +112,72 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3391">
-            <a href="https://benfoster.io/blog/resolving-hostnames-with-powershell/" target="_blank">
-                <h2 class="title mb-6" id="article-3391">Resolving hostnames with PowerShell</h2>
+            <a href="https://ayende.com/blog/170881/ravendb-sharding-enabling-shards-for-existing-database" target="_blank">
+                <h2 class="title mb-6" id="article-3391">RavenDB Sharding</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 18, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A question came up in the mailing list, how do we enable sharding for an existing database. I&#x2019;ll deal with data migration in this scenario at a later post.  The scenario is that we have a very successful application, and we start to feel the need to move the data to multiple shards. Currently all the data is sitting in the RVN1 server. We want to add RVN2 and RVN3 to the mix. For this post, we&#x2019;ll assume that we have the notion of Customers and Invoices. Previously, we access the database using a simple document store:  var documentStore = new DocumentStore&#xA;{&#xA;&#x9;Url = &quot;http://RVN1:8080&quot;,&#xA;&#x9;DefaultDatabase = &quot;Shop&quot;&#xA;};&#xA;&#xA;&#xA;Now, we want to move to a sharded environment, so we want to write it like this. Existing data is going to stay where it is at, and new data will be sharded according to geographical location.&#xA;&#xA;var shards = new Dictionary&lt;string, IDocumentStore&gt;&#xA;{&#xA;&#x9;{&quot;Origin&quot;, new DocumentStore {Url = &quot;http://RVN1:8080&quot;, DefaultDatabase = &quot;Shop&quot;}},//existing data&#xA;&#x9;{&quot;ME&quot;, new DocumentStore {Url = &quot;http://RVN2:8080&quot;, DefaultDatabase = &quot;Shop_ME&quot;}},&#xA;&#x9;{&quot;US&quot;, new DocumentStore {Url = &quot;http://RVN3:8080&quot;, DefaultDatabase = &quot;Shop_US&quot;}},&#xA;};&#xA;&#xA;var shardStrategy = new ShardStrategy(shards)&#xA;&#x9;.ShardingOn&lt;Customer&gt;(c =&gt; c.Region)&#xA;&#x9;.ShardingOn&lt;Invoice&gt; (i =&gt; i.Customer);&#xA;&#xA;var documentStore = new ShardedDocumentStore(shardStrategy).Initialize();&#xA;&#xA;This wouldn&#x2019;t actually work. We are going to have to do a bit more. To start with, what happens when we don&#x2019;t have a 1:1 match between region and shard? That is when the translator become relevant:&#xA;&#xA;.ShardingOn&lt;Customer&gt;(c =&gt; c.Region, region =&gt;&#xA;{&#xA;    switch (region)&#xA;    {&#xA;        case &quot;Middle East&quot;:&#xA;            return &quot;ME&quot;;&#xA;        case &quot;USA&quot;:&#xA;        case &quot;United States&quot;:&#xA;        case &quot;US&quot;:&#xA;            return &quot;US&quot;;&#xA;        default:&#xA;            return &quot;Origin&quot;;&#xA;    }&#xA;})&#xA;&#xA;&#xA;We basically say that we map several values into a single region. But that isn&#x2019;t enough. Newly saved documents are going to have the shard prefix, so saving a new customer and invoice in the US shard will show up as:&#xA;&#xA;But existing data doesn&#x2019;t have this (created without sharding). &#xA;&#xA;So we need to take some extra effort to let RavenDB know about them. We do this using the following two functions:&#xA;&#xA; Func&lt;string, string&gt; potentialShardToShardId = val =&gt;&#xA; {&#xA;     var start = val.IndexOf(&#x27;/&#x27;);&#xA;     if (start == -1)&#xA;         return val;&#xA;     var potentialShardId = val.Substring(0, start);&#xA;     if (shards.ContainsKey(potentialShardId))&#xA;         return potentialShardId;&#xA;     // this is probably an old id, let us use it.&#xA;     return &quot;Origin&quot;;&#xA;&#xA; };&#xA; Func&lt;string, string&gt; regionToShardId = region =&gt;&#xA; {&#xA;     switch (region)&#xA;     {&#xA;         case &quot;Middle East&quot;:&#xA;             return &quot;ME&quot;;&#xA;         case &quot;USA&quot;:&#xA;         case &quot;United States&quot;:&#xA;         case &quot;US&quot;:&#xA;             return &quot;US&quot;;&#xA;         default:&#xA;             return &quot;Origin&quot;;&#xA;     }&#xA; };&#xA;&#xA;&#xA;We can then register our sharding configuration so:&#xA;&#xA;  var shardStrategy = new ShardStrategy(shards)&#xA;      .ShardingOn&lt;Customer, string&gt;(c =&gt; c.Region, potentialShardToShardId, regionToShardId)&#xA;      .ShardingOn&lt;Invoice, string&gt;(x =&gt; x.Customer, potentialShardToShardId, regionToShardId); &#xA;&#xA;&#xA;That takes care of handling both new and old ids, and let RavenDB understand how to query things in an optimal fashion. For example, a query on all invoices for &#x2018;customers/1&#x2019; will only hit the RVN1 server.&#xA;However, we aren&#x2019;t done yet. New customers that don&#x2019;t belong to the Middle East or USA will still go to the old server, and we don&#x2019;t want any modification to the id there. We can tell RavenDB how to handle it like so:&#xA;&#xA;var defaultModifyDocumentId = shardStrategy.ModifyDocumentId;&#xA;shardStrategy.ModifyDocumentId = (convention, shardId, documentId) =&gt;&#xA;{&#xA;    if(shardId == &quot;Origin&quot;)&#xA;        return documentId;&#xA;&#xA;    return defaultModifyDocumentId(convention, shardId, documentId);&#xA;};&#xA;&#xA;&#xA;That is almost the end. There is one final issue that we need to deal with, and that is the old documents, before we used sharding, don&#x2019;t have the required sharding metadata. We can fix that using a store listener. So we have:&#xA;&#xA; var documentStore = new ShardedDocumentStore(shardStrategy);&#xA; documentStore.RegisterListener(new AddShardIdToMetadataStoreListener());&#xA; documentStore.Initialize();&#xA;&#xA;&#xA;Where the listener looks like this:&#xA;&#xA; public class AddShardIdToMetadataStoreListener : IDocumentStoreListener&#xA; {&#xA;     public bool BeforeStore(string key, object entityInstance, RavenJObject metadata, RavenJObject original)&#xA;     {&#xA;         if (metadata.ContainsKey(Constants.RavenShardId) == false)&#xA;         {&#xA;             metadata[Constants.RavenShardId] = &quot;Origin&quot;;// the default shard id&#xA;         }&#xA;         return false;&#xA;     }&#xA;&#xA;     public void AfterStore(string key, object entityInstance, RavenJObject metadata)&#xA;     {&#xA;     }&#xA; }&#xA;&#xA;&#xA;And that is it. I know that there seems to be quite a lot going on in here, but it basically can be broken down to three actions that we take:&#xA;&#xA;Modify the existing metadata to add the sharding server id via the listener.&#xA;Modify the document id convention so documents on the old server won&#x2019;t have a designation (optional).&#xA;Modify the sharding configuration so we&#x2019;ll understand that documents without a shard prefix actually belong to the Origin shard.&#xA;And that is pretty much it.</p>
+        </article>
+        <article id="article-3392">
+            <a href="https://ayende.com/blog/170849/why-ravendb-isnt-written-in-f-or-the-cost-of-the-esoteric-choice" target="_blank">
+                <h2 class="title mb-6" id="article-3392">Why RavenDB isn&#x2019;t written in F#, or the cost of the esoteric choice</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 15, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In a recent post, a commenter suggested that using F# rather than C# would dramatically reduce the code size (measured in line numbers). My reply to that was:  F# would also lead to a lot more complexity, reduced participation in the community, harder to find developers and increased costs all around. And the data to back up this statement:     C# Developers F# Developers      Nitpicker corner: Now, I realize that this is a sensitive topic, so I&#x2019;ll note that this isn&#x2019;t meant to be a scientific observation. It is a data point that amply demonstrate my point. I&#x2019;m not going to run a full bore study.&#xA0; And yes, those numbers are about jobs, not people, but I&#x2019;m assuming that the numbers are at least roughly comparable. The reply to this was:  You have that option to hire cheaper developers. I think that the cheapest developers usually will actually increase your costs. But if that is your way, then I wish you good luck, and I accept that as an answer. How about &quot;a lot more complexity&quot;? Now, let me try to explain my thinking. In particular, I would strongly disagree with the &#x201C;cheapest developers&#x201D; mentality. That is very far from what I&#x2019;m trying to achieve. You usually get what you pay for, and trying to save on software development costs when your product is software is pretty much the definition of penny wise and pound foolish.  But let us ignore such crass terms as money and look at availability. There are less than 500 jobs for F# developers (with salary ranges implications that there isn&#x2019;t a whole lot of F# developers queuing up for those jobs). There are tens of thousands of jobs for C# developers, and again, the salary range suggest that there isn&#x2019;t a dearth of qualified candidates that would cause demand to raise the costs. From those numbers, and my own experience, I can say the following. There are a lot more C# developers than there are F# developers. I know that this is a stunning conclusion, likely to shatter the worldview of certain people. But I think that you would find it hard to refute that. Now, let us try to build on this conclusion.  First, there was the original point, that F# lead to reduced number of lines. I&#x2019;m not going to argue that, mostly&#xA0; because software development isn&#x2019;t an issue of who can type the most. The primary costs for development is design, test, debugging, production proofing, etc. The act of actually typing is pretty unimportant. For fun, I checked out the line count numbers for similar projects (RavenDB &amp; CouchDB). The count of lines in the Raven.Database project is roughly 100K. The count of lines in CouchDB src folder is roughly 45K. CouchDB is written in Erlang, which is another functional language, so we are at least not comparing apples to camels here. We&#x2019;ll ignore things like different feature set, different platforms, and the different languages for now. And just say that an F# program can deliver with 25% lines of code of a comparable C# program. Note that I&#x2019;m not actually agreeing with this statement, I&#x2019;m just using this as a basis for the rest of this post. And to (try to) forestall nitpickers. It is easy to show great differences in development time and line of code in specific cases where F# is ideally suited to the task. But we are talking about general purpose usage here. Now, for the sake of argument, we&#x2019;ll even assume that the cost of F# development is 50% of the cost of C# development. That is, that the reduction in line count actually has a real effect on the time and efficiency. In other words, if an F# program is 25% smaller than a similar C# program, we&#x2019;ll not assume that it takes 4 times as much time to write. Where does this leave us? It leave us with a potential pool of people to hire that is vanishingly small. What are the implications of writing software in a language that have fewer people familiar with it? Well, it is harder to find people to hire. That is true not only for people that your hire &#x201C;as is&#x201D;. Let us assume that you&#x2019;re going to give those people additional training after hiring them, so they would know F# and can work on your product. An already steep learning curve has just became that much steeper. Not only that, but this additional training means that the people you hire are more expensive (there is an additional period in which they are only learning). In addition to all of that, it will be harder to hire people, not just because you can&#x2019;t find people already experienced with F#, but because people don&#x2019;t want to work for you. Most developers at least try to pay attention to the market, and they make a very simple calculation. If I spend the next 2 &#x2013; 5 years working in F#, what kind of hirability am I going to have in the end? Am I going to be one of those trying to get the &lt; 500 F# jobs, or am I going to be in the position to find a job among the tens of thousands of C# jobs? Now, let us consider another aspect of this. The community around a project. I actually have a pretty hard time finding any significant F# OSS projects. But leaving that aside, looking at the number of contributors, and the ability of users to go into your codebase and look for themselves is a major advantage. We have had users skip the bug report entirely and just send us a Pull Request for an issue they run into, others have contributed (significantly) to the project. That is possible only because there is a wide appeal. If the language is not well known, the number of people that are going to spend the time and do something with it is going to be dramatically lower. Finally, there is the complexity angle. Consider any major effort required. Recently, we are working on porting RavenDB to Linux. Now, F# work on Linux, but anyone that we would go to in order to help us port RavenDB to Linux would have this additional (rare) requirement, need to understand F# as well as Linux &amp; Mono. Any problem that we would run into would have to first be simplified to a C# sample so it could be readily understood by people who aren&#x2019;t familiar with F#, etc. To go back to the beginning, using F# might have reduce the lines of code counter, but it wouldn&#x2019;t reduce the time to actually build the software and it would limit the number of people that can participate in the project, either as employees or Open Source contributors.</p>
+        </article>
+        <article id="article-3393">
+            <a href="https://ayende.com/blog/170817/the-ravendb-comic-strip-part-i-finding-the-hero" target="_blank">
+                <h2 class="title mb-6" id="article-3393">The RavenDB Comic Strip</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 12, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A while ago I posted the first draft of the RavenDB Comic Strip. Here is the final version.</p>
+        </article>
+        <article id="article-3394">
+            <a href="https://enterprisecraftsmanship.com/posts/3-misuses-of-operator-in-c-6/" target="_blank">
+                <h2 class="title mb-6" id="article-3394">3 misuses of ?. operator in C# 6</h2>
+            </a>
+            <p class="mb-2">by Vladimir Khorikov</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 11, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I guess you already know about the safe navigation operator (?. operator) coming up in C# 6. While it&#x2019;s a nice syntactic sugar for quite a few cases, I&#x2019;d like to point out some misuses of it I&#x2019;m sure we will see when C# 6 is released.</p>
+        </article>
+        <article id="article-3395">
+            <a href="https://benfoster.io/blog/aspnet-webapi-cors/" target="_blank">
+                <h2 class="title mb-6" id="article-3395">Enabling CORS in ASP.NET Web API 2</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -123,109 +187,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: April 27, 2015
+                posted on: May 11, 2015
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How to resolve a CSV file of hostnames with Windows PowerShell.</p>
-        </article>
-        <article id="article-3392">
-            <a href="https://ayende.com/blog/170625/work-stealing-in-the-presence-of-startup-shutdown-costs" target="_blank">
-                <h2 class="title mb-6" id="article-3392">Work stealing in the presence of startup / shutdown costs</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 24, 2015
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned that we have created our own thread pool implementation in RavenDB to handle our specific needs. A common scenario that ended up quite costly for us was the notion of parallelizing similar work. For example, I have 15,000 documents to index .That means that we need to go over each of the documents and apply the indexing function. That is an embarrassingly parallel task. So that is quite easy. One easy way to do that would be to do something like this:  foreach(var doc in docsToIndex)&#xA;&#x9;ThreadPool.QueueUserWorkItem(()=&gt; IndexFunc(new[]{doc}));&#xA;&#xA;Of course, that generates 15,000 entries for the thread pool, but that is fine. &#xA;Except that there is an issue here, we need to do stuff to the result of the indexing. Namely, write them to the index. That means that even though we can parallelize the work, we still have non trivial amount of startup &amp; shutdown costs. Just running the code like this would actually be much slower than running it in single threaded mode.&#xA;So, let us try a slightly better method:&#xA;&#xA;foreach(var partition in docsToIndex.Partition(docsToIndex.Length / Environment.ProcessorCount))&#xA;&#x9;ThreadPool.QueueUserWorkItem(()=&gt; IndexFunc(partition));&#xA;&#xA;If my machine has 8 cores, then this will queue 8 tasks to the thread pool, each indexing just under 2,000 documents. Which is pretty much what we have been doing until now.&#xA;Except that this means that we have to incur the startup/shutdown costs a minimum of 8 times.&#xA;A better way is here:&#xA;&#xA;ConcurrentQueue&lt;ArraySegment&lt;JsonDocument&gt;&gt; partitions = docsToIndex.Partition(docsToIndex.Length / Environment.ProcessorCount);&#xA;for(var i = 0; i &lt; Environment.ProcessorCount; i&#x2B;&#x2B;) &#xA;{&#xA;&#x9;ThreadPool.QueueUserWorkItem(()=&gt; {&#xA;&#x9;&#x9;ArraySegment&lt;JsonDocument&gt; first;&#xA;&#x9;&#x9;if(partitions.TryTake(out first) == false)&#xA;&#x9;&#x9;&#x9;return;&#xA;&#xA;&#x9;&#x9;IndexFunc(Pull(first, partitions));&#xA;&#x9;});&#xA;}&#xA;&#xA;IEnumerable&lt;JsonDocument&gt; Pull(ArraySegment&lt;JsonDocument&gt; first, ConcurrentQueue&lt;ArraySegment&lt;JsonDocument&gt;&gt; partitions )&#xA;{&#xA;&#x9;while(true)&#xA;&#x9;{&#xA;&#x9;&#x9;for(var i = 0; i &lt; first.Count; i&#x2B;&#x2B;)&#xA;&#x9;&#x9;&#x9;yield return first.Array[i&#x2B;first.Start];&#xA;&#xA;&#x9;&#x9;if(partitions.TryTake(out first) == false)&#xA;&#x9;&#x9;&#x9;break;&#xA;&#x9;}&#xA;}&#xA;&#xA;Now something interesting is going to happen, we are scheduling 8 tasks, as before, but instead of allocating 8 static partitions, we are saying that when you start running, you&#x2019;ll get a partition of the data, which you&#x2019;ll go ahead and process. When you are done with that, you&#x2019;ll try to get a new partition, in the same context. So you don&#x2019;t have to worry about new startup/shutdown costs.&#xA;Even more interesting, it is quite possible (and common) for those tasks to be done with by the time we end up executing some of them. (All the index is already done but we still have a task for it that didn&#x2019;t get a chance to run.) In that case we exit early, and incur no costs.&#xA;The fun thing about this method is what happens under the load when you have multiple indexes running. In that case, we&#x2019;ll be running this for each of the indexes. It is quite likely that each core will be running a single index. Some indexes are going to be faster than the others, and complete first, consuming all the documents that they were told to do. That means that the tasks belonging to those indexes will exit early, freeing those cores to run the code relevant for the slower indexes, which hasn&#x2019;t completed yet. &#xA;This gives us dynamic resource allocation. The more costly indexes get to run on more cores, while we don&#x2019;t have to pay the startup / shutdown costs for the fast indexes.</p>
-        </article>
-        <article id="article-3393">
-            <a href="https://ayende.com/blog/170593/fine-grained-work-control" target="_blank">
-                <h2 class="title mb-6" id="article-3393">Fine grained work control</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 21, 2015
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">With RavenDB 3.5, we are focusing on performance as one of the key features. I&#x2019;ve already spoken at length about the kind of changes that we had made to improve performance. A few percentage points here and there end up being quite significant when you add them all together. But just sanding over the rough edges isn&#x2019;t quite enough for us. We want to have a major impact, not just an avalanche of small improvements. In order to handle that, we needed to be much more aware of how we are making use of resources in the system. The result of several months of work is now ready to enter into performance testing, and I&#x2019;m quite excited about it. But before I show you the results, what is it? Well, RavenDB does quite a lot in the background, to avoid holding up a request thread when you are calling RavenDB. This mean that we have a lot of background work, indexing, map/reduce, etc. We have been using the default .NET thread pool for a long time to do that, and it has served us very well. But it is a generic construct, without awareness of the unique needs that RavenDB has. Therefor, we worked for quite some time to create our own Thread Pool that match what we do. The major changes with the RavenThreadPool (RTP from now) are:  There is a fixed (and dedicated) number of threads that will do the work, sharing (and stealing) work among themselves. Indexes tasks are continuous and shared, so a big indexing work will spread across all threads, but with a preference for locality of work if we have a lot of stuff to parallel.  A slow index doesn&#x2019;t stop us from working on other indexes, we&#x2019;ll let it process on its own, and let the other indexes run forward without it. Dynamic adjusting of the amount of work that is allowed for the indexes means that under load, we can dynamically and rapidly reduce the amount of work we are doing to allow more resources for processing requests. There are other stuff, but they are mostly of interest for the people who work on RavenDB, not on those who use it. And the results, they are pretty good. Here is the before and after sample.  Note that we have a mix here of various types of indexes. The X axis is time, and the Y axis is the number of documents indexed. As you can see, in the before (without RTP), we are processing all indexes roughly on the same course, with a pretty flat growth over time.&#xA0; However, with RTP, the situation is different. You can see that very quickly the fast indexes are starting to outpace both their version without RTP and the slower indexes. That, in turn, means that they complete much faster. In the case of the Simple Map index, it complete indexing roughly 50% faster than without RTP. But even more interesting is what happens globally, because we are able to complete indexing of the fast indexing fast, it means that we can process the slow index (HeavyMapReduce) with more resources. So even this slowpoke completes about 15% faster with RTP than without it. We are still running tests, but even so, this is quite exciting.</p>
-        </article>
-        <article id="article-3394">
-            <a href="https://enterprisecraftsmanship.com/posts/types-of-cqrs/" target="_blank">
-                <h2 class="title mb-6" id="article-3394">Types of CQRS</h2>
-            </a>
-            <p class="mb-2">by Vladimir Khorikov</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 20, 2015
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">CQRS&#xA0;is a pretty defined concept. Often, people say that you either follow CQRS or not, meaning that it is some kind of a binary choice. In this article, I&#x2019;d like to show that there is some wriggle room in this notion and how different types of CQRS can look like.&#xA; Type 0: no CQRS With this type, you don&#x2019;t have any CQRS whatsoever. That means you have a domain model and you use your domain classes for both serving commands and executing queries.</p>
-        </article>
-        <article id="article-3395">
-            <a href="https://www.meziantou.net/sql-export-the-contents-of-a-table.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3395">SQL - Export the contents of a table</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 20, 2015
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When developing an application using a database one may need to initialize tables with a few rows. For example, it is useful for a &quot;Category&quot; table to contain a few rows as soon as the application starts. So we create these lines in the database with the tool that we want (rarely a SQL INSERT comma</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post looks at the different ways you can enable CORS (Cross Origin Resource Sharing) in Web API 2.</p>
         </article>
         <article id="article-3396">
-            <a href="https://ardalis.com/developer-user-group-tips/" target="_blank">
-                <h2 class="title mb-6" id="article-3396">Developer User Group Tips</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 17, 2015
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve been a participant in a number of software developer user groups for many years, and an organizer of the Hudson Software Craftsmanship&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-3397">
-            <a href="https://ardalis.com/github-spinoff-sites/" target="_blank">
-                <h2 class="title mb-6" id="article-3397">GitHub Spinoff Sites</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 14, 2015
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently I&#x2019;ve started using a couple of GitHub-related sites for collaboration. These are made possible by GitHub&#x2019;s open API, and&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-3398">
-            <a href="https://enterprisecraftsmanship.com/posts/dto-vs-value-object-vs-poco/" target="_blank">
-                <h2 class="title mb-6" id="article-3398">DTO vs Value Object vs POCO</h2>
+            <a href="https://enterprisecraftsmanship.com/posts/combining-sql-server-and-mongodb-using-nhibernate/" target="_blank">
+                <h2 class="title mb-6" id="article-3396">Combining SQL Server and MongoDB using NHibernate</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -235,13 +203,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: April 13, 2015
+                posted on: May 06, 2015
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this article, I&#x2019;d like to clarify the differences in DTO vs Value Object vs POCO where DTO stands for Data Transfer Object, and POCO is Plain Old CLR Object, also known as POJO in Java environment.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We often think that relational and NoSQL databases are somewhat incompatible. But what if we could use both within a single domain model? I&#x2019;d like to show how to combine SQL Server and MongoDB together and discuss what benefits we could get from it.</p>
         </article>
-        <article id="article-3399">
-            <a href="https://ayende.com/blog/170561/project-tamar" target="_blank">
-                <h2 class="title mb-6" id="article-3399">Project Tamar</h2>
+        <article id="article-3397">
+            <a href="https://ayende.com/blog/170785/a-new-blog-look-feel" target="_blank">
+                <h2 class="title mb-6" id="article-3397">A new blog look &amp; feel</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -251,13 +219,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: April 12, 2015
+                posted on: May 06, 2015
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m happy to announce that despite the extreme inefficiencies involved in the process, the performance issues and what are sure to be multiple stop ship bugs in the way the release process is handled. We have successfully completed Project Tamar. The result showed up as 2.852 Kg bundle, and is currently sleeping peacefully. I understand that this is a temporary condition, and lack of sleep shall enthuse shortly. I&#x2019;ll probably regret saying that, but I can&#x2019;t wait. &#xA0; This little girl is named Tamar and to celebrate, I&#x2019;m offering a 28.52% discount for all our products. This include:  NHibernate Profiler  Entity Framework Profiler RavenDB &amp; RavenFS Just use coupon code: Tamar This will be valid for the next few days.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This blog has been running continuously for over 10 years now. And while I think that the level of content has improved somewhat over the years (certainly my command of English did), I&#x2019;m afraid that we never really touch with the design. This blog theme was taken from (if I recall properly) dasBlog default skin with some color shifting to make it a bit more orange. And I kept that look for the past 10 years, even when we moved between various blogging platform. This has grown tiring, and more to the point, the requirement that we have today are not nearly the same as before. Hence, the new design. This include responsive design, mobile friendly layout and improving just about every little bit in the user experience.  One major feature is the introduction of series, which will allow reader to easily go through an entire related series of post without them (or me) having to do anything. I would appreciate any feedback you have.</p>
         </article>
-        <article id="article-3400">
-            <a href="https://www.meziantou.net/scan-a-document-with-windows-image-acquisition.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3400">Scan a document with Windows Image Acquisition</h2>
+        <article id="article-3398">
+            <a href="https://www.meziantou.net/sql-server-change-data-capture.htm" target="_blank">
+                <h2 class="title mb-6" id="article-3398">SQL Server - Change Data Capture (CDC)</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -267,9 +235,41 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: April 10, 2015
+                posted on: May 05, 2015
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Windows Image Acquisition (WIA) was introduced with Windows 2000. This platform is intended to allow access to scanner and webcam devices without having to worry about the details of interfacing with them. In addition WIA included GUIs to help us use these devices from our code (script, COM, .NET v</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Change Data Capture is a mechanism built into SQL Server since 2008 that is intended to keep a history of changes to data in one or more tables. Indeed in some cases, you want to save all the steps (creation, modification, deletion) to arrive at the data of a table at a given time.NoteCDC is only a</p>
+        </article>
+        <article id="article-3399">
+            <a href="https://ayende.com/blog/170753/boldly-confidently-fail-it-is-better-than-the-alternative" target="_blank">
+                <h2 class="title mb-6" id="article-3399">Boldly &amp; confidently fail, it is better than the alternative</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 04, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently I had the chance to sit with a couple of the devs in the RavenDB Core Team to discuss &#x201C;keep &amp; discard&#x201D; habits*. The major problem we now have with RavenDB is that it is big. And there are a lot of things going on there that you need to understand. I run the numbers, and it turns out that the current RavenDB contains:  835,000 Lines of C# &#xA0; 67,500 Lines of Type Script &#xA0; 87,500 Lines of HTML That is divided into many areas of functionalities, but that is still a big chunk of stuff to go through. And that is ignoring things that require we understand additional components (like Esent, Lucene, etc). What is more, there is a lot of expertise in understanding what is going on in term of the full picture. We limit this value here because too much of it would result in high memory consumption under this set of circumstances, for example.  The problem is that it take time, and sometime a lot of it, to get good understanding on how things are all coming together. In order to handle that, we typically assign new devs issues from all around the code base. The idea isn&#x2019;t so much to give them a chance to become expert in a particular field, but to make sure that they get the general idea of how come is structured and how the project comes together. Over time, people tend to gravitate toward a particular area (M** is usually the one handling the SQL Replication stuff, for example), but that isn&#x2019;t fixed (T fixed the most recent issue there), and the areas of responsibility shifts (M is doing a big task, we don&#x2019;t want to disturb him, let H do that).  Anyway, back to the discussion that we had. What I realized is that we have a problem. Most of our work is either new features or fixing issues. That means that nearly all the time, we don&#x2019;t really have any fixed template to give developers &#x201C;here is how you do this&#x201D;. A recent example was an issue where invoking smuggler with a particular set of filters would result in very high cost. The task was to figure out why, and then fix this. But the next task for this developer is to do sharded bulk insert implementation.  I&#x2019;m mentioning this to explain a part of the problem. We don&#x2019;t see a lot of &#x201C;exactly the same as before&#x201D; and a new dev on the team lean on the other members quite heavily initially. That is expected, of course, and encouraged. But we identified a key problem in the process. Because the other team members also don&#x2019;t have a ready made answer, they need to dig into the problem before they can offer assistance, which sometimes (all too often, to be honest) lead to a &#x201C;can you slide the keyboard my way?&#x201D; and taking over the hunt. The result is that the new dev does learn, but a key part of the process is missing, the finding out what is going on. We are going to ask both sides of this interaction to keep track of that, and stop it as soon as they realize that this is what is going on. The other issue that was raised was the issue of fear. RavenDB is a big system, and it can be quite complex. It is quite reasonable apprehension, what if I break something by mistake?  Here it comes back to the price of failure. Trying something out means that at worst you wasted a work day, nothing else. We are pretty confident in our QA process and system, so we can allow people to experiment. Analysis paralysis is a much bigger problem. And I wasn&#x2019;t being quite right, trying the wrong thing isn&#x2019;t wasting a day, you learned what doesn&#x2019;t work, and hopefully also why.  &#x201C;I have not failed. I&#x27;ve just found 10,000 ways that won&#x27;t work.&#x201D;&#x2015; Thomas A. Edison * Keep &amp; discard is a literal translation of a term that is very common in the IDF. After most activities, there is an investigation performed, and one of the first questions asked is what we want to keep (good things that happened that we need to preserve for the next time we do this) and what we need to discard (bad things that we need to watch out for). ** The actual people are not relevant for this post, so I&#x2019;m using letters only.</p>
+        </article>
+        <article id="article-3400">
+            <a href="https://ayende.com/blog/170721/my-view-on-crowd-funding" target="_blank">
+                <h2 class="title mb-6" id="article-3400">My view on crowd funding</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 01, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After my previous post, I was asked what I&#x2019;m thinking about the notion of crowd funding, which is currently all the rage. The answer is complicated. I&#x2019;m focusing right now on things like kick starter and its siblings, because I&#x2019;m familiar with how they work. The basic premise is pretty great. You have some idea (usually a product) that require initial capital and has some well known market. By directly contacting the target audience, we can get the seed money, judge demand and have very low risk overall. The &#x201C;investors&#x201D; put in small amount of money, which loss they can tolerate without hardship. The project get money for very little effort and get great marketing along the way. This is great, if you are doing a product. Something that can be sold. For instance, let us say that we want to do a major feature, like adding time series capabilities to RavenDB. Let us say that we start a kick starter campaign for this, asking for 150,000 USD and promising backers that they&#x2019;ll get a free license out of early sponsorship.  I&#x2019;ll get into the exact costs associated with this option in a bit. But before we go there, remember the premise of my previous post. It isn&#x2019;t money to build a specific product. It is money that is required to purchase something for the business itself. Of course, buying that cool car will raise morale and I have a spreadsheet that says that it will increase the effectiveness of the team by 17.4% (although it will decrease parking space by 37%). So it make sense to go with that, from a business perspective. However, there is very little that I can do to actually make people want to back &#x201C;we want a cool car&#x201D; notion. At least, I don&#x2019;t think so, but the internet does have some dark corners. Back to the notion of using this to build products. There is a very basic problem here. RavenDB isn&#x2019;t targeting individuals. It is a database platform, and most of our customers are businesses or enterprises. That lead to a very different mindset. Speculative investment in something like this is going to be much rarer, harder and fraught with issues. An Open Source project can do that, but it make sense to invest in a project a business is using, but there are very few who actually manage to do that. A quick search of kick starter doesn&#x2019;t show any major open source soliciting funds there.  Kick starter make sense for personal stuff, things that you actually get to hold, or need to buy. Something of some scarcity. Doing this for commercial software make very little sense, and for open source, it is even a bigger problem. For open source projects that depend on donations, usually you have a valid commercial reason for people to donate (Linux, Wikipedia, etc). I&#x2019;m open for contrarian point of view, mind. But I don&#x2019;t think that crowd funding is applicable for the kind of things that I would want to use it for.</p>
         </article>
         <div class="button flex justify-between">
             <a href="339.html"><span class="back arrow"></span></a>
