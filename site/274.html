@@ -112,8 +112,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-2731">
+            <a href="https://ayende.com/blog/177025/low-level-voron-optimizations-recyclers-do-it-over-and-over-again" target="_blank">
+                <h2 class="title mb-6" id="article-2731">Low level Voron optimizations</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 20, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the key rules in optimization work is that you want to avoid work as much as possible. In fact, any time that you can avoid doing work that is a great help to the entire system. You can do that with caching, buffering, pooling or many other such common patterns.  With Voron, one of our most common costs is related to writing to files. We are doing quite a lot of work around optimizing that, but in the end, this is file I/O and it is costly. A big reduction in the cost of doing such I/O is to pre-allocate the journal files. That means that instead of each write extending the file, we ask the operation system to allocate it to its full expected size upfront. This saves time and also ensures that the OS has a chance to allocate the entire file in as few fragments as it possible can. However, &#x643;&#x644; &#x643;&#x644;&#x628; &#x644;&#x647; &#x64A;&#x648;&#x645;&#x647; (every dog has its day), and eventually a journal has outlived its usefulness, which means that it is time to make a hotdog. Or, as the case may be, delete the now useless journal file. Of course, eventually the current journal file will be full, and we&#x2019;ll need a new journal file, in which case we&#x2019;ll ask the OS to allocate us a new one, and pay the cost of doing all of this I/O and the cost of file allocations. Hm&#x2026; that seems pretty stupid, isn&#x2019;t it, when you think about the whole system like that&#x2026; Instead we now reuse those journals. We rely on the fact that file rename is atomic in both Windows and Posix, and so we can avoid expensive allocation calls and reuse the buffers. Here is what this looks like, when doing heavy writes benchmark:   It is important to note that we also have to do some management here (to only keep pending journals for a period of time if they aren&#x2019;t being used) but also need to handle a very strange case. Because we are now reusing a valid journal file, we now have a case where we might read valid transactions, but ones that are obsolete. This means that we need to be aware that beyond just garbage, we might have to encounter some valid data that is actually invalid. That made us tighten our journal validation routine by quite a bit.&#xA0;  There is also another advantage of this approach is that this also plays very well with the underlying hardware. The reuse of the already allocated files means that the disk has to do a lot less work, it reduces fragmentation and it allows much faster responses overall. According to research papers, the difference can be a factor of 4 difference on modern SSD drives. This is a really good thing, since this means that this approach has wide applicability across mass storage devices (SSD, HDD, etc). I actually had a meeting with a storage company to better understand the low level details of how a disk manages the bits, and some of this behavior is influenced by those discussions.  I&#x2019;m ignoring a lot of previous work that we have done around that (aligned writes, fixed sizes, pre-allocation, etc) of course, and just focusing on the new stuff. Some of that only applies to that particular manufacturer disks, but a lot of that has broader applicability. In short, the idea is that if we can keep the amount of writes we do to a few hot spots, the disk can recognize that and organize things so this would be optimized. You can read a bit more about this here, where it discusses the notion of multiple internal storage tiers inside a disk. The idea is that we provide the disk with an easily recognizable pattern of work that it can optimize. We looked at using the disk low level options to tell it directly what we expect from it, but that is both hard to do and will only work in specific brand of disks. In particular, with cloud storage, it is very common to just lose all such notions of being able to pass hints to the disk itself, even while the underlying storage could handle it. (In the previous presentation, this is call I/O tagging and latency / priority hints). Instead, by intentionally formatting our I/O in easily recognizable pattern, we have much higher applicability and ensure that the Right Thing will happen. Sequential writes, in particular (the exact case for journals) will typically hit a non volatile buffer and stay there for a while, letting the disk optimize its I/O behavior even further. Another good read on this is here, where it talks about StableBuffer (you can ignore all the other stuff about decomposing and reoredering I/O), just the metrics about how much a focused write like that can help is very good. Other resource also indicate that this is an optimal data access pattern, preserving the most juice from the drive and giving us the best possible performance.</p>
+        </article>
+        <article id="article-2732">
+            <a href="https://www.meziantou.net/quickly-insert-millions-of-rows-in-sql-server-in-net.htm" target="_blank">
+                <h2 class="title mb-6" id="article-2732">Quickly insert millions of rows in SQL Server in .NET</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 20, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A few days ago, I needed to insert about 3 million rows in a table. This is not a frequent operation but I will do it about once a month, and of course, I want it to be as fast as possible to not lock the table for too long. The data come from several CSV files, on which I apply some processing usi</p>
+        </article>
+        <article id="article-2733">
             <a href="https://www.stevejgordon.co.uk/things-ive-learnt-this-week-19-february" target="_blank">
-                <h2 class="title mb-6" id="article-2731">Things I&#x2019;ve Learnt This Week (19th February)</h2>
+                <h2 class="title mb-6" id="article-2733">Things I&#x2019;ve Learnt This Week (19th February)</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Week 4 of my series, sharing things I&#x2019;ve learnt, read, watched and listened to, in the pursuit of expanding my knowledge&#xA0;about software development. A slightly shorter set of links this week, things have been fairly busy so I&#x2019;ve had less time to keep up with all of the fantastic content. Things I&#x2019;ve Learned That I [&#x2026;]</p>
         </article>
-        <article id="article-2732">
+        <article id="article-2734">
             <a href="https://ayende.com/blog/176875/ravendb-conference-videos-should-i-use-a-document-database" target="_blank">
-                <h2 class="title mb-6" id="article-2732">RavenDB Conference videos</h2>
+                <h2 class="title mb-6" id="article-2734">RavenDB Conference videos</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this talk from the RavenDB conference, Elemar J&#xFA;nior is talking about the differences between relational and document databases, and how you can utilize RavenDB for best effect. I&#x2019;ll hint that the answer to the question in the title is: Yes, RavenDB.  For the last 40 years or so, we used relational databases successfully in nearly all business contexts and systems of nearly all sizes. Therefore, if you feel no pain using a RDBMS, you can stay with it. But, if you always have to work around your RDBMS to get your job done, a document oriented database might be worth a look.  RavenDB is a 2nd generation document database that allows you to write a data-access layer with much more freedom and many less constraints. If you have to work with large volumes of data, thousands of queries per second, unstructured/semi-structured data or event sourcing, you will find RavenDB particularly rewarding.  In this talk we will explore some document database usage scenarios. I will share some data modeling techniques and many architectural criteria to help you to decide where safely adopt RavenDB as a right choice.</p>
         </article>
-        <article id="article-2733">
+        <article id="article-2735">
             <a href="https://enterprisecraftsmanship.com/posts/on-automappers/" target="_blank">
-                <h2 class="title mb-6" id="article-2733">On Automappers</h2>
+                <h2 class="title mb-6" id="article-2735">On Automappers</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is about some bad practices in using automappers.</p>
         </article>
-        <article id="article-2734">
+        <article id="article-2736">
             <a href="https://ayende.com/blog/176993/when-the-code-says-you-are-stupid-but-you-are-too-stupid-to-know-that" target="_blank">
-                <h2 class="title mb-6" id="article-2734">When the code says you are stupid, but you are too stupid to know that</h2>
+                <h2 class="title mb-6" id="article-2736">When the code says you are stupid, but you are too stupid to know that</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We recently made some big changes in how we handle writing to the Voron journal. As part of that, we introduced a subtle bug. It would only happen on specific data, and only if you were unlucky enough to hit it with the right time. It took a lot of effort to track that done, but here is the offending line:  Sometimes, it just isn&#x2019;t plain that the code is snigger to itself and thinking &#x201C;stupid&#x201D;.</p>
         </article>
-        <article id="article-2735">
+        <article id="article-2737">
             <a href="https://ayende.com/blog/176874/ravendb-conference-videos-know-thy-costs" target="_blank">
-                <h2 class="title mb-6" id="article-2735">RavenDB Conference videos</h2>
+                <h2 class="title mb-6" id="article-2737">RavenDB Conference videos</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this talk from the RavenDB conference, Federico Lois is discussing the kind of performance work and optimizations that goes into RavenDB.  Performance happens. Whether you&#x27;re designed for it or not it doesn&#x2019;t matter, she is always invited to the party (and you better find her in a good mood). Knowing the cost of every operation, and how it distributes on every subsystem will ensure that when you are building that proof-of-concept (that always ends up in production) or designing the latest&#x2019;s enterprise-grade application; you will know where those pesky performance bugs like to inhabit. In this session, we will go deep into the inner working of every performance sensitive subsystem. From the relative safety of the client to the binary world of Voron.</p>
         </article>
-        <article id="article-2736">
+        <article id="article-2738">
             <a href="https://ayende.com/blog/176963/low-level-voron-optimizations-high-data-locality" target="_blank">
-                <h2 class="title mb-6" id="article-2736">Low level Voron optimizations</h2>
+                <h2 class="title mb-6" id="article-2738">Low level Voron optimizations</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After talking about increasing the Voron page size, let us talk about another very important optimization. High data locality. The importance of locality comes up again and again in performance.The cost of getting the next bit of data can be so prohibitedly expensive that it dominates everything else, including standard Big O time complexity metrics. A fun discussion of that is here.  Remember that Voron actually stores all data in pages, and that means that it needs some way to allocate new pages. And by default, whenever you allocate a page, we use a page from the end of the file. In certain scenarios (pure sequential inserts), that generates some pretty good allocation pattern, but even there it can cause issues. Let us consider what the database file looks like after a while:  Imagine that the green sections are all pages that belong to the same B&#x2B;Tree inside Voron. Traversing the B&#x2B;Tree now means that we have a very high probability of having to jump around in the file a lot. Since we are memory mapped, we wouldn&#x2019;t typically feel this, since we aren&#x2019;t actually hitting the disk that often, but it has several interesting implications:  Startup time can increase rapidly, since we need to issue many I/O requests to different places in the file Flush / sync time is also increased, because it need to touch more of the disk Trees are typically used for indexes in Voron, and a document collection would typically have a few different storage indexes (lookup by etag, lookup by name, etc). Because they store different data, they have different growth pattern, so they are going to allocate pages at different rate, which means that the scattering of the pages across the data file is even more sever.  The change we just finished implementing is going to do several important things all at once:  Pages for all the storage indexes of a collection are going to be pre-allocated, and when they run out, be allocated again in batches. The indexes will ask the storage to allocate pages nearby the sibling page, to increase locality even further. All indexes will use the same pre-allocation buffer, so they all reside in roughly the same place. That also give us some really interesting optimizations opportunities. Since indexes are typically order of magnitude smaller than the data they cover, it is possible to ask the operation system to prefetch the sections that we reserved for indexes for each collection in advance, leading to far less paging in the future and improving the startup time. It also means that the operation system can issue a lot more continuous reads and writes, which is perfectly in line with what we want.  The new allocation strategy ends up looking like this:  In this case, we have enough data to fill the first pre-allocated section, and then we allocate a new one. So instead of 4 operations to load things, we can do this in 2.  Even without explicit prefetching on our end, this is going to be great because the operating system is going to be able to recognize the pattern of access and optimize the access itself.</p>
         </article>
-        <article id="article-2737">
+        <article id="article-2739">
             <a href="https://ardalis.com/ddd-with-aspnet-core-workshop-at-devintersections/" target="_blank">
-                <h2 class="title mb-6" id="article-2737">DDD with ASPNET Core Workshop at DevIntersections</h2>
+                <h2 class="title mb-6" id="article-2739">DDD with ASPNET Core Workshop at DevIntersections</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ll be teaching a one-day workshop at DevIntersections&#x2019; spring show on Domain-Driven Design with ASP.NET Core. I gave this workshop, which&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-2738">
+        <article id="article-2740">
             <a href="https://ardalis.com/github-pull-request-checklist/" target="_blank">
-                <h2 class="title mb-6" id="article-2738">GitHub Pull Request Checklist</h2>
+                <h2 class="title mb-6" id="article-2740">GitHub Pull Request Checklist</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -238,38 +270,6 @@
                 posted on: February 14, 2017
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last updated: 13 October 2023 I really like the workflow that GitHub Pull Requests allow. It&#x2019;s great even in tiny projects to be able to get&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-2739">
-            <a href="https://ayende.com/blog/176873/ravendb-conference-videos-lessons-from-the-trenches" target="_blank">
-                <h2 class="title mb-6" id="article-2739">RavenDB Conference videos</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 13, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this talk from the RavenDB conference, Dan Bishop is talking about lessons learned from running RavenDB in production for a very long time. It&#x27;s easy, fun, and simple to get a prototype application built with RavenDB, but what happens when you get to the point of shipping v1.0 into Production? Many of the subtle decisions made during development can have undesirable consequences in Production. In this session, Dan Bishop will explore some of the pain points that arise when building, deploying, and supporting enterprise-grade applications with RavenDB.</p>
-        </article>
-        <article id="article-2740">
-            <a href="https://www.meziantou.net/be-notified-when-a-new-release-is-created-in-a-github-repository.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2740">Be notified when a new release is created in a GitHub repository</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 13, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A few weeks ago, a co-worker told me that I didn&#x27;t use the latest version of TypeScript. After a quick check, I was using version 2.1.4 whereas the latest was 2.1.5. The first thing that came to my head was, I should be notified when a new release is available on GitHub. So, I searched for a checkb</p>
         </article>
         <div class="button flex justify-between">
             <a href="273.html"><span class="back arrow"></span></a>
