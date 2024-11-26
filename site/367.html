@@ -112,8 +112,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3661">
+            <a href="https://ayende.com/blog/167361/message-passing-performance" target="_blank">
+                <h2 class="title mb-6" id="article-3661">Message passing, performance</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 14, 2014
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I got some replies about the async event loop post, mentioning LMAX Disruptor and performance. I decided to see for myself what the fuss was all about. You can read about the LMAX Disruptor, but basically, it is a very fast single process messaging library. I wondered what that meant, so I wrote my own messaging library:  public class Bus&lt;T&gt;{    Queue&lt;T&gt; q = new Queue&lt;T&gt;();    public void Enqueue(T msg)    {        lock (q)        {            q.Enqueue(msg);        }    }    public bool TryDequeue(out T msg)    {        lock (q)        {            if (q.Count == 0)            {                msg = default(T);                return false;            }            msg = q.Dequeue();            return true;        }    }}&#xA;I think that you&#x2019;ll agree that this is a thing of beauty and elegant coding. I then tested this with the following code:&#xA;&#xA;public static void Read(Bus&lt;string&gt; bus){    int count = 0;    var sp = Stopwatch.StartNew();    while (sp.Elapsed.TotalSeconds &lt; 10)    {        string msg;        while (bus.TryDequeue(out msg))        {            count&#x2B;&#x2B;;        }    }    sp.Stop();    Console.WriteLine(&quot;{0:#,#;;0} msgs in {1} for {2:#,#} ops/sec&quot;, count, sp.Elapsed, (count / sp.Elapsed.TotalSeconds));}public static void Send(Bus&lt;string&gt; bus){    var sp = Stopwatch.StartNew();    while (sp.Elapsed.TotalSeconds &lt; 10)    {        for (int i = 0; i &lt; 1000; i&#x2B;&#x2B;)        {            bus.Enqueue(&quot;test&quot;);        }    }}var bus = new Bus&lt;string&gt;();ThreadPool.QueueUserWorkItem(state =&gt; Send(bus));ThreadPool.QueueUserWorkItem(state =&gt; Read(bus));&#xA;The result of this code?&#xA;&#xA;145,271,000 msgs in 00:00:10.4597977 for 13,888,510 ops/sec&#xA;Now, what happens when we use the DataFlow&#x2019;s BufferBlock as the bus?&#xA;&#xA;public static async Task ReadAsync(BufferBlock&lt;string&gt; bus){    int count = 0;    var sp = Stopwatch.StartNew();    while (sp.Elapsed.TotalSeconds &lt; 10)    {        try        {            await bus.ReceiveAsync(TimeSpan.FromMilliseconds(5));            count&#x2B;&#x2B;;        }        catch (TaskCanceledException e)        {        }    }    sp.Stop();    Console.WriteLine(&quot;{0:#,#;;0} msgs in {1} for {2:#,#} ops/sec&quot;, count, sp.Elapsed, (count / sp.Elapsed.TotalSeconds));}public static async Task SendAsync(BufferBlock&lt;string&gt; bus){    var sp = Stopwatch.StartNew();    while (sp.Elapsed.TotalSeconds &lt; 10)    {        for (int i = 0; i &lt; 1000; i&#x2B;&#x2B;)        {            await bus.SendAsync(&quot;test&quot;);        }    }}&#xA;What we get is:&#xA;&#xA;43,268,149 msgs in 00:00:10 for 4,326,815 ops/sec.&#xA;I then decided to check what happens with the .NET port of the LMAX Disruptor. Here is the code:&#xA;&#xA;public class Holder{    public string Val;}internal class CounterHandler : IEventHandler&lt;Holder&gt;{    public int Count;    public void OnNext(Holder data, long sequence, bool endOfBatch)    {        Count&#x2B;&#x2B;;    }}static void Main(string[] args){    var disruptor = new Disruptor.Dsl.Disruptor&lt;Holder&gt;(() =&gt; new Holder(), 1024, TaskScheduler.Default);    var counterHandler = new CounterHandler();    disruptor.HandleEventsWith(counterHandler);    var ringBuffer = disruptor.Start();    var sp = Stopwatch.StartNew();    while (sp.Elapsed.TotalSeconds &lt; 10)    {        for (var i = 0; i &lt; 1000; i&#x2B;&#x2B;)        {            long sequenceNo = ringBuffer.Next();            ringBuffer[sequenceNo].Val = &quot;test&quot;;            ringBuffer.Publish(sequenceNo);        }    }    Console.WriteLine(&quot;{0:#,#;;0} msgs in {1} for {2:#,#} ops/sec&quot;, counterHandler.Count, sp.Elapsed, (counterHandler.Count / sp.Elapsed.TotalSeconds));}&#xA;And the resulting performance is:&#xA;&#xA;29,791,996 msgs in 00:00:10.0003334 for 2,979,100 ops/sec&#xA;Now, I&#x2019;ll be the first to agree that this is really and absolutely not even close to be a fair benchmark. It is testing wildly different things. Distruptor is using a ring buffer, and the BlockBuffer didn&#x2019;t, and the original Bus implementation just used an unbounded queue. &#xA;But that is a very telling benchmark as well. Pretty much because it doesn&#x2019;t matter. What I need this for is for network protocol handling. As such, even assuming that every single byte is a message, we would have to go far beyond what any reasonable pipe can be expected to be handle.</p>
+        </article>
+        <article id="article-3662">
+            <a href="https://ayende.com/blog/167299/async-event-loops-in-c" target="_blank">
+                <h2 class="title mb-6" id="article-3662">Async event loops in C#</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 11, 2014
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m designing a new component, and I want to reduce the amount of complexity involved in dealing with it. This is a networked component, and after designing several such, I wanted to remove one area of complexity, which is the use of explicitly concurrent code. Because of that, I decided to go with the following architecture:  &#xA0; The network code is just reading messages from the network, and putting them in an in memory queue. Then we have a single threaded event loop that simply goes over the queue and process those messages. All of the code that is actually processing messages is single threaded, which make it oh so much easier to work with. Now, I can do this quite easily with a&#xA0; BlockingCollection&lt;T&gt;, which is how I usually did those sort of things so far. It is simple, robust and easy to understand. It also tie down a full thread for the event loop, which can be a shame if you don&#x2019;t get a lot of messages. So I decided to experiment with async approaches. In particular, using the BufferBlock&lt;T&gt; from the DataFlow assemblies. I came up with the following code:  var q = new BufferBlock&lt;int&gt;(new DataflowBlockOptions{    CancellationToken = cts.Token,});&#xA;This just create the buffer block, but the nice thing here is that I can setup a &#x201C;global&#x201D; cancellation token for all operations on this. The problem is that this actually generate bad exceptions (InvalidOperationException, instead of TaskCancelledException). Well, I&#x2019;m not sure if bad is the right term, but it isn&#x2019;t the one I would expect here, at least. If you pass a cancellation token directly to the method, you get the behavior I expected.&#xA;At any rate, the code for the event loop now looks like this:&#xA;&#xA;private static async Task EventLoop(BufferBlock&lt;object&gt; bufferBlock, CancellationToken cancellationToken){    while (true)    {        object msg;        try        {            msg = await bufferBlock.ReceiveAsync(TimeSpan.FromSeconds(3), cancellationToken);        }        catch (TimeoutException)        {            NoMessagesInTimeout();            continue;        }        catch (Exception e)        {            break;        }        ProcessMessage(msg);    }}&#xA;And that is pretty much it. We have a good way to handle timeouts, and processing messages, and we don&#x2019;t take up a thread. We can also be easily cancelled. I still need to run this through a lot more testing, in particular, to verify that this doesn&#x2019;t cause issues when we need to debug this sort of system, but it looks promising.</p>
+        </article>
+        <article id="article-3663">
             <a href="https://ardalis.com/free-stock-photos-for-presentations/" target="_blank">
-                <h2 class="title mb-6" id="article-3661">Free Stock Photos for Presentations</h2>
+                <h2 class="title mb-6" id="article-3663">Free Stock Photos for Presentations</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">6812132167_e26473b22c_mIf you&#x2019;ve graduated from basic death-by-bullet-point presentations to something that will keep your audience&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3662">
+        <article id="article-3664">
             <a href="https://ayende.com/blog/167329/ravendb-events" target="_blank">
-                <h2 class="title mb-6" id="article-3662">RavenDB Events</h2>
+                <h2 class="title mb-6" id="article-3664">RavenDB Events</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the following months, there are going to be quite a few RavenDB Events, and I have been remiss in talking about them.  The Triangle RavenDB User Group is meeting in Raleigh. Jul 30, you can register here. Mauro is going to be giving a 3 days course in RavenDB in London. Aug 11 &#x2013; Aug 13, you can register here. The Arizona RavenDB User Group is meeting in Scottsdale. Aug 12, you can register here. We are going to be giving 2 full days events in Sweden. Sep 18 &#x2013; Sep 19, you can register here. I&#x2019;m also going to be speaking in NSB Conf in New York City. Sep 29 &#x2013; Sep 30, you can register here. The RavenDB in Action should come out in October. You can purchase the early access copy here. We are going to show up for Oredev with a lot of exciting stuff. Nov 4 &#x2013; Nov 7, you can register here. We also have a couple of surprises, but I&#x2019;ll keep them for later.</p>
         </article>
-        <article id="article-3663">
+        <article id="article-3665">
             <a href="https://ayende.com/blog/167298/dsls-in-boo-and-a-look-back" target="_blank">
-                <h2 class="title mb-6" id="article-3663">DSLs in Boo, and a look back</h2>
+                <h2 class="title mb-6" id="article-3665">DSLs in Boo, and a look back</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">About 6 years ago, I started writing the DSLs in Boo book, it came out in 2010, and today I got an email saying that this is now officially out of print. It was never a hugely popular book, so I&#x2019;m not really surprised, but it really got me thinking. I got to build several DSLs for production during the time I was writing this book, but afterward, I pretty much pivoted hard to RavenDB, and didn&#x2019;t do much with DSLs since. However, the knowledge acquired during the writing of this book has actually been quite helpful when writing RavenDB itself. I&#x2019;m not talking about the design aspects of writing a DSLs, or the business decisions that are involved with that, although that is certainly a factor. I&#x2019;m talking about the actual technical details of working with a language, a parser, etc. In fact, you won&#x2019;t see that, probably, but RavenDB indexes and transformers are actually DSLs, and they use a lot of the techniques that I talk about in the book. We start with something that looks like a C# code, but what ends up running is actually something that is far different. The Linq provider, too, rely heavily on those same techniques. We show you one thing but actually do something quite different under the cover.  It is interesting to see how the actual design of RavenDB was influenced by what my own history and the choices I made in various places. If I wasn&#x2019;t well versed with abusing a language, I would probably have to go with something like CouchDB&#x2019;s views, for example.</p>
         </article>
-        <article id="article-3664">
+        <article id="article-3666">
             <a href="https://ayende.com/blog/167297/help-us-select-a-theme-for-ravendb-3-0" target="_blank">
-                <h2 class="title mb-6" id="article-3664">Help us select a theme for RavenDB 3.0</h2>
+                <h2 class="title mb-6" id="article-3666">Help us select a theme for RavenDB 3.0</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are getting closer &amp; closer for a 3.0 release. And as I mentioned, we are doing a lot of UI work. I&#x2019;m quite excited about that, even though I don&#x2019;t think you&#x2019;ll be aware of all of the changes that we are adding. But here is one that will be very visible, the new theme for the studio. So far, we have gone with the default theme, and pushed the actual design for later. Now we have some options to consider:      Dark:   Darkly:  Flatly:   Lumen: RClassic Space lab: &#xA0;       What do you think is best?</p>
         </article>
-        <article id="article-3665">
+        <article id="article-3667">
             <a href="https://ayende.com/blog/167265/european-ravendb-days" target="_blank">
-                <h2 class="title mb-6" id="article-3665">European RavenDB Days</h2>
+                <h2 class="title mb-6" id="article-3667">European RavenDB Days</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After the success of the RavenDB conference, we have teamed with Oredev to bring the RavenDB conference to Europe.  &#xA0; I&#x2019;m very pleased to announce that we&#x2019;ll be doing 2 full day events, in Malmo and in Stockholm in September. You can read all about it here. We&#x2019;re going to have talks by core team members, customer stories and actual on field experiences. Looking forward to seeing you there&#x2026;</p>
         </article>
-        <article id="article-3666">
+        <article id="article-3668">
             <a href="https://www.meziantou.net/write-more-generic-wpf-converters.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3666">Write more generic WPF Converters</h2>
+                <h2 class="title mb-6" id="article-3668">Write more generic WPF Converters</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">With XAML we often use Converters during a Binding to adapt the source data to the destination type. For example, the BooleanToVisibilityConverter converts a Boolean value into a value in the Visibility enumeration.This mechanism is very convenient but we can find ourselves quickly with many conver</p>
         </article>
-        <article id="article-3667">
+        <article id="article-3669">
             <a href="https://ayende.com/blog/167234/sql-injection-optimizations-path" target="_blank">
-                <h2 class="title mb-6" id="article-3667">SQL Injection &amp; Optimizations Path</h2>
+                <h2 class="title mb-6" id="article-3669">SQL Injection &amp; Optimizations Path</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It is silly, but I just had a conversation with one of our developers on SQL Injection. In RavenDB we support replicating to a relational database, which obviously require using SQL. We are doing things properly, with parameters and everything. No chance for SQL Injection from there. Great, and end of a very short blog post if it was everything. As it turned out, there is a significant performance difference between: @p1 = &#x27;users/1&#x27;&#xA;@p2 = &#x27;users/2&#x27;&#xA;&#xA;DELETE FROM Users WHERE Id IN (@p1,@p1)&#xA;&#xA;&#xA;And:&#xA;DELETE FROM Users WHERE Id IN (&#x27;users/1&#x27;, &#x27;users/2&#x27;)&#xA;&#xA;&#xA;Enough that we added that as an option. The reason why related to the vagaries of the database query optimizer, and not really relevant.&#xA;This is off by default, obviously. And we use parameters by choice &amp; preference. But we still added a minimal &#x201C;protection&#x201D; by adding: &#xA;sqlValue.Replace(&quot;&#x27;&quot;, &quot;&#x27;&#x27;&quot;)&#xA;&#xA;&#xA;Considering that this isn&#x2019;t meant for user&#x2019;s input (it is for document ids), that is something that is annoying.&#xA;Any suggestions on how to improve this?</p>
         </article>
-        <article id="article-3668">
+        <article id="article-3670">
             <a href="https://ayende.com/blog/167233/visualizing-map-reduce-in-ravendb-3-0" target="_blank">
-                <h2 class="title mb-6" id="article-3668">Visualizing Map/Reduce in RavenDB 3.0</h2>
+                <h2 class="title mb-6" id="article-3670">Visualizing Map/Reduce in RavenDB 3.0</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -238,38 +270,6 @@
                 posted on: July 03, 2014
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are working hard on RavenDB 3.0 and a lot of the work now goes into the spit &amp; polish phase. Usually this is a pretty boring part. Making sure that intellisense works in the right places, that the UI makes sense, that we give the right results, that the logs are helpful, etc. But occasionally we get to actually do really cool stuff in this phase, and one of them is this guy:   Map/Reduce is a very powerful technique, but it can be hard to figure out issues sometimes. We always had debug endpoints to help actually figuring this out, but we are now putting a lot of attention on surfacing them to the user and making this easy to understand. The map/reduce visualizer is a great example of that.</p>
-        </article>
-        <article id="article-3669">
-            <a href="https://ayende.com/blog/167201/compression-finale" target="_blank">
-                <h2 class="title mb-6" id="article-3669">Compression finale</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 02, 2014
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After a fairly long road, we are done. We have all the pieces, generating a shared dictionary, writing using Huffman encoding and getting the results back out. Hopefully by now the theory behind it is fairly clear to you, and it is time to actually put this into practice. I&#x2019;ve 100,000 random users documents in this file, and I want to see what kind of compression I can get from a shared dictionary approach. The project with the code for all of this can be found here: Rhea Compression (most of it is basically a port of FemtoZip to .NET). The actual file size is 8.49 MB, and when compressing it with Zip (Windows&#x2019; send to compress folder) it turn into a 1.93 MB file.  The original file size in bytes is: 8,809,353. I then tried to compress each document individually using GZipStream, resulting in a total of: 10,004,614 bytes used. Or 9.5 MB! In other words, and not to anyone surprise (I hope), we see an increase in the file size. However, when using Rhea&#x2019;s compression, we do the following: var trainer = new CompressionTrainer();&#xA;&#xA;for (int i = 0; i &lt; json.Length/100; i&#x2B;&#x2B;)&#xA;{&#xA;    trainer.TrainOn(json[i*100]);&#xA;}&#xA;&#xA;var compressionHandler = trainer.CreateHandler();&#xA;&#xA;&#xA;This creates a shared dictionary from every 100th document. So we have 1,000 documents as our sampling data. Then, I compressed all the individual documents one at a time.&#xA;The result took: 2,593,235 bytes or just 2.47 MB. We got 29% compression ratio! Note that we did this with a 34Kb shared dictionary.&#xA;Here is the actual compression code:&#xA;foreach (var dic in docs)&#xA;{&#xA;    size &#x2B;= s.Length;&#xA;    ms.SetLength(0);&#xA;    compressedSize &#x2B;= compressionHandler.Compress(s, ms);&#xA;}&#xA;&#xA;&#xA;&#xA;And that is pretty much it. Rhea Compression is on github, and that concludes my spike into compression. In general, Rhea (and FemtoZip, obviously) are meant for very specific scenarios. I have high hopes to be able to use it in the future for doing great things .</p>
-        </article>
-        <article id="article-3670">
-            <a href="https://ayende.com/blog/167171/huffman-coding-and-encoding-compressed-data" target="_blank">
-                <h2 class="title mb-6" id="article-3670">Huffman coding and encoding compressed data</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 01, 2014
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So far, we have dealt with relatively straightforward topics. Given a corpus, find a shared dictionary that we can then use to extract repeated patterns. This is the classic view of compression, even if real world compression schemes are actually a lot more convoluted. Now, that we have compressed text like the following, what comes next?&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;&lt;-43,6&gt;11,&#x27;n&lt;-60,6&gt;Anna Nepal&lt;-40,13&gt;&lt;-18,8&gt;&lt;-68,8&gt;awest@twinte.gov&#x27;}&#xA;&#xA;&#xA;&#x9;Obviously, it would be pretty important to encoding this properly. Here is an example of a bad encoding scheme:&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;[prefix &#x2013; byte &#x2013; 1 for compressed, 0 for literal]&#xA;&#x9;&#xA;&#x9;&#x9;[length &#x2013; int &#x2013; length of compressed / literal]&#xA;&#x9;&#xA;&#x9;&#x9;[offset &#x2013; int &#x2013; back reference if the prefix was set to 1]&#xA;&#xA;&#xA;&#x9;The problem here is that we need 6 bytes to encode a one letter literal, and 9 bytes to encode any back reference. Using this inefficient method, encoding the compressed string above actually takes more space than the original one.&#xA;&#xA;&#x9;As you can imagine, there has been a lot of research into this. The RFC 1951 specification, for example, set us how to do that in detail, although I find this explanation much easier to go through.&#xA;&#xA;&#x9;Let us see a simple Huffman encoding scheme. We will use &#x201C;this is an example of a huffman tree&#x201D; as our text, and first, we&#x2019;ll build the table.&#xA;&#xA;&#x9;&#xA;&#xA;&#x9;And now we can encoding the above sentence in 135 bits, instead of 288.&#xA;&#xA;&#x9;For decoding, we just run over the table again, and stop the first time that we hit a leaf.&#xA;&#xA;&#x9;For example, let us see how we would decode &#x2018; &#x2018; and &#x2018;r&#x2019;.&#xA;&#xA;&#x9;Space is very common, appearing 7 times in the text. As such, it is encoded as 111. So, start from the root, and move right three times. We are in a leaf node, and we output space.&#xA;&#xA;&#x9;With the letter R, it only appear in the text 4 times, and its encoding is 10111. So move right from the root node, then left, then three times right, resulting in the leaf node R.&#xA;&#xA;&#x9;So the results of Huffman encoding using the above table is:&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;[t] = 0001&#xA;[h] = 1010&#xA;[i] = 1011&#xA;[s] = 0000&#xA;[ ] = 111&#xA;[i] = 1011&#xA;[s] = 0000&#xA;[ ] = 111&#xA;[a] = 010&#xA;[n] = 0011&#xA;[ ] = 111&#xA;[e] = 011&#xA;[x] = 10001&#xA;[a] = 010&#xA;[m] = 0010&#xA;[p] = 10010&#xA;[l] = 110010&#xA;[e] = 011&#xA;[ ] = 111&#xA;[o] = 110011&#xA;[f] = 1101&#xA;[ ] = 111&#xA;[a] = 010&#xA;[ ] = 111&#xA;[h] = 1010&#xA;[u] = 10000&#xA;[f] = 1101&#xA;[f] = 1101&#xA;[m] = 0010&#xA;[a] = 010&#xA;[n] = 0011&#xA;[ ] = 111&#xA;[t] = 0001&#xA;[r] = 10011&#xA;[e] = 011&#xA;[e] = 011&#xA;&#x9;&#xA;&#xA;&#xA;&#x9;However, we have a problem here, this result in 135 bits or 17 bytes (vs 36 bytes for the original code). However, 17 bytes contains 136 bits. How do we avoid corruption in this case? The answer is that we have to include an EOF Marker in there. We do that by just adding a new item to our Huffman table and recording this normally.&#xA;&#xA;&#x9;So, that is all set, and we are ready to go, right?&#xA0; Almost, we still need to decide how to actually encode the literals and compressed data. GZip (and FemtoZip) uses a really nice way of handling that.&#xA;&#xA;&#x9;The use of Huffman table means that it contains the frequencies of individual bytes values, but instead of having just 0 &#x2013; 255 entries in the Huffman table, they uses 513 entries.&#xA;&#xA;&#x9;256 entries are for the actual byte entries.&#xA;&#xA;&#x9;256 entries are just lengths.&#xA;&#xA;&#x9;1 entry for EOF.&#xA;&#xA;&#x9;What does it means, length entries? It basically means, we store the values 256 &#x2013; 511 for lengths. When we read the Huffman value, it will give us a value in the range of 0 &#x2013; 512.&#xA;&#xA;&#x9;If it is 512, this is the EOF marker, and we are done.&#xA;&#xA;&#x9;If it is 0 &#x2013; 255, it is a byte literal, and we can treat it as such.&#xA;&#xA;&#x9;But if it is in the range of 256 &#x2013; 511, it means that this is a length. Note that because lengths also cluster around common values, it is very likely that we&#x2019;ll be able to store most lengths in under a byte.&#xA;&#xA;&#x9;Following a length, we&#x2019;ll store the actual offset back. And again, FemtoZip is using Huffman encoding to do that. This is actually being done by encoding the offset into multiple 4 bits entries. The idea is to gain as much as possible from commonalities in the actual byte patterns for the offset.&#xA;&#xA;&#x9;Yes, it is confusing, and it took me a while to figure it out. But it is also very sleek to see this in action.&#xA;&#xA;&#x9;On my next post, I&#x2019;ll bring it all together and attempt to actually generate something that produces compressed data and can decompress it back successfully&#x2026;</p>
         </article>
         <div class="button flex justify-between">
             <a href="366.html"><span class="back arrow"></span></a>

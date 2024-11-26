@@ -112,8 +112,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-8741">
+            <a href="https://ayende.com/blog/1527/safe-multi-threading" target="_blank">
+                <h2 class="title mb-6" id="article-8741">Safe Multi Threading</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 06, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am using the code below to run work in multiply threads.&#xA0;A client registers a callback and an input, and it is executed on the thread pool.    I have some notes about this code below:            public class WorkManager&lt;T&gt; : IWorkManager&lt;T&gt;                        {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; static ILog logger = LogManager.GetLogger(typeof(WorkManager&lt;T&gt;));                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; /// &lt;summary&gt;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; /// I hate XML Comments, can&#x27;t use generics in them.                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; /// &lt;/summary&gt;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; /// &lt;param name=&quot;state&quot;&gt;State is KeyValuePair&amp;lt;Action&amp;lt;T&amp;gt;,T&amp;gt;&lt;/param&gt;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; private void ExecuteWorkThreaded(object state)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; KeyValuePair&lt;Action&lt;T&gt;, T&gt; pair = (KeyValuePair&lt;Action&lt;T&gt;, T&gt;)state;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Action&lt;T&gt; action = pair.Key;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; logger.DebugFormat(&quot;Executing action: {0}.{1}&quot;, action.Method.DeclaringType, action.Method.Name);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; // this should prevent parallel execution of the same method from the same object                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; // and help prevent re-entracy issues.                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; lock (action)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; try                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; action(pair.Value);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; catch (Exception e)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; logger.Error(string.Format(&quot;Exception when executing work on {0}.{1}&quot;,                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; action.Method.DeclaringType, action.Method.Name), e);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; EventHandler&lt;EventArgs&lt;Exception&gt;&gt; temp = ExceptionRaised;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; if (temp != null)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; temp(this, new EventArgs&lt;Exception&gt;(e));                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                                &#xA0;                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; public void ExecuteWork(Action&lt;T&gt; action, T item)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; KeyValuePair&lt;Action&lt;T&gt;, T&gt; pair = new KeyValuePair&lt;Action&lt;T&gt;, T&gt;(action, item);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; AbortableThreadPool.QueueUserWorkItem(ExecuteWorkThreaded, pair);                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; public event EventHandler&lt;EventArgs&lt;Exception&gt;&gt; ExceptionRaised;                        }        I am using the command patten here, where an object perform a single task, so I don&#x27;t run into issues with two threads running actions from the same object. The object may be registered twice, but that is okay, we are serializing access to the action, so it wouldn&#x27;t run in parallel. The only requirement that I have from my actions is that they can be called more than once, which is a lot less than require them to be thread safe.    The whole idea here is to save threads. I don&#x27;t want my threads to be busy waiting for something, and I do want centralized control over how they are executed and why. As I said, the logging is extremely important to me, but it also something that I would like to free the actions from (except action related logging, of course.</p>
+        </article>
+        <article id="article-8742">
+            <a href="https://ayende.com/blog/1526/the-null-method-operator" target="_blank">
+                <h2 class="title mb-6" id="article-8742">The Null Method Operator &quot;?!&quot;</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 06, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After reading this, I was reminded how much I want the null method operator. Here is the scenario: string&#xA0;name&#xA0;=&#xA0;user&#xA0;!=&#xA0;null&#xA0;?&#xA0;user.Name&#xA0;:&#xA0;&quot;no-name&quot;;     The Null Method Operator work like this:string&#xA0;name&#xA0;=&#xA0;user.Name&#xA0;?!&#xA0;&quot;no-name&quot;;    The rules:            The first object reference is checked, and if it is null, it skips the method call and goes to the other line.            Only the first object reference is checked.&#xA0;Chained method calls are not supported, this should throw an NullReferenceError, as usual.        string&#xA0;name&#xA0;=&#xA0;user.ReturnNull.ToString()&#xA0;?!&#xA0;&quot;no-name&quot;;                        You can chain the calls, like this:        string&#xA0;name&#xA0;=&#xA0;user.Name&#xA0;?!&#xA0;Context.User.Identity.Name&#xA0;?!&#xA0;&quot;really-no-name&quot;;                I really can&#x27;t express how much&#xA0;I would like this feature. And have the null coalesing operator is like a thorn in my foot, everytime I think about it, I get annoyed that I don&#x27;t hve the Null Method Operator.    Feel free to come with a better name.</p>
+        </article>
+        <article id="article-8743">
             <a href="https://ayende.com/blog/1525/how-to-read-a-file-the-ioc-way" target="_blank">
-                <h2 class="title mb-6" id="article-8741">How to read a file, the IoC way...</h2>
+                <h2 class="title mb-6" id="article-8743">How to read a file, the IoC way...</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned that it can take me quite a bit of code to read&#xA;a file. After carefully consulting the documentation, I have come to realize&#xA;that INT21 calls are not necessary in .Net. A bit amazed, I took a look at the&#xA;code, which grew in leaps and bounds and is now self sustaining, according to&#xA;my research. &#xA;&#xA;I don&#x2019;t believe in UML, but I do believe in pretty&#xA;pictures, so I put together the following picture. &#xA;&#xA;&#xA0;&#xA;&#xA;&#xA;&#xA;&#xA0;&#xA;&#xA;&#xA0;&#xA;&#xA;I left out several pieces, like the file parser, to focus on&#xA;the important issue, which is reading a file. The big fun was to listen to a&#xA;list of requirements and say &#x201C;Yes, I can do that&#x201D;, &#x201C;Yes, should&#xA;be easy&#x201D;, &#x201C;Already there&#x201D;, etc. Building the configuration is&#xA;a bit like playing puzzles, each part of the application is truly separated. &#xA0;&#xA;&#xA;You get nice configuration bugs this way. I accidently put&#xA;the mark done action before the parse file action, and couldn&#x2019;t&#xA;understand why it wasn&#x2019;t working. J&#xA;&#xA;&#xA;This is the first project in a long time where I did not&#xA;use NHibernate. I now regret this position bitterly, ADO.Net is just a PITA to&#xA;work with. The amount of repeating code that you need to write is amazing, the amount&#xA;of strings is also frightening. I&#x2019;ll probably put NHibernate there&#xA;anyway, since that would significantly reduce the amount of stuff that I need&#xA;to do. &#xA0;I am not sure that this is an overkill or not. Right now I start&#xA;to get into the data access for the application itself, and it looks like it&#xA;will be needed anyway.&#xA;&#xA;There is only so much datasets that I can stand.&#xA;&#xA;&#xA0;&#xA;&#xA;&#xA0;Anyway, most of those pieces were developed TDD`ed and&#xA;separately; I had major worries about integration, but it passed rather&#xA;smoothly. I love Windsor, and in this case, it is the&#xA;application. The above should be the simplified live object graph, as it was&#xA;generated by Windsor. Call a single method on the coordinator, and the system&#xA;starts rolling. Input comes in, and the system responds, often in fairly complex&#xA;ways. &#xA;&#xA;The only output that I have at the moment is log4net output,&#xA;which is a great help in general, but thought me quite a bit about what is&#xA;considered good logging.&#xA;&#xA;&#x201C;Executing action&#x201D; is generally not a good log&#xA;message.&#xA;&#xA;&#xA0;&#xA;&#xA;By the way, anyone knows of a good way to draw complex&#xA;object graphs?&#xA0; The example above is nice, but it is one dimensional and show&#xA;just a single aspect of the object graph. The case in point, under both the clock&#xA;and the file watcher, I&#x2019;ve many sub trees, and it is just not possible to&#xA;get them all there in the &#xA0;structure above. You would lose sight of the&#xA;forest from all the trees. J</p>
         </article>
-        <article id="article-8742">
+        <article id="article-8744">
             <a href="https://ardalis.com/19224/" target="_blank">
-                <h2 class="title mb-6" id="article-8742">Atlas June CTP Available</h2>
+                <h2 class="title mb-6" id="article-8744">Atlas June CTP Available</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;ve been usingAtlas, or if you&#x2019;ve been waiting for a more stable version of Atlas, the latest Community Tech Preview release is now&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8743">
+        <article id="article-8745">
             <a href="https://ardalis.com/19315/" target="_blank">
-                <h2 class="title mb-6" id="article-8743">Team Foundation Source Control Tips</h2>
+                <h2 class="title mb-6" id="article-8745">Team Foundation Source Control Tips</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Barry Gervin recently wrote some nice tips for working with source control and Team System on a mailing list: The best guidance is to do a&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8744">
+        <article id="article-8746">
             <a href="https://ayende.com/blog/1524/elegant" target="_blank">
-                <h2 class="title mb-6" id="article-8744">Elegant</h2>
+                <h2 class="title mb-6" id="article-8746">Elegant</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#xA;would let this piece of code to stand on its own. I like it.&#xA;&#xA;&#xA0;&#xA;&#xA;UPDATE&#xA;TOP (100) Messages&#xA;&#xA;SET&#xA;Status = &#x27;Sending&#x27;&#xA;&#xA;OUTPUT&#xA;Inserted.*&#xA;&#xA;WHERE&#xA;Status&#xA0; IN (&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#x27;New&#x27;,&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#x27;Sending&#x27;) -- we previously failed to send this message</p>
         </article>
-        <article id="article-8745">
+        <article id="article-8747">
             <a href="https://ardalis.com/19221/" target="_blank">
-                <h2 class="title mb-6" id="article-8745">BoundField DataFormatString attribute not working</h2>
+                <h2 class="title mb-6" id="article-8747">BoundField DataFormatString attribute not working</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was stuck with a problem a few weeks ago where my DataFormatString on a BoundField in a GridView was not being applied. I had a chance to&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8746">
+        <article id="article-8748">
             <a href="https://ardalis.com/19223/" target="_blank">
-                <h2 class="title mb-6" id="article-8746">LLBLGen v2 Released</h2>
+                <h2 class="title mb-6" id="article-8748">LLBLGen v2 Released</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Frans announced yesterday that LLBLGen 2.0 has been released! I&#x2019;ve been using LLBLGen happily for several years now. It is a very solid ORM&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8747">
+        <article id="article-8749">
             <a href="https://ayende.com/blog/1523/you-know-that-you-have-been-doing-too-much-sql-when" target="_blank">
-                <h2 class="title mb-6" id="article-8747">You know that you have been doing too much SQL when...</h2>
+                <h2 class="title mb-6" id="article-8749">You know that you have been doing too much SQL when...</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You write code like this:                                                                                        public bool IsInPeriod(DateTime dateTime)                        {                        &#xA0;&#xA0;&#xA0; bool withinHoursRange = startHour &gt;= dateTime.Hour &amp;&amp; dateTime.Hour &lt;= endHour;                        &#xA0;&#xA0;&#xA0; bool matchDayInMonth = dateTime.Day == ( dayInMonth ?? dateTime.Day);                        &#xA0;&#xA0;&#xA0; bool matchDayOfWeek = dateTime.DayOfWeek == ( dayOfWeek ?? dateTime.DayOfWeek);                        &#xA0;&#xA0;&#xA0; bool matchMonth = dateTime.Month == ( month ?? dateTime.Month);                        &#xA0;&#xA0;&#xA0; return withinHoursRange &amp;&amp;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; matchDayInMonth &amp;&amp;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; matchDayOfWeek &amp;&amp;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; matchMonth;                        }                                                                                                Ten points for the first guy that will tell me why this is not good for DBs.                Update: Just to clarify, this is not SQL CLR code, it is an instance method in a business object</p>
         </article>
-        <article id="article-8748">
+        <article id="article-8750">
             <a href="https://ayende.com/blog/1522/it-was-too-late" target="_blank">
-                <h2 class="title mb-6" id="article-8748">It was too late...</h2>
+                <h2 class="title mb-6" id="article-8750">It was too late...</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -238,38 +270,6 @@
                 posted on: July 03, 2006
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It&#xA;was too late in the night, and I debugged multi threaded code with ease.&#xA;&#xA;It&#xA;was too late in the night, and I struggled with regular expressions.&#xA;&#xA;It&#xA;was too late in the night, and I downloaded the Regulator.&#xA;&#xA;It&#xA;was too late in the night, and I found in two minutes that I forgot to add a #@^$@#&#xA;(no, that is not the pattern) ? for the regex.&#xA;&#xA;Thanks&#xA;God for the Regulator.&#xA;&#xA;&#xA;&#xA;And&#xA;thanks to Roy.</p>
-        </article>
-        <article id="article-8749">
-            <a href="https://ayende.com/blog/1521/riddle-active-record-as-a-rule-engine" target="_blank">
-                <h2 class="title mb-6" id="article-8749">Riddle: Active Record as a Rule Engine</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 02, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned in a previous post that I used Active Record as a Rule Engine, and a couple of people asked just how. Before I will post the answer, I want to see if you can come up with the same idea.    The scenario: A rule engine that can process big amount of data. The engine will run as a Windows service, and not as a part of another application.Throughput is important, as well as flexibility in the rules and what they can do. The processing of each rule can be quite complex, so it is important that the rule engine will not limit what the rule can do.    Hints:            A database is really good in filtering data.            Active&#xA0;Record (well, NHibernate, but it is the same thing) can take inheritance to the database level.</p>
-        </article>
-        <article id="article-8750">
-            <a href="https://ayende.com/blog/1520/suggestion-consider-inheriting-acting-interfaces-from-idisposable" target="_blank">
-                <h2 class="title mb-6" id="article-8750">Suggestion: Consider Inheriting Acting Interfaces From IDisposable</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 02, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It felt like I was posting a lots of posts lately, but checking the numbers, I didn&#x27;t come close to scratching my daily record in the entire weekend, and I still have items in my blog scratch pad that I need to post (down to five items, though). Anyway, this post is about interfaces, not about my blogging habits.     I mentioned&#xA0;that it takes quite a bit of interfaces to write a file to database&#xA0;(8 interfaces and 15 classes, on last count). I found it useful to make all the interfaces inherit from IDisposable. There is quite a bit of composition there, and even if currently their implementor do not hold disposable resources, they will probably will.    I don&#x27;t have a good defination for an acting interface, but I have a good defination for one that isn&#x27;t. A non acting interface is one that can be used only to get information or to change the state of an object. An acting interface is one that can change the state of the system.    This allows me to handle resources in the top level class by simply disposing a single interface, which will pass the call to the rest of the system.</p>
         </article>
         <div class="button flex justify-between">
             <a href="874.html"><span class="back arrow"></span></a>
