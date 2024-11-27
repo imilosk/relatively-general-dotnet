@@ -112,8 +112,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-2881">
+            <a href="https://ayende.com/blog/175970/idle-memory-gc-memory-yanking" target="_blank">
+                <h2 class="title mb-6" id="article-2881">Idle memory GC memory yanking</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: November 01, 2016
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned in passing that a lot of the actual memory use we have in RavenDB 4.0 is in unmanaged code. That frees us from the benevolent tyranny of the garbage collector, and it allow us to optimize our memory utilization to fit our usage scenarios. In particular, most of our memory is used in thread local manner, and there it is used in one of two ways. Dedicated threads that do specific type of work (indexing, replication, etc) and request processing threads, that handle all requests.  A typical scenario for us would be to have a lot of requests come in all of a sudden and require us to allocate all bunch of memory, for example, if we have just run a benchmark. Or, for production usage, a spike in traffic that then turns into a lull.  One of the common hotspots in high performance servers is memory allocations, in particular, allocating and de-allocating can kill your performance. So you don&#x2019;t do that. Instead, you pool the memory and reuse it,hopefully without major costs for doing that. Which is all well and good, until you get that spike. In this case, you allocated memory to handle the traffic, and after the load is over, you are still holding on to that memory, and we probably really should give it back so something else can use that. Sure, it will be paged out to disk eventually, etc, and virtual memory is there to cover us, but that is really not the right way to write high performance stuff.  Now, the way we want to handle it, we want to wait until everything is calmed, and then start de-allocating all that memory that isn&#x2019;t being used. But that lead to a problem. How can we do this if everything is thread local? And you want to have everything thread local, because synchronization on memory allocation/de-allocation is one of the most common performance killers.  So we handle this by using a MutliReaderSingleWriterStack. The idea is, like in the previous post,&#xA0; we have a designated data structure that has only a single write and is held in a thread local value, but that is expected to be read by multiple threads. In particular, the thread that is going to be reading from it is the idle thread. Once a minute, this is going to scan all the threads, find all the saved memory that we have allocated but haven&#x2019;t used in the past minute, and clear it. Because this can run concurrently with the thread using memory itself, we&#x2019;ll only free the memory that is parked (as in, waiting for work to come), not memory that is actively used. And we also need to be aware that we aren&#x2019;t taking the idle memory to be disposed at the same time the thread is reaching for its memory bank to pull a new range. Here we have to have some thread safe operation. We do that using an interlocked operation on the InUse field. Both the cleanup thread and the owning thread will try to set that value, but only one of them will succeed.  In this way, under load, we get to use purely local memory, but we also have automatic cleanup going on if we have an idle period.</p>
+        </article>
+        <article id="article-2882">
+            <a href="https://andrewlock.net/adding-cache-control-headers-to-static-files-in-asp-net-core/" target="_blank">
+                <h2 class="title mb-6" id="article-2882">Adding Cache-Control headers to Static Files in ASP.NET Core</h2>
+            </a>
+            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: November 01, 2016
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I&#x27;ll show how you can add caching headers to the files served by the StaticFileMiddleware to increase your site&#x27;s performance.&#x2026;</p>
+        </article>
+        <article id="article-2883">
+            <a href="https://ayende.com/blog/175969/optimizing-read-transaction-startup-time-racy-data-structures" target="_blank">
+                <h2 class="title mb-6" id="article-2883">Optimizing read transaction startup time</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 31, 2016
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Finding the appropriate image for this post was hard, you try searching for &#x201C;racy pictures&#x201D; in Google Image Search, but you might not want to do it from work . Anyway, today at lunch we had a discussion about abstractions and at what level you should be working. The talk centered about the difference between working in low level C and working with a high level framework like C# and the relative productivity associated with it. At one point the following argument was raised: &#x201C;Well, consider the fact that you never need to implement List, for example&#x201D;. To which my reaction was: &#x201C;I did just that last week&#x201D;. Now, to forestall the nitpickers, pretty much any C developer will have an existing library of common data structures already in place, I know. And no, you shouldn&#x2019;t be implementing basic data structures unless you have a really good reason. In my case, I think I did. The issue is very simple. I need to have a collection of items that are safe for multi threaded reads, but they are mostly only ever accessed from a single thread, and are only ever modified by a single thread. Oh, and they are also extremely performance sensitive. The reason we started looking into replacing them is that the concurrent data structures that we were using (ConcurrentDictionary &amp; ConcurrentStack, in those cases) were too expensive. And a large part of that was because they gave us a lot more than what we actually needed (fully concurrent access). So, how do we build a simple list that allow for the following:  Only one thread can write. Multiple threads can read. No synchronization on either end. Stale reads allowed. The key part here is the fact that we allow stale reads.  Here is the concrete scenario, we need to track all active transactions. A transaction is single threaded, but we allow thread hopping (because of async). So we define:  And then we have:  DynamicArray is just a holder for an array of Nodes. Whenever we need to add an item to the active transactions, we&#x2019;ll get the local thread value, and do a linear search through the array. If we find a node that has a null Transaction value, we&#x2019;ll use it. Otherwise, we&#x2019;ll add a new Node value to the end of the array. If we run out of room in the array, we&#x2019;ll double the array size.&#xA0; All pretty standard stuff, so far. Removing a value from the array is also simple, all you need to do is to null the Transaction field on the relevant node.  Why all of this? Well, only a single thread can ever register a transaction for a particular DynamicArray instance. That means that we don&#x2019;t have to worry about concurrency here. However, we do need to worry about transactions that need to remove themselves from the list from other threads. That is why we don&#x2019;t have any concurrency control here. Instead, removing the transaction is done by setting the node&#x2019;s Transaction field to null. Since only the owning transaction can do that, this is safe. Other threads, however, need to read this information. They do that by scanning through all the thread values, and then accessing the DynamicArray directly. Now, that means that we need to be safe for concurrent reading. This is done by having the array more or less static on most scenarios. After it get full enough, it will never grow again, and the values will remain there, so effectively other threads will be reading an array of Nodes. We do need to be careful when we expand the array to give more room. We do this by first creating the new array, copying the values to the new array, and only then setting it in the threaded instance.  This way, concurrent code may either see the old array or the new one, but never need to traverse both. And when traversing, it goes through the nodes and check their Transaction value.  Remember that the Transaction is only being set from the original thread, but can be reset from another thread if the transaction moved between threads. We don&#x2019;t really care, the way it works, we read the node&#x2019;s transaction field, and then check its value (once we have a stable reference). The idea is that we don&#x2019;t worry about data races. The worst that can happen is that we&#x2019;ll see an older view of the data, which is perfectly fine for our purposes.  This is pretty complex, but the code itself is simple enough, and the performance benefit justify it several times over.</p>
+        </article>
+        <article id="article-2884">
             <a href="https://ayende.com/blog/175907/optimizing-read-transaction-startup-time-every-little-bit-helps-a-lot" target="_blank">
-                <h2 class="title mb-6" id="article-2881">Optimizing read transaction startup time</h2>
+                <h2 class="title mb-6" id="article-2884">Optimizing read transaction startup time</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Some of the performance work that I have been doing recently was complex, and then, some of it isn&#x2019;t:  And its implementation:  And the optimized version:  And the result?  The really interesting thing is that we have an improvement that is about 3 times more than we would expect. Why is that? We can see that we eliminated the ResouceName call, and saved all of that cost, but we have much lower cost overall, where did that come from? This is something that we saw over and over again. The obvious answer is that we now do less allocations, so we have less GC work to do, which is true as far as it goes, but it is also true that when we are even slightly faster, things start to align more closely, and we get a chain reaction (slightly less work means more time process the actual requests, so we can get more done in less).</p>
         </article>
-        <article id="article-2882">
+        <article id="article-2885">
             <a href="https://ayende.com/blog/175937/ravendb-3-5-rtm-released" target="_blank">
-                <h2 class="title mb-6" id="article-2882">RavenDB 3.5 RTM released</h2>
+                <h2 class="title mb-6" id="article-2885">RavenDB 3.5 RTM released</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m very proud to announce that RavenDB 3.5 is out and about, feeling quite awesome about itself.&#xA;&#xA;Here is some of our team in Las Vegas celebrating the release:&#xA;&#xA;You can find the go read the full features highlights page, or you can download it or just start playing with it directly.&#xA;This release represent about 3 years of effort and over three thousands commits.&#xA;This release makes me very happy.</p>
         </article>
-        <article id="article-2883">
+        <article id="article-2886">
             <a href="https://andrewlock.net/accessing-services-when-configuring-mvcoptions-in-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-2883">Accessing services when configuring MvcOptions in ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-2886">Accessing services when configuring MvcOptions in ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is a follow on to one by Steve Gordon, in which I show a clean way to use configured services when setting up MvcOptions when calling AddMvc.&#x2026;</p>
         </article>
-        <article id="article-2884">
+        <article id="article-2887">
             <a href="https://enterprisecraftsmanship.com/posts/verifying-collaborations-at-system-edges/" target="_blank">
-                <h2 class="title mb-6" id="article-2884">Verifying collaborations at the system edges</h2>
+                <h2 class="title mb-6" id="article-2887">Verifying collaborations at the system edges</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last week I wrote about when to use mocks. In this post, I&#x2019;d like to outline a specific guideline which comes into play when you start working with mocks: verifying collaborations at the system edges. This article is based on my recent Pluralsight course about Pragmatic Unit Testing.&#xA; Verifying collaborations at the system edges The use of mocks goes hand in hand with the style of unit testing which I call collaboration verification.</p>
         </article>
-        <article id="article-2885">
+        <article id="article-2888">
             <a href="https://ayende.com/blog/175906/optimizing-read-transaction-startup-time-the-performance-triage" target="_blank">
-                <h2 class="title mb-6" id="article-2885">Optimizing read transaction startup time</h2>
+                <h2 class="title mb-6" id="article-2888">Optimizing read transaction startup time</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This series is no longer appropriately named, but we&#x2019;ll go with that for the sake of grouping everything together. So far we have seen how we start with a fixed benchmark, and we use a profiler to narrow down all sort of hotspots. However, we do that in a pretty strange way. Consider were we started:  Now consider this series&#x2019; name. Why are we even looking at OpenReadTransaction in the first place? There is a big giant hotspot in GetDocumentsById that we can start with. Even a small change there is likely to generate a lot more results for our benchmark than eliminating everything else entirely. So why focus on those first? Put simply, this isn&#x2019;t just about this particular benchmark. We focused on everything else because those are costs that are shared across the board. Not only for the &#x201C;read random documents&#x201D; benchmark but for pretty much anything else in RavenDB.  By reducing those costs, we are enabling ourselves to get much better performance overall. And we&#x2019;ll get to the actual meat of this benchmark late, when it takes the bulk of the work.  Look at the relative costs here. We moved from 60% of the request being spent there to over 80% being spent there. (Don&#x2019;t look at the actual number, different machines, load and timing are responsible for those). Now any work that we do here will have much greater impact.</p>
         </article>
-        <article id="article-2886">
+        <article id="article-2889">
             <a href="https://ayende.com/blog/175905/optimizing-read-transaction-startup-time-unicode-ate-my-perf-and-all-i-got-was" target="_blank">
-                <h2 class="title mb-6" id="article-2886">Optimizing read transaction startup time</h2>
+                <h2 class="title mb-6" id="article-2889">Optimizing read transaction startup time</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As an aside, I wonder how much stuff will break because the title of this post has  in it. The topic of this post is the following profiler output. GetSliceFromKey takes over 6% of our performance, or about 24.5 seconds out of the total run. That kinda sucks.  What is the purpose of this function? Well, RavenDB&#x2019;s document ids are case insensitive, so we need to convert the key to lower case and then do a search on our internal index. That has quite a big cost associated with it. And yes, we are aware of the pain. Luckily, we are already working with highly optimized codebase, so we aren&#x2019;t seeing this function dominate our costs, but still&#x2026; Here is the breakdown of this code:   As you can see, over 60% of this function is spent in just converting to lower case, which sucks. Now, we have some additional knowledge about this function. For the vast majority of cases, we know that this function will handle only ASCII characters, and that Unicode document ids are possible, but relatively rare. We can utilize this knowledge to optimize this method. Here is what this will look like, in code:  Basically, we scan through the string, and if there is a character whose value is over 127 we fall to the slower method (slower being relative, that is still a string conversion in less than 25 &#x3BC;s). Then we just find if a character is in the upper case range and convert it to lower case (ASCII bit analysis is funny, it was intentionally designed to be used with bit masking, and all sort of tricks are possible there) and store it in the buffer, or just store the original value.  The result?  This method went from taking 5.89% to taking just 0.6%, and we saved over 22 seconds(!) in the run. Again, this is under the profiler, and the code is heavily multi threaded. In practice, this means that the run took 3 seconds less.  Either way, we are still doing pretty good, and we don&#x2019;t have that pile of poo, so I  we&#x2019;re good.</p>
         </article>
-        <article id="article-2887">
+        <article id="article-2890">
             <a href="https://andrewlock.net/resource-specific-authorisation-in-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-2887">Resource-based authorisation in ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-2890">Resource-based authorisation in ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -222,54 +270,6 @@
                 posted on: October 25, 2016
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this next post on authorisation in ASP.NET Core I show how you can secure resources based on properties of the resource itself&#x2026;</p>
-        </article>
-        <article id="article-2888">
-            <a href="https://ayende.com/blog/175873/optimizing-read-transaction-startup-time-dont-ignore-the-context" target="_blank">
-                <h2 class="title mb-6" id="article-2888">Optimizing read transaction startup time</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 24, 2016
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We focused on opening the transaction, but we also have the context management to deal with, in this case, we have: And you can see that it cost us over 11.5% of the total request time. When we started this optimization phase, by the way, it took about 14% of the request time, so along the way our previous optimizations has also helped us to reduce it from 42 &#x3BC;s to just 35 &#x3BC;s.  Drilling into this, it become clear what is going on:   The problem is that on each context release we will dispose the ByteStringContext, and on each operation allocation we&#x2019;ll create a new one. That was done as part of performance work aimed at reducing memory utilization, and it looks like we were too aggressive there. We do want to keep those ByteStringContext around if we are going to immediately use them, after all. I changed it so the actual disposal will only happen when the context is using fragmented memory, and the results were nice.   This is a much nicer profiler output to look at, to be frank. Overall, we took the random reads scenario and moved it from million reads in 342 seconds (under the profiler) to 264 seconds (under the profiler). Note that those times are cumulative, since we run that in multiple threads, the actual clock time for this (in the profiler) is just over a minute. And that just leave us with the big silent doozy of GetDocumentsById, which now takes a whooping 77% of the request time.</p>
-        </article>
-        <article id="article-2889">
-            <a href="https://ayende.com/blog/175843/optimizing-read-transaction-startup-time-getting-frisky" target="_blank">
-                <h2 class="title mb-6" id="article-2889">Optimizing read transaction startup time</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 21, 2016
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As in the last post, I&#x2019;m focusing on reducing the startup time for transactions. In the last post, we focused on structural changes (removing Linq usage, avoiding O(N^2) operations) and we were able to reduce our cost by close to 50%. As a reminder, this is what we started with:  And this is where we stopped on the last post:  Now, I can see that we spend quite a bit of time in the AddifNotPresent method of the HashSet. Since we previously removed any calls to write only transactional state, this means that we have something in the transaction that uses a HashSet and in this scenario, adds just one item to it. Inspecting the code showed us that this was the PagerStates variables. Transactions need to hold the PagerState so they can ensure that the pagers know when the transaction starts and ends. And we do that by calling AddRef / Release on that at the appropriate times. The nice thing about this is that we don&#x2019;t actually care if we hold the same PagerState multiple times. As long as we called the same number of AddRef / Release, we are good. Therefor, we can just drop the HashSet in favor of a regular list, which gives us:  So that is about a second and a half we just saved in this benchmark.But note that we still spend quite a bit of time on the List.Add method, looking deeper into this, we can see that all of this time is spent here:  So the first Add() requires an allocation, which is expensive.  I decided to benchmark two different approaches to solving this. The first is to just define an initial capacity of 2, which should be enough to cover most common scenarios. This resulted in the following:  So specifying the capacity upfront had a pretty major impact on our performance, dropping it by another full second. The next thing I decided to try was to see if a linked list would be even better. This is typically very small, and the only iteration we do on it is during disposal, anyway (and it is very common to have just one or two of those). That said, I&#x2019;m not sure that we can beat the List performance when we have specified the size upfront. A LinkedList.Add() requires allocation, after all, and a List.Add just sets a value.  So&#x2026; nope, we won&#x2019;t be using this optimization.  Now, let us focus back on the real heavy weights in this scenario. The GetPageStatesOfallScratches and GetSnapshots. Together they take about 36% of the total cost of this scenario, and that is just stupidly expensive.&#xA0; Here we can utilize our knowledge of the code and realize that those values can only ever be changed by a write transaction, and they are never changed . That gives us an excellent opportunity to do some caching. Here is what this looks like when we move the responsibility of creating the pager states of all scratches to the write transaction:  Now let us do the same for GetSnapShots()&#x2026; which give us this:  As a reminder, LowLevelTransaction.ctor started out with 36.3 seconds in this benchmark, now we are talking about 6.6. So we reduced the performance cost by over 82%.  And the cost of a single such call is down to 7 microsecond under the profiler. That said, the cost of OpenReadTransaction started out at 48.1 seconds, and we dropped it to 17.6 seconds. So we had a 63% reduction in cost, but it looks like we now have more interesting things to look at than the LowLevelTransaction constructor&#x2026;  The first thing to notice is that EnsurePagerStateReference ends up calling _pagerStates.Add(), and it suffers from the same issue of cost because of it needs to increase the capacity.   Increasing the initial capacity has resulted in measurable gain.  With that, we can move on to analyze the rest of the costs. We can see that the TryAdd on the ConcurrentDictionary is really expensive*. * For a given value of really  It takes just under 3 microseconds to complete, but that is still a big chunk of what we can do here.  The reason we need this call is that we need to track the active transactions. This is done because we need to know who is the oldest running transaction for MVCC purposes. The easiest thing to do there was to throw that in a concurrency dictionary, but that is expensive for those kind of workloads. I have switch it up with a dedicated class, that allows us to do better optimizations around it. The design we ended up going with is a bit complex (more after the profiler output), but it gave us this:   So we are just over a third of the cost of the concurrent dictionary. And we did that using a dedicated array per thread, so we don&#x2019;t have contention. The problem is that we can&#x2019;t just do that, we need to read all of those values, and we might be closing a transaction from a different thread. Because of that, we split the logic up. We have an array per each thread that contains a wrapper class, and we give the transaction access to that wrapper class instance. So when it is disposed, it will clear the value in the wrapper class.  Then we can reuse that instance later in the original thread once the memory write has reached the original thread. And until then, we&#x2019;ll just have&#xA0; a stale read on that value and ignore it. It is more complex, and took a bit of time to get right, but the performance justify it. Current status is that we started at 48.1 seconds for this benchmark, and now we are at 14.7 seconds for the OpenReadTransaction. That is a good day&#x2019;s work.</p>
-        </article>
-        <article id="article-2890">
-            <a href="https://ayende.com/blog/175842/optimizing-read-transaction-startup-time-the-low-hanging-fruit" target="_blank">
-                <h2 class="title mb-6" id="article-2890">Optimizing read transaction startup time</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 20, 2016
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The benchmark in question deals with service 1 million random documents, as fast as possible. In my previous post, I detailed how we were able to reduce the cost of finding the right database to about 1.25% of the cost of the request (down from about 7% &#x2013; 8%). In this post, we are going to tackle the next problem:  So 14% of the request times goes into just opening a transaction?! Well, that make sense, surely that means that there is a lot going on there, some I/O, probably. The fact that we can do that in less than 50 micro seconds is pretty awesome, right? Not quite, let us look at what is really costing us here.  Just look at all of those costs, all of this isn&#x2019;t stuff that you just have to deal with because there is I/O involved, let us look at the GetPagerStatesOfAllScratches, shall we?  I&#x2019;ll just sit down and cry now, if you don&#x2019;t mind. Here is what happens when you take this code and remove the Linqness.   This is purely a mechanical transformation, we have done nothing to really change things. And here is the result:  Just this change reduced the cost of this method call by over 100%! As this is now no longer our top rated functions, we&#x2019;ll look at the ToList now. This method is called from here:  And here is the implementation:  And then we have:   Well, at least my job is going to be very easy here. The interesting thing is that the Any() call can be removed / moved to DEBUG only. I changed the code to pass the JournalSnapshots into the GetSnapshots, saving us an allocation and all those Any calls. That gave us:  So far, we have managed to reduce ten seconds out of the cost of opening a transaction. We have done this not by being smart of doing anything complex. We just looked at the code and fixed the obvious performance problems in it.  Let&#x2019;s see how far that can take us, shall we? The next observation I had was that Transaction is actually used for both read and write operations. And that there is quite a bit of state in the Transaction that is only used for writes. However, this is actually a benchmark measuring pure read speed, so why should we be paying all of those costs needlessly? I basically moved all the field initializers to the constructor, and only initialize them if we are using a write transaction. Just to give you some idea, here is what I moved:  So those are six non trivial allocations that have been moved from the hot path, and a bunch of memory we won&#x2019;t need to collect. As for the impact?  We are down to about half of our initial cost! And we haven&#x2019;t really done anything serious yet. This is quite an awesome achievement, but we are not done. In my next post, we&#x2019;ll actually move to utilizing our knowledge of the code to make more major changes in order to increase overall performance.</p>
         </article>
         <div class="button flex justify-between">
             <a href="288.html"><span class="back arrow"></span></a>
