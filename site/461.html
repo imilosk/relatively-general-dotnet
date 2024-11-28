@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4601">
+            <a href="https://ayende.com/blog/136193/the-required-infrastructure-frees-you-from-infrastructure-decisions" target="_blank">
+                <h2 class="title mb-6" id="article-4601">The required infrastructure frees you from infrastructure decisions</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: November 16, 2011
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that I try to do whenever I design a system is to have just enough infrastructure in place to make sure that I don&#x2019;t have to make any infrastructure decisions. What does this means? It means that the code that actually does the interesting things, the code that actually provide a business value, isn&#x2019;t really aware of the context that it is running on. It can make assumptions about the state of the world in which it runs.  For example, let us take this controller, it inherits from RavenController, and it assumes that when it runs, it will have a documentSession instance primed &amp; ready for it: public ActionResult Validate(Guid key)&#xA;{&#xA;  var license = documentSession.Query&lt;License&gt;()&#xA;    .Customize(x=&gt;x.Include&lt;License&gt;(y=&gt;y.OrderId))&#xA;    .Where(x=&gt;x.Key == key)&#xA;    .FirstOrDefault();&#xA;&#xA;  if (license == null)&#xA;    return HttpNotFound();&#xA;&#xA;  var orderMessage = documentSession.Load&lt;OrderMessage&gt;(license.OrderId);&#xA;&#xA;  switch (orderMessage.OrderType)&#xA;  {&#xA;    case &quot;Perpetual&quot;:&#xA;      return Json(new {License = &quot;Valid&quot;});&#xA;  }&#xA;&#xA;  return HttpNotFound();&#xA;}&#xA;&#xA;&#xA;What is important about that is that it isn&#x2019;t actively doing something, it just assumes that it is there. &#xA;Why is that important? It is important because instead of going ahead and creating the session, we assume it is there, we are unaware of how it got there, who did it, etc. If we wanted to execute this code in a unit test, all we would need to do is to plug a session in, and then execute the code.&#xA;But that is just part of this. Let us look at a more complex scenario, the processing of an order:&#xA;public class ProcessOrderMessageTask : BackgroundTask&#xA;{&#xA;  public string OrderId { get; set; }&#xA;&#xA;  public override void Execute()&#xA;  {&#xA;    var orderMessage = documentSession.Load&lt;OrderMessage&gt;(OrderId);&#xA;&#xA;    var license = new License&#xA;    {&#xA;      Key = Guid.NewGuid(),&#xA;      OrderId = orderMessage.Id&#xA;    };&#xA;    documentSession.Store(license);&#xA;&#xA;    TaskExecuter.ExecuteLater(new SendEmailTask&#xA;    {&#xA;      From = &quot;orders@tekpub.com&quot;,&#xA;      To = orderMessage.Email,&#xA;      Subject = &quot;Congrats on your new tekpub thingie&quot;,&#xA;      Template = &quot;NewOrder&quot;,&#xA;      ViewContext = new&#xA;      {&#xA;        orderMessage.OrderId,&#xA;        orderMessage.Name,&#xA;        orderMessage.Amount,&#xA;        LiceseKey = license.Key&#xA;      }&#xA;    });&#xA;&#xA;    orderMessage.Handled = true;&#xA;  }&#xA;&#xA;&#xA;  public override string ToString()&#xA;  {&#xA;    return string.Format(&quot;OrderId: {0}&quot;, OrderId);&#xA;  }&#xA;}&#xA;&#xA;&#xA;There are several things that are happening here:&#xA;&#xA;Again, we are assuming that when we run, we are actually going to run with the documentSession set to a valid value.&#xA;Note that we have the notion of TaskExecuter.ExecuteLater.&#xA;That is actually quite an important aspect of infrastructure ignorance.&#xA;ExecuteLater is just that, a promise to execute something later, it doesn&#x2019;t specify how or when. In fact, it takes this a bit farther than that. Only if the current operation will complete successfully will this task run. So if we failed to commit the transaction, the SendemailTask won&#x2019;t get executed. Those sort of details can only happen when we let go of trying to control everything and let the infrastructure support us.&#xA;During the Full Throttle episode in which this code was written, we moved the task execution from a background thread to a different process, and nothing in the code had to change, because the only thing that we had to do is to setup the environment that the code expected.&#xA;I really like this sort of behavior, because it frees the code from all the nasty infrastructure concerns, at the same time as it gives you an incredibly powerful platform to work on.&#xA;And just for fun, this result in a system that you can play with with great ease, you don&#x2019;t have to worry about your choice. You can modify them at any time, because you don&#x2019;t really care how those things are done.</p>
+        </article>
+        <article id="article-4602">
             <a href="https://ayende.com/blog/135169/frictionless-development-web-config-and-connection-strings" target="_blank">
-                <h2 class="title mb-6" id="article-4601">Frictionless development: Web.config and connection strings</h2>
+                <h2 class="title mb-6" id="article-4602">Frictionless development: Web.config and connection strings</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is something that I actually run into a lot at customer sites. They have a lot of friction during development between different connection strings that developers use during development. For example, we may have one developer using: &lt;add name=&quot;RavenDB&quot; connectionString=&quot;Url=http://localhost:8080&quot; /&gt;&#xA;&#xA;&#xA;While another is using:&#xA;&lt;add name=&quot;RavenDB&quot; connectionString=&quot;Url=http://localhost:8191;Database=TheApp&quot; /&gt;&#xA;&#xA;&#xA;This usually causes a hell of a lot of trouble in most teams (or maybe you have developers that use SQL Express, and some who installed SQL Development, etc). &#xA;That is friction, and you want to deal with that as soon as possible. The easiest thing to do is actually:&#xA;&lt;add name=&quot;Ayende-PC&quot; connectionString=&quot;Url=http://localhost:8080&quot; /&gt;&#xA;&lt;add name=&quot;Ayende-Laptop&quot; connectionString=&quot;Url=http://localhost:8191;Database=TheApp&quot; /&gt;&#xA;&#xA;&#xA;This works, because the connection string name is now the machine name (System.Environment.MachineName). That is a great first step, because it means that you can get things done without fighting over the connection string in the web.config.&#xA;Another alternative is to have a default connection string, and allow to &#x201C;override&#x201D; it with the specification of a connection string specific for the machine.&#xA;It is a small thing, but it actually helps quite a lot. You can extend this to other settings as well. For apps that have a lot of settings, I usually take them out of the Web.config into a Default.config file, and the configuration reader is set to look for [MachineName].config first, and only then at the Default.config file.</p>
         </article>
-        <article id="article-4602">
+        <article id="article-4603">
             <a href="https://ayende.com/blog/134145/sharding-vs-having-multiple-databases" target="_blank">
-                <h2 class="title mb-6" id="article-4602">Sharding vs. Having multiple databases</h2>
+                <h2 class="title mb-6" id="article-4603">Sharding vs. Having multiple databases</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was recently at a customer site, and he made a mention of sharding their database in a specific way, putting all of the user generated content on a separate server. I jumped in and told him that this isn&#x2019;t sharding. And then I had to explain, both to the customer and to myself, why splitting things up in that way bothered me. The basic idea is the same, we want to split the information over several databases to reduce the load on each individual server, and get higher capacity. We&#x2019;ll use the Flickr model for this post. What the client suggested was:  And what I suggested was:  On the face of it, there isn&#x2019;t much difference, right? But I really don&#x2019;t like calling the first example sharding. From my perspective, this is merely splitting the data into multiple databases, it isn&#x2019;t sharding. I&#x2019;ll accept arguments about this still being sharding, but it doesn&#x2019;t feel right from my perspective. The main problem with the first option is that in order to actually do something interesting, you have to go to three different servers. On the other hand, by selecting a good sharding function, you can usually serve a single request completely from a single database. That is important, because databases, whatever they are relational or RavenDB all include multiple ways for you to gather several pieces of information in an efficient manner. The common part about all of those efficient ways to gather multiple pieces of information? They all break down when you are trying to gather different pieces of information from different servers. That is leaving aside things like connection pooling and persistent connections, which are also quite important. For example, loading an image with its user&#x2019;s information and its comments would be the following three queries in the first example: var image = imagesSession.Load&lt;Image&gt;(&quot;images/1&quot;);&#xA;var user = usersSession.Load&lt;User&gt;(image.UserId)&#xA;var comments = commentsSession.Load&lt;ImageComments&gt;(images.CommentsId);&#xA;&#xA;&#xA;Whereas with the second example, we will have:&#xA;session&#xA;     .Include&lt;Image&gt;(x=&gt;x.UserId)&#xA;     .Include(x=&gt;x.CommentsId)&#xA;     .Load(&quot;images/1&quot;);&#xA;      &#xA;&#xA;&#xA;Other things, like transactions across the data set, are also drastically simpler when you are storing all of the related data on the same server.&#xA;In short, sharding means splitting the dataset, but a good sharding function would make sure that related information is located on the same server (strong locality), since that drastically simply things. A bad sharding function (splitting by type) would create very weak locality, which will drastically impact the system performance down the road.</p>
         </article>
-        <article id="article-4603">
+        <article id="article-4604">
             <a href="https://ardalis.com/represent-behavior-with-classes-not-flags/" target="_blank">
-                <h2 class="title mb-6" id="article-4603">Represent Behavior with Classes not Flags</h2>
+                <h2 class="title mb-6" id="article-4604">Represent Behavior with Classes not Flags</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In any non-trivial software applications, there will be different kinds of behavior attributed to different kinds of objects.  For instance&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4604">
+        <article id="article-4605">
             <a href="https://ayende.com/blog/132097/legacy-etl-solutions" target="_blank">
-                <h2 class="title mb-6" id="article-4604">Legacy ETL solutions</h2>
+                <h2 class="title mb-6" id="article-4605">Legacy ETL solutions</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am currently working with a customer on some issues that they have with moving to RavenDB, and we run into a set of problems with their (Legacy with a capital L) relational database. They run into several problems with how to create a good ETL on that, especially with regards to how to detect changes and the tendency of the legacy system to re-use old primary keys. The solution for both is actually fairly easy. Instead of relying on the primary keys of the legacy system, which can be re-used and creates a ton of trouble down the stream, create your own ids, distinct from the legacy system ids. That can be done easily enough by issuing: ALTER TABLE Customers ADD UniqueKeyForEtl uniqueidentifier NOT NULL DEFAULT(newid())&#xA;&#xA;&#xA;&#xA;&#xA;This is a non breaking change operation, that is, you can do that on any database without fearing that this would somehow break any application that is using it. The good thing about this is that this now ensures that every row in the table is going to have a unique, never repeating, never re-used key. This is a good approach because it is also something that has such a low cost. &#xA;The next problem was how to actually detect changes, the Legacy System does have LastModified column on some tables, and actually bothers to update this in some cases, but not in all of them. Again, the answer is to add a column to the table. The easiest option would probably to just ensure that the LastModified is updated in a trigger, something like:&#xA;CREATE TRIGGER UpdateCustomersLastModifiedDate ON Customers&#xA;FOR UPDATE &#xA;AS&#xA;UPDATE [TableName] SET Customers.LastModified=getdate()&#xA;FROM Customers INNER JOIN Inserted ON Customers.[UniqueID]= Inserted.[UniqueID]&#xA;&#xA;&#xA;Maybe with a check to skip the update if the Legacy System already updated it. &#xA;The problem is that the Legacy System has so many triggers already, that the client is very reluctant to add another one. So another option is to use the rowversion feature in SQL Server. This allows us to define the following:&#xA;ALTER TABLE Customers ADD ModifiedVersionForEtl rowversion NOT NULL &#xA;&#xA;&#xA;&#xA;&#xA;The rowversion will be incremented by the DB on every write. So you can check on all rows that has been updated since the last version that you have seen. This isn&#x2019;t a trigger, since this happens as part of the actual update process, and is likely to be significantly cheaper. &#xA;By adding these two columns, an operation that it is safe to make since it can&#x2019;t break any code that uses the database, we have given ourselves an easy way to detect changes, and an easy way to get unique keys that are actually unique, and non repeating.</p>
         </article>
-        <article id="article-4605">
+        <article id="article-4606">
             <a href="https://ardalis.com/handy-enumerableextensions/" target="_blank">
-                <h2 class="title mb-6" id="article-4605">Handy EnumerableExtensions</h2>
+                <h2 class="title mb-6" id="article-4606">Handy EnumerableExtensions</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There&#x2019;s a great site for finding extension methods, ExtensionMethod.net. I don&#x2019;t believe either of these came from there, and I&#x2019;ve not (yet&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4606">
+        <article id="article-4607">
             <a href="https://ardalis.com/view-html-source-of-email-in-gmail-and-google-apps/" target="_blank">
-                <h2 class="title mb-6" id="article-4606">View HTML Source of Email in GMail and Google Apps</h2>
+                <h2 class="title mb-6" id="article-4607">View HTML Source of Email in GMail and Google Apps</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;re working on creating a pleasant-looking HTML email template for your site&#x2019;s newsletter, you&#x2019;ll want to test it out on the major&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4607">
+        <article id="article-4608">
             <a href="https://ayende.com/blog/133121/what-happened-to-the-blog" target="_blank">
-                <h2 class="title mb-6" id="article-4607">What happened to the blog?</h2>
+                <h2 class="title mb-6" id="article-4608">What happened to the blog?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You might have noticed that during the last day, we had duplicated posts. When I first saw that, I was shocked, there was absolutely no reason for this to have happened, and it seems that somehow the index or the database were corrupted.  We started investigating this, and we were able to reproduce this locally by using the database export. That was a great relief, because it meant that at least we could debug this. Once we were able to do that, we found out what the problem was. And basically, there was no problem. It was a configuration error (actually, two of them) that caused the problem. We accidently enabled versioning for the blog&#x2019;s database, you can read more about RavenDB&#x2019;s versioning bundle if you want, but basically, it keep copies of modified documents so you have an audit trail around. So far, so good, and no one noticed anything. But then we removed versioning from the blog&#x2019;s database, since after all, we didn&#x2019;t need it there in the first place. The problem is that in the meantime, the versioning bundle created all of those additional documents. While it was in operation, it would hide those documents (since they were there for historical purposes only), but once we removed it, all those historical documents showed up. The reason for the duplicate posts was that we had duplicate posts, it was just that they were duplicate posts of the same post (the historical review). Why did we have so many? Whenever you comment, we update the CommentCount field, so we had as many historical copies for most posts as we had comments.  Fixed now, and I apologize for the trouble. As a general point of interest, bundles allows great flexibility in the database, but they are design to be with the database. Removing and adding bundles to a database on the fly is not something that is going to just work, as we have just re-learned. I apologize for the problem, it was a simple misconfiguration error that caused all the historical records to show up when they didn&#x2019;t need to. Nothing to see here, move along</p>
         </article>
-        <article id="article-4608">
+        <article id="article-4609">
             <a href="https://ardalis.com/msmq-queue-counts/" target="_blank">
-                <h2 class="title mb-6" id="article-4608">Get MSMQ Queue Counts in C#</h2>
+                <h2 class="title mb-6" id="article-4609">Get MSMQ Queue Counts in C#</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m working with NServiceBus and MSMQ for one of my projects, and I wanted to be able to show a simple dashboard with the numbers of&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4609">
+        <article id="article-4610">
             <a href="https://benfoster.io/blog/listing-installed-software-on-a-windows-pc/" target="_blank">
-                <h2 class="title mb-6" id="article-4609">Listing installed software on a Windows PC</h2>
+                <h2 class="title mb-6" id="article-4610">Listing installed software on a Windows PC</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: November 05, 2011
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How to list the software you have installed on your Windows PC.</p>
-        </article>
-        <article id="article-4610">
-            <a href="https://www.meziantou.net/validation-with-postsharp.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4610">Validation with PostSharp</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 04, 2011
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">PostSharp allows you to do AOP (Aspect Oriented Programming). To summarize the interest of PostSharp nothing beats a small quote:Do you ever find yourself creating a mess by duplicating boilerplate code because of tracing, exception handling, data binding, threading, or transaction management? You&#x27;</p>
         </article>
         <div class="button flex justify-between">
             <a href="460.html"><span class="back arrow"></span></a>
