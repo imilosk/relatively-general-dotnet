@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5631">
+            <a href="https://ayende.com/blog/4175/break-the-algorithm-distributed-lock" target="_blank">
+                <h2 class="title mb-6" id="article-5631">Break the algorithm: Distributed Lock</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: September 05, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The scenario for this is to create a locking mechanism in a Distributed Hash Table where nodes are allowed to fail without taking the entire DHT down.  Now, don&#x2019;t expect too much out of this, I thought this out at 2 AM or so, and just sat down to hurriedly write it before it escape my mind.  The environment in which it runs is a DHT, where a key may reside on several nodes (usually 1 or 3).&#xA0; Taking a look means placing a lock item in over half of the nodes. Lock expires after a set amount of time (because we can&#x2019;t trust the client to clear them). We assume a system that share a clock (or synchronize clocks).  The annoying thing is that we need to recover from situations in which some of the nodes holding the key are down or inaccessible.   Here is the pseudo code:          def LockKey(key, recursionDepth) as bool:    topology = dht.GetTopologyFor(key)    successfulLocks = 0    lockExpiry = DateTime.Now.AddMinutes(1)    lockKey = key&#x2B;&quot;_lock&quot;    for server in topology:        try:            server.WriteIfDoesNotExistsOrSameServer(lockKey, currentServerName, lockExpiry)            successfulLocks &#x2B;= 1        except ServerDown:            ignore error        except KeyAlreadyExists:            if ScavengeExpiredLocks(lockKey):                return LockKey(key, recursionDepth&#x2B;1) if recursionDepth &lt; 3            return false&#xA;&#xA;        return (successfulLocks/2) &gt;= (topology.Count/2) //at least half the servers have the lock&#xA;&#xA;    def ScavengeExpiredLocks(key):    topology = dht.GetTopologyFor(key)    for server in topology:       try:           val = server.ReadKey(lockKey)           if HasExpired(val):                server.RemoveKey(lock, val.Version)           else:                return false       except ServerDown:           ignore error       except KeyVersionChanged:           return false          return true        def ClearLock(key):  topology = dht.GetTopologyFor(key)  for server in topology:     try:         val = server.ReadKey(lockKey)         if BelongsToCurrentServer(val):              server.RemoveKey(lock, val.Version)     except ServerDown:         ignore error     except KeyVersionChanged:         ignore error&#xA;&#xA;    &#xA;&#xA;&#xA;So, how many critical bugs do I have here?</p>
+        </article>
+        <article id="article-5632">
             <a href="https://ardalis.com/euler-7-trivial-with-linq-and-generators/" target="_blank">
-                <h2 class="title mb-6" id="article-5631">Euler 7 Trivial with LINQ and Generators</h2>
+                <h2 class="title mb-6" id="article-5632">Euler 7 Trivial with LINQ and Generators</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Euler problem 7 requires returning the 10001st prime number. It notes that the 6th prime number is 13 in the problem description. Having&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5632">
+        <article id="article-5633">
             <a href="https://ayende.com/blog/4174/why-git" target="_blank">
-                <h2 class="title mb-6" id="article-5632">Why Git?</h2>
+                <h2 class="title mb-6" id="article-5633">Why Git?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have been using Git for the past week or so, enough to get a good handle on its benefits and disadvantages.  I moved to Git from Subversion, after having done a stint of almost 6 years of using Subversion. A stint which also included doing some development on Subversion.  Despite appearances, I actually took a fairly structured (and long running) approach to learning Git, I got a book and read it, I played around with it, and I mostly dismissed it as &#x201C;it isn&#x2019;t solving my problem&#x201D; and &#x201C;I already know how source control works&#x201D;.  Last week I had the chance to pick Aaron Jensen mind about Git, and he was able to clear up some conceptual issues about how Git operates. I made a bigger effort since to learn how I can make better use of Git and I think that I now know enough to be able to talk about it.  First, let me talk about Subversion a little bit. As I said, I am a long time user of Subversion, and I consider it an excellent source control system. It is, however, strongly aimed at meeting corporate development scenarios.  What do I mean by that? In Subversion, you have the root repository, and everything else falls out from there. That doesn&#x2019;t sounds like such a problem, until you realize that except for your local working copy, every single operation is a remote operation.  Just to give you an idea why this is a problem, looking up a history of changes (including file diffs) is a real pain in Subversion. Merging (the actual act, not keeping track of it) is a pretty long operation as well.  That was the final deal breaker for me. I feel insulted whenever I have to wait for the machine, it should be the other way around, damn it!  But there are other issues with Subversion usage, specifically, for Open Source projects I don&#x2019;t believe that the centralized model works anymore.  Consider the workflow for getting a patch in Rhino Mocks. You get the code, make the patch, send the patch. In the meantime, the project is moving ahead and you are forced to keep up with what is basically a dirty and unversioned working copy.  Worse, for me, when you send me the patch, it has to go back to the server for any old versions (slow! slow! slow!) and make me do a lot of the work.  Having a single source of truth is important, for official releases. But in the meantime, I like the idea of having multiple disparate copies that people are working on independently. They should.  Some other important thoughts, with absolutely no order:     Local history is another major important aspect. I mentioned that this is something that I sometimes do, and it is a total pain to go through that with Subversion, and it totally painless to do so with Git. I have TortoiseGit installed specifically for that, so I get a UI that I am very familiar with but with no network round tripping time.     I am not sure how to qualify this point, but it feels like Git is faster even when it does goes on the network. Project checkouts and remote commits seems to be faster. Even though on the face of it Subversion should be much faster at least for checkouts (Git gets the entire history, Subversion gets a single revision).     People keep mentioning having private commits as an advantage. I guess I see the point, but I am not sold on that yet. Sure, it is fun to be able to do that, but this is a paper advantage so far. What I really do like is that commits are fast. Which means that in many cases I can commit &amp; push on the background while resuming work.    Github is another consideration, its major advantage is that it is taking care of a lot of details related to actually managing git.   For open source work, I love looking at this:     This gives me a good indication about the actual interest in a project.   Other things, like pull requests and their management makes me tingle all over, since they represent how people actually work in OSS project in real life and this represent a significant time saving.  There are other stuff as well, having a download button in the site means that I don&#x2019;t get questions from people that have no Subversion tools or are behind firewalls.  Github is also a huge disadvantage since in less than a week I caught it broken at least twice. There are some things that I want to be stable, the place where I put my source code is one of them, and I don&#x2019;t care if the unstable parts aren&#x2019;t the Git repositories. As far as I am concerned, unstable site equals to nervousness on my part.  Anyway, those are my reasons for moving to Git. The tooling are pretty good, I got used to the git command line, gitk and git gui fairly quickly.</p>
         </article>
-        <article id="article-5633">
+        <article id="article-5634">
             <a href="https://ayende.com/blog/4173/git-warning-signs" target="_blank">
-                <h2 class="title mb-6" id="article-5633">Git warning signs</h2>
+                <h2 class="title mb-6" id="article-5634">Git warning signs</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is what made me leave Subversion:     Grr!</p>
         </article>
-        <article id="article-5634">
+        <article id="article-5635">
             <a href="https://ayende.com/blog/4172/rhino-mocks-4-0-planning-forum" target="_blank">
-                <h2 class="title mb-6" id="article-5634">Rhino Mocks 4.0 Planning Forum</h2>
+                <h2 class="title mb-6" id="article-5635">Rhino Mocks 4.0 Planning Forum</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It was brought up in the mailing list that we should have a more structured way of managing the ideas for Rhino Mocks 4.0, I agree, and the forum is here:  http://nhprof.uservoice.com/pages/28152-rhino-mocks-4-0</p>
         </article>
-        <article id="article-5635">
+        <article id="article-5636">
             <a href="https://ayende.com/blog/4171/the-kiss-of-death-for-subversion" target="_blank">
-                <h2 class="title mb-6" id="article-5635">The kiss of death for Subversion</h2>
+                <h2 class="title mb-6" id="article-5636">The kiss of death for Subversion</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There are some things that I am just not willing to take, and waiting for my machine is one of them.  I had tpo much of this:     I am not sure yet what I am going to use, but it is going to be some sort of DVCS</p>
         </article>
-        <article id="article-5636">
+        <article id="article-5637">
             <a href="https://ayende.com/blog/4170/nh-prof-feature-freeze" target="_blank">
-                <h2 class="title mb-6" id="article-5636">NH Prof</h2>
+                <h2 class="title mb-6" id="article-5637">NH Prof</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">NH Prof just went for a feature freeze in preparation for a release.  This means that sometimes next week, the v1.0 release will go up. To be rather more exact, the v1.0 is out as far as the bits are concerned. Build 414 is going to be it, unless people find some big bugs in it.  There are two main reasons for the delay.      No one likes to have to push out a v1.0.1 release, so it is better to play it safe.    For the beta period, a full license of NH Prof was offered with a 30% beta discount.    With the formal release, this beta discount is going away, and buyers will have to pay the full price. I think it is only fair to give potential buyers some heads up warning about this.  So, sometimes during the next week, I&#x2019;ll formally change everything to show as v1.0 and remove the beta sticker from the site.   The beta discount will be discontinued on Friday, September 11th.  Just as a reminder, there is no difference between a beta license and a standard v1.0 license, so if would like to get NH Prof, buying it before the 11th will save you 30%.  I&#x2019;ll have a more detailed post about NH Prof and its capabilities, in a few days, since I think that recently I always spoke only about a specific feature, not about the whole thing.</p>
         </article>
-        <article id="article-5637">
+        <article id="article-5638">
             <a href="https://ardalis.com/windows-auto-sign-on-in-locked-mode/" target="_blank">
-                <h2 class="title mb-6" id="article-5637">Windows Auto Sign On In Locked Mode</h2>
+                <h2 class="title mb-6" id="article-5638">Windows Auto Sign On In Locked Mode</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Earlier this week, after enduring yet another windows update, I came up with a feature request for Windows that would make me a much happier&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5638">
+        <article id="article-5639">
             <a href="https://ayende.com/blog/4169/planning-for-rhino-mocks-4-0" target="_blank">
-                <h2 class="title mb-6" id="article-5638">Planning for Rhino Mocks 4.0</h2>
+                <h2 class="title mb-6" id="article-5639">Planning for Rhino Mocks 4.0</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, now that Rhino Mocks 3.6 is out of the way, we need to think about what the next version will look like.  Initially, I thought to match Rhino Mocks 4.0 to the .NET 4.0 release and support mocking dynamic variables, but while this is still on the planning board, I think that it is much more important to stop and take a look at where Rhino Mocks is now and where we would like it to be.  I started Rhino Mocks about 5 years ago, and the codebase has stood well in the test of time. There aren&#x2019;t any nasty places and we can keep releasing new features with no major issues.  However, 5 years ago the community perception of mocking was different than what it is now. Rhino Mocks hasn&#x2019;t really changed significantly since it 1.1 days, for that matter, you can take a code base using Rhino Mocks for .Net 1.1 and move it to Rhino Mocks 3.6 with no issues.  But one of the most frequent complaints that I have heard is that Rhino Mocks API has became too complex over the years, there are too many options and knobs that you can turn. I know that my own style of interaction testing has changed as well.   The current plan for Rhino Mocks 4.0 is that we will break backward compatibility in a big way. That means that we are going to drastically simplify everything in the framework.   We are still discussing this in the mailing list, but currently it looks like we will go with the following route:     Kill the dynamic, strict, partial and stub terminology. No one cares. It is a fake.    Remove the record / playback API. The AAA method is much simpler.    Simplify mocking options, aiming at moving as much as possible from expectation style to assert style.    Keep as much of the current capabilities as we can. That means that if Rhino Mocks was able to support a scenario, it should still support it for the 4.0 version, hopefully in a simpler fashion.   The end result is putting Rhino Mocks on an API diet. I am looking for help in doing this, both in terms of suggested syntax and in terms of actual patches.  You are welcome to contribute&#x2026;</p>
         </article>
-        <article id="article-5639">
+        <article id="article-5640">
             <a href="https://ayende.com/blog/4168/answer-the-lazy-loaded-inheritance-many-to-one-association-or-m-conundrum" target="_blank">
-                <h2 class="title mb-6" id="article-5639">Answer</h2>
+                <h2 class="title mb-6" id="article-5640">Answer</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: September 03, 2009
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Update: It appears that I am wrong, and NHibernate can support this functionality by eagerly loading the association at load time. You can do by specifying lazy=&quot;false&quot; (and optionally, outer-join=&quot;true&quot;) on the many to one association.&#xA;&#xA;&#xA;Yesterday I presented an interesting problem that pop up with any OR/M that supports inheritance and lazy loading.  Let us say that we have the following entity model:     Backed by the following data model:     As you can see, we map the Animal hierarchy to the Animals table, and we have a polymorphic association between Animal Lover and his/her animal. Where does the problem starts?  Well, let us say that we want to load the animal lover. We do that using the following SQL:     SELECT Name,&#xA;&#x9; Animal,&#xA;&#x9; Id&#xA;FROM AnimalLover&#xA;WHERE Id = 1 /* @p0 */&#xA;&#xA;&#xA;And now we have an animal lover instance:&#xA;&#xA;&#xA;  var animalLover = GetAnimalLoverById(1);&#xA;var isDog = animalLover.Animal is Dog;&#xA;var isCat = animalLover.Animal is Cat;&#xA;&#xA;&#xA;Can you guess what would be the result of this code?&#xA;&#xA;The answer is that both isDog nor isCat would be&#x2026; false.&#xA;&#xA;But how is that?&#xA;&#xA;To answer that question, let us take a look at the SQL that was used to load the animal lover, and let us take a look at a typical example of hydrating entities. I am using Davy&#x2019;s DAL here to show off the problem, because the code is simple and it demonstrate that the problem is not unique to a particular OR/M, but is shared among all of them (Davy&#x2019;s DAL doesn&#x2019;t even support inheritance, for example).&#xA;&#xA;&#xA;  private void SetReferenceProperties&lt;TEntity&gt;(&#xA;&#x9;TableInfo tableInfo, &#xA;&#x9;TEntity entity, &#xA;&#x9;IDictionary&lt;string, object&gt; values)&#xA;{&#xA;&#x9;foreach (var referenceInfo in tableInfo.References)&#xA;&#x9;{&#xA;&#x9;&#x9;if (referenceInfo.PropertyInfo.CanWrite == false)&#xA;&#x9;&#x9;&#x9;continue;&#xA;&#x9;&#x9;&#xA;&#x9;&#x9;object foreignKeyValue = values[referenceInfo.Name];&#xA;&#xA;&#x9;&#x9;if (foreignKeyValue is DBNull)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;referenceInfo.PropertyInfo.SetValue(entity, null, null);&#xA;&#x9;&#x9;&#x9;continue;&#xA;&#x9;&#x9;}&#xA;&#xA;&#x9;&#x9;var referencedEntity = sessionLevelCache.TryToFind(&#xA;&#x9;&#x9;&#x9;referenceInfo.ReferenceType, foreignKeyValue);&#xA;&#x9;&#x9;&#x9;&#xA;&#x9;&#x9;if(referencedEntity == null)&#xA;&#x9;&#x9;&#x9;referencedEntity = CreateProxy(tableInfo, referenceInfo, foreignKeyValue);&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;   &#xA;&#x9;&#x9;referenceInfo.PropertyInfo.SetValue(entity, referencedEntity, null);&#xA;&#x9;}&#xA;}&#xA;&#xA;&#xA;Take a look at what the code is doing, we are currently processing the Aminal property on the AnimalLover class. And we try to find an Animal that was loaded with a primary key matching to the value of the Animal column in the AnimalLovers table.&#xA;&#xA;When we can&#x2019;t find it, we have to create a lazy loading proxy for the referenced entity. And here is where the conundrum kicks into play. When we have inheritance, we have a real problem here. What is the type of the referenced entity? &#xA;&#xA;From the model, we know that it must be a derivation of Animal of some sort, and we have its PK, but we have no way of knowing which without going to the database for it.&#xA;&#xA;So what are we going to do? Because we don&#x2019;t have enough information to create a lazy loading proxy of the appropriate type, we actually generate a lazy loading proxy of the type that we do know about, Animal.&#xA;&#xA;But what about when it is being loaded?&#xA;&#xA;Well, that is where the lack of #become in .NET becomes painful, we already have an instance, and we can&#x2019;t change its types. And we can&#x2019;t replace the reference on the AnimalLover because someone might have grab a reference to the animal before the lazy load.&#xA;&#xA;The way to handle it is by turning the lazy loading proxy into a real one. We load a new instance that represent the entity, now with the correct type, since we query the DB to find out what it is (along with the rest of the entity&#x2019;s data).&#xA;&#xA;And the lazy loading proxy that we originally used is now loaded, and any call made on it will be forwarded to the new instance that was loaded.&#xA;&#xA;animalLover.Animal stays an AnimalProxy, and cannot be cast to a Dog or a Cat, even if the actual row it is pointing to is a Dog or a Cat.</p>
-        </article>
-        <article id="article-5640">
-            <a href="https://ayende.com/blog/4167/rhino-divan-db-consideration" target="_blank">
-                <h2 class="title mb-6" id="article-5640">Rhino Divan DB &#x2013; Consideration</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 03, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It is interesting, I have been thinking about Divan DB for a long time now, and tonight I decided to give it some love and finally try to see exactly how hard it is going to be to write it.  It turns out that it isn&#x2019;t really hard at all. You can see my progress here (http://github.com/ayende/rhino-divandb/tree/master). It now supports adding and retrieving documents, defining views, view caching, and (very simple) view application.  So you can now push a bunch of views and documents to the database and get the result back. There is a lot more to do (for example, handling edits with the views), but it seems to be fairly straight forward so far.</p>
         </article>
         <div class="button flex justify-between">
             <a href="563.html"><span class="back arrow"></span></a>

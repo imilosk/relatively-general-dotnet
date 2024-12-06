@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-2921">
+            <a href="https://ayende.com/blog/175681/performance-analysis-simple-indexes" target="_blank">
+                <h2 class="title mb-6" id="article-2921">Performance analysis</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 04, 2016
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I outlined the scenario in my previous post, and I wanted to focus on each scenario one at a time. We&#x2019;ll start with the following simple map index:  In RavenDB 4.0, we have done a lot of work to make this scenario as fast as possible. In fact, this has been the focus of a lot of architectural optimizations. When running a simple index, we keep very few things in managed memory, and even those are relatively transient. Most of our data is in memory mapped files. That means, no high GC cost because we have very few objects getting pushed to Gen1/Gen2. Mostly, this is telling Lucene &#x201C;open wide, please&#x201D; and shoving as much data inside as we can. So we are seeing much better performance overall. But that isn&#x2019;t to say that we don&#x2019;t profile (you always do). So here are the results of profiling a big index run:  And this is funny, really funny. What you are seeing there is that about 50% of our runtime is going into those two functions. What you don&#x2019;t know is why they are here. Here is the actual code for this:  The problem is that the write.Delete() can be very expensive, especially in the common case of needing to index new documents. So instead of just calling for it all the time, we first check if we have previously indexed this document, and only then we&#x2019;ll delete it. As it turns out, those hugely costly calls are still a very big perf improvement, but we&#x2019;ll probably replace them with a bloom filter that can do the same job, but with a lot less cost. That said, notice that the runtime cost of those two functions together is 0.4 ms under profiler. So while I expect bloom filter to be much better, we&#x2019;ll certainly need to double check that, and again, only the profiler can tell.</p>
+        </article>
+        <article id="article-2922">
             <a href="https://andrewlock.net/introduction-to-authorisation-in-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-2921">Introduction to Authorisation in ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-2922">Introduction to Authorisation in ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post we&#x27;ll learn about authorisation in ASP.NET Core, explaining the principles behind it, how it is implemented, and how to apply simple policies.&#x2026;</p>
         </article>
-        <article id="article-2922">
+        <article id="article-2923">
             <a href="https://ayende.com/blog/175649/performance-analysis-the-cost-of-stackoverflow-indexes" target="_blank">
-                <h2 class="title mb-6" id="article-2922">Performance analysis</h2>
+                <h2 class="title mb-6" id="article-2923">Performance analysis</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, we are going to look at the relevant costs we have when testing out different indexes on the stack overflow data dump. In this case, we have the following two collections, and sample documents from each.  The first index we&#x2019;ll look at is a simple full text index, simply mapping the users and asking to search over their data.  This index is pretty simple, both in how it works and what it would cause RavenDB to do. We do a simple scan over all the Users documents, and just index those two properties. Nothing much to see here, let&#xA0; us move on. Here we have a map/reduce index, over users, to see how many signups StackOverflow had per month.       This gets more interesting as a performance analysis goes. While a map only index just needs to spill everything to Lucene, and let it do its work (more on that later), a map/reduce index has to keep track of quite a lot of internal state. And as it runs out, the costs associated with the index vary according to what it does, and the access pattern it has. In this case, we&#x2019;re going to be scanning the users in roughly the order they were inserted into the database, and that would match pretty closely to the aggregation by the registration month. That means that this is likely to be a pretty cheap index, since we scan the data and it is mostly going to be naturally grouped along the same lines that we are going to group it. It means that the working set we&#x2019;ll need for this index is going to be fairly small. Once we have passed by a particular month, we won&#x2019;t be accessing it again. The number of reduce keys (the distinct number of values that we group by) is also going to be fairly small, in the order of 100 keys or so.  Now, let us move to a more complex index:  This one is aggregating information over questions twice, once for the questions, and once for the answers. In terms of sheer amount of data it works on, it is pretty big. However, in terms of actual work that is done, we still somewhat benefit so significantly from the ordering of the data. This is the case since while questions and answers are usually temporally close to one another, that isn&#x2019;t always the case. That said, for the vast majority of cases, we&#x2019;re likely to see quite a bit of locality, which will help the index. There is also the fact that we still have very few reduce key, only about 100 or so, which also helps.  And now we are talking about putting the db through its paces. The problem here is that we are scanning all the indexes, and outputting an entry for each tag. There are 46,564 tags, and in total this index outputs 37,122,139 entries.&#xA0; However, there are just 3,364 tags that have more than a thousand questions, and they are responsible for 32,831,961 of the questions, so while there is a significant long tail, it is pretty small, in terms of actual number of questions. Note that we are still scanning in a manner consistent with the index, so we&#x2019;ll typically go over a set of questions that all belong to the same month. And each month will have roughly 3 million questions (obviously less the further back in time we go). So complex, but not too badly so. The number of reduce keys will be in the hundreds of thousands, but the number of entries per reduce key will be relatively small.  This one, however, is much more problematic:  On the face of it, it looks like it would be a simpler index than the previous two, but it lacks a very important property, it isn&#x2019;t actually limited by anything related to the scanning order we have. What this means is that whenever we will scan the data for this index, we are going to find a lot of tags, so each batch will have to touch a lot of reduce keys, and they are going to be big reduce keys (with lots of entries), so that means that we&#x2019;ll need to re-reduce large number of large reduce keys often. Effectively, this index is forcing us to scatter values all over the place, then aggregate all the information about each of those values. It is likely to be one of the worst scenarios for us to work with. Now that we have the groundwork laid out, we can talk about how we are actually going to approach performance optimizations here.</p>
         </article>
-        <article id="article-2923">
+        <article id="article-2924">
             <a href="https://www.stevejgordon.co.uk/github-contributor-tips-tricks-gitiquette" target="_blank">
-                <h2 class="title mb-6" id="article-2923">GitHub Contributor Tips and Tricks (Gitiquette)</h2>
+                <h2 class="title mb-6" id="article-2924">GitHub Contributor Tips and Tricks (Gitiquette)</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I made by first GitHub pull request back in November 2015. After a code review I needed to make some changes to the code and the learning curve of Git/GitHub bit me. I had to close my PR and open a fresh one in order to get my code accepted since I couldn&#x2019;t figure out [&#x2026;]</p>
         </article>
-        <article id="article-2924">
+        <article id="article-2925">
             <a href="https://ayende.com/blog/175618/playing-with-the-stackoverflow-datasets-all-the-wrong-ways" target="_blank">
-                <h2 class="title mb-6" id="article-2924">Playing with the StackOverflow datasets : All the wrong ways</h2>
+                <h2 class="title mb-6" id="article-2925">Playing with the StackOverflow datasets : All the wrong ways</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As I mentioned, given a 45 GB file containing all the StackOverflow questions since 2008, I wanted to transform items like this:  Into this:  This turn out to be rather tricky to do. The file is sorted by the row id, but there are tricks here:  You can&#x2019;t assume that all the answers to a question are located near the question itself. Ideally, we could keep a dictionary of the questions and their answers until we have all the answers to the question, they write it all out. The problem here is that a question might have answered years after it was asked, which means that the answer id would place it very far from the question in the file, which means that we have to keep the question in memory for a very long time. In practice, this happens quite frequently, and it plays havoc with trying to limit the memory utilization for this approach.  While you would expect that answers will always have a row id that is higher than their questions, that isn&#x2019;t always the case. Let us take this question, about Haskell monads, which has the following answer. The answer id is: 2388 The question id is: 44965 That means that if you scan the file sequentially, you are going to find the answers before their questions, somethings a lot before (I&#x2019;m guessing that this happens if you have edits to a question, so a popular question might get edited long after it was asked &amp; had answers). The next thing I tried was to group all the questions together, then process them. Because I can&#x2019;t do that in memory, I tried writing them to disk directly:  /questions/44965/q  /questions/44965/2388 The idea is that I can write them out to the file system, and then traverse the file system to gather all of them. The problem is that we are talking about over 32 million questions &amp; answers, that isn&#x2019;t really going to work for us using most normal file systems. So I tried writing it all to a zip file, which was successful, but resulted in a zip file that was 21GB in size, and was very good in ensuring that nothing could open it before I run out of patience.  Eventually I just gave us and used Voron to handle it, here are the relevant sections:  Remember that Voron stores everything in a B&#x2B;Tree, and allows to do ordered operations, so once this is done, all I need to do is traverse the tree, get all the records that have the same parent id, and voila, I have the grouping I wanted.  If I wanted to do it without the use of a database (or Voron), I would probably go with the following manner:  Read each entry from the source data, and write it to another file, noting its location. Write &#x201C;parent id, id, location&#x201D; to a separate index file Sort the index file. Start reading from the index file as long as I have the same parent id, and merge those questions. Why separate file? Because XmlReader does buffering, so it will be really hard to just in the file from just reading, by writing it out, we have the proper position to seek to. Note that this will require a lot of random I/O, but that is pretty much just what it has to be.</p>
         </article>
-        <article id="article-2925">
+        <article id="article-2926">
             <a href="https://enterprisecraftsmanship.com/posts/law-of-demeter-and-immutability/" target="_blank">
-                <h2 class="title mb-6" id="article-2925">Law of Demeter and immutability</h2>
+                <h2 class="title mb-6" id="article-2926">Law of Demeter and immutability</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, we&#x2019;ll discuss the Law of Demeter in the context of immutability.</p>
         </article>
-        <article id="article-2926">
+        <article id="article-2927">
             <a href="https://ayende.com/blog/175617/interview-question-stackoverflow-that" target="_blank">
-                <h2 class="title mb-6" id="article-2926">Interview question</h2>
+                <h2 class="title mb-6" id="article-2927">Interview question</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are doing perf testing right now, and we are looking into real world datasets to play around with. Luckily for us, Stackoverflow have regular data dump of size significant enough to be useful for our experiments. The file that I&#x2019;m currently looking it is the Posts.xml file, which is about 45GB in size, and looks roughly like this (lot of stuff removed to make the point).  Since Stackoverflow is using relational database, their output is also relational. You can see that each element is a single row, and you have the ParentId in row #7 that points back to row #4. Basically, row #4 is the question, and row #7 is one of the answers.  What I want it to take all of this data and move it into a more document format. In other words, what I want to have all the answers for a question contained within the question, something like this:  The fun part here is that this is a pretty big file, and we are writing the output into a GzipStream, so we don&#x2019;t really have the option of saving / modifying midway through. Once we have written something out to the GzipStream, it cannot be changed. So we need to find a way in which we can group all the answers under their questions, but at the same time, the file size is big, much bigger than the memory I have available, so we can&#x2019;t just keep it all in memory and write it out in the end. How would you solve this issue? My attempt is currently sitting at roughly 10GB of RAM used after processing about 30GB of XML, but I have to admit that I have thrown it together rather quickly, since I just needed the data and a quick &amp; dirty solution is just fine here.</p>
         </article>
-        <article id="article-2927">
+        <article id="article-2928">
             <a href="https://andrewlock.net/injecting-services-into-validationattributes-in-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-2927">Injecting services into ValidationAttributes in ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-2928">Injecting services into ValidationAttributes in ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post describes how to use dependency injection with ValidationAttributes in ASP.NET Core, and the process I took in trying to figure out how!&#x2026;</p>
         </article>
-        <article id="article-2928">
+        <article id="article-2929">
             <a href="https://ayende.com/blog/175586/ravendb-retrospective-unbounded-result-sets" target="_blank">
-                <h2 class="title mb-6" id="article-2928">RavenDB Retrospective</h2>
+                <h2 class="title mb-6" id="article-2929">RavenDB Retrospective</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We spent some time recently looking into a lot of our old design decisions. Some of them make very little sense today (json vs. blittalbe as a good example), but made perfect sense at the time, and were essential to actually getting the product out. Some of those design decisions, however, are still something that I very firmly believe in.&#xA0; This series of posts is going to explore those decisions, their background and how they played out in the real world. So, without further ado, let us talk about unbounded result sets. The design of RavenDB was heavily influenced by my experience as That NHibernate Guy (I got started with NHibernate over a decade ago, if you can believe that), where I saw the same types of error, repeated over and over again. I then read Release It!, and I suddenly discovered that I wasn&#x2019;t alone fighting those kind of demons. When I designed RavenDB, I set out explicitly to prevent as many of those as I possibly could. One of the major issues that I wanted to address was Unbounded Result Sets, simply put, this is when you have:  SELECT * FROM OrderLines WHERE OrderID = 1555 And you don&#x2019;t realize that this order has three million line items (or, which is worst, that most of your orders have a few thousands line items, so you are generating a lot of load on the database, only to throw most of them away). In order to prevent this type of issue, RavenDB has the notion of mandatory page sizes.  On the client side, if you don&#x2019;t specify a limit, we&#x2019;ll implicitly add one (by default set to 128). On the server side, there is a database wide maximum page size (by default set to 1024). The server will trim all page sizes to the max if they are larger. I think that this is one of the more controversial decisions in RavenDB design, and one that got a lot of heated discussion. But I still think that this is a good idea,because I have seen what happens when you don&#x2019;t do that.&#xA0;&#xA0; And the arguments are mostly about &#x201C;RavenDB should trust developers to know what they are doing&#x201D; and a particular irate guy called me while I was out shopping to complain how I broke the sacred contract of Linq with regards to &#x201C;queries should return all by default, even if this is ten billion results&#x201D;. I pointed out that this is actually configurable, and if he wanted to set the default to any size he wanted, he could do that, but apparently it is supposed to be &#x201C;shoot my own foot first, then think&#x201D; kind of deal. Even though that I still think that this is a really good idea, we have added some features over the years to make it easy for people to access the entire dataset when they need it. Streaming has been around since 2.5 or so, giving you a dedicated API to stream unbounded results. Streams were built to make it efficient to process large sets of data, and they allow both client &amp; server to process the data in parallel, instead of batching huge responses on the server, then consuming ridiculous amounts of memory on the client before giving you the full result set. Instead, you can get each result as soon as it arrive from server, and you can process it and send it further. In 4.0, we are going to change the behavior of the paging limits so:  If you don&#x2019;t specify a limit, we&#x2019;ll supply a limit clause of 25 items. If there are more than 25 items, we&#x2019;ll throw an exception (unless you asked otherwise in the conventions).  If you supply a limit explicitly, it will work as expected and page through the data. The idea is that we want to reduce the surprise for users, and that can give them the experience to draw upon early on. Another thing that we&#x2019;ll do is make sure that the operations guys can also change that, likely with an environment variable or something like that. If you need to modify the conventions on the fly, you usually have hard time deploying a new version, and an immediate action is needed. In this manner, we can help users avoid expensive requests to the server, and they can be explicit with what they need to do.</p>
         </article>
-        <article id="article-2929">
+        <article id="article-2930">
             <a href="https://www.meziantou.net/creer-une-extension-pour-chrome-opera-vivaldi.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2929">Cr&#xE9;er une extension pour Chrome/Opera/Vivaldi</h2>
+                <h2 class="title mb-6" id="article-2930">Cr&#xE9;er une extension pour Chrome/Opera/Vivaldi</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: September 28, 2016
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">NoteAn English version of this post is available: Creating an extension for Chrome / Opera / VivaldiJ&#x27;ai &#xE9;crit un article sur un autre blog:En tant que d&#xE9;veloppeur, j&#x27;ai r&#xE9;guli&#xE8;rement besoin d&#x27;informations sur les outils et les Frameworks que j&#x27;utilise. La plupart des informations techniques sont p</p>
-        </article>
-        <article id="article-2930">
-            <a href="https://ayende.com/blog/175585/debug-operations-as-a-feature-tracking-allocations-costs" target="_blank">
-                <h2 class="title mb-6" id="article-2930">Debug &amp; Operations as a feature: Tracking allocations costs</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 27, 2016
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that we have learned from supporting RavenDB in production is that you by default, everything is a black box into which you have exactly zero input. And in order to figure out what the problems are, you need to use expert tools (WinDBG or VM MAP for example) that are typically more focused on developers, and not usually available in production. In RavenDB 4.0, we have started from the get go with the notion that everything we do must be exposed, tracked and monitored. Here is the results of the latest effort in that direction.  And:  There are several important things here. First, you can see that we are tracking the managed and unmanaged allocations that are happening in the system. More than that, we are now able to track down exactly which part of the system is responsible for that. In the screenshots above, you can see that the UsageIpAndQuantity index has allocated about 65 MB of unmanaged memory, and that we have a few memory mapped files storing the data for index #3. The idea is that we can now glance at this endpoint and tell very quickly what is going on. And this is something that can be done in production. In fact, that is something that we&#x2019;ll expose in the studio so you can see those value change over time. We are also waiting for the CoreCLR to expose the managed allocations on&#xA0; a per thread basis, which will give us even better metrics.</p>
         </article>
         <div class="button flex justify-between">
             <a href="292.html"><span class="back arrow"></span></a>

@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-9351">
+            <a href="https://ayende.com/blog/1003/triggers-auditing-take-2" target="_blank">
+                <h2 class="title mb-6" id="article-9351">Triggers &amp; Auditing: Take 2</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 17, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Okay, my post about auditing &amp; triggers&#xA0;generated some good questions, so here are a couple of answers.    Before anything else, I made a mistake in the schema and didn&#x27;t change the defination of the [Posts_Audit_Trail]&#x27;s post_id, it shouldn&#x27;t be an identity, here is the new schema:            CREATE TABLE [dbo].[Posts_Audit_Trail] (                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [audit_post_id] [int] IDENTITY (1, 1) NOT NULL,                        &#xA0;&#xA0;&#xA0; [post_id] [int] NOT NULL ,                        &#xA0;&#xA0;&#xA0; [post_title] [varchar] (50) NULL ,                        &#xA0;&#xA0;&#xA0; [post_blogid] [int] NULL ,                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [changed_by] nvarchar(255),                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [changed_on] datetime,                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [changed_action] nchar(10)                        ) ON [PRIMARY]        First, what about NHibernate, and other tools that relies on the changed rows count, here is a simple way to avoid breaking them by using the SET NOCOUNT ON/OFF option (I&#x27;m showing it for the update trigger only, but it should be clear how to use this):            CREATE TRIGGER Posts_AuditUpdate ON [Posts] FOR UPDATE                        AS                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SET NOCOUNT ON                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; INSERT INTO [Posts_Audit_Trail]                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; (                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [post_id],[post_title],[post_blogid],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [changed_by],[changed_on],[changed_action]                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; )                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; post_id,post_title,post_blogid,                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; CURRENT_USER,GETDATE(), &#x27;UPDATE-NEW&#x27;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; FROM Inserted                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; UNION ALL                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; post_id,post_title,post_blogid,                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; CURRENT_USER,GETDATE(), &#x27;UPDATE-OLD&#x27;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; FROM Deleted;                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SET NOCOUNT OFF                        Second, about getting the application user instead of the database user (which is a problem in any 3-tiers application), this one require help from the application to get this information. Usually it will be written to the table anyway (last_changed_by, or something like that), and then copied to the auditing table.    Third, using this with complex scenarios. This is a fairly simple scenario, where all you need is to have some sort of tracking on what happened to your data. If you need to have complex things happening (log outside of SQL Server, send mail when sensitive rows change, etc), that should happen on the business layer. While you can make it happen in the DB, you really don&#x27;t want it to happen there, think about poor you in 5 months time, staring at the screen trying to figure out why the CEO is getting flooded with emails. Like I mentioned, triggers are usually invisible, and that can be bad if you want to find out why stuff is happening. I wouldn&#x27;t want to track an email sent from the database (and boy, did I see much worse done in the DB layer) by a trigger.     Just think about the time that it would take to think about looking at the triggers. This is something for the quick &amp; simple solutions, not logic whatsoever, just log all the changes and forget about it until you need it.    For anything that require real logic, go with the code, if you&#x27;ve a good DAL, it should be easy enough to add that in (even with extensability) without affecting the rest of the application.</p>
+        </article>
+        <article id="article-9352">
             <a href="https://ayende.com/blog/1002/changes" target="_blank">
-                <h2 class="title mb-6" id="article-9351">Changes</h2>
+                <h2 class="title mb-6" id="article-9352">Changes</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I look back at my posts for the last couple of weeks, and the are full of SQL stuff. One of the nicest things in having a blog is that you can go back and see what you did at various points in time. I knew that I blog about it, and indeed, I found out that I wrote my first trigger&#xA0;less than three months ago. That was a half day ordeal involving me and a couple of co-workers, checking out all sorts of crazy stuff (recursive triggers, for instance). But writing the last post took me 5 minutes for the SQL, and ten for the text between them :-)</p>
         </article>
-        <article id="article-9352">
+        <article id="article-9353">
             <a href="https://ayende.com/blog/1001/triggers-and-auditing" target="_blank">
-                <h2 class="title mb-6" id="article-9352">Triggers and auditing</h2>
+                <h2 class="title mb-6" id="article-9353">Triggers and auditing</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There is some discussion in the Castle Mailing List&#xA0;about auditing using ActiveRecord. I firmly believe that auditing is one of those things that should be done in the database layer. It&#x27;s very simple to set up, and then you can forget about it until you need it. Here is an example of how simple it is.    Like most of my database samples, it is going to be a Blog-&gt;Posts sample. The issue is auditing in a multiply users per blog environment. Here is how the Posts table looks:            CREATE TABLE [dbo].[Posts] (                        &#xA0;&#xA0;&#xA0; [post_id] [int] IDENTITY (1, 1) NOT NULL ,                        &#xA0;&#xA0;&#xA0; [post_title] [varchar] (50) NULL ,                        &#xA0;&#xA0;&#xA0; [post_blogid] [int] NULL                                 ) ON [PRIMARY]                Now, let&#x27;s add support for auditing. First, the audting table:            CREATE TABLE [dbo].[Posts_Audit_Trail] (                        &#xA0;&#xA0;&#xA0; [post_id] [int] IDENTITY (1, 1) NOT NULL ,                        &#xA0;&#xA0;&#xA0; [post_title] [varchar] (50) NULL ,                        &#xA0;&#xA0;&#xA0; [post_blogid] [int] NULL ,                                &#xA0;&#xA0;&#xA0;&#xA0;[changed_by] nvarchar(255),                        &#xA0;&#xA0;&#xA0;&#xA0;[changed_on] datetime,                        &#xA0;&#xA0;&#xA0;&#xA0;[changed_action] nchar(10)                        ) ON [PRIMARY]                As you can see, it&#x27;s an exact duplicate of the Posts table, but with a couple of extra columns to track what happened, when and by whom. Next step, writing a trigger for saving deleted posts:            CREATE TRIGGER Posts_AuditDelete ON [Posts] FOR DELETE                        AS                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; INSERT INTO [Posts_Audit_Trail]                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; (                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [post_id],[post_title],[post_blogid],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [changed_by],[changed_on],[changed_action]                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; )                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; post_id,post_title,post_blogid,                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; CURRENT_USER,GETDATE(), &#x27;DELETE&#x27;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; FROM Deleted;         As you can see, there is nothing much to it, we shove all the deleted records into the audit trail table, and we are done. Doing the same for inserts is very easy:            CREATE TRIGGER Posts_AuditInsert ON [Posts] FOR INSERT                        AS                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; INSERT INTO [Posts_Audit_Trail]                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; (                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [post_id],[post_title],[post_blogid],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [changed_by],[changed_on],[changed_action]                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; )                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; post_id,post_title,post_blogid,                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; CURRENT_USER,GETDATE(), &#x27;INSERT&#x27;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; FROM Inserted;                The only midly tricky part is saving both the old and new version of a post when we are doing an update, and even that is very simple:            CREATE TRIGGER Posts_AuditUpdate ON [Posts] FOR UPDATE                        AS                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; INSERT INTO [Posts_Audit_Trail]                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; (                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [post_id],[post_title],[post_blogid],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [changed_by],[changed_on],[changed_action]                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; )                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; post_id,post_title,post_blogid,                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; CURRENT_USER,GETDATE(), &#x27;UPDATE-NEW&#x27;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; FROM Inserted                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; UNION ALL                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; post_id,post_title,post_blogid,                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; CURRENT_USER,GETDATE(), &#x27;UPDATE-OLD&#x27;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; FROM Deleted;                         As you can see, it&#x27;s very simple to add auditing in the database layer. The next step would be writing some sort of UI for this (if this is needed for someone other than the sys admin), but you would need to do it anyway.    The complexity of doing it somewhere else is not trivial. If you&#x27;ve a good DAL, you can add it there, but why bother when the database can do it for you for free?     The only reasons I can think about is that your database doesn&#x27;t support triggers, or you need to have some business rules involved with the auditing.     UPDATE: What about NHibernate? Since it check the modified rows count, wouldn&#x27;t that break it (and other tools that rely on the rows count? In general, yes, but there is a very simple solution. In this case I didn&#x27;t bother, but all you need to do is to use:            SET NOCOUNT ON        &#xA0;                        -- Trigger actions                                                        SET NOCOUNT OFF</p>
         </article>
-        <article id="article-9353">
+        <article id="article-9354">
             <a href="https://ayende.com/blog/1000/feeling-great" target="_blank">
-                <h2 class="title mb-6" id="article-9353">Feeling Great</h2>
+                <h2 class="title mb-6" id="article-9354">Feeling Great</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I went to work today expecting to be there until it would all work, and I expected it to start working (if at all) only very late into the night. I got off today before I usually leave, with a really great feeling. Everything that should&#x27;ve worked by tonight worked. It is a great feeling. I&#x27;m not sure how we did it, because last week I would&#x27;ve probably said that it can&#x27;t be done by the time frame we had, but we did :-)    Now it&#x27;s a show &amp; tell and off to the next stage, spit &amp; polish.</p>
         </article>
-        <article id="article-9354">
+        <article id="article-9355">
             <a href="https://ayende.com/blog/999/performance-tuning-in-sql-server" target="_blank">
-                <h2 class="title mb-6" id="article-9354">Performance Tuning In SQL Server</h2>
+                <h2 class="title mb-6" id="article-9355">Performance Tuning In SQL Server</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Steve has a good article on&#xA0;Why is SQL Server So Slow?</p>
         </article>
-        <article id="article-9355">
+        <article id="article-9356">
             <a href="https://ayende.com/blog/998/testdriven-net-code-coverage" target="_blank">
-                <h2 class="title mb-6" id="article-9355">TestDriven.Net &amp; Code Coverage</h2>
+                <h2 class="title mb-6" id="article-9356">TestDriven.Net &amp; Code Coverage</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just found out that TestDriven.Net&#xA0;can use the VS.Net code coverage! This is great, since the VS.Net code coverage engine is the best looking one I&#x27;ve seen so far.</p>
         </article>
-        <article id="article-9356">
+        <article id="article-9357">
             <a href="https://ayende.com/blog/997/exception-handling-the-ugly" target="_blank">
-                <h2 class="title mb-6" id="article-9356">Exception Handling - the ugly</h2>
+                <h2 class="title mb-6" id="article-9357">Exception Handling - the ugly</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If this was&#xA0;an art, I would name it &quot;Without Words&quot;&#xA0;            HelperObj&#xA0;obj;        int Foo()        {        &#xA0; try                &#xA0;&#xA0;{        &#xA0;&#xA0;&#xA0;&#xA0; return&#xA0;obj.DoWork()        &#xA0; }        &#xA0; catch&#xA0;(NullReferenceException&#xA0;)        &#xA0; {        &#xA0;&#xA0;&#xA0; obj&#xA0;=&#xA0;new&#xA0;HelperObj();        &#xA0;&#xA0;&#xA0; return&#xA0;Foo();        &#xA0; }        }        Some people seems to like exceptions all too much.</p>
         </article>
-        <article id="article-9357">
+        <article id="article-9358">
             <a href="https://ayende.com/blog/996/history-of-languages" target="_blank">
-                <h2 class="title mb-6" id="article-9357">History Of Languages</h2>
+                <h2 class="title mb-6" id="article-9358">History Of Languages</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Go and read this, a history of C &amp; History of Basic.    I laughed so hard I couldn&#x27;t breath.</p>
         </article>
-        <article id="article-9358">
+        <article id="article-9359">
             <a href="https://ayende.com/blog/995/how-to-debug-your-head-agasint-the-wall" target="_blank">
-                <h2 class="title mb-6" id="article-9358">How to debug your head agasint the wall</h2>
+                <h2 class="title mb-6" id="article-9359">How to debug your head agasint the wall</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just watch a very nice diagram of SSIS doing its work, and throwing 70% of the input rows into the garbage. I was a bit concerned about that, as you may imagine. I talked before about the experiance of debugging a problem with SSIS, I present this case as a case study.First, I should mention that I pipe all the errors to a table that contains three columns (which are provided by SSIS). The columns are ErrorColumn, ErrorCode and ErrorOutput. So when I get an error, I just check the error table and see where they happen. In this case, I got the following results (times 70 thousands):ErrorCode &#xA0;&#xA0; &#xA0;&#xA0;&#xA0;&#xA0; ErrorColumn&#xA0;&#xA0;&#xA0; &#xA0;&#xA0;&#xA0; ErrorOutput-1073442796&#xA0;&#xA0;&#xA0; 162&#xA0;&#xA0;&#xA0; &#xA0;&#xA0;&#xA0; &#xA0;&#xA0;&#xA0; &#xA0;&#xA0;&#xA0; &#xA0;&#xA0; null&quot;Hm, that is strange&quot;, I think, and goes to check the SSIS package for the column. I get to the point of the failure, and then I need to use the advance editor to go through each and every one of the dozens of columns that I have there, searching for a matching LineageId.I have no idea what a LineageId is, by the way. I can&#x27;t really think of why I would want to use that as my error column identifier rather than the rather nice column name.Leaving that aside, I&#x27;m left with the entirely too opaque error code. Searching Google for this gives nothing, nor does search MSDN. So I&#x27;m basically getting told: &quot;I know what the error was, but I am not going to tell you what it was.&quot;After checking that the connection manager was fine, I noticed that it was converting a string to an int, so I tried trimming the string before converting, but it wasn&#x27;t that, I kept getting the same error on the same column.I outputted the offensive column as text to the table, and looked at the values (it sounds easy to do, but it takes over 5 minutes to do this, and adjust everything that it will work correctly).All the values were perfect numbers, and SQL Server had no problem to convert them to numbers.This is usually the point where I resort to physical violance and hit my head against the wall until I either find the answer or pass out. After picking myself from the floor and passing the &quot;Who I am? Where am I? What is this big bulge on my head?&quot; stage, I had tried looking over the raw data. That was fine, but I noticed that several numbers were quite a bit bigger than the others. Then I checked the type of the column in the data base numeric(20,0) and the type I was converting to numeric(3,0), and it was obvious what the problem was.Now, if I could get something like &quot;truncation would occur&quot;, that would have saved me several hours of head butting and severe annoyance.</p>
         </article>
-        <article id="article-9359">
+        <article id="article-9360">
             <a href="https://ayende.com/blog/994/more-annoying-stuff-about-ssis" target="_blank">
-                <h2 class="title mb-6" id="article-9359">More annoying stuff about SSIS</h2>
+                <h2 class="title mb-6" id="article-9360">More annoying stuff about SSIS</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: January 13, 2006
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You can&#x27;t close a package after execution. You&#x27;ve to manually stop debugging and then close the package.No way that I could find to look at just the errors/ warnings from the log.The Flat File Source just blithedly ignored the fact that the file doesn&#x27;t exists and carried on its work. I need this behaviour in several places, so it would be useful to do it, but I&#x27;ve no idea why or how this works.You can&#x27;t edit connection managers without a live connection to use.You don&#x27;t get any results when you search for the errors on Google.I&#x27;m not sure how I got the situation below, but I did get it. I&#x27;m pretty sure that this shouldn&#x27;t happen. It got so many stuff wrong that I don&#x27;t know where to begin checking. More so, I don&#x27;t know how to check this stuff.</p>
-        </article>
-        <article id="article-9360">
-            <a href="https://ayende.com/blog/993/sql-management-studio" target="_blank">
-                <h2 class="title mb-6" id="article-9360">SQL Management Studio</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 13, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is one of the more annoying things in SQL Management Studio. If you try to use the Summary tab to skip the [dbo] prefix in the treeview, you often get this error:I&#x27;m getting this thing three or four times a day, and then the summary tab stops showing stuff.</p>
         </article>
         <div class="button flex justify-between">
             <a href="935.html"><span class="back arrow"></span></a>
