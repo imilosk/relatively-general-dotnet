@@ -112,8 +112,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-8981">
+            <a href="https://ayende.com/blog/1328/combating-the-select-n-1-problem-in-nhibernate" target="_blank">
+                <h2 class="title mb-6" id="article-8981">Combating the Select N &#x2B; 1 Problem In NHibernate</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 02, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Using&#xA;an O/RM can greatly simplify your life, but is has its on set of Gotcha that&#xA;you need to be aware of. One of the more serious ones is the Select N &#x2B; 1&#xA;issue. To describe the issue, let&#x27;s look at a typical example. Users &#xF893; &#x5D0; M:M &#xF893; &#x5D0; Blogs &#x5D0; 1:M &#x5D0; Posts &#x5D0; 1:M &#x5D0; Comments. Here&#xA;is the diagram:&#xA;&#xA;&#xA;&#xA;I&#xA;hope that both my notation above and diagram makes it clear what the relations&#xA;between the objects are (isn&#x27;t class designer cool)?&#xA;As an aside, the above model is from NHibernate.Generics&#xA;tests. All collections are lazy.&#xA;&#xA;I&#xA;want to show the user all the comments from all the posts, so they can delete&#xA;all the nasty comments. The na&#x5DF;ve implementation would be something like:&#xA;&#xA;foreach&#xA;(Post post in blog.Posts)&#xA;&#xA;{&#xA;&#xA;&#xA0;&#xA0;&#xA0; foreach (Comment comment in post.Comments)&#xA;&#xA;&#xA0;&#xA0;&#xA0; {&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; //print comment...&#xA;&#xA;&#xA0;&#xA0;&#xA0; }&#xA;&#xA;}&#xA;&#xA;The&#xA;posts collection has 80 posts in it. When we access it, we load all the posts&#xA;(1 select to grab all the posts), now, when we access each post&#x27;s Comments&#x27;&#xA;collection, we need to issue a new select to get the data (1 select to grab all&#xA;the comments for this post). In my testing, I got 81 selects from this&#xA;seemingly innocent piece of code. I&#x27;m not sure about you, but I&#x27;m usually&#xA;motivated to reduce the number of external queries. To put it another way, for every&#xA;iteration of the external loop above, we have a database query. And that is in order&#xA;to print a fairly simple UI, and this is a fairly common task.&#xA;&#xA;There&#xA;are several ways to solve the issue. The easiest is to just ask NHibernate to&#xA;give you it all in a single query, like this:&#xA;&#xA;IList&#xA;posts = session.CreateQuery(&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; @&quot;from Post post left join fetch &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA;post.Comments where post.Blog = :blog&quot;)&#xA;&#xA;&#xA0;&#xA0;&#xA0; .SetEntity(&quot;blog&quot;,blog)&#xA;&#xA;&#xA0;&#xA0;&#xA0; .List();&#xA;&#xA;foreach&#xA;(Post post in posts)&#xA;&#xA;{&#xA;&#xA;&#xA0;&#xA0;&#xA0; foreach (Comment comment in post.Comments)&#xA;&#xA;&#xA0;&#xA0;&#xA0; {&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; //print comment...&#xA;&#xA;&#xA0;&#xA0;&#xA0; }&#xA;&#xA;}&#xA;&#xA;This&#xA;code is a little more explicit in what it does; it tells NHibernate &quot;give&#xA;me all the posts for this blog, and make sure to fetch all their comments as&#xA;well, since I&#x27;m going to use this&quot;. The result of this query is a single SQL Statement to load all the data&#xA;in one go. &#xA;&#xA;&#xA0;&#xA;&#xA;Fetch Join vs. Join &#xA;&#xA;One&#xA;important thing that you should be aware of is the difference between join fetch and just join. NHibernate can use multiply joins in&#xA;a single statement, but can fetch&#xA;only a single collection &#x2013; it&#xA;can fetch several properties {many to one or one to one} &#x2013; in a single&#xA;query. Fetching means that NHibernate will load the collection and put it in&#xA;its proper place (for instance, load all the comments for this post and put&#xA;them in the collection).&#xA;&#xA;Normal&#xA;joining means that NHibernate will return the correct objects, but it will not&#xA;be able to associate them to their proper place in the objects without going to&#xA;the database again.&#xA;&#xA;To&#xA;clarify, the result of this query:&#xA;&#xA;IList&#xA0;&#xA;blogs = session.CreateQuery(&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; @&quot;from Blog blog left join fetch &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA;blog.Posts left join blog.Users&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; where&#xA;blog.id = 1&quot;)&#xA;&#xA;&#xA0;&#xA0;&#xA0; .List();&#xA;&#xA;It is&#xA;not a Blog object with all its collections already filled. It is a list of&#xA;tuples { { blog1, user1} , { blog1, user2}, { blog1, user3},{ blog1, user1} },&#xA;etc. The list in my case has a length of 567, and contains many duplicate&#xA;items. The reason it contains duplicate items is that NHibernate doesn&#x27;t attempt&#xA;to uniqueify (is that a word?) the result from the database, and because the&#xA;database returned &#xA0;567 (for all permutations of a post, blog and user), this is&#xA;what you get. NHibernate is smart&#xA;enough to return the same instances,&#xA;so it is not a problem to do the filtering yourself.&#xA;&#xA;However,&#xA;if we will try to access the Users&#x27; collection of the blog that was returned,&#xA;we will still get a query to the&#xA;database to get the collection. NHibernate is smart enough to figure out that&#xA;it already has the data itself in memory, so it will just ask for the identifiers&#xA;and nothing more.&#xA;&#xA;&#xA0;&#xA;&#xA;There&#xA;are other ways to get the same result, we can use the Criteria API (my favorite),&#xA;to do the same:&#xA;&#xA;session.CreateCriteria(typeof(Post))&#xA;&#xA;&#xA0;&#xA0;&#xA0; .SetFetchMode(&quot;Comments&quot;, FetchMode.Eager)&#xA;&#xA;&#xA0;&#xA0;&#xA0; .Add(Expression.Eq(&quot;Blog&quot;, blog))&#xA;&#xA;&#xA0;&#xA0;&#xA0; .List();&#xA;&#xA;This&#xA;is one of the more powerful features on NHibernate, since it allows you a fine&#xA;grained control of the loading strategy, based on your scenario. A fairly&#xA;simple change turned an 80&#x2B;1 queries (for a small example. If I was using my&#xA;own blog for example, I would need ~1300&#x2B;1 queries to get the data!!) to a&#xA;single query.&#xA;&#xA;And I&#xA;can do this on a case by case basis! That is truly powerful. &#xA0;&#xA;&#xA;The other&#xA;ways that I mentioned are no as fined grained, and involve changing the mapping&#xA;for the specified association(s). This is good if you need to change the behavior&#xA;for all the application in one stroke. Personally, I can&#x27;t think of hand on&#xA;many cases where I would need that, but it is good to have the option for when&#xA;I would need it.</p>
+        </article>
+        <article id="article-8982">
+            <a href="https://ayende.com/blog/1327/the-prison-domain-model" target="_blank">
+                <h2 class="title mb-6" id="article-8982">The Prison Domain Model</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 02, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here&#xA;is an interesting challenge. Below is a highly simplified database diagram for a&#xA;prison. The idea is that the Inmates details are in the Inmates table (duh!),&#xA;and the Commands table hold the authorization to hold the inmate in prison.&#xA;&#xA;It&#xA;is highly simplified because there are about fifteen different commands, each&#xA;with strange and stranger semantics, but we will concentrate on the challenge.&#xA;&#xA;For&#xA;the purpose of discussion, there are three types of commands:&#xA;&#xA;&#xA; Hold&#xA;     the inmate for a specified number of days, starting from the issued date&#xA; Hold&#xA;     the inmate for a specified number of hours, starting from the issued hour&#xA; Hold&#xA;     the inmate until told otherwise.&#xA;&#xA;&#xA;&#xA0;&#xA;&#xA;Commands&#xA;can overlap and (in general, but not always) in this case, the more recent one&#xA;wins. &#xA;&#xA;&#xA0;&#xA;&#xA;&#xA;&#xA;Here&#xA;is a sample query to pull all the commands history for all inmates. The&#xA;CommandEnds() function calculate when the command is no longer valid. &#xA;&#xA;&#xA0;&#xA;&#xA;SELECT&#xA0;&#xA0;&#xA0;&#xA0;&#xA;&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Inmates.Id, &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Inmates.FirstName, &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Inmates.Surname, &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Commands.Id AS [Commands.Id], &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; CommandsTypes.Description AS [Commands.Description], &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Commands.ValidFor as [Commands.ValidFor], &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Commands.IssuedAt as [Commands.IssuedAt], &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; dbo.CommandEnds(Commands.CommandType, Commands.ValidFor, Commands.IssuedAt) as&#xA;[Commands.Until]&#xA;&#xA;FROM&#xA0; Inmates&#xA;&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; INNER JOIN Commands &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ON Inmates.Id =&#xA;Commands.InmateId&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; INNER JOIN CommandsTypes&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ON Commands.CommandType = CommandsTypes.Id&#xA;&#xA;&#xA0;&#xA;&#xA;The output of the above query is something like&#xA;this:&#xA;&#xA;&#xA0;&#xA;&#xA;&#xA;&#xA;&#xA; &#xA;  &#xA;  Id&#xA;  &#xA;  &#xA;  FirstName&#xA;  &#xA;  &#xA;  Surname&#xA;  &#xA;  &#xA;  Commands.Id&#xA;  &#xA;  &#xA;  Commands.Description&#xA;  &#xA;  &#xA;  Commands.ValidFor&#xA;  &#xA;  &#xA;  Commands.IssuedAt&#xA;  &#xA;  &#xA;  Commands.Until&#xA;  &#xA; &#xA; &#xA;  &#xA;  1&#xA;  &#xA;  &#xA;  Bad&#xA;  &#xA;  &#xA;  Man&#xA;  &#xA;  &#xA;  1&#xA;  &#xA;  &#xA;  Hold - Days&#xA;  &#xA;  &#xA;  8&#xA;  &#xA;  &#xA;  2/5/2006 6:39 PM&#xA;  &#xA;  &#xA;  10/5/2006 6:39 PM&#xA;  &#xA; &#xA; &#xA;  &#xA;  1&#xA;  &#xA;  &#xA;  Bad&#xA;  &#xA;  &#xA;  Man&#xA;  &#xA;  &#xA;  2&#xA;  &#xA;  &#xA;  Hold - Hours&#xA;  &#xA;  &#xA;  24&#xA;  &#xA;  &#xA;  10/5/2006 6:40 PM&#xA;  &#xA;  &#xA;  11/5/2006 6:40 PM&#xA;  &#xA; &#xA; &#xA;  &#xA;  1&#xA;  &#xA;  &#xA;  Bad&#xA;  &#xA;  &#xA;  Man&#xA;  &#xA;  &#xA;  3&#xA;  &#xA;  &#xA;  Hold - To Sentence&#xA;  &#xA;  &#xA;  NULL&#xA;  &#xA;  &#xA;  11/5/2006 6:40 PM&#xA;  &#xA;  &#xA;  9/9/9999 12:00 AM&#xA;  &#xA; &#xA;&#xA;&#xA;&#xA;&#xA;&#xA0;&#xA;&#xA;The&#xA;challenge here is to find all the inmates that are held illegally. That is, those&#xA;that are held in prison without a valid authorization. This is not just for now,&#xA;where it is relatively simple to find using something like this:&#xA;&#xA;&#xA0;&#xA;&#xA;SELECT&#xA;Id, FirstName, Surname, &#x27;Oh!&#xA;Boy! Problem!!!&#x27;&#xA;&#xA;FROM&#xA;Inmates &#xA;&#xA;WHERE&#xA;EXISTS&#xA;&#xA;(&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; SELECT&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; 1&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; FROM&#xA0; Commands &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; WHERE Commands.InmateID = Inmates.Id&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; AND&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; dbo.CommandEnds(Commands.CommandType, Commands.ValidFor, Commands.IssuedAt) &lt;&#xA;getdate()&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; AND&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; IssuedAt&#xA;= (SELECT&#xA;MAX(IssuedAt) FROM&#xA;Commands WHERE&#xA0; Commands.InmateID = Inmates.Id)&#xA;&#xA;)&#xA;&#xA;&#xA0;&#xA;&#xA;I&#x27;m&#xA;talking about finding all the gaps&#xA;in the commands, for instance, the following inmate is held illegally:&#xA;&#xA;&#xA0;&#xA;&#xA;&#xA;&#xA;&#xA; &#xA;  &#xA;  Id&#xA;  &#xA;  &#xA;  FirstName&#xA;  &#xA;  &#xA;  Surname&#xA;  &#xA;  &#xA;  Commands.Id&#xA;  &#xA;  &#xA;  Commands.Description&#xA;  &#xA;  &#xA;  Commands.ValidFor&#xA;  &#xA;  &#xA;  Commands.IssuedAt&#xA;  &#xA;  &#xA;  Commands.Until&#xA;  &#xA; &#xA; &#xA;  &#xA;  1&#xA;  &#xA;  &#xA;  Bad&#xA;  &#xA;  &#xA;  Man&#xA;  &#xA;  &#xA;  1&#xA;  &#xA;  &#xA;  Hold - Days&#xA;  &#xA;  &#xA;  8&#xA;  &#xA;  &#xA;  2/5/2006 6:39 PM&#xA;  &#xA;  &#xA;  10/5/2006 6:39 PM&#xA;  &#xA; &#xA; &#xA;  &#xA;  1&#xA;  &#xA;  &#xA;  Bad&#xA;  &#xA;  &#xA;  Man&#xA;  &#xA;  &#xA;  2&#xA;  &#xA;  &#xA;  Hold - Hours&#xA;  &#xA;  &#xA;  24&#xA;  &#xA;  &#xA;  10/5/2006 6:40 PM&#xA;  &#xA;  &#xA;  11/5/2006 6:40 PM&#xA;  &#xA; &#xA; &#xA;  &#xA;  1&#xA;  &#xA;  &#xA;  Bad&#xA;  &#xA;  &#xA;  Man&#xA;  &#xA;  &#xA;  3&#xA;  &#xA;  &#xA;  Hold - To Sentence&#xA;  &#xA;  &#xA;  NULL&#xA;  &#xA;  &#xA;  11/5/2006 7:40 PM&#xA;  &#xA;  &#xA;  9/9/9999 12:00 AM&#xA;  &#xA; &#xA;&#xA;&#xA;&#xA;&#xA;&#xA0;&#xA;&#xA;There&#xA;is an hour gap between the second and third commands. (This is usually bad, by the way).&#xA;&#xA;&#xA0;&#xA;&#xA;Okay,&#xA;so far there was a lot of rambling, but nothing concrete. The challenge is to&#xA;find all the gaps in T-SQL, without using&#xA;cursors. Can you do it?</p>
+        </article>
+        <article id="article-8983">
             <a href="https://ayende.com/blog/1326/youre-a-dba-if" target="_blank">
-                <h2 class="title mb-6" id="article-8981">You&#x27;re a DBA If...</h2>
+                <h2 class="title mb-6" id="article-8983">You&#x27;re a DBA If...</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This list had me laughing out loud too often.It is great.</p>
         </article>
-        <article id="article-8982">
+        <article id="article-8984">
             <a href="https://ayende.com/blog/1325/great-advertising" target="_blank">
-                <h2 class="title mb-6" id="article-8982">Great Advertising</h2>
+                <h2 class="title mb-6" id="article-8984">Great Advertising</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It is not often that I like a commercial. The last two that I liked was &quot;It Is a Big Ad&quot;, and &quot;It Is a Small Ad&quot;.I&#x27;m liking this one very much. Go watch it.</p>
         </article>
-        <article id="article-8983">
+        <article id="article-8985">
             <a href="https://ayende.com/blog/1324/great-advice-on-screws" target="_blank">
-                <h2 class="title mb-6" id="article-8983">Great Advice On Screws</h2>
+                <h2 class="title mb-6" id="article-8985">Great Advice On Screws</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Jeff has a great post about screws, and why we need so many.Go read it, it worth your time, and will provide you with some insight you can use later.</p>
         </article>
-        <article id="article-8984">
+        <article id="article-8986">
             <a href="https://ardalis.com/update-to-cs-2-0/" target="_blank">
-                <h2 class="title mb-6" id="article-8984">Update to CS 2.0</h2>
+                <h2 class="title mb-6" id="article-8986">Update to CS 2.0</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday we updated ASPAdvice.com to Community Server 2.0. So far it seems to be a lot nicer. Please let me know if you have any problems&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8985">
+        <article id="article-8987">
             <a href="https://ayende.com/blog/1323/active-record-internals" target="_blank">
-                <h2 class="title mb-6" id="article-8985">Active Record Internals</h2>
+                <h2 class="title mb-6" id="article-8987">Active Record Internals</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Hammett is publishing a set of article about how Active Record is working internally. They are very detailed, without boring you with thousands of lines of code.Article #1 - Introcuding Active RecordArticle #2 - Active Record Initialization.</p>
         </article>
-        <article id="article-8986">
+        <article id="article-8988">
             <a href="https://ayende.com/blog/1322/replacing-o-rm-is-hard" target="_blank">
-                <h2 class="title mb-6" id="article-8986">Replacing O/RM Is Hard</h2>
+                <h2 class="title mb-6" id="article-8988">Replacing O/RM Is Hard</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">No, I&#x27;m not abandoning NHibernate to greener pastors, I&#x27;m talking about this post.I&#x27;m not sure what the point of the author was, but on first reading, it read like FUD to me. Maybe it is the general tone of the post, or that there are a lot of numbers without any clue how the author got them, but that was my first feeling. A lot of the points that are raised are valid, but I just don&#x27;t understand where the numbers came from.I had a math teacher that used to look at a student excersize and say: &quot;And suddenly there is a QED.&quot; when we did something stupid. I fill like saying it here.Take for instance the part about entities and methods. I present you my most common method of dealing with O/RM:public interface IRepository&lt;T&gt;{&#xA0;&#xA0;&#xA0; void Save(T item);&#xA0;&#xA0;&#xA0; void Delete(T item);&#xA0;&#xA0;&#xA0; ICollection&lt;T&gt; Find(params Predicate[] preds);&#xA0;&#xA0;&#xA0; T Load(int id);&#xA0;&#xA0;&#xA0; T TryLoad(int id);}That is it. The implementation is generic as well, so I go five methods, not matter how many entities I have. In theory I can switch from O/RM to DAO to SOA to AOM (Acronym Of Month) with very little effort. I would replace the implementation of the IRepository&lt;T&gt;, and I&#x27;m done. Five methods, about 2.5 hours if I understand the math correctly, we&#x27;ll add a couple of days to be safe, but we are still under 20 hours.&#xA0; I don&#x27;t even need to touch the UI since it works against the interface, and not the implementation.The problem is that this math is that it is based on nothing in particular. I recently had to evaluate moving from one O/RM to another, and I had to survey the number of places where I was dependant on the O/RM. I counted 23 major features that I had to have if I didn&#x27;t want to basically re-write my application from scratch.Those ranged from lazy loading to cascades to reference equality for same entities in the same session, etc.Replacing the O/RM would&#x27;ve have been hard at best, impossible at worst, and painful whatever I would have done. And I used a very similar interface to isolate myself from the O/RM (even though I never had any intention of replacing it).Frankly, the issue is not the support of interface, but far smaller interactions. From knowing that you can map the same fields in a class to different properties in a hierarchy (an integer in one case, an object in the other, etc) is very powerful tool that will cause quite a bit of pain if you need to stop using it. That is where the cost of switching O/RM will come into play.If you are doing anything at all interesting with your O/RM of choice (or hand written DAL), then you are going to get into some serious trouble if you think about switching.For instance, I&#x27;m using NHibernate&#x27;s Table Hierarchy to save strategies to the database, so when I load the object later, I&#x27;ll get all its saved strategies with their parameters. It is making my life so much easier, but I don&#x27;t want to even think what I would have to do if I had to write it all on my own.To conclude, I agree with the first two observations, and disagree with the third. You can certainly optimize a good O/RM as much as you like. Usually you don&#x27;t even need to see the O/RM code for this.I really don&#x27;t agree with his conclustions, though.</p>
         </article>
-        <article id="article-8987">
+        <article id="article-8989">
             <a href="https://ayende.com/blog/1321/training-by-the-ear" target="_blank">
-                <h2 class="title mb-6" id="article-8987">Training By The Ear</h2>
+                <h2 class="title mb-6" id="article-8989">Training By The Ear</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of my tasks when I was in the army was to train people. It was often new guys that arrived, but also refreshing the knowledge and the skill of our existing staff. One Wendsday afternoon I got an urgent call from headquarters, I was to drop everything and go to another base, to train several cadets in the final stages of their training.I was literally yanked away in a matter of a few hours. The course that I needed to pass was supposed to be two to three weeks long, and existed mainly as a set of power point presentations that were written by someone who never worked in the field.I took a brief look at the material that I had and flat out refused to pass the course this way. It was, in fact, the same material that I was taught, and it hasn&#x27;t changed a bit in over two years (and a lot has changed since). So I just played the course by the ear, without much sleep, but with a real devotion to make sure that the officer that I will train will go into the field as prepared as I can make them in a class room and in field trips.I remember several times when I had to tell the cadets to wait for several minutes while I was finishing writing their next lesson, and then immediately giving it to them. Needless to say, in the breaks between lessons, I kept writing the next lessons. It was also one of the times that I had the most fun in the army (sadly, it wasn&#x27;t even close to one of the times that I had least sleep).I had a similar experiance today, writing a presentation and the lesson&#x27;s plan in the morning, doing a short trial run on some co-workers, and then passing it later that day. In fact, I wrote the lesson for tomorrow while the students were doing excersizes.Oh, and one point that I am particuallry proud of, the presentations and lessons that I created for the out of the blue course were used in the army for several years afterward (actually, to my knowledge, they are still in use today).</p>
         </article>
-        <article id="article-8988">
+        <article id="article-8990">
             <a href="https://ayende.com/blog/1320/nhibernate-generics-1-0-6-release" target="_blank">
-                <h2 class="title mb-6" id="article-8988">NHibernate Generics 1.0.6 Release</h2>
+                <h2 class="title mb-6" id="article-8990">NHibernate Generics 1.0.6 Release</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -238,38 +270,6 @@
                 posted on: April 30, 2006
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This release fixes a very annoying bug with NHibernate Generics and lazy load exception when the entity ref is set. A huge thanks for Daniel for giving me a much better solution than the workaround that I found.You can find source and binaries here</p>
-        </article>
-        <article id="article-8989">
-            <a href="https://ayende.com/blog/1319/runas-mystery" target="_blank">
-                <h2 class="title mb-6" id="article-8989">Runas Mystery</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 30, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I can&#x27;t seem to use Runas on files that or a network share. I&#x27;m not sure why, but I&#x27;m getting invalid user name or password for combinations that are valids.Anyone knows anything about this?</p>
-        </article>
-        <article id="article-8990">
-            <a href="https://ayende.com/blog/1318/nhibernate-net-2-0-nullable-types" target="_blank">
-                <h2 class="title mb-6" id="article-8990">NHibernate &amp; .Net 2.0 Nullable Types</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 30, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you want to use NHibernate with .Net 2.0 Nullable Types (int?, DateTime?, etc), all you need to do is to specify full type name of the (non nullable) property.So, if you&#x27;ve something like &quot;DateTime? DueDate { get; set; }&quot;, the mapping will looks something like this: &quot;&lt;propery name=&#x27;DueDate&#x27; type=&#x27;System.DateTime&#x27;/&gt;&quot;You don&#x27;t need to do anything else.</p>
         </article>
         <div class="button flex justify-between">
             <a href="898.html"><span class="back arrow"></span></a>
