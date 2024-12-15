@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3281">
+            <a href="https://ayende.com/blog/172481/technical-observations-from-my-wife-production-issues" target="_blank">
+                <h2 class="title mb-6" id="article-3281">Technical observations from my wife</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: November 13, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So I was telling my wife about this issue, and she had two interesting comments.&#xA;When I told her that the customer was complaining about performance, she stopped me to figure out what I meant by that. When I told her that they had to wait for 20 minutes, her response was:&#xA;&#xA;Oh, I thought you were talking about 1/16 of a millisecond here again. Well, if it is 20 minutes, why make a fuss about it? They should go have a cup of coffee or something.&#xA;&#xA;The second observation was when I told her that we narrowed things down to suggestions taking up a lot of a CPU:&#xA;&#xA;Oh, so you told them to go and buy some more RPM, right?</p>
+        </article>
+        <article id="article-3282">
             <a href="https://ayende.com/blog/172449/production-postmortem-the-case-of-the-it-is-slow-on-that-machine-only" target="_blank">
-                <h2 class="title mb-6" id="article-3281">Production postmortem</h2>
+                <h2 class="title mb-6" id="article-3282">Production postmortem</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A customer called with a major issue, on a customer machine, a particular operation took too long. In fact, it takes quite a bit more than too long. Instead of the few milliseconds or (at worst, seconds), the customer saw a value in the many minutes. At first, we narrowed it down to an extreme load on the indexing engine. The customer had a small set of documents that were referenced using LoadDocument by large number of other documents. That meant that whenever those documents were updated, we would need to reindex all the referencing documents. In their case, that was in the tens to hundreds of thousands of referencing documents in some cases. So an update to a single document could force re-indexing of quarter million documents. Except&#x2026; that this wasn&#x2019;t actually the case. What drove everyone crazy was that here was a reasonable, truthful and correct answer. And on one machine the exact same thing took 20 &#x2013; 30 seconds, and on the customer machine the process took 20 minutes.  The customer also assured us that those documents that everyone referenced are very rarely, if at all, touched or modified, so that shouldn&#x2019;t be the issue. The machine with the problem was significantly more powerful from the one without the problem. This issue also started to occur recently, out of the blue. Tracing the resource utilization in the system showed moderate CPU usage, low I/O and memory consumption and nothing much really going on. We looked at the debug logs, and we couldn&#x2019;t really figure out what it was doing. There were very large gaps in the log where nothing seems to be happening. % Time in GC was low, so that ruled out a long GC pause that would explain the gap in the logs.   This is in version 2.5, which predates all of our introspection efforts, so figuring out what was going on was pretty hard. I&#x2019;ll have another post talking about that in this context later. Eventually we gained access to the machine and was able to reproduce this, and take a few mini dumps along the way. Looking at the stack traces, we found this:   And now it all became clear. Suggestions in RavenDB is a really cool feature, which allows you to ask RavenDB to figure out what the user actually meant to ask. It is also extremely CPU intensive during indexing, which is really visible when you try to pump large number of documents through it. And it is a single threaded process. Except that the customer wasn&#x2019;t using Suggestions in their application&#x2026;  So, what happened, in order to hit this issue the following things all needed to happen:  Suggestions to be enabled on the relevant index/indexes. Check &#x2013; while the customer wasn&#x2019;t currently using it, they were using it in the past, and unfortunately that stuck. A very large number of documents need to be indexed. Check &#x2013; that happened when they updated one of the commonly referenced documents. A commonly referenced document needed to be modified. Check &#x2013; that happens when they started work for next year, which modified those rarely touched documents. Now, why didn&#x2019;t it manifest itself on the other machines? Simple, on those machines, they used the current version of the application, which didn&#x2019;t use suggestions. On the machines that were problematic, they upgraded to the new version, so even though they weren&#x2019;t using suggestions, that was still in affect, and still running. According to a cursory check, those suggestions has been running there for over 6 months, and no one noticed, because you needed the confluence of all three aspects to actually get this issue. Removing the suggestions once we know they were there was very easy, and the problem was resolved.</p>
         </article>
-        <article id="article-3282">
+        <article id="article-3283">
             <a href="https://enterprisecraftsmanship.com/posts/is-sql-good-place-for-business-logic/" target="_blank">
-                <h2 class="title mb-6" id="article-3282">Is SQL a good place for business logic?</h2>
+                <h2 class="title mb-6" id="article-3283">Is SQL a good place for business logic?</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">&lt;TL;DR&gt; No, it isn&#x2019;t. While&#xA0;SQL is a Turing-complete language and we can use it to encode any business logic we want, placing business (domain) logic into SQL leads to a less maintainable solution comparing to one that uses an OO or functional language. Because of that, I advocate to limit the use of SQL to read-only queries (which can potentially contain business logic, that&#x2019;s fine) and simple CRUD statements where possible.</p>
         </article>
-        <article id="article-3283">
+        <article id="article-3284">
             <a href="https://ardalis.com/builtwith-web-analytics/" target="_blank">
-                <h2 class="title mb-6" id="article-3283">BuiltWith Web Analytics</h2>
+                <h2 class="title mb-6" id="article-3284">BuiltWith Web Analytics</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;re looking for information on adoption of a given platform, framework, or JavaScript library,BuiltWithhas a nice site with tools and&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3284">
+        <article id="article-3285">
             <a href="https://ayende.com/blog/172417/speaking-community-talk-in-kiev-ukraine-what-does-it-take-to-be-a-good-developer" target="_blank">
-                <h2 class="title mb-6" id="article-3284">Speaking</h2>
+                <h2 class="title mb-6" id="article-3285">Speaking</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">On Nov 25, I&#x2019;ll be speaking in Kiev Ukraine at the Build Stuff Encore community event about what it means to be a good developer, including what exactly does it take. This is actually an expansion of a conversation I had recently with a bunch of people, and it is the distillation of what is currently going on with our hiring practices. In a single sentence, it is trying to the oh so elusive quality, passion.</p>
         </article>
-        <article id="article-3285">
+        <article id="article-3286">
             <a href="https://ardalis.com/troubleshooting-strongly-named-assembly-errors-in-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-3285">Troubleshooting Strongly Named Assembly Errors in ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-3286">Troubleshooting Strongly Named Assembly Errors in ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last week I tried to work with the latest (beta 8) version of theMusic Store samplefor ASP.NET 5 (now ASP.NET Core). After pulling down the&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3286">
+        <article id="article-3287">
             <a href="https://ardalis.com/web-security-resources/" target="_blank">
-                <h2 class="title mb-6" id="article-3286">Web Security Resources</h2>
+                <h2 class="title mb-6" id="article-3287">Web Security Resources</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last month I attended a workshop put on by none other than Troy Hunt. Try had a ton of great security tips, as well as some online resources&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3287">
+        <article id="article-3288">
             <a href="https://enterprisecraftsmanship.com/posts/sql-vs-nosql-you-do-want-to-have-a-relational-storage-by-default/" target="_blank">
-                <h2 class="title mb-6" id="article-3287">SQL vs NoSQL: you do want to have a relational storage by default</h2>
+                <h2 class="title mb-6" id="article-3288">SQL vs NoSQL: you do want to have a relational storage by default</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The concept of NoSQL databases has been around for a while, but there still are quite a few misunderstandings regarding the topic of relational SQL vs NoSQL databases. In this post, I&#x2019;d like to clarify the most common misconceptions and discuss the primary use cases for each of them.</p>
         </article>
-        <article id="article-3288">
+        <article id="article-3289">
             <a href="https://ayende.com/blog/172385/recording-available-system-architecture-with-nosql-docdb" target="_blank">
-                <h2 class="title mb-6" id="article-3288">Recording available - SYSTEM ARCHITECTURE WITH NOSQL (DOCDB)</h2>
+                <h2 class="title mb-6" id="article-3289">Recording available - SYSTEM ARCHITECTURE WITH NOSQL (DOCDB)</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My Oredev talk is now available here:&#xA;https://vimeo.com/144829219</p>
         </article>
-        <article id="article-3289">
+        <article id="article-3290">
             <a href="https://ayende.com/blog/172289/ravendb-in-action" target="_blank">
-                <h2 class="title mb-6" id="article-3289">RavenDB in Action</h2>
+                <h2 class="title mb-6" id="article-3290">RavenDB in Action</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: November 04, 2015
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Writing books takes a lot of time, and quite a bit of effort. Which is why I was delighted when Itamar Syn-Hershko decided to write the RavenDB in Action book.  You can now get a 39% discount for the book (both physical and electronic versions) using the coupon code: 39ravendb Itamar has worked at Hibernating Rhinos for several years, mostly dealing with Lucene integration, but really all over the place. Off the top of my head, Itamar is responsible for Spatial searches in RavenDB, he wrote the first periodic backup implementation as well as the &#x201C;backup to cloud&#x201D; functionality, implemented the server side document json (which supports cheap cloning and is key for some very interesting performance optimizations) and in general worked all over the RavenDB codebase. In other words, this is a person who knows RavenDB quite well, and he has done an excellent in passing on that knowledge with the RavenDB in Action book. This book is likely to be the most up to date resource for getting started with RavenDB.  Itamar has covered working with RavenDB, how indexes work, and how to work with indexes (two distinctly different issues ) and most importantly, in my opinion, document based modeling. Users bringing relational modeling to RavenDB is usually the most common reason they run into trouble. So document modeling is quite important, and Itamar did a good job in covering it. Both as an independent concept and by contrasting that with relational model and discussing the cons and pros as it relates to RavenDB. And, naturally, the book also cover the fun parts of working with RavenDB.  Replication for high availability and load balancing  Sharding for scalability and increased throughput  Geo spatial queries  Full text, more like this and reporting queries  The advanced API options and how (and when) to use it. There is even a full chapter talking about how you can extend RavenDB on both the client side and the server side.  Overall, I highly recommend the RavenDB in Action book, if you are using RavenDB, or even if you just want to learn about it, this is a great resource. And remember that you can get a 39% discount for the book (both physical and electronic versions) using the coupon code: 39ravendb</p>
-        </article>
-        <article id="article-3290">
-            <a href="https://ardalis.com/contributing-to-asp-net-core-documentation/" target="_blank">
-                <h2 class="title mb-6" id="article-3290">Contributing to ASP.NET Core Documentation</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 03, 2015
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;re looking to learn ASP.NET 5, the best place to start today is the documentation site atdocs.asp.net. It&#x2019;s hosted on ReadTheDocs and&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="328.html"><span class="back arrow"></span></a>
