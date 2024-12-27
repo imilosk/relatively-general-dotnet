@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6011">
+            <a href="https://ayende.com/blog/3862/the-cost-of-messaging" target="_blank">
+                <h2 class="title mb-6" id="article-6011">The cost of messaging</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 09, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Greg Young has a post about the cost of messaging. I fully agree that the cost isn&#x27;t going to be in the time that you are going to spend actually writing the message body. You are going to have a lot of those, and if you take more than a minute or two to write one, I am offering overpriced speed your typing courses. The cost of messaging, and a very real one, comes when you need to understand the system. In a system where message exchange is the form of communication, it can be significantly harder to understand what is going on. For tightly coupled system, you can generally just follow the path of the code. But for messages? When I publish a message, that is all I care about in the view of the current component. But in the view of the system? I sure as hell care about who is consuming it and what it is doing with it. Usually, the very first feature in a system that I write is login a user. That is a good proof that all the systems are working. We will ignore the UI and the actual backend for user storage for a second, let us thing about how we would deal with this issue if we had messaging in place? We have the following guidance from Udi about this exact topic. I am going to try to break it down even further. We have the following components in the process. The user, the browser (distinct from the user), the web server and the authentication service. We will start looking at how this approach works by seeing how system startup works.   The web server asks the authentication service for the users. The authentication service send the web server all the users he is aware off. The web server then cache them internally. When a user try to login, we can now satisfy that request directly from our cache, without having to talk the the authentication service. This means that we have a fully local authentication story, which would be blazingly fast.   But what happens if we get a user that we don&#x27;t have in the cache? (Maybe the user just registered and we weren&#x27;t notified about it yet?). We ask the authentication service whatever or not this is a valid user. But we don&#x27;t wait for a reply. Instead, we send the browser the instruction to call us after a brief wait. The browser set this up using JavaScript. During that time, the authentication service respond, telling us that this is a valid user. We simply put this into the cache, the way we would handle all users updates. Then the browser call us again (note that this is transparent to the user), and we have the information that we need, so we can successfully log them in:   There is another scenario here, what happens if the user is not valid. The first part of the scenario is identical, we ask the authentication service to tell us if this is valid or not. When the service reply that this is not a valid user, we cache that. When the browser call back to us, we can tell it that this is not a valid user.   (Just to make things interesting, we also have to ensure that the invalid users cache will expire or has a limited size, because otherwise this is an invitation for DOS attack.) Finally, we have the process of creating a new user in the application, which work in the following fashion: &#xA0; Now, I just took three pages to explain something that can be explained very easily using:  usp_CreateUser usp_ValidateLogin Backed by the ACID guarantees of the database, those two stored procedures are much simpler to reason about, explain and in general work with. We have way more complexity to work with. And this complexity spans all layers, from the back end to the UI! My UI guys needs to know about async messaging! Isn&#x27;t this a bit extreme? Isn&#x27;t this heavy weight? Isn&#x27;t this utterly ridiculous? Yes, it is, absolutely. The problem with the two SPs solution is that it would work beautifully for a simple scenario, but it creaks when start talking about the more complex ones. Authentication is usually a heavy operation. ValidateLogin is not just doing a query. It is also recording stats, updating last login date, etc. It is also something that users will do frequently. It make sense to try to optimize that. Once we leave the trivial solution area, we are face with a myriad of problems that the messaging solution solve. There is no chance of farm wide locks in the messaging solution, because there is never a lock taking place. There are no waiting threads in the messaging solution, because we never query anything but our own local state. We can take the authentication service down for maintenance and the only thing that will be affected is new user registration. The entire system is more robust. Those are the tradeoffs that we have to deal with when we get to high complexity features. It make sense to start crafting them, instead of just assembling a solution. Just stop and think about what it would require of you to understand how logins work in the messaging system, vs. the two SP system. I don&#x27;t think that anyone can argue that the messaging system is simpler to understand, and that is where the real cost is. However, I think that you&#x27;ll find that after getting used to the new approach, you&#x27;ll find that it start making sense. Not only that, but it is fairly easy to see how to approach problems once you have started to get a feel for messaging.</p>
+        </article>
+        <article id="article-6012">
             <a href="https://ayende.com/blog/3861/better-to-release-early-and-be-ridiculed-than-just-ridiculed" target="_blank">
-                <h2 class="title mb-6" id="article-6011">Better to release early and be ridiculed than just ridiculed</h2>
+                <h2 class="title mb-6" id="article-6012">Better to release early and be ridiculed than just ridiculed</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The title for this post is taken from this post. I released NH Prof to the wild in two stages. First, I had a closed beta, with people that I personally know and trust. After resolving all the issues for the closed beta group, we went into a public beta. Something that may not be obvious from the NH Prof site is that when you download NH Prof from the site, you are actually downloading the latest build. The actual download site is here. NH Prof has a CI process that push it to the public whenever anyone makes a commit. My model here was both OSS and JetBrains&#x27; daily builds. What this means for me is that the cost of actually releasing a new version is just about zero. This is going to change soon, when&#xA0; 1.0 will be released, of course, but even then, you&#x27;ll be able to access the daily builds (and I&#x27;ll probably have 1.1, 1.2, etc). What is interesting is that it never occurred to me not to work that way. Perhaps it is my long association with open source software. I have long ago lost my fear of being shown as the stupidest guy in class. (As an aside, one of the things that I tend to mutter while coding is: If stupidity was money, I was rich.) The first release of NH Prof for the private beta group showed that the software will not even run on some machines!  The whole idea is to get the software out there and get feedback from people. And overall, the feedback was positive. I got some invaluable ideas from people, including some surprises that I am keeping for after v1.0. I also got some on the field crashes. That can&#x27;t really help the reputation of the tool, but I consider that an acceptable compromise. Especially when the product is in beta. And especially since you are basically getting whatever I just committed.  Being able to get an email from a user, figure out that problem, fix it, commit and then reply: &quot;try downloading now, it is fixed&quot; is a very powerful motivator. For myself, because now fixing a bug is so much easier. For the users, because response times are short.&#xA0; For myself, because I am a lazy guy, basically, and I am not willing to do things that are annoying, and deployment is annoying. One interesting anecdote, we run into some problem with a component that we were using (now completely resolved, and totally our fault). We were able to commit a reduced functionality version, which was immediately available to users (build #227, if you care). Fix the actual issue (build #230, 14 hours later) and have a version out which the users could use. What about private features? If I want to expose a feature only when it is completed, this is an issue.&#xA0;  Well, what about them? This is why we have branches, and we did some work there, but I don&#x27;t really believe in private features. We mostly did things there of exploratory nature, or things that were broken (lot of attempts to reduce UI synchronization, for example). So far, it seems to be working :-)</p>
         </article>
-        <article id="article-6012">
+        <article id="article-6013">
             <a href="https://ayende.com/blog/3860/should-i-be-flattered" target="_blank">
-                <h2 class="title mb-6" id="article-6012">Should I be flattered?</h2>
+                <h2 class="title mb-6" id="article-6013">Should I be flattered?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Seen on InfoQ. I can&#x27;t decided if this is a reference to Rhino Mocks or to the Rhino JavaScript project (which has nothing to do with me).</p>
         </article>
-        <article id="article-6013">
+        <article id="article-6014">
             <a href="https://ayende.com/blog/3859/dsl-tests-as-documentation" target="_blank">
-                <h2 class="title mb-6" id="article-6013">DSL: Tests as documentation</h2>
+                <h2 class="title mb-6" id="article-6014">DSL: Tests as documentation</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have several DSL that have no documentation beyond their source and the tests. They are usable, useful and have been of a lot of help. However, I have run into situations where I, as the language author, could not answer a question about the language without referring to the code. I strongly recommend in investing the time to create good documentation in your DSL. Even if you are using a Behavior Driven Design flavored tests, it is not quite enough. Those types of tests can help make it clear what the language is doing, but they are not the type of documentation that you can hand to an end user and expect them to start using the language. Even if your users are developers, it is not nearly good enough approach. It is your responsibility to make the system easy to use for the users, and documentation is a key part of that. Handing them the tests is a good way to handle the complex cases, if your users are developers, but it is not a good way to reduce the learning curve.</p>
         </article>
-        <article id="article-6014">
+        <article id="article-6015">
             <a href="https://ayende.com/blog/3858/rhino-dht-and-failover-and-replication-on-my" target="_blank">
-                <h2 class="title mb-6" id="article-6014">Rhino DHT and failover and replication, on my!</h2>
+                <h2 class="title mb-6" id="article-6015">Rhino DHT and failover and replication, on my!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My initial design when building Rhino DHT was that it would work in a similar manner to Memcached, with the addition of multi versioned values and persistence. That is, each node is completely isolated from all the rest, and it is the client that is actually creating the illusion of distributed cohesion.  The only problem with this approach is reliability. That is, if a node goes down, all the values that are stored in it are gone. This is not a problem for Memcached. If the node is down, all you have to do is to hit the actual data source. Memcached is not a data store, it is a cache, and it is allowed to remove values when you want it.   For Rhino DHT, that is not the case. I am using it to store the saga details for Rhino Service Bus, as well as storing persistent state.  The first plan was to use it as is. If a node is down, it would cause an error during load&#xA0; saga state stage (try to say that three times fast!), which would eventually move the message to the error queue, when the node came back up, we could move the messages from the error queue to the main queue and be done with it.  My current client had some objections to that, from his perspective, if any node in the DHT was down, the other nodes should take over automatically, without any interruption of service. That is&#x2026; somewhat more complex to handle.  Well, actually, it isn&#x2019;t more complex to handle. I was able to continue with my current path for everything (including full transparent failover for reads and writes).   What I was not able to solve, however, was how to handle a node coming back up. Or, to be rather more exact, I run into a problem there because the only way to solve this cleanly was to use messaging. But, of course, Rhino Service Bus is dependent on Rhino DHT. And creating a circular reference would just make things more complex, even if it was broken with interfaces in the middle.  Therefore, I intend on merging the two projects.  Also, two points if you can tell me why I have used this image for this post.  The design for the new version of Rhino DHT is simple. We continue to support only three operations on the wire, Put, Get and Remove. But we also introduced a new notion. Failover servers. Every node in the DHT has a secondary and tertiary nodes defined to it. Those nodes are also full fledged nodes in the DHT, capable of handling their own stuff.  During normal operation, any successful Put or Remove operation will be sent via async messages to the secondary and tertiary nodes. If a node goes down, the client library is responsible for detecting that and moving to the secondary node, and the tertiary one if that is down as well. Get is pretty simple in this regard, as you can imagine, the node needs to simply serve the request from local storage. Put and Remove operations are more complex, the logic for doing this is the same as always, include all the conflict resolution, etc. But in addition to that, the Put and Remove requests will generate async messages to the primary and tertiary nodes (if using the secondary as fallback, and primary and secondary if using the tertiary as fallback).  That way, when the primary come back up, it can catch up with work that was done while it was down.  That leaves us with one issue, where do we store the data about the actual nodes. That is, the node listing, which is the secondary / tertiary to which, etc.  There are a few constraints here. One thing that I really don&#x2019;t want to do is to have to have duplicate configuration. Even worse than that is the case of conflicting configurations. That can really cause issues. We deal with that by defining a meta-primary and a meta-secondary for the DHT as well. Those will keep track of the nodes in the DHT, and that is where we would configure who goes where. Replication of this value between the two meta nodes is automatic, based on the information in the primary, the secondary node is a read only copy, in case the primary goes down.  The only configuration that we need for the DHT then is the URL for the meta-primary/meta-secondary.  Another important assumption that I am making for now is that the DHT is mostly static. That is, we may have nodes coming up and down, but we don&#x2019;t have to support nodes joining and leaving the DHT dynamically. This may seem like a limitation, but in practice, this isn&#x2019;t something that happen very often, and it significantly simplifies the implementation. If we need to add more nodes, we can do it on deployment boundary, rather than on the fly.</p>
         </article>
-        <article id="article-6015">
+        <article id="article-6016">
             <a href="https://ayende.com/blog/3857/elegant-code" target="_blank">
-                <h2 class="title mb-6" id="article-6015">Elegant code</h2>
+                <h2 class="title mb-6" id="article-6016">Elegant code</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just like this code, so I thought I would publish it.                    1: public static class ArrayExtension&#xA;&#xA;         2: {&#xA;&#xA;         3:     public static T[] GetOtherElementsFromElement&lt;T&gt;(this T[] array , T element)&#xA;&#xA;         4:     {&#xA;&#xA;         5:         var index = Array.IndexOf(array, element);&#xA;&#xA;         6:         if (index == -1)&#xA;&#xA;         7:             return array;&#xA;&#xA;         8:         return array.Skip(index &#x2B; 1).Union(array.Take(index)).ToArray();&#xA;&#xA;         9:     }&#xA;&#xA;        10: }&#xA;    &#xA;  &#xA;&#xA;&#xA;And the unit test:&#xA;&#xA;&#xA;  &#xA;    &#xA;         1: public class ReplicationUnitTest&#xA;&#xA;         2: {&#xA;&#xA;         3:     [Fact]&#xA;&#xA;         4:     public void Will_distribute_work_starting_with_next_node()&#xA;&#xA;         5:     {&#xA;&#xA;         6:         var nodes = new[] { 1, 2, 3 };&#xA;&#xA;         7:         Assert.Equal(new[] { 3, 1 }, nodes.GetOtherElementsFromElement(2));&#xA;&#xA;         8:         Assert.Equal(new[] { 1, 2 }, nodes.GetOtherElementsFromElement(3));&#xA;&#xA;         9:         Assert.Equal(new[] { 2, 3 }, nodes.GetOtherElementsFromElement(1));&#xA;&#xA;        10:         Assert.Equal(new[] { 1, 2, 3 }, nodes.GetOtherElementsFromElement(4));&#xA;&#xA;        11:     }&#xA;&#xA;        12: }</p>
         </article>
-        <article id="article-6016">
+        <article id="article-6017">
             <a href="https://ayende.com/blog/3856/a-wcf-perf-mystery" target="_blank">
-                <h2 class="title mb-6" id="article-6016">A WCF Perf Mystery</h2>
+                <h2 class="title mb-6" id="article-6017">A WCF Perf Mystery</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Anyone can tell me why this is taking a tad over 11 seconds?                    1: class Program&#xA;&#xA;         2: {&#xA;&#xA;         3:     static void Main(string[] args)&#xA;&#xA;         4:     {&#xA;&#xA;         5:         try&#xA;&#xA;         6:         {&#xA;&#xA;         7:             var sw = Stopwatch.StartNew();&#xA;&#xA;         8:             var host = new ServiceHost(new Srv(), new Uri(&quot;net.tcp://localhost:5123&quot;));&#xA;&#xA;         9:             host.AddServiceEndpoint(typeof (ISrv), new NetTcpBinding(), new Uri(&quot;net.tcp://localhost:5123&quot;));&#xA;&#xA;        10:             host.Open();&#xA;&#xA;        11:&#xA0; &#xA;&#xA;        12:             var srv = ChannelFactory&lt;ISrv&gt;.CreateChannel(new NetTcpBinding(),&#xA;&#xA;        13:                                                              new EndpointAddress(new Uri(&quot;net.tcp://localhost:5123&quot;)));&#xA;&#xA;        14:             srv.Test(&quot;hello&quot;); // if I remove this, it finishes in 0.3s - 0.5s&#xA;&#xA;        15:&#xA0; &#xA;&#xA;        16:             host.Close();&#xA;&#xA;        17:&#xA0; &#xA;&#xA;        18:             Console.WriteLine(sw.Elapsed);&#xA;&#xA;        19:         }&#xA;&#xA;        20:         catch (Exception e)&#xA;&#xA;        21:         {&#xA;&#xA;        22:             Console.WriteLine(e);&#xA;&#xA;        23:         }&#xA;&#xA;        24:     }&#xA;&#xA;        25: }&#xA;&#xA;        26:&#xA0; &#xA;&#xA;        27: [ServiceContract]&#xA;&#xA;        28: public interface ISrv&#xA;&#xA;        29: {&#xA;&#xA;        30:     [OperationContract]&#xA;&#xA;        31:     int Test(string x);&#xA;&#xA;        32: }&#xA;&#xA;        33:&#xA0; &#xA;&#xA;        34: [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single, ConcurrencyMode = ConcurrencyMode.Multiple)]&#xA;&#xA;        35: public class Srv : ISrv&#xA;&#xA;        36: {&#xA;&#xA;        37:     public int Test(string x)&#xA;&#xA;        38:     {&#xA;&#xA;        39:         return x.GetHashCode();&#xA;&#xA;        40:     }&#xA;&#xA;        41: }&#xA;    &#xA;  &#xA;&#xA;&#xA;The reason that I care is that I am doing that in my tests, and this is significantly slow them down.&#xA;&#xA;Is there anything that I am missing?</p>
         </article>
-        <article id="article-6017">
+        <article id="article-6018">
             <a href="https://ayende.com/blog/3855/closing-the-xheo-saga" target="_blank">
-                <h2 class="title mb-6" id="article-6017">Closing the XHEO saga</h2>
+                <h2 class="title mb-6" id="article-6018">Closing the XHEO saga</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was just contacted by Paul Alexander from XHEO, telling me that he had refunded the money that I paid for their product. That is all I wanted, and I am sorry that it had to reach this level of unpleasantness. Thanks.</p>
         </article>
-        <article id="article-6018">
+        <article id="article-6019">
             <a href="https://ayende.com/blog/3854/how-you-should-handle-support" target="_blank">
-                <h2 class="title mb-6" id="article-6018">How you SHOULD handle support</h2>
+                <h2 class="title mb-6" id="article-6019">How you SHOULD handle support</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For NH PRof, we are using AqiStar&#x27;s TextBox.  To my knowledge, this is the only WPF syntax highlighting text editor that is available in the marker. After taking it for a short trial run, I decided that I love it, bought three licenses and Rob implemented it for NH Prof. Introducing AqiStar&#x27;s TextBox allowed us to delete a whole bunch of code, significantly improved the speed of the profiler and even fixed a memory leak that we had. Good stuff all around. Except, we had made an error (100% our issue, I admit) and we accidentally deployed the trial version instead of the licensed version. We didn&#x27;t notice it at first because it was well.. in trial mode. But a trial eventually expires and we start getting errors. I emailed AqiStar&#x27;s support. Here is the exchange:   What you don&#x27;t see is that their first response was a full explanation of the issue, three different ways of solving it, and it arrived within 16 hours of me first contacting them. I also arrived when I was sleeping, so Rob and Christopher were able to fix the problem. But AqiStar&#x27;s support followed through on that. What you don&#x27;t see here is that each of us got the error at roughly the same time and all of us contacted support independently. Good stuff, did I mention already?</p>
         </article>
-        <article id="article-6019">
+        <article id="article-6020">
             <a href="https://ayende.com/blog/3853/i-wasnt-the-target-audience-for-windows-live-writer" target="_blank">
-                <h2 class="title mb-6" id="article-6019">I wasn&#x27;t the target audience for Windows Live Writer</h2>
+                <h2 class="title mb-6" id="article-6020">I wasn&#x27;t the target audience for Windows Live Writer</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: February 06, 2009
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How do I know?  Well, I wanted to edit a post of mine from 2006, and I got this dialog:   Just to give you an idea, I now have over 3,800 posts... 500 posts back only take me as far as June 2008</p>
-        </article>
-        <article id="article-6020">
-            <a href="https://ayende.com/blog/3852/newsflash-to-commentors-it-is-my-blog" target="_blank">
-                <h2 class="title mb-6" id="article-6020">Newsflash to commentors: it is my blog</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 06, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I can&#x27;t believe that I actually have to spell this out. This is my blog.  You can double check the URL, to make sure that it clearly states that.  As such, I am going to write about whatever topic I feel like writing. And if I care enough about Chinese Procelaim Kittens, I am going to write about them. If you don&#x27;t like a particular post, feel free to skip it.</p>
         </article>
         <div class="button flex justify-between">
             <a href="601.html"><span class="back arrow"></span></a>

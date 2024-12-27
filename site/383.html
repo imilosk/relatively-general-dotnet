@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3821">
+            <a href="https://ayende.com/blog/165569/death-by-70-000-facets" target="_blank">
+                <h2 class="title mb-6" id="article-3821">Death by 70,000 facets</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 10, 2014
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Just sit right back and you&#x27;ll hear a tale, a tale of a fateful bug. That started from a simple request, about a feature that was just a bit too snug. Okay, leaving aside my attempts at humor. This story is about a customer reporting an issue. &#x201C;Most of the time we have RavenDB running really fast, but sometimes we have high latency requests&#x201D;. After a while, we managed to narrow it down to the following scenario:  We have multiple concurrent requests. Those requests contains a Lazy request that has a facet query. The concurrent requests appears to all halt and then complete together. In other words, it looks like we had all those requests waiting on a lock, then when it is released, all of them are free to return. This makes sense, there is a cache lock in the facet code that should behave in this manner. But when we looked at that, we could see that this didn&#x2019;t really behave in the way we expected it to.  Eventually we got to test this out on the client data, and that is when we were able to pin point the issue. Usually, you have facets like this: The one of the left is when searching Amazon for HD, the one on the right is when you search Amazon for TV.   In RavenDB, you typically express this sort of query using:  session.Query&lt;Product&gt;().Search(&#x201C;Search&#x201D;, query).ToFacets(new Facet { Name = &#x201C;Brand&#x201D;} ); And we expect the number of facets that you have in a query to be in the order of a few dozens.  However, the client in question has done something a bit different. I think that this is because they brought the system over from a relational database. Each product in the system had a list of facets associated with it. It looked something like:  &#x201C;Facets&#x201D;: [13124,87324,32812,65743] Obvious, this means that this product belongs to the &#x201C;2,000 &#x2013; 3,500&#x201D; price range facet (electronics) the &#x201C;Red&#x201D; color facet (electronics, handheld) etc&#x2026; In total, we had over 70,000 facets in the database, and that is just something that we never really expected. Because we didn&#x2019;t expect it, we reacted&#x2026; poorly when we had to deal with it. In fact, what happened was that pattern of behavior meant that we effectively had worse than not having a cache, we would always have to do the work, and never really gain any benefit from it (there wasn&#x2019;t enough sharing to actually trigger the benefits of the cache). And because we did locks on the cache to ensure that we don&#x2019;t get into a giant mess&#x2026; Well, you can figure out how it went from there. The fix was to actually devolve the code in to a simpler method. Instead of trying to be smart and just figure out what we needed to compute for this query, we can be aggressive and load everything we needed. All the next requests will result in no wait time, because the data is already there. The code became much simpler.  Oh, and we got it deployed to production and saw a 400% decrease in the average request time, and no more sudden waits when we had requests piling up.</p>
+        </article>
+        <article id="article-3822">
             <a href="https://ayende.com/blog/165537/didja-know-ravendb-include-a-proxy-server" target="_blank">
-                <h2 class="title mb-6" id="article-3821">Didja know, RavenDB include a proxy server</h2>
+                <h2 class="title mb-6" id="article-3822">Didja know, RavenDB include a proxy server</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is one of those things that I had to read several times to realize what was actually going on. The code for that is here: https://github.com/ayende/ravendb/blob/c0c9ccf98011fb64b5eb5406a900ec1338ea78e4/Raven.Tests/Issues/RavenDB_1603.cs#L32 And it appears that along with every else, RavenDB also include a proxy server. Now, to be fair, this is required for our tests, to see what happens when we have a forced disconnect / timeout at the network level, so it make sense. And the whole thing is under 100 lines of code. This sort of thing explains why we really need to do a whole bunch of work on our tests. We want to get to a 500 &#x2013; 1000 tests (currently we have close to 3,200) that run in under 5 minutes.</p>
         </article>
-        <article id="article-3822">
+        <article id="article-3823">
             <a href="https://ayende.com/blog/165506/all-the-pieces-of-a-feature" target="_blank">
-                <h2 class="title mb-6" id="article-3822">All the pieces of a feature</h2>
+                <h2 class="title mb-6" id="article-3823">All the pieces of a feature</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the interesting* tidbits I learned is that just having an idea about a feature is far from being able to actually do something with it.&#xA0; Hell, even implementing the feature is just the first step in a very long road. * Read: annoying instead of interesting. Here are the things that you need to do just in order to actually call a feature Ready To Show (vs. Done **):  Implement backend.  Expose over the wire.  Write client API.  Create user interface. Distribution (replication/sharding) Those things are just what you need so you can actually show something meaningful, rather than a bunch of code and a lot of hand waving. This can be pretty annoying at times, mostly because it puts a lot of work that has to be done before we can actually show it to people. ** And just because people will ask, to get to done you need:  Logging  Monitoring  The ability to test easily  Performance trials  Longevity trails  Production proofing I&#x2019;m probably forgetting a bunch of stuff, but those are what pops to mind. The nice thing about getting to show something is that we can usually parallelize the work for the all of those by handing this to different people.</p>
         </article>
-        <article id="article-3823">
+        <article id="article-3824">
             <a href="https://ayende.com/blog/165345/reviewing-metrics-net-project" target="_blank">
-                <h2 class="title mb-6" id="article-3823">Reviewing Metrics .NET project</h2>
+                <h2 class="title mb-6" id="article-3824">Reviewing Metrics .NET project</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a review of the Metrics.NET project (commit cb52da325c0a88336e09412638f72620d9ba7992). The project is supposed to give us a way to track metrics about our applications, and we want to make use of it in RavenDB instead of the highly unreliable performance counters. This is going to be a pretty short review, mostly because I don&#x2019;t really have much to say.&#xA0; There are a few things that I take issues with (async tasks using Thread.Sleep instead of Task.Delay, but that is probably because it is targeting .NET 4.5). Other than that, most of the code is actually doing crazy math stuff, and there are proper links to the explanations, and you can see why it is doing so. The impressive thing is that pretty much everything that I wanted to do was already there. Including an easy way to expose metrics over the wire, and that the whole things seems pretty seamless.  Very good work, all around. For our purposes, however, I think we&#x2019;ll need to do some other things. In particular, one of the major assumptions throughout the code is that there is always a type associated with a metric, which isn&#x2019;t the case for our purposes.&#xA0; More than that, the code now assumes a static and fixed set of metrics for the entire system. That doesn&#x2019;t work very well for us when we have different metrics for each database, so we&#x2019;ll probably need to change that as well. But I am very impressed, this looks like it could sort out a lot of the things that we need to do very quickly.</p>
         </article>
-        <article id="article-3824">
+        <article id="article-3825">
             <a href="https://benfoster.io/blog/saaskit-multi-tenancy-made-easy/" target="_blank">
-                <h2 class="title mb-6" id="article-3824">Introducing SaasKit - Multi-tenancy made easy</h2>
+                <h2 class="title mb-6" id="article-3825">Introducing SaasKit - Multi-tenancy made easy</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post introduces SaasKit, a new project I&#x2019;m working on to help developers build SAAS based applications, covering common challenges such as Multi-tenancy.</p>
         </article>
-        <article id="article-3825">
+        <article id="article-3826">
             <a href="https://ayende.com/blog/165249/self-flagellation-and-the-barbarians-are-at-the-gate" target="_blank">
-                <h2 class="title mb-6" id="article-3825">Self flagellation and the barbarians are at the gate</h2>
+                <h2 class="title mb-6" id="article-3826">Self flagellation and the barbarians are at the gate</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We got a report from a user about severe issues with RavenDB. It reports resource exhaustion with plenty of resources still available, and once that happens, it will refuse to even restart itself, forcing a process kill. As you can imagine, that was a pretty big deal for us, so we set out to investigate. And we found some interesting results. One of the things that we like to keep in mind with RavenDB is that it is a safe choice. Whenever we need to make a decision between various tradeoffs, we&#x2019;ll always chose the safe choice. That means, among other things, that we are pretty careful about the way that we approach external input. And in this case, we are actively protecting ourselves from the outside world. One of the ways we do that is by limiting the number of requests that we will concurrently process. The idea is that it is better to flat out reject requests than put such a load on the system that it will eventually crash. Indeed, that has been such a successful tactic that to this day, there has been exactly zero production issues with it. To my knowledge, it hasn&#x2019;t ever been even noticed by any of our users.  The actual issue is that we have an internal limit that is set by default to 256 concurrent transactions. And by default, we will accept up to 192 concurrent requests. Then I looked at the actual logs, and I found:  And that explains much, but not nearly all. We had this in our code base for roughly 8 months. There are still other things that protect us from those issues, not the least of which is that it is actually hard to generate that number of requests against us (you really have to try very hard, usually from multiple machines). But there was one scenario that we didn&#x2019;t consider for the purpose of protecting ourselves from the barbarians at the gate. Multi Get requests.  Multi Get requests allows you to package multiple requests to RavenDB into a single physical request. Those requests are going to cost you a single round trip to the server, and you can run as many of those as you want. In the dump we received, we could see 17 pending Multi Get request, and about 400 queries being executed, each of them requiring their own session. No wonder we got out of session errors. Final note: for what it is worth, I changed our limits to 1,024 concurrent sessions and 512 concurrent requests, which is more reasonable considering the kind of hardware we usually run on. Multi Get has another 192 sessions that it can utilize, and the rest are dedicated for background processes.</p>
         </article>
-        <article id="article-3826">
+        <article id="article-3827">
             <a href="https://ayende.com/blog/165409/voron-time-series-data-getting-real-data-outputs" target="_blank">
-                <h2 class="title mb-6" id="article-3826">Voron &amp; time series data: Getting real data outputs</h2>
+                <h2 class="title mb-6" id="article-3827">Voron &amp; time series data: Getting real data outputs</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So far, we have just put the data in and out. And we have had a pretty good track record doing so. However, what do we do with the data now that we have it? As you can expect, we need to read it out. Usually by specific date ranges. The interesting thing is that we usually are not interested in just a single channel, we care about multiple channels. And for fun, those channel might be synchronized or not. An example of the first might be the current speed and the current engine temperature in a car. They are generally share the exact same timestamps. An example of out of sync is when you have a sensor on a rooftop measuring rainfall, and another sensor in the sewer measuring water flow rates. (Again, thanks to Dan for helping me with the domain). This is interesting, because it present quite a few interesting problems:  We need to merge different streams into a unified view. We need to handle both matching and non matching sequences. We need to handle erroneous data, what happens when we have two reading for the same time for the same sensor? Yes, that shouldn&#x2019;t happen, but it does. I solved this with the following API: public class RangeEntry&#xA;{&#xA;    public DateTime Timestamp;&#xA;    public double?[] Values;&#xA;}IEnumerable&lt;RangeEntry&gt; results = dts.ScanRanges(DateTime.MinValue, DateTime.MaxValue, new[]&#xA;                {&#xA;                    &quot;6febe146-e893-4f64-89f8-527f2dbaae9b&quot;,&#xA;                    &quot;707dcb42-c551-4f1a-9203-e4b0852516cf&quot;,&#xA;                    &quot;74d5bee8-9a7b-4d4e-bd85-5f92dfc22edb&quot;,&#xA;                    &quot;7ae29feb-6178-4930-bc38-a90adf99cfd3&quot;,&#xA;                });&#xA;&#xA;&#xA;This API gives me the results in the time order, with the same positions as the ids requested for the values. With nulls if there isn&#x2019;t a value matching the value from that time in that particular sensor channel.&#xA;The actual implementation relies on this method:&#xA;IEnumerable&lt;Entry&gt; ScanRange(DateTime start, DateTime end, string id)&#xA;&#xA;&#xA;All this does it provide the entries all the entries in a particular date range, for a particular channel. Let us see how we implement multi channel scanning on top of this:&#xA;private class PendingEnumerator&#xA;{&#xA;    public IEnumerator&lt;Entry&gt; Enumerator;&#xA;    public int Index;&#xA;}&#xA;&#xA;private class PendingEnumerators&#xA;{&#xA;    private readonly SortedDictionary&lt;DateTime, List&lt;PendingEnumerator&gt;&gt; _values =&#xA;        new SortedDictionary&lt;DateTime, List&lt;PendingEnumerator&gt;&gt;();&#xA;&#xA;    public void Enqueue(PendingEnumerator entry)&#xA;    {&#xA;        List&lt;PendingEnumerator&gt; list;&#xA;        var dateTime = entry.Enumerator.Current.Timestamp;&#xA;        if (_values.TryGetValue(dateTime, out list) == false)&#xA;        {&#xA;            _values.Add(dateTime, list = new List&lt;PendingEnumerator&gt;());&#xA;        }&#xA;        list.Add(entry);&#xA;    }&#xA;&#xA;    public bool IsEmpty { get { return _values.Count == 0; } }&#xA;&#xA;    public List&lt;PendingEnumerator&gt; Dequeue()&#xA;    {&#xA;        if (_values.Count == 0)&#xA;            return new List&lt;PendingEnumerator&gt;();&#xA;&#xA;        var kvp = _values.First();&#xA;        _values.Remove(kvp.Key);&#xA;        return kvp.Value;&#xA;    }&#xA;}&#xA;&#xA;public IEnumerable&lt;RangeEntry&gt; ScanRanges(DateTime start, DateTime end, string[] ids)&#xA;{&#xA;    if (ids == null || ids.Length == 0)&#xA;        yield break;&#xA;&#xA;    var pending = new PendingEnumerators();&#xA;    for (int i = 0; i &lt; ids.Length; i&#x2B;&#x2B;)&#xA;    {&#xA;        var enumerator = ScanRange(start, end, ids[i]).GetEnumerator();&#xA;        if(enumerator.MoveNext() == false)&#xA;            continue;&#xA;        pending.Enqueue(new PendingEnumerator&#xA;        {&#xA;            Enumerator = enumerator,&#xA;            Index = i&#xA;        });&#xA;    }&#xA;&#xA;    var result = new RangeEntry&#xA;    {&#xA;        Values = new double?[ids.Length]&#xA;    };&#xA;    while (pending.IsEmpty == false)&#xA;    {&#xA;        Array.Clear(result.Values,0,result.Values.Length);&#xA;        var entries = pending.Dequeue();&#xA;        if (entries.Count == 0)&#xA;            break;&#xA;        foreach (var entry in entries)&#xA;        {&#xA;            var current = entry.Enumerator.Current;&#xA;            result.Timestamp = current.Timestamp;&#xA;            result.Values[entry.Index] = current.Value;&#xA;            if(entry.Enumerator.MoveNext())&#xA;                pending.Enqueue(entry);&#xA;        }&#xA;        yield return result;&#xA;    }&#xA;}&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;We are getting a single entry from each channel into the pending enumerators. Then, we collate all the entries that share the same time into a single entry. &#xA;We use the Index property to track the actual expected index of the entry in the output. And we handle duplicate times in the same channel by outputting multiple entries.&#xA;Testing this on my 1.1 million records data set, we can get 185 thousands records back in 0.15 seconds.</p>
         </article>
-        <article id="article-3827">
+        <article id="article-3828">
             <a href="https://ayende.com/blog/164929/maximum-addressable-virtual-memory" target="_blank">
-                <h2 class="title mb-6" id="article-3827">Maximum addressable virtual memory</h2>
+                <h2 class="title mb-6" id="article-3828">Maximum addressable virtual memory</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I wonder what is says about what I am doing right now that I really wish that I could have the OS give me more control over virtual memory allocation. At any rate, the point of this post is to point out something quite important to people writing databases, especially databases that make use of virtual memory a lot. There isn&#x2019;t quite as much of it as I thought it would be. Oh, on 32 bits the 4GB limits is really hard to swallow. But on 64 bits, the situation is much better, but still constrained. On Windows, using x64, you are actually limited to merely 8TB of address space. In Windows 8.1, (and I assume, but couldn&#x2019;t verify, Windows 2012 R2) you can use up to 128TB of virtual address space. With Linux, at least since 2.6.32, and probably earlier, the limit is 128TB per process. Implications for Voron, by the way, is that the total size of of all databases in a single process can be up to 8TB (probably somewhat less than that, the other stuff will also need memory). Currently the biggest RavenDB database that I am aware of was approaching the 1.5 &#x2013; 2.0 TB mark last I checked (several months ago), and Esent, our current technology, is limited to 16TB per database. So it isn&#x2019;t great news, but it is probably something that I can live with. And at least I can give proper recommendations. In practice, I don&#x2019;t think that this would be an issue. But that is good to know.</p>
         </article>
-        <article id="article-3828">
+        <article id="article-3829">
             <a href="https://ayende.com/blog/165377/voron-time-series-working-with-real-data" target="_blank">
-                <h2 class="title mb-6" id="article-3828">Voron &amp; Time Series: Working with real data</h2>
+                <h2 class="title mb-6" id="article-3829">Voron &amp; Time Series: Working with real data</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Dan Liebster has been kind enough to send me a real world time series database. The data has been sanitized to remove identifying issues, but this is actually real world data, so we can learn a lot more about this. This is what this looks like:  The first thing that I did was take the code in this post, and try it out for size. I wrote the following:      1: int i = 0;   2: using (var parser = new TextFieldParser(@&quot;C:\Users\Ayende\Downloads\TimeSeries.csv&quot;))   3: {   4:    parser.HasFieldsEnclosedInQuotes = true;   5:    parser.Delimiters = new[] {&quot;,&quot;};   6:    parser.ReadLine();//ignore headers   7:    var startNew = Stopwatch.StartNew();   8:    while (parser.EndOfData == false)   9:    {  10:        var fields = parser.ReadFields();  11:        Debug.Assert(fields != null);  12:&#xA0;   13:        dts.Add(fields[1], DateTime.ParseExact(fields[2], &quot;o&quot;, CultureInfo.InvariantCulture), double.Parse(fields[3]));  14:        i&#x2B;&#x2B;;  15:        if (i == 25*1000)  16:        {  17:            break;  18:        }  19:        if (i%1000 == 0)  20:            Console.Write(&quot;\r{0,15:#,#}          &quot;, i);  21:    }  22:    Console.WriteLine();  23:    Console.WriteLine(startNew.Elapsed);  24: }&#xA;Note that we are using a separate transaction per line, which means that we are really doing a lot of extra work. But this simulate very well incoming events coming one at a time. We were able to process 25,000 events in 8.3 seconds. At a rate of just over 3 events per millisecond.&#xA;Now, note that we have in here the notion of &#x201C;channels&#x201D;. From my investigation, it seems clear that some form of separation is actually very common in time series data. We are usually talking about sensors or some such, and we want to track data across different sensors over time. And there is little if any call for working over multiple sensors / channels at the same time.&#xA;Because of that, I made a relatively minor change in Voron, that allows it to have an infinite number of separate trees. That means that I can use as many trees as you want, and we can model a channel as a tree in Voron. I also changed things so we instead of doing a single transaction per line, we will do a transaction per 1000 lines. That dropped the time to insert 25,000 lines to 0.8 seconds. Or a full order of magnitude faster.&#xA;That done, I inserted the full data set, which is just over 1,096,384 records. That took 36 seconds. In the data set I have, there are 35 channels.&#xA;I just tried, and reading all the entries in a channel with 35,411 events takes 0.01 seconds. That allows doing things like doing averages over time, comparing data, etc.&#xA;You can see the code implementing this in the following link.</p>
         </article>
-        <article id="article-3829">
+        <article id="article-3830">
             <a href="https://ayende.com/blog/165505/a-ravendb-hackaton" target="_blank">
-                <h2 class="title mb-6" id="article-3829">A RavenDB Hackaton</h2>
+                <h2 class="title mb-6" id="article-3830">A RavenDB Hackaton</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: January 29, 2014
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just had what I think is a great idea. As you know by now, we are going to do a full blown conference to celebrate RavenDB 3.0 We are going to do a lot of talking about RavenDB, but I think that a more active experience would also be good. So what I&#x2019;m planning is to have at least three RavenDB Core Dev Team present and do something. Right now I am torn between doing something that the people showing up want to do and build an application using RavenDB and doing a major new feature live with everyone pitching in. Or any combination of the two.  Thoughts and suggestions are welcome&#x2026;</p>
-        </article>
-        <article id="article-3830">
-            <a href="https://ayende.com/blog/165378/fail-can-impress-too" target="_blank">
-                <h2 class="title mb-6" id="article-3830">FAIL can impress, too</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 29, 2014
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned that a quick way to setup things for me to think that a candidate is a bad idea is to send us a UI project. This is usually a very strong indication that the candidate doesn&#x2019;t really have any idea what they are doing. They have been doing Win Forms projects, so they write the code for the task at hand in buttom1_Click event handler. Or inside the Page_Load code in an ASP.Net WebForms application if they are &#x201C;web developers&#x201D;.  On the other hand, here is a strong counter example. We had a candidate send in a WinForms project, as I said, that is usually a bad sign. But then I actually looked at his code:  And here is a single method:  This code is several levels of too complex for the task.&#xA0; It can be easily simplified to a great degree quite easily. But the key point from this, and the reason that this candidate has an interview later this week, is that this demonstrate a bunch of things:  Understanding of separation of concerns. Code that actually does what it is supposed to do. Proper integration between UI &amp; backend code (for example, we are working with large files, so we have progress bars and off-the-UI-thread work). The UI doesn&#x2019;t look like it was put together by a hiccupping monkey.  I can work with this. There are things that need to be improved for what we do, but there appears to be a SOLID foundation here.</p>
         </article>
         <div class="button flex justify-between">
             <a href="382.html"><span class="back arrow"></span></a>

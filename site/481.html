@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4801">
+            <a href="https://ayende.com/blog/14337/concurrent-max" target="_blank">
+                <h2 class="title mb-6" id="article-4801">Concurrent Max</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 12, 2011
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Can you think of a better way to implement this code? private volatile Guid lastEtag;&#xA;private readonly object lastEtagLocker = new object();internal void UpdateLastWrittenEtag(Guid? etag)&#xA;{&#xA;    if (etag == null)&#xA;        return;&#xA;&#xA;    var newEtag = etag.Value.ToByteArray();&#xA;&#xA;    // not the most recent etag&#xA;    if (Buffers.Compare(lastEtag.ToByteArray(), newEtag) &lt;= 0)&#xA;    {&#xA;        return;&#xA;    }&#xA;&#xA;    lock (lastEtagLocker)&#xA;    {&#xA;        // not the most recent etag&#xA;        if (Buffers.Compare(lastEtag.ToByteArray(), newEtag) &lt;= 0)&#xA;        {&#xA;            return;&#xA;        }&#xA;&#xA;        lastEtag = etag.Value;&#xA;    }&#xA;}&#xA;&#xA;&#xA;&#xA;We have multiple threads calling this function, and we need to ensure that lastEtag value is always the maximum value. This has the potential to be called often, so I want to make sure that I chose the best way to do this. Ideas?</p>
+        </article>
+        <article id="article-4802">
             <a href="https://www.meziantou.net/what-s-the-usage-of-asenumerable.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4801">What&#x27;s the usage of AsEnumerable</h2>
+                <h2 class="title mb-6" id="article-4802">What&#x27;s the usage of AsEnumerable</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The extension method AsEnumerable is just an identity method. This means it always returns the same value that was used as its argument:C#copypublic static IEnumerable&lt;TSource&gt; AsEnumerable&lt;TSource&gt;(this IEnumerable&lt;TSource&gt; source)&#xA;{&#xA;    return source;&#xA;}You may wonder what is the</p>
         </article>
-        <article id="article-4802">
+        <article id="article-4803">
             <a href="https://ayende.com/blog/13314/elegant-code-raccoon-blogs-css-controller" target="_blank">
-                <h2 class="title mb-6" id="article-4802">Elegant Code, Raccoon Blog&#x2019;s CSS Controller</h2>
+                <h2 class="title mb-6" id="article-4803">Elegant Code, Raccoon Blog&#x2019;s CSS Controller</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The following piece of code is responsible for the CSS generation for this blog: public class CssController : Controller&#xA;{&#xA;     public ActionResult Merge(string[] files)&#xA;     {&#xA;         var builder = new StringBuilder();&#xA;         foreach (var file in files)&#xA;         {&#xA;             var pathAllowed = Server.MapPath(Url.Content(&quot;~/Content/css&quot;));&#xA;             var normalizeFile = Server.MapPath(Url.Content(Path.Combine(&quot;~/Content/css&quot;, file)));&#xA;             if (normalizeFile.StartsWith(pathAllowed) == false)&#xA;             {&#xA;                 return HttpNotFound(&quot;Path not allowed&quot;);&#xA;             }&#xA;             if (System.IO.File.Exists(normalizeFile))&#xA;             {&#xA;                 Response.AddFileDependency(normalizeFile);&#xA;                 builder.AppendLine(System.IO.File.ReadAllText(normalizeFile));&#xA;             }&#xA;         }&#xA;&#xA;         Response.Cache.VaryByParams[&quot;files&quot;] = true;&#xA;         Response.Cache.SetLastModifiedFromFileDependencies();&#xA;         Response.Cache.SetETagFromFileDependencies();&#xA;         Response.Cache.SetCacheability(HttpCacheability.Public);&#xA;&#xA;         var css = dotless.Core.Less.Parse(builder.ToString(), new DotlessConfiguration());&#xA;&#xA;         return Content(css, &quot;text/css&quot;);&#xA;     }&#xA;}&#xA;&#xA;&#xA;There are a lot of things going on in a very short amount of code. The CSS for this blog is defined as:&#xA;&lt;link rel=&quot;stylesheet&quot; type=&quot;text/css&quot; href=&quot;/blog/css?files=ResetCss.css&amp;files=custom/ayende.settings.less.css&amp;files=base.less.css&amp;files=custom/ayende.less.css&quot;&gt;&#xA;&#xA;&#xA;&#xA;This means that while we have multiple CSS files that make maintaining things easier, we only make a single request to the server to get all of them.&#xA;Next, and important, we have a security check that ensures that only files from the appropriate path can be served. If you aren&#x2019;t in the CSS directory, you won&#x2019;t be returned.&#xA;Then we have a lot of code that is related to caching, which basically means that we will rely on the ASP.Net output cache to do everything for us. The really nice thing is that unless the files change, we will not be executing this code again, rather, it would be served directly from the cache, without any computation on our part.&#xA;All in all, I am more than happy with this code.</p>
         </article>
-        <article id="article-4803">
+        <article id="article-4804">
             <a href="https://ayende.com/blog/13313/fix-the-code-not-the-tooling" target="_blank">
-                <h2 class="title mb-6" id="article-4803">Fix the code, not the tooling</h2>
+                <h2 class="title mb-6" id="article-4804">Fix the code, not the tooling</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a story from the time (all those week or two ago) when we were building RaccoonBlog. The issue of managing CSS came up. We use the same code base for multiple sites, and mostly just switch around the CSS values for colors, etc. It looks something like this:  We are using the less syntax to generate a more reasonable development experience with CSS. We started with the Chirpy extension, which provides build time CSS generation from less files inside Visual Studio.  Well, I say started because when I heard that we were using an extension I sort of freaked out a bit. I don&#x2019;t like extensions, I especially don&#x2019;t like extensions that I have to install now on every machine that I use to work on RaccoonBlog.&#xA0; The answer to that was that it takes 2 minutes or less, and is completely managed within the VS AddIn UI, so it is really painless. More than that, I was upset that it ruined my F5 scenario. That is, I could no longer make a change to the CSS file, hit F5 in the browser and see the changes. The answer to that is that I could still hit F5, I would just have to do that inside of Visual Studio, which is where I usually edit CSS anyway. I didn&#x2019;t like the answers very much, and we went with a code base solution that preserved all of the usual niceties of plain old CSS files (more on that in my next post). The problem with tooling over code is that you need to have the tooling with you. And that is often an unacceptable burden. Consider the case of me wanting to make a modification on production to the way the site looks. Leave aside for a bit the concept of making modifications on productions, taking away the ability to do so is a Bad Thing, because if you need to do so, you need to do so Very Much. Tooling are there to support and help you, but if tooling impact the way you work, it has better not have any negative implications. For example, if one member of the team is using the NHibernate Profiler, no one else on the team is impacted, they can go on and develop the application without any issue. But when using a tool like Chirpy, if you don&#x2019;t have Chirpy installed, you can&#x2019;t really work with the application CSS, and that isn&#x2019;t something that I was willing to tolerate. Other options were raised as well, &#x201C;we can do this in the build, you don&#x2019;t need to do this via Chirpy&#x201D;, but that just raised the same problem of breaking the Modify-CSS-Hit-F5-In-Browser cycle of work. The code to solve this problem was short, to the point and really interesting, and it preserved all the usual CSS properties without creating dependencies on tools which might not be there when we need them.</p>
         </article>
-        <article id="article-4804">
+        <article id="article-4805">
             <a href="https://ardalis.com/entity-framework-error-&#x2013;-model-compatibility-cannot-be-checked/" target="_blank">
-                <h2 class="title mb-6" id="article-4804">Entity Framework Error &#x2013; Model compatibility cannot be checked</h2>
+                <h2 class="title mb-6" id="article-4805">Entity Framework Error &#x2013; Model compatibility cannot be checked</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;re using Entity Framework Code First and you have everything working with, for instance, a SQL CE database, but then you want to move&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4805">
+        <article id="article-4806">
             <a href="https://ayende.com/blog/12289/fix-it-in-the-code-not-in-the-documentation" target="_blank">
-                <h2 class="title mb-6" id="article-4805">Fix it in the code, not in the documentation</h2>
+                <h2 class="title mb-6" id="article-4806">Fix it in the code, not in the documentation</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that Fitzchak is working on right now is the RavenDB in Practice series. During the series, he run into an issue with RavenDB failing if the configured port is already taken. Since by default we use 8080, it wasn&#x2019;t very surprising that on his machine, the 8080 port was already taken. Because he run into this problem, he set out to document how to fix this issue if you run into it. My approach was different, I don&#x2019;t like documenting things. More to the point, documenting a problem is a last ditch effort, something that you do only if you have no other choice. It is usually much easier to figure out a way to solve the problem. In the case of RavenDB and the busy port, we start out at port 8080, and if it is busy, we find another port that is open that we can use. That means that the initial experience is much easier, since you can immediately make use of the database without dealing with how to change the port it is listening on.   Nitpicker corner: this feature kicks in only if you have explicitly stated that you wanted it in the configuration. This is part of the default config for RavenDB, and is meant for the initial process only. It is not recommended for production use. Why is it so much better in code than in the documentation? Surely it takes a lot less time to explain how to modify an App.config value than write the code for auto detecting an open port and binding to it&#x2026; and you need to document the behavior anyway&#x2026; The answer is that it saves on support and increase success rate. The saves on support are pretty obvious. If it works Out Of The Box, everyone is happy. But what is this Success Rate that I am talking about? Unless you are someone like Oracle, you have a very narrow window of time when a user is willing to try whatever it is that you are providing. And you had better make that window of time a Success Story, rather than &#x201C;Reading the Known Issues&#x201D; document.</p>
         </article>
-        <article id="article-4806">
+        <article id="article-4807">
             <a href="https://ayende.com/blog/11265/what-is-next-for-the-profilers" target="_blank">
-                <h2 class="title mb-6" id="article-4806">What is next for the profilers?</h2>
+                <h2 class="title mb-6" id="article-4807">What is next for the profilers?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We have been working on the profilers (NHibernate Profiler, Entity Framework Profiler, Linq to SQL Profiler, LLBLGen Profiler and Hibernate Profiler) for close to three years now. And we have been running always as 1.x, so we didn&#x2019;t have a major release (although we have continual releases, we currently have close to 900 drops of the 1.x version). The question now becomes, what is going to happen in the next version of the profiler?  Production Profiling, the ability to setup your application so that you can connect to your production application and see what is going on right now.  Error Analysis, the ability to provide you with additional insight and common solution to recurring problems. Global Query Analysis, the ability to take all of your queries, look at their query plans and show your potential issues. Those are the big ones, we have a few others, and a surprise in store  What would you want to see in the next version of the profiler?</p>
         </article>
-        <article id="article-4807">
+        <article id="article-4808">
             <a href="https://ayende.com/blog/10241/rhino-mocks-new-location" target="_blank">
-                <h2 class="title mb-6" id="article-4807">Rhino Mocks new location</h2>
+                <h2 class="title mb-6" id="article-4808">Rhino Mocks new location</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a public service announcement, mostly meant to be caught in Google, to be frank. The new homepage for Rhino Mocks is: http://hibernatingrhinos.com/open-source/rhino-mocks</p>
         </article>
-        <article id="article-4808">
+        <article id="article-4809">
             <a href="https://ardalis.com/record-visual-studio-web-test-using-fiddler/" target="_blank">
-                <h2 class="title mb-6" id="article-4808">Record Visual Studio Web Test Using Fiddler</h2>
+                <h2 class="title mb-6" id="article-4809">Record Visual Studio Web Test Using Fiddler</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Fiddler is a great tool for examining and working with HTTP requests. If you&#x2019;re a web developer, it&#x2019;s one of those tools that you should&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4809">
+        <article id="article-4810">
             <a href="https://ardalis.com/log-method-name-helper/" target="_blank">
-                <h2 class="title mb-6" id="article-4809">Log Method Name Helper</h2>
+                <h2 class="title mb-6" id="article-4810">Log Method Name Helper</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: May 29, 2011
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Sometimes it&#x2019;s handy to see the order in which methods are firing, or how long they&#x2019;re taking, without having to attach a debugger&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-4810">
-            <a href="https://ardalis.com/run-batch-file-as-scheduled-task/" target="_blank">
-                <h2 class="title mb-6" id="article-4810">Run Batch File as Scheduled Task</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 28, 2011
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ve had problems running batch files as scheduled tasks. I&#x2019;m not alone &#x2013; over the past couple of weeks, while I&#x2019;ve been trying to get a&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="480.html"><span class="back arrow"></span></a>
