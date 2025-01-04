@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-9231">
+            <a href="https://ayende.com/blog/1120/clemens-on-o-r-mappers" target="_blank">
+                <h2 class="title mb-6" id="article-9231">Clemens on O/R Mappers</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 07, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Clemens has a post about O/R Mappers. From his post:             Another argument I keep hearing is that O/R mapping yields a significant productivity boost. However, if that were the case and if using O/R mapping would shorten the average development cost in a departmental development project by &#x2013; say &#x2013; a quarter or more, O/R mapping would likely have taken over the world by now. It hasn&#x27;t. And it&#x27;s not that the idea is new. It&#x2019;s been around for well more than a decade.         O/R Mappers are hard to do without framework services such as reflection. Code generation can support this for lagnauges without reflection, but this is harder to do, and much less flexible. I think that this is one of the reasons that ORM is only now getting a lot of notice from people (now being relative, Hibernate is very strong in the Java space, and has been for quite a while). I believe that the reason that ORM adoption is slow is simply because Microsoft&#x27;s stance in the matter was &quot;Using Stored Procedures and Result Sets (COM) / DataSets (.Net)&quot; for a long time, and now it is &quot;Wait for DLinq.&quot;     O/R Mappers certainly do not take the complexity away, I still need to be aware of it, but it doesn&#x27;t get shoved in my face every time that I need to do something that touches the database. Understanding what is happening in all layers is important in this, as in all other things. The major benefit of using O/R Mappers in your application comes when you realize how flexible you suddenly are. You need to make a query that you have not thought of before? Just ask the O/R to do it for you, there is no context switch while you add an additional method to your DAL, write the stored procedure, test them both, and then return to your code. Instead, you just tell the O/R mapper to give the data you want. This is very powerful, and it is a huge productivity enhancement.     Clemens goes on to say that we should treat our database as a service, and apply the following principals to it:                         Boundaries are explicit&#xA0;=&gt; Database access is explicit                             Services avoid coupling (autonomy)&#xA0;=&gt; Database schema and in-process data representation are disjoint and mapped explicitly                             Share schema not code&#xA0;=&gt; Query/Sproc result sets and Sproc inputs form data access schema (aliased result sets provide a degree of separation from phys. schema)                 I already have an explicit boundary.&#xA0;There is my code, and there is the O/R library. The O/R library expose a set of classes / methods that I can use to query the database. How they do it, I really don&#x27;t care about. It&#x27;s pretty clear when I&#x27;m accessing the database and when I&#x27;m not. The fact that I don&#x27;t have CustomersDAL or SqlConnection in sight doesn&#x27;t mean that the boundary is less real.     Coupling between the in process data representation and the database schema is not something I worry about. Why? Because my O/R of choice (NHibernate, in case you missed it) can handle pretty much every schema that I throws at it, and do it more quickly (and likely more efficently) than I can do it. I&#x27;m not tied to a particular schema, and I don&#x27;t care if my database is changed. All I need to do is update the mappings, and I&#x27;m done with it.     I&#x27;m not sure what is the difference between the second and third points is, since to me it seems like repeating the same statement, with different focus. I don&#x27;t care for seperation from the physical schema in the database layer because I&#x27;ve already go that seperation by using an O/R mapper. Every class of data items (table) surround special considerations: read-only, read/write, insert-only; update frequency, currency and replicability; access authorization; business relevance; caching strategies; etc.&#xA0;     Yes, indeed, I fully agree with Clemens on this one. But I just don&#x27;t see the relevance of this to the O/R vs Custom DAL argument. I can define all of that with ORM more easily than I could if I was writing my own DAL. Proper data management is the key to great architecture. Ignoring this and abstracting data access and data management away just to have a convenient programming model is &#x2026; problematic.     I sort of agree with this, and then I sort of don&#x27;t. What does Clemens suggest here? Write Stored Procedures and Custom DALs? For what purpose, exactly? The API that I&#x27;ll get from a well designed DAL is likely to be very similar to the API I get now (for much less work and effort) by using an ORM.     One thing that Clemens said that is likely to cause problems is: Many of the proponents of O/R mapping that I run into (and that is a generalization and I am not trying to offend anyone &#x2013; just an observation) are folks who don&#x27;t know SQL and RDBMS technology in any reasonable depth and/or often have no interest in doing so.     Well, I know SQL, and I think that I know it pretty well. I am not a guru by any means, but I can use the tools that SQL gives me to get the correct result back. I still love O/R Mapping, not because I have no interest in SQL or RDBMS, but because they are grunt work. I enjoy working with SQL to solve complex problems, and I can make SQL Server cry and beg for mercy, but doing this for everyday work? Why on earth would I want to do that? I don&#x27;t do memory management on my own anymore, and for much the same reasons. It&#x27;s boring, it&#x27;s easy to get wrong and it&#x27;s just not relevant to what I&#x27;m trying to do most of the time.     I would like to end that with a story of explaining the cost to develop a new feature to a co-worker. (He didn&#x27;t work on the project, by the way.) He just couldn&#x27;t believe my estimates, the conversation was something like:             Me: Well, I guess this thingie will take us about a day.        Co-Worker: Are you sure? You haven&#x27;t done anything in this area yet.        Me: Yes, we need to build all the UI from scratch, which is why it will take so long. It is mostly showing the data to the user, but there is some complex UI stuff we need to do here.        Co-Worker: But you don&#x27;t have anything that get the data!        Me: So, it&#x27;s just querying the database for it?        Co-Worker: But you haven&#x27;t written anything to do it yet.                 .. a couple of minutes goes by where I just can&#x27;t understand what he is talking about                 Co-Worker: Look, you have not done this, and you didn&#x27;t allocate any time for it, how can you keep you estimate?        Me: Like this&#xA0;[notepad] Container.Repository&lt;EmployeeContract&gt;().FindWhere(Expression.Eq(&quot;Employee&quot;,employee)) [/notepad], this will fetch us all the contracts for the employee, and we can then show them to the user, who can then do XYZ.        Co-Worker: But it doesn&#x27;t get you Salary and Bonuses for this contract.        Me: They are loaded when we load the contract, we don&#x27;t need to take care of it.        (EmployeeContract, Salaray and Bonus are fictional, of course, but the idea was that I needed to pull the data from 4 - 5 tables for this page.) The problem in this conversation was that I got the infrastructure to pull the data from the database with great flexibility, I don&#x27;t worry about how the database is structured, I let the O/R mapper take care of this.</p>
+        </article>
+        <article id="article-9232">
             <a href="https://ayende.com/blog/1119/documentation-update" target="_blank">
-                <h2 class="title mb-6" id="article-9231">Documentation Update</h2>
+                <h2 class="title mb-6" id="article-9232">Documentation Update</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I updated my Projects page with some annoucements, and when I wrote the Rhino Mocks updates&#xA0;I noticed just how many changes I made to it.&#xA;It&#x27;s both cool and scary. The nice thing about it is that I don&#x27;t have a lot of documentation to write, since I didn&#x27;t change much outfacing functionality.&#xA;I already updated the documentation for NHibernate Generics, so that is done.&#xA;The documentation on this site for Brail&#xA0;is deprecated! You should use the Castle website documentation. I&#x27;m going to update this one as soon as I can find the time to do so. This is the one project where quite a bit has changed that I need to document.</p>
         </article>
-        <article id="article-9232">
+        <article id="article-9233">
             <a href="https://ardalis.com/15595/" target="_blank">
-                <h2 class="title mb-6" id="article-9232">Another Viral Marketing Buzz Campaign Almost Over</h2>
+                <h2 class="title mb-6" id="article-9233">Another Viral Marketing Buzz Campaign Almost Over</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Ron McDaniel who is into Buzz Marketing posted about the TextPayMe marketing effort that I&#x2019;m participating in. When I last checked, they&#x2019;d&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-9233">
+        <article id="article-9234">
             <a href="https://ayende.com/blog/1118/documentation-open-source" target="_blank">
-                <h2 class="title mb-6" id="article-9233">Documentation &amp; Open Source</h2>
+                <h2 class="title mb-6" id="article-9234">Documentation &amp; Open Source</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the worst thing about doing open source software is maintaining the documentation. I recently had changed Rhino Mocks, NHibernate Generics and Brail.    This mean that I have to update the documentation of all three of them, and I&#x27;m less than excited about doing that :-(</p>
         </article>
-        <article id="article-9234">
+        <article id="article-9235">
             <a href="https://ayende.com/blog/1117/rhino-mocks-2-6-6-bug-fix-relase-stackoverflow-when-overriding-equals" target="_blank">
-                <h2 class="title mb-6" id="article-9234">Rhino Mocks 2.6.6: Bug Fix Relase - StackOverFlow when overriding Equals</h2>
+                <h2 class="title mb-6" id="article-9235">Rhino Mocks 2.6.6: Bug Fix Relase - StackOverFlow when overriding Equals</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Okay, I got a bug report today about something I knew I fixed. A StackOverFlow exception when overriding Equals(). Looking at the code, I did fix it, for 1.1 (this is one of the few places where there is a difference between the versions, unfortantely).    More unfortantely, I didn&#x27;t have a test for this, and I&#x27;m not sure why. IIRC, I got those exceptions by the dozens when I got this error, so I never bothered to write a spesific test for it. In hindsight, those exceptions where for Object.Equals(), which is not the same thing as the overriden method.    Looking at the code, it&#x27;s a true shame that I didn&#x27;t have a test for this, because it appears that I regressed with this scenario all over the place. I&#x27;m not sure how I can avoid this short of adding a couple dozens of tests that check all the code paths. So far I think that I got all of them. And I think that I&#x27;ll be much more careful with this in the future.    The problem is that the code that caused the problem looked like those two samples:                        if(proxy&#xA0;==&#xA0;invocation.Proxy)//explode&#xA0;with&#xA0;fireworks                            IMockedObject&#xA0;mock&#xA0;=&#xA0;proxies[proxy];//explode&#xA0;with&#xA0;fireworks&#xA0;as&#xA0;well                I&#x27;m really concerned about regressing with this one, since I&#x27;m not in the mood to add couple of dozens of tests, and I&#x27;m not sure how to handle this one. Anyway, I got a test for the main path, of course, which should catch most new things that I do.    You can get the sources and binaries from this page.</p>
         </article>
-        <article id="article-9235">
+        <article id="article-9236">
             <a href="https://ayende.com/blog/1116/nhibernate-generics-update" target="_blank">
-                <h2 class="title mb-6" id="article-9235">Nhibernate Generics Update</h2>
+                <h2 class="title mb-6" id="article-9236">Nhibernate Generics Update</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve updated NHibernate Generics (based on Dragos&#x27; suggestion) to add support for different accessors. You can now use the following types to select which naming strategy it will use to get your fields.            NHibernate.Generics.GenericAccessor&#x2B;CamelCase, NHibernate.Generics                 NHibernate.Generics.GenericAccessor&#x2B;CamelCaseUnderscore, NHibernate.Generics            NHibernate.Generics.GenericAccessor&#x2B;PascalCaseUnderscore, NHibernate.Generics            NHibernate.Generics.GenericAccessor&#x2B;PascalCaseMUnderscore, NHibernate.Generics            NHibernate.Generics.GenericAccessor&#x2B;LowerCase, NHibernate.Generics                 NHibernate.Generics.GenericAccessor&#x2B;LowerCaseUnderscore, NHibernate.Generics    The old accessor (NHibernate.Generics.GenericAccessor, NHibernate.Generics) still works, of course, and default to CamelCaseUnderscore naming strategy.</p>
         </article>
-        <article id="article-9236">
+        <article id="article-9237">
             <a href="https://ayende.com/blog/1115/windows-boots-on-macbook-pro" target="_blank">
-                <h2 class="title mb-6" id="article-9236">Windows Boots on MacBook Pro</h2>
+                <h2 class="title mb-6" id="article-9237">Windows Boots on MacBook Pro</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is wonderful, Windows Boots On Mac</p>
         </article>
-        <article id="article-9237">
+        <article id="article-9238">
             <a href="https://ayende.com/blog/1114/how-not-to-be-flagged-as-spam" target="_blank">
-                <h2 class="title mb-6" id="article-9237">How Not To Be Flagged As Spam</h2>
+                <h2 class="title mb-6" id="article-9238">How Not To Be Flagged As Spam</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently I got several legitimate emails that I nearly threw to the trash, since my eyes flagged them as spam just by the subject. Those mails had subject lines such as:            Urgent!            You are the only one who can help me!            Congrationlations!            Do you want to work for &lt;CompanyName&gt;?            etc    Don&#x27;t this people get any spam whatsoever? I see something like this, I usually won&#x27;t even stop to read the content of the mail. If you email me, try to put some content there. I do believe that I lost at least one job because I flagged the &quot;You have been accepted to work for us&quot;&#xA0;mail as spam without bother to read it.</p>
         </article>
-        <article id="article-9238">
+        <article id="article-9239">
             <a href="https://ayende.com/blog/1113/casle-demo-app-midway-summary" target="_blank">
-                <h2 class="title mb-6" id="article-9238">Casle Demo App: Midway Summary</h2>
+                <h2 class="title mb-6" id="article-9239">Casle Demo App: Midway Summary</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I tried to get an overview of all the posts I wrote so far about Castle Demo App, and I got a little lost, and I guess that this isn&#x27;t only my problem, so I put up a list of all the posts in the subject. I must say that I was very surprised to see that I posted so much about this (and I can think of several more topics that I want to post about).     So, without much further ado, here is the list as of right now:             Building a full blown application with Castle                 Castle Demo App: Getting Started With Active Record                 Castle Demo App: Active Record Relations                 Castle Demo App: Play with where clauses                 Castle Demo App: Playing with the code                 Castle Demo App: Lazy Loading and Scopes                 Castle Demo App: Many To Many Relations                 Castle Demo App: The First MonoRail Page                 Castle Demo App: MonoRail At A Glance                 Castle Demo App: Getting serious, the first real page                 Castle Demo App: Updating our Users                 Castle Demo App: Let There Be A New User                 Castle Demo App: CRUD Operations on Projects                 Castle Demo App: Complex Interactions                 Castle Demo App: Queries and Foreign Keys                 Castle Demo App: ViewComponents, Security, Filters and Friends         Enjoy.</p>
         </article>
-        <article id="article-9239">
+        <article id="article-9240">
             <a href="https://ayende.com/blog/1112/rhino-mocks-2-6-5-cls-complaint" target="_blank">
-                <h2 class="title mb-6" id="article-9239">Rhino Mocks 2.6.5: CLS Complaint</h2>
+                <h2 class="title mb-6" id="article-9240">Rhino Mocks 2.6.5: CLS Complaint</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: March 04, 2006
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It&#x27;s starting to feel like an hourly thing, I must say. There is a new version of Rhino Mocks out, the only change is that I made this version CLS Complaint, so it should give you a warm fuzzy feeling in your heart when you use it. :-)    Do I really need to give the URL again? Okay, get the sources and binaries from this page.</p>
-        </article>
-        <article id="article-9240">
-            <a href="https://ayende.com/blog/1111/least-privileges-on-sql-server" target="_blank">
-                <h2 class="title mb-6" id="article-9240">Least Privileges on SQL Server</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 04, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m a long time subscriber to the notion that users shouldn&#x27;t run as administrators. It may take some work for a developer to run as non-admin, but I believe that this is worth it. The issue is more than security, it&#x27;s about forcing coding practices (my code never write to Program Files, buecase it simply not allowed on my machine). I had to make some modifications to the environment (enable debugging for my user, for instance), but it wasn&#x27;t very hard.    One thing that I did run into is SQL Server. I don&#x27;t want to use sa/blank, of course. I want to use Windows Authentication (since then at least my connection strings don&#x27;t contain sensitive information, and I don&#x27;t need to remember more passwords), but I don&#x27;t want to give my user any more privileges that it absolutely must have. Right now I&#x27;ve settled on granting my user a db_creator on the server and db_owner for a couple of my databases.     I&#x27;m not sure if this is really the least privileges, but I&#x27;m currently doing a lot of SQL work, so I&#x27;m constantly doing stuff at the database level (restore, backup, drop, create, etc).</p>
         </article>
         <div class="button flex justify-between">
             <a href="923.html"><span class="back arrow"></span></a>
