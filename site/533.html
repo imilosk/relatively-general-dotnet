@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5321">
+            <a href="https://ayende.com/blog/4465/that-no-sql-thing-the-relational-modeling-anti-pattern-in-document-databases" target="_blank">
+                <h2 class="title mb-6" id="article-5321">That No SQL Thing</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: April 20, 2010
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am going to demonstrate the design of the data model in a document database for a typical blog application.   The following is my default sample data model, showing a very simple blog:     The absolutely wrong approach with a document database is to try to take the relational model and apply it on a document level. This is especially wrong because for a while, it might actually work. Let us say that we want to store the following:     var user = new User(&quot;ayende&quot;);&#xA;var blog = new Blog(&quot;Ayende @ Rahien&quot;, user) { Tags = {&quot;.NET&quot;, &quot;Architecture&quot;, &quot;Databases&quot; } };&#xA;var categoryRaven = new Category(&quot;Raven&quot;);&#xA;var categoryNoSQL = new Category(&quot;NoSQL&quot;);&#xA;var post = new Post(blog, &quot;RavenDB&quot;, &quot;... content ...&quot;)  &#xA;{&#xA;    Categories  = { categoryRaven, categoryNoSQL },&#xA;    Tags = {&quot;RavenDB&quot;, &quot;Announcements&quot; }&#xA;};&#xA;var comment = new Comment(post, &quot;Great news&quot;);&#xA;&#xA;PersistAll(user, blog, categoryRaven, categoryNoSQL, post, comment);&#xA;  &#xA;&#xA;Interestingly enough, I need to use code to represent the data without tying it to a particular storage format. &#xA;&#xA;The wrong approach to store the data would be to store each object as its own document, similar to the way we would store each object as its own row in a relational database. That wrong approach would look like this:&#xA;&#xA;&#xA;  &#xA;      &#xA;        &#xA;          // users/ayende&#xA;{&#xA;   &quot;type&quot;: &quot;user&quot;,&#xA;   &quot;name&quot;: &quot;ayende&quot;&#xA;}&#xA;&#xA;// tags/1&#xA;{&#xA;   &quot;name&quot;: &quot;.NET&quot;&#xA;}&#xA;&#xA;// tags/2&#xA;{&#xA;   &quot;name&quot;: &quot;Architecture&quot;&#xA;}&#xA;&#xA;// tags/3&#xA;{&#xA;   &quot;name&quot;: &quot;Databases&quot;&#xA;}&#xA;// tags/4&#xA;{&#xA;   &quot;name&quot;: &quot;RavenDB&quot;&#xA;}&#xA;// tags/5&#xA;{&#xA;   &quot;name&quot;: &quot;Announcements&quot;&#xA;}&#xA;          &#xA;&#xA;        &#xA;          // categories/1&#xA;{&#xA;    &quot;name&quot;: &quot;Raven&quot;&#xA;}&#xA;&#xA;          // categories/2&#xA;{&#xA;    &quot;name&quot; : &quot;NoSQL&quot;&#xA;}&#xA;&#xA;          // blogs/1&#xA;{&#xA;   &quot;type&quot;: &quot;blog&quot;,&#xA;    &quot;users&quot;: [&quot;users/ayende&quot;],&#xA;    &quot;name&quot;: &quot;Ayende @ Rahien&quot;,&#xA;    &quot;tags&quot;: [&quot;tags/1&quot;, &quot;tags/2&quot;, &quot;tags/3&quot;]&#xA;}&#xA;&#xA;// posts/1&#xA;{&#xA;    &quot;blog&quot;: &quot;blogs/1&quot;,&#xA;    &quot;title&quot;: &quot;RavenDB&quot;,&#xA;    &quot;content&quot;: &quot;... content ...&quot;,&#xA;    &quot;categories&quot;: [&quot;categories/1&quot;, &quot;categories/2&quot;]&#xA;    &quot;tags&quot; : [&quot;tags/4&quot;, &quot;tags/5&quot;]&#xA;}&#xA;&#xA;// comments/1&#xA;{&#xA;    &quot;post&quot;: &quot;posts/1&quot;,&#xA;    &quot;content&quot;: &quot;Great News&quot;&#xA;}&#xA;          &#xA;      &#xA;    &#xA;&#xA;&#xA;I know that I am repeating myself here, but I have seen people miss the point before. Do NOT try to model a document database in this way.&#xA;&#xA;The main reason that this is wrong is that a document database has no real support for doing joins, unions or any of the things that make such a model work effectively in a relational model.&#xA;&#xA;Let us try to analyze the scenarios where we need this data, okay?&#xA;&#xA;&#xA;  Main page: show list of blogs&#xA;&#xA;  Main page: show list of recent posts&#xA;&#xA;  Main page: show list of recent comments&#xA;&#xA;  Main page: show tag cloud for posts&#xA;&#xA;  Main page: show categories&#xA;&#xA;  Post page: show post and all comments&#xA;&#xA;  Post page: add comment to post&#xA;&#xA;  Tag page: show all posts for tag&#xA;&#xA;  Categories page: show all posts for category&#xA;&#xA;&#xA;I am going to analyze each of those scenarios using SQL (and the above model) and the current (and bad, smelly, nasty) document database model. I&#x2019;ll have another post showing how to correctly model this in a document database, this post is about how not to do it.&#xA;&#xA;Main page: show list of blogs&#xA;&#xA;Using SQL, this is pretty easy:&#xA;&#xA;&#xA;  select * from blogs&#xA;&#xA;&#xA;Using DocDB, this is easy, we are using a built-in index to query for documents by their type:&#xA;&#xA;&#xA;  docDb.Query&lt;Blog&gt;(&quot;DocumentsByType&quot;, query:&quot;type:blog&quot;);&#xA;&#xA;&#xA;Main page: show list of recent posts&#xA;&#xA;Using SQL, this is pretty easy:&#xA;&#xA;&#xA;  select * from posts order by PostedAt desc&#xA;  &#xA;&#xA;Using DocDB, we need to define our own index function, to allow use to sort on it. That is painless, even if I say so myself:&#xA;&#xA;&#xA;  from doc in docs&#xA;where doc.type == &quot;post&quot;&#xA;select new {doc.posted_at}&#xA;  &#xA;&#xA;And now we can query this using:&#xA;&#xA;&#xA;  docDb.Query&lt;Post&gt;(&quot;Posts&quot;, orderBy:&quot;-posted_at&quot;);&#xA;  &#xA;&#xA;Main page: show list of recent comments&#xA;&#xA;This is exactly the same as recent posts, so I&#x2019;ll skip it. &#xA;&#xA;Main page: show tag cloud for posts&#xA;&#xA;Here the SQL grows interesting:&#xA;&#xA;&#xA;  select Name, COUNT(*) as TagCount from tags&#xA;where ItemType = &#x27;Posts&#x27;&#xA;group by Name&#xA;  &#xA;&#xA;And with the document database we need to write a map/reduce index (&#x201C;Did you just told me to go @%$# myself?&#x201D;)&#xA;&#xA;&#xA;  from doc in docs&#xA;where doc.type == &quot;posts&quot;&#xA;from tag in doc.tags&#xA;select new { tag, count = 1 }&#xA;&#xA;from result in results&#xA;group result by result.tag into g&#xA;select new { tag = g.Key, count = g.Sum(x=&gt;x.count) }&#xA;  &#xA;&#xA;And now that we have the index, we can get the values from it using:&#xA;&#xA;&#xA;  var tagCloud = new TagCloud();&#xA;var tagIds = docDb.Query&lt;TagAndCount&gt;(&quot;TagsCloud&quot;, orderBy:&quot;&#x2B;count&quot;);&#xA;foreach(var tagId in tagIds)&#xA;{&#xA;    var tag = docDb.Get&lt;Tag&gt;(tagId.Tag);&#xA;    tagCloud.Add(tag.Name, tagId.Count);&#xA;}&#xA;  &#xA;&#xA;Now this is ugly on many levels. First, we have the fairly complex index. Second, we have to merge the data ourselves at the client side. Third, we have to perform a SELECT N&#x2B;1.&#xA;&#xA;Yuck doesn&#x2019;t being to cover it. There are actually ways to handle this more nicely, by making a multi get request, but I&#x2019;ll not bother.&#xA;&#xA;Main page: show categories&#xA;&#xA;Exactly the same as show blogs, so I&#x2019;ll skip it.&#xA;&#xA;Post page: show post and all comments&#xA;&#xA;Using stupid SQL:&#xA;&#xA;&#xA;  select * from Posts where Id = 1&#xA;&#xA;select * from Comments where PostId = 1&#xA;  &#xA;&#xA;A more efficient method would be to use a join:&#xA;&#xA;&#xA;  select * from Posts &#xA;  join Comments &#xA;    on Posts.Id = Comments.Id&#xA;where Posts.Id = 1&#xA;  &#xA;&#xA;With the doc db, we can do:&#xA;&#xA;&#xA;  var post = docDb.Get&lt;Post&gt;(1);&#xA;var comments = docDb.Query&lt;Comment&gt;(&quot;CommentsByPost&quot;, query:&quot;post_id:1&quot;, orderBy:&quot;&#x2B;posted_at&quot;);&#xA;  &#xA;&#xA;Which, of course, require us to define the comments by post index:&#xA;&#xA;&#xA;  from doc in docs&#xA;where doc.type == &quot;comment&quot;&#xA;select new{doc.post_id, doc.posted_at}&#xA;  &#xA;&#xA;Note that we have to make two calls here, because a document database has no notion of joins.&#xA;&#xA;Post page: add comment to post&#xA;&#xA;In SQL, it is a straightforward insert:&#xA;&#xA;&#xA;  insert into comments (PostId, ... )&#xA;values(1, ...)&#xA;  &#xA;&#xA;And with a document database, you can use:&#xA;&#xA;&#xA;  docDb.Store(new Comment{ PostId = 1, ... });&#xA;docDb.SaveChanges();&#xA;  &#xA;&#xA;Nothing much to look at here, using this flawed model.&#xA;&#xA;Tag page: show all posts for tag&#xA;&#xA;Using sql, that is slightly complex, because tags may be associated with blogs or with posts, so we need to do:&#xA;&#xA;&#xA;  select * from Posts &#xA;where Id in (&#xA;    select ItemId from tags&#xA;    where ItemType = &#x27;Posts&#x27; and TagId = 1&#xA;)&#xA;  &#xA;&#xA;Using a document database:&#xA;&#xA;&#xA;  var posts = docDb.Query&lt;Post&gt;(&quot;PostsByTag&quot;, query:&quot;tag:tags/1&quot;);&#xA;  &#xA;&#xA;With the following index:&#xA;&#xA;&#xA;  from doc in docs&#xA;where doc.type == &quot;post&quot;&#xA;from tag in doc.tags&#xA;select new {tag}&#xA;  &#xA;&#xA;Categories page: show all posts for category&#xA;&#xA;This is exactly like tags, so I&#x2019;ll skip it.&#xA;&#xA;As you&#x2019;ve seen, by copying the relational model, we have created just the same sort of environment that we already had with RDBMS, but now we are faced with the problem that a document database can&#x2019;t do things that a relational database can. In my eyes, what we have done is a net lose. Oh, we may gain some small benefit by being schemaless, but that isn&#x2019;t really that beneficial in compared to the amount of effort that we have to go to by trying to be relational on a non relational database.</p>
+        </article>
+        <article id="article-5322">
             <a href="https://ardalis.com/run-mstest-without-breaking-on-exceptions-in-vs2010/" target="_blank">
-                <h2 class="title mb-6" id="article-5321">Run MSTest Without Breaking on Exceptions in VS2010</h2>
+                <h2 class="title mb-6" id="article-5322">Run MSTest Without Breaking on Exceptions in VS2010</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Quick tip I just figured out (no R# installed yet) when using VS2010&#x2019;s test runner. If you want to just use the keyboard, then you can use&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5322">
+        <article id="article-5323">
             <a href="https://ayende.com/blog/4464/that-no-sql-thing-document-databases-usages" target="_blank">
-                <h2 class="title mb-6" id="article-5322">That No SQL Thing</h2>
+                <h2 class="title mb-6" id="article-5323">That No SQL Thing</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I described what a document database is, but I haven&#x2019;t touched about why you would want to use it.  The major benefit, of course, is that you are dealing with documents. There is little or no impedance mismatch between DTOs and documents. That means that storing data in the document database is usually significantly easier than when using an RDBMS for most non trivial scenarios.  It is usually quite painful to design a good physical data model for an RDBMS, because the way the data is laid out in the database and the way that we think about it in our application are drastically different. Moreover, RDBMS has this little thing called Schemas. And modifying a schema can be a painful thing indeed.     Sidebar: One of the most common problems that I find when reviewing a project is that the first step (or one of them) was to build the Entity Relations Diagram, thereby sinking a large time/effort commitment into it before the project really starts and real world usage tells us what we actually need.    The schemaless nature of a document database means that we don&#x2019;t have to worry about the shape of the data we are using, we can just serialize things into and out of the database. It helps that the commonly used format (JSON) is both human readable and easily managed by tools.  A document database doesn&#x2019;t support relations, which means that each document is independent. That makes it much easier to shard the database than it would be in a relational database, because we don&#x2019;t need to either store all relations on the same shard or support distributed joins.  Finally, I like to think about document databases as a natural candidate for DDD and DDDish (DDD-like?) applications. When using a relational database, we are instructed to think in terms of Aggregates and always go through an aggregate. The problem with that is that it tends to produce very bad performance in many instances, as we need to traverse the aggregate associations, or specialized knowledge in each context. With a document database, aggregates are quite natural, and highly performant, they are just the same document, after all.  I&#x2019;ll post more about this issue tomorrow.</p>
         </article>
-        <article id="article-5323">
+        <article id="article-5324">
             <a href="https://ardalis.com/vs2010-launch-presentations/" target="_blank">
-                <h2 class="title mb-6" id="article-5323">VS2010 Launch Presentations</h2>
+                <h2 class="title mb-6" id="article-5324">VS2010 Launch Presentations</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last week I was in Vegas to present at the DevConnections/ VS2010 Launch event. The show was well-attended and everybody I spoke to agreed&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5324">
+        <article id="article-5325">
             <a href="https://ardalis.com/asp-net-mvc-2-and-windows-azure/" target="_blank">
-                <h2 class="title mb-6" id="article-5324">ASP.NET MVC 2 and Windows Azure</h2>
+                <h2 class="title mb-6" id="article-5325">ASP.NET MVC 2 and Windows Azure</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you upgrade an Azure web instance to use ASP.NET MVC 2, make sure you mark the System.Web.Mvc reference as Copy Local = true. Otherwise&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5325">
+        <article id="article-5326">
             <a href="https://ardalis.com/adding-attributes-to-generated-classes/" target="_blank">
-                <h2 class="title mb-6" id="article-5325">Adding Attributes to Generated Classes</h2>
+                <h2 class="title mb-6" id="article-5326">Adding Attributes to Generated Classes</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">ASP.NET MVC 2 adds support for data annotations, implemented via attributes on your model classes. Depending on your design, you may be&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5326">
+        <article id="article-5327">
             <a href="https://ayende.com/blog/4463/opps-dangerous-typos" target="_blank">
-                <h2 class="title mb-6" id="article-5326">Opps: Dangerous typos</h2>
+                <h2 class="title mb-6" id="article-5327">Opps: Dangerous typos</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When releasing EF Prof, I had a typo in the pricing information. A single additional zero led to this embarrassment:     I think I caught it before anyone actually saw the price&#x2026;</p>
         </article>
-        <article id="article-5327">
+        <article id="article-5328">
             <a href="https://ayende.com/blog/4462/entity-framework-profiler-is-released" target="_blank">
-                <h2 class="title mb-6" id="article-5327">Entity Framework Profiler is released!</h2>
+                <h2 class="title mb-6" id="article-5328">Entity Framework Profiler is released!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The release got delayed because I moved apartments (which also explains why I am way behind on email), but it is out now.</p>
         </article>
-        <article id="article-5328">
+        <article id="article-5329">
             <a href="https://ayende.com/blog/4461/profiler-subscriptions-are-now-available" target="_blank">
-                <h2 class="title mb-6" id="article-5328">Profiler subscriptions are now available</h2>
+                <h2 class="title mb-6" id="article-5329">Profiler subscriptions are now available</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the repeated requests for the profiler was to provide some alternative to the full price. After due consideration, I chose to implement an additional licensing model for the profiler, a subscription based one.  The current licensing model is still available and will not change!  What does this mean? Using the subscription model, you pay a monthly fee, and you can keep using the profiler as long as you pay.  The monthly fee is 12 Euro / 16$ US.      Why 12 Euro / 16$? It isn&#x2019;t a &#x201C;normal&#x201D; price point.       When looking at the pricing model for subscriptions, I wanted to choose something low enough that most people wouldn&#x2019;t mind paying. I choose this particular price point because this is how much a business lunch cost at a nearby restaurant. I believe that it should be low enough for everyone in the target audience.   The terms are simple:     Payment is made month to month (that is, you get charged each month for the profiler).    You can cancel the subscription at any point in time, and your copy of the profiler will expire when the time it due.    Upgrading between version will happen automatically. That is, if you are subscribed to version 1.x, you&#x2019;ll get 2.x automatically.   Subscriptions are currently offered for NH Prof only, but we will expand that to the other profilers if this prove successful.  You can buy a subscription here.</p>
         </article>
-        <article id="article-5329">
+        <article id="article-5330">
             <a href="https://ayende.com/blog/4460/more-production-problems" target="_blank">
-                <h2 class="title mb-6" id="article-5329">More production problems</h2>
+                <h2 class="title mb-6" id="article-5330">More production problems</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: April 11, 2010
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Should I tell you how long it took me to figure this one out?</p>
-        </article>
-        <article id="article-5330">
-            <a href="https://ayende.com/blog/4459/that-no-sql-thing-document-databases" target="_blank">
-                <h2 class="title mb-6" id="article-5330">That No SQL Thing &#x2013; Document Databases</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 11, 2010
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A document database is, at its core, a key/value store with one major exception. Instead of just storing any blob in it, a document db requires that the data will be store in a format that the database can understand. The format can be XML, JSON, Binary JSON (MongoDB), or just about anything, as long as the database can understand it.  Why is this such a big thing? Because when the database can understand the format of the data that you send it, it can now do server side operations on that data. In most doc dbs, that means that we can now allow queries on the document data.The known format also means that it is much easier to write tooling for the database, since it is possible to show, display and edit the data.  I am going to use Raven as the example for this post. Raven is a JSON based, REST enabled document database. Documents in Raven use the JSON format, and each document contains both the actual data and an additional metadata information that you can use. Here is an example of a document:     {     &#xA0;&#xA0;&#xA0; &quot;name&quot;: &quot;ayende&quot;,      &#xA0;&#xA0;&#xA0; &quot;email&quot;: &quot;ayende@ayende.com&quot;,      &#xA0;&#xA0;&#xA0; &quot;projects&quot;: [      &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;rhino mocks&quot;,      &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;nhibernate&quot;,      &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;rhino service bus&quot;,      &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;raven db&quot;,      &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;rhino persistent hash table&quot;,      &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;rhino distributed hash table&quot;,      &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;rhino etl&quot;,      &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;rhino security&quot;,      &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;rampaging rhinos&quot;      &#xA0;&#xA0;&#xA0; ]      }   We can PUT this document in the database, under the key &#x2018;ayende&#x2019;. We can also GET the document back by using the key &#x2018;ayende&#x2019;.  A document database is schema free, that is, you don&#x2019;t have to define your schema ahead of time and adhere to that. It also allow us to store arbitrarily complex data. If I want to store trees, or collections, or dictionaries, that is quite easy. In fact, it is so natural that you don&#x2019;t really think about it.  It does not, however, support relations. Each document is standalone. It can refer to other documents by store their key, but there is nothing to enforce relational integrity.  The major benefit of using a document database comes from the fact that while it has all the benefits of a key/value store, you aren&#x2019;t limited to just querying by key. By storing information in a form that the database can understand, we can ask the server to do things for us. Such as defining the following index for us:     from doc in docs&#xA;from prj in doc.projects&#xA;select new { Project = prj, Name = doc.Name }&#xA;  &#xA;&#xA;With that in place, we can now make queries on the stored documents:&#xA;&#xA;&#xA;  GET /indexes/ProjectAndName?query=Project:raven&#xA;&#xA;&#xA;This will give us all the documents that include a project with the name raven.&#xA;&#xA;We can take it a bit further, though, and ask the database to store aggregations for us:&#xA;&#xA;&#xA;  from doc in docs&#xA;from prj in doc.projects&#xA;select new { Count = 1, Project = prj}&#xA;&#xA;from result in results&#xA;group result by result.Project into g&#xA;select new { Project = g.Key, Count = g.Sum(x=&gt;x.Count) };&#xA;  &#xA;&#xA;And now we can query for the number of users involved in the raven project:&#xA;&#xA;&#xA;  GET /indexes/UsersCountByProject?query=Project:raven&#xA;&#xA;&#xA;In general, querying a document database falls into the prepared ahead of time (Raven, CouchDB) or at query time (MongoDB). &#xA;&#xA;In the first case, you define an indexing function (in Raven&#x2019;s case, a Linq query, in CouchDB case, a JavaScript function) and the server will run it to prepare the results, once the results are prepared, they can be served to the client with minimal computation. CouchDB and Raven differs in the method they use to update those indexes, Raven will update the index immediately on document change, and queries to indexes will never wait. The query may return a stale result (and is explicitly marked as such), but it will return immediately. With CouchDB, a view is updated at view query time, which may lead to a long wait time on the first time a view is accessed if there were a lot of changes in the meanwhile. The CouchDB approach avoids doing extra works that may not be needed, but Raven&#x2019;s approach means that you don&#x2019;t have to handle potentially large delays at queyring times. CouchDB allow to pass a parameter at the view querying time to allow it to return stale results, which seems to be the best of all worlds.&#xA;&#xA;Note that in both CouchDB and Raven&#x2019;s cases, indexes do not affect write speed, since in both cases this is done at a background task. &#xA;&#xA;MongoDB, on the other hand, allows ad-hoc querying, and relies on indexes defined on the document values to help it achieve reasonable performance when the data size grows large enough. MongoDB&#x2019;s indexes behave in much the same way RDBMS indexes behave, that is, they are updated as part or the insert process, so large number of indexes is going to affect write performance. &#xA;&#xA;Other document databases: &#xA;&#xA;&#xA;  ThruDB is the closest one that I could find, but it is basically a key/value store with manual Lucene indexing. &#xA;&#xA;  Terrastore seems to be a full fledged document database, but I can&#x2019;t find much information about it. Requires Terracotta to work.&#xA;&#xA;  Riak is another Erlang based Doc DB. It seems to be close to MongoDB in terms of operation, but that is about as much as I know about it. Querying Riak is done by writing a map/reduce query in javascript or erlang. I think it is the originator of this.</p>
         </article>
         <div class="button flex justify-between">
             <a href="532.html"><span class="back arrow"></span></a>
