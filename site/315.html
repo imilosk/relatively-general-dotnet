@@ -112,8 +112,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3141">
+            <a href="https://ayende.com/blog/173900/ravendb-3-5-whirlwind-tour-i-need-to-be-free-to-explore-my-data" target="_blank">
+                <h2 class="title mb-6" id="article-3141">RavenDB 3.5 Whirlwind tour: I need to be free to explore my data</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 06, 2016
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This feature is primarily about giving operations / developers the ability to just say: &quot;I don&#x27;t care about performance, I don&#x27;t care about cost, I need to find something out, and I wanna do this qucikly&quot;. For those case, you can use Data Exploration:  This allows you to write Linq statements that are processed on the server with full access to the entire data set. Note that this has the option of running for a very long time, so we also provide a way to limit the cost based on time and the number of documents to process. And, of course, because those kind of tasks are almost always generated at the behest of a business analyst, we can get the results as an Excel file, and dump the data in someone&#x27;s else lap to deal with it.</p>
+        </article>
+        <article id="article-3142">
+            <a href="https://ayende.com/blog/173954/the-design-of-ravendb-4-0-physically-segregating-collections" target="_blank">
+                <h2 class="title mb-6" id="article-3142">The design of RavenDB 4.0</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 05, 2016
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When we started writing RavenDB, the idea of collection was this notion of &#x201C;just a way to say that those documents are roughly similar&#x201D;. We were deep in the schemaless nature of the system, and it made very little sense at the time to split different documents. By having all documents in the same location (and by that, I mean that they were all effectively stored in the same physical format and the only way to tell the difference between a User document and an Order document is by reading their metadata), we were able to do some really cool things. Indexes could operate over multiple collections easily, replication was simple, exporting documents was very natural operation, etc.&#xA;Over time, we learned by experience that most of the time, documents in separate collections are truly separate. They are processed differently, behave differently, and users expect to be able to operate on them differently. This is mostly visible when users have a large database and try to define an index on a small collection, and are surprised when it can take a while to index. The fact that we need to go over all the documents (because we can&#x2019;t tell them apart before we read them) is not something that is in the mental model for most users.&#xA;We have work around most of that by utilizing our own indexing structure. The Raven/DocumentsByEntityName index is used to do quite a lot. For example, we often are able to optimize the &#x201C;small collection, new index&#x201D; scenario using the Raven/DocumentsByEntityName, deletion / patching of collections through the studio is using it, etc.&#xA;In RavenDB 4.0 we decided to see what it would take to properly segregate collections. As it turned out, this is actually quite hard to do, because of the etag property.&#xA;The etag property of RavenDB goes basically like this: Etags are numbers (128 bits in RavenDB up to 3.x, 64 bits in RavenDB 4.0 and onward) that are always increasing, and each document change will result in a higher etag being generated. You can ask RavenDB to give you all documents since a particular etag, and by continually doing this, you&#x2019;ll get all documents in the database, including all updates.&#xA;This properly is the key for quite a lot of stuff internally. Replication, indexing, subscriptions, exports, the works.&#xA;But by putting documents in separate physical locations, that means that we won&#x2019;t have an easy way to scan through all of them. In RavenDB 3.0, we effectively have an index of [Etag, Document], and the process of getting all documents after a particular etag is extremely simple and cheap. But if we segregate collections, we&#x2019;ll need to merge the information from multiple locations, which can be non trivial, and has a complexity of O(N logN).&#xA;There is also the issue of the document keys namespace, which is global (so you can&#x2019;t have a User with the document key &#x201C;users/1&#x201D; and an Order with the document key &#x201C;users/1&#x201D;).&#xA;Remember the previous post about choosing Voron as our storage engine for RavenDB 4.0? This is one of the reasons why. Because we control the storage layer, we we able to come up with an elegant solution to the problem.&#xA;Each of our collections is going to be stored in a separate physical structure, with its own location on disk, its own indexes, etc. But at the same time, all of those separate collections are also going to share a pair of indexes (document key and document etag). In this manner, we effectively index the document etag twice. At first it is indexed in the global index, along all the documents in the database, regardless of which collection they are on. This index will be used for replication, exports, etc. And it is indexed again in a per collection index, which is what we&#x2019;ll use for indexing, patch by colelction, etc. In the same manner, the documents key index is going to allow us to lookup documents by their key without needing to know what collection they are on.&#xA;Remember, those indexes actually store the an id that gives us an O(1) access to the data, which means that processing them is going to be incredibly cheap.&#xA;This has a bunch of additional advantages. To start with, it means that we can drop the Raven/DocumentsByEntityName index ,it is not longer required, since all its functioned are now handled by those internal storage indexes.&#xA;&#xA;Loaded terminology term: Indexes in RavenDB can refer to either the indexes that users define and are familiar with (such as the good ol` Raven/DocuemntsByEntityName) and also storage indexes, which are internal structures inside the RavenDB engine and aren&#x2019;t exposed externally.&#xA;&#xA;That has the nice benefit of making sure that all collection data are now transactional and is updated as part of the write transactions.&#xA;So we had to implement a relatively strange internal structure to support this segregation. But aside from the &#x201C;collections are physically separated from one another&#x201D;, what does this actually gives us?&#xA;Well, it make certain tasks, such as indexing, subscriptions, patching, etc that work on a per collection basis much easier. You don&#x2019;t need to scan all documents and filter the stuff that isn&#x2019;t relevant. Instead, you can just iterate over the entire result set directly. And that has its own&#xA0;advantages. Because we are storing documents in separate internal structures per collection, there is a much stronger chance that documents in the same collection will reside nearby one another on the disk. Which is going to increase performance, and opens up some interesting optimization opportunities.</p>
+        </article>
+        <article id="article-3143">
+            <a href="https://andrewlock.net/starting-a-blog/" target="_blank">
+                <h2 class="title mb-6" id="article-3143">Starting a blog to get yourself noticed</h2>
+            </a>
+            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 05, 2016
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I discuss some of the benefits of starting a Blog&#x2026;</p>
+        </article>
+        <article id="article-3144">
             <a href="https://enterprisecraftsmanship.com/posts/singleton-vs-dependency-injection/" target="_blank">
-                <h2 class="title mb-6" id="article-3141">Singleton vs Dependency Injection</h2>
+                <h2 class="title mb-6" id="article-3144">Singleton vs Dependency Injection</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is a showcase for the Singleton design pattern. In contrast to the common belief, Singleton is not inherently bad and I&#x2019;ll try to show you in what circumstances it is a good choice.</p>
         </article>
-        <article id="article-3142">
+        <article id="article-3145">
             <a href="https://ayende.com/blog/173899/ravendb-3-5-whirl-wind-tour-ill-find-who-is-taking-my-i-o-bandwidth-and-they-shall-pay" target="_blank">
-                <h2 class="title mb-6" id="article-3142">RavenDB 3.5 whirl wind tour</h2>
+                <h2 class="title mb-6" id="article-3145">RavenDB 3.5 whirl wind tour</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I previously mentioned that a large part of what we need to do as a database is to actively manage our resources, things like CPU usage and memory are relatively easy to manage (to a certain extent), but one of the things that we trip over again and again is the issue of I/O. Whatever it is a cloud based system with an I/O rate of a an old IBM XT after being picked up from a garage after a flood to users that pack literally hundreds of extremely active database on the same physical storage medium to a user that is reading the entire database (through subscriptions) on every page load, I/O is not something that you can ever have enough of. We spend an incredible amount of time trying to reduce our I/O costs, and still we run into issues. So we decided to approach it from the other side. RavenDB 3.5 now packages Raven.Monitor.exe, which is capable of monitoring the actual I/O and pin point who is to blame, live. Here is what this looks like after 1 minute run in a database that is currently having data imported &#x2B; some minor indexing.   The idea is that we can use this ability to do two things. We can find out who is consuming the I/O on the system, and even narrow down to exactly what is consuming it, but we can also use it to find how much resources a particular database is using, and can tell based on that whatever we are doing good job of utilizing the hardware properly. As a reminder, we have the RavenDB Conference in Texas in a few months, which would be an excellent opportunity to see RavenDB 3.5 in all its glory.</p>
         </article>
-        <article id="article-3143">
+        <article id="article-3146">
             <a href="https://ayende.com/blog/173953/the-design-of-ravendb-4-0-making-lucene-reliable" target="_blank">
-                <h2 class="title mb-6" id="article-3143">The design of RavenDB 4.0</h2>
+                <h2 class="title mb-6" id="article-3146">The design of RavenDB 4.0</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I don&#x2019;t like Lucene. It is an external dependency that works in somewhat funny ways, and the version we use is a relatively old one that has been mostly ported as-is from Java. This leads to some design decisions that are questionable (for example, using exceptions for control flow in parsing queries), or just awkward (by default, an error in merging segments will kill your entire process). Getting Lucene to run properly in production takes quite a bit of work and effort. So I don&#x2019;t like Lucene. We have spiked various alternatives to Lucene multiple times, but it is a hard problem, and most solutions that we look at lead toward pretty much the same approach that Lucene does it.By now, we have been working with Lucene for over eight years, so we have gotten good in managing it, but there are still quite a bit of code in RavenDB that is decided to managing Lucene&#x2019;s state, figuring out how to recover in case of errors, etc. Just off the top of my head, we have code to recover from aborted indexing, background processes that takes regular backups of the indexes, so we&#x2019;ll be able to restore them in the case of an error, etc. At some point we had a lab of machines that were dedicated to testing that our code was able to manage Lucene properly in the presence of hard resets. We got it working, eventually, but it was hard. And we still get issues from users that into trouble because Lucene can tie itself into knots (for example, a disk full error midway through indexing can corrupt your index and require us to reset it). And that is leaving aside the joy of I/O re-ordering does to you when you need to ensure reliability. So the problem isn&#x2019;t with Lucene itself, the problem is that it isn&#x2019;t reliable. That led us to the Lucene persistence format. While Lucene persistent mode is technically pluggable, in practice, this isn&#x2019;t really possible. The file format and the way it works are very closely tied to the idea of files. Actually, the idea of process data as a stream of bytes. At some point, we thought that it would be good to implement a Transactional NTFS Lucene Directory, but that idea isn&#x2019;t really viable, since that is going away. It was at this point that we realized that we were barking at the entirely wrong tree. We already have the technology in place to make Lucene reliable: Voron! Voron is a low level storage engine that offers ACID transactions. All we need to do is develop VoronLuceneDirectory, and that should handle the reliability part of the equation. There are a couple of details that needs to be handled, in particular, Voron needs to know, upfront, how much data you want to write, and a single value in Voron is limited to 2GB. But that is fairly easily done. We write to a temporary file from Lucene, until it tells us to commit. At which point we can write it to Voron directly (potentially breaking it to multiple values if needed). Voila, we have got ourselves a reliable mechanism for storing Lucene&#x2019;s data. And we can do all of that in a single atomic transaction. When reading the data, we can skip all of the hard work and file I/O and serve it directly from Voron&#x2019;s memory map. And having everything inside a single Voron file means that we can skip doing things like the compound file format Lucene is using, and chose a more optimal approach.  And with a reliable way to handle indexing, quite large swaths of code can just go away. We can now safely assume that indexes are consistent, so we don&#x2019;t need to have a lot of checks on that, startup verifications, recovery modes, online backups, etc. Improvement by omission indeed.</p>
         </article>
-        <article id="article-3144">
+        <article id="article-3147">
             <a href="https://ardalis.com/asp-net-core-training-&#x2013;-june-2016/" target="_blank">
-                <h2 class="title mb-6" id="article-3144">ASP.NET Core Training &#x2013; June 2016</h2>
+                <h2 class="title mb-6" id="article-3147">ASP.NET Core Training &#x2013; June 2016</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;ve been wondering when the time would come for you to start learning about ASP.NET Core, it&#x2019;s quickly approaching. ASP.NET Core RC&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3145">
+        <article id="article-3148">
             <a href="https://ayende.com/blog/173898/ravendb-3-5-whirl-wind-tour-you-want-all-the-data-you-cant-handle-all-the-data" target="_blank">
-                <h2 class="title mb-6" id="article-3145">RavenDB 3.5 whirl wind tour</h2>
+                <h2 class="title mb-6" id="article-3148">RavenDB 3.5 whirl wind tour</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Another replication feature in RavenDB is the ability to replicate only specific collections to a sibling, and even the ability to transform the outgoing data as it goes out. Here is an example of how this looks in the UI, which will probably do it much better justice than a thousand words from me.  There are several reasons why you&#x27;ll want to use this feature. In terms of deployment, it gives you an easy way to replicate parts of a database&#x27;s data to a number of other databases, without requiring you to send the full details. A typical example would be a product catalog that is shared among multiple tenants, but where each tenant can modify the products or add new ones.  Another example would be to have the production database replicate backward to the staging database, with certain fields that are masked so the development / QA team can work with a realistic dataset. An important consideration with filtered replication is that because the data is filtered, a destination that is using filtered replication isn&#x27;t a viable fallback target, and it will not be considered as such by the client. If you want failover, you need to have multiple replicas, some with the full data set and some with the filtered data.</p>
         </article>
-        <article id="article-3146">
+        <article id="article-3149">
             <a href="https://ayende.com/blog/173897/ravendb-3-5-whirl-wind-tour-a-large-cluster-goes-into-a-bar-and-order-n-2-drinks" target="_blank">
-                <h2 class="title mb-6" id="article-3146">RavenDB 3.5 whirl wind tour</h2>
+                <h2 class="title mb-6" id="article-3149">RavenDB 3.5 whirl wind tour</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Imagine that you have a two nodes cluster, setup as master-master replication, and then you write a document to one of them. The node you wrote the document to now contacts the 2nd node to let it knows about the new document. The data is replicated, and everything is happy in this world. But now let us imagine it with three nodes. We write to node 1, which will then replicate to nodes 2 and 3. But node 2 is also configured to replicate to node 3, and given that we have a new document in, it will do just that. Node 3 will detect that it already have this document and turn that into a no-op. But at the same time that node 3 is getting the document from node 2, it is also sending the document it got from node 1 to node 2.  This work, and it evens out eventually, because replicating a document that was already replicated is safe to do. And on high load systems, replication is batched, so you typically don&#x27;t see a problem until you get to bigger cluster sizes. Let us take the following six way cluster. In this graph, we are going to have 15 round trips across the network on each replication batch.*  * Nitpicker corner, yes, I know that the number of connections is ( N * (N-1) ) / 2, but N^2 looks better in the title.   The typical answer we have for this is to change the topology, instead of having a fully connected graph, with each node talking to all other nodes, we use something like this:  Real topologies typically have more than a single path, and it isn&#x27;t a hierarchy, but this is to illustrate a point.  This work, but it requires the operations team to plan ahead when they deploy, and if you didn&#x27;t allow for breakage, a single node going down can disconnect large portion of your cluster. That is not ideal. So in RavenDB 3.5 we have taken steps to avoid it, nodes are now much smarter about the way they go about talking about their changes. Instead of getting all fired up and starting to send replication message all over the place, potentially putting some serious pressure on the network, the nodes will be smarter about it, and wait a bit to see if their siblings already got the documents from the same source. In which case, we now only need to ping them periodically to ensure that they are still connected, and we saved a whole bunch of bandwidth.</p>
         </article>
-        <article id="article-3147">
+        <article id="article-3150">
             <a href="https://ayende.com/blog/173892/the-design-of-ravendb-4-0-the-implications-of-the-blittable-format" target="_blank">
-                <h2 class="title mb-6" id="article-3147">The design of RavenDB 4.0</h2>
+                <h2 class="title mb-6" id="article-3150">The design of RavenDB 4.0</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -222,54 +270,6 @@
                 posted on: April 28, 2016
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have written extensively about the blittable format already, so I&#x2019;ll not get into that again. But what I wanted to do in this post is to discuss the implication of the intersection of two very important features:&#xA;&#xA;The blittable format requires no further action to be useful.&#xA;Voron is based on a memory mapped file concept.&#xA;&#xA;Those two, brought together, are quite interesting.&#xA;To see why, let us consider the current state of affairs. In RavenDB 3.0, we store the data as json directly. Whenever we need to read a document, we need to load the document from disk, parse the json, load it into .NET objects, and only then do something with it. When we just got started with RavenDB, it didn&#x2019;t actually matter to us. Our main concern was I/O, and that dominated all our costs. We spent multiple releases improving on that, and the solution was the prefetcher.&#xA;&#xA;Prefetcher will load documents from the disk and make them ready to be indexed.&#xA;The prefetcher is running concurrently to indexing, so we can parallelize I/O and CPU work.&#xA;&#xA;That allow us to reduce most of the I/O wait times, but it still left us with problems. If two indexes are working, and they each use their own prefetcher, then we have double the I/O cost, double the parsing cost, double the memory cost, double the GC cost. So in order to avoid that, we group indexes together that are roughly at the same space in their indexing. But that lead to a different set of problems, if we have one slow index, that would impact all the other indexes, so we need to have a way to &#x201C;abandon&#x201D; an index while it is indexing, to let the other indexes in the group the chance to run.&#xA;There is also another issue, when inserting documents into the database, we want to index them, but it seems stupid to take the index, write it to the disk, only to then load them from the disk, parse them, etc. So when we insert a new document, we add it to the prefetcher directly, saving us some work in the common case where indexes are caught up and only need to index new things. That, too, have a cost, it means that the lifetime of such objects tend to be much longer, which means that they are more likely to be pushed into Gen1 or Gen2, so they will not be collected for a while, and when they do, it will be a more expensive collection run.&#xA;Oh, and to top it off, all of the structure above need to consider available memory, load on the server, time for indexing batch, I/O rates, liveliness and probably a dozen other factors that don&#x2019;t pop to mind right now. In short, this is complex.&#xA;With RavenDB 4.0, we set out to remove all of this complexity. A large part of the motivation for the blittable format and using Voron are driven by the reasoning below.&#xA;If we can get to a point where we can just access the values, and reading documents won&#x2019;t incur a heavy penalty in CPU/memory, we could radically shift the cost structure. Let us see how. Now, the only cost for indexing is going to be pure I/O, paging the documents to memory when we access them. Actually indexing them is done by merely access the mapped memory directly, so we don&#x2019;t actually need to allocate much memory during indexing.&#xA;Optimizing the actual I/O is pretty easily done by just asking the operating system, we can do that explicitly using PrefetchVirtualMemory or madvise(MADV_WILLNEED), or just let the OS handle that based on actual access pattern. So those are two separate issues that just went away completely. And without needing to spread the cost of loading the documents among all indexes, we no longer have a good reason to go with grouping indexes. So that is out the window, as well as all the complexity that is required to handle a slow index slowing down everyone.&#xA;And because newly written documents are likely to be memory resident (they have just been accessed, after all), we can just skip the whole &#x201C;let us remember recently written documents for the indexes&#x201D;, because by the time we index them, we are expecting them to still be in memory.&#xA;What is interesting here is that by using the right infrastructure we have been able to remove quite a lot of code. Now, the major part here is that being able to remove a lot of code is almost always great, the major change here is that all of the code we removed had to deal with a very large number of factors (if new documents are coming in, but indexing isn&#x2019;t caught up to them, we need to stop putting the new documents into the perfetcher cache and clear it) that are hard to predict and sometimes interact in funny ways. By moving a lot of that complexity to &#x201C;let us manage what parts of the file are memory resident&#x201D;, we can simplify a lot of that complexity and even push much of it directly to the operation system.&#xA;This has other implications, because we now no longer need to run indexes in groups, and they can each run and do their own thing, we can now split them so each index has their own dedicated thread. Which mean, in turn, that if we have a very busy index, it is going to be very easy to point which one is the culprit. It also make it much easier for us to handle priorities. Because each index is a thread, it means that we can now rely on the OS prioritization. If you have an index that you really care about running as soon as possible, we can bump its priority higher. And by default, we can very easily mark the indexing thread as lower priority, so we can&#xA0;prioritize answer incoming requests over processing indexes.&#xA;Doing it in this manner means that we are able to ask the OS to handle the problem of starvation in the system, where an index doesn&#x2019;t get to run because it has a lower priority. All of that is already handled in the OS scheduler, so we can lean on that.&#xA;Probably the hardest part in the design of RavenDB 4.0 is that we are thinking very hard about how to achieve our goals (and in many cases exceed them) not by writing code, but by not writing code. But by arranging things so the right thing would happen. Architecture and optimization by omission, so to speak.&#xA;As a reminder, we have the RavenDB Conference in Texas in a few months, which would be an excellent opportunity to learn about RavenDB 4.0 and the direction in which we are going.</p>
-        </article>
-        <article id="article-3148">
-            <a href="https://enterprisecraftsmanship.com/posts/defensive-programming/" target="_blank">
-                <h2 class="title mb-6" id="article-3148">Defensive programming: the good, the bad and the ugly</h2>
-            </a>
-            <p class="mb-2">by Vladimir Khorikov</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 27, 2016
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I want to take a closer look at the practice of defensive programming.</p>
-        </article>
-        <article id="article-3149">
-            <a href="https://ayende.com/blog/173896/ravendb-3-5-whirl-wind-tour-im-the-admin-and-i-got-the-power" target="_blank">
-                <h2 class="title mb-6" id="article-3149">RavenDB 3.5 whirl wind tour</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 27, 2016
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It looks like I&#x2019;m on a rule for administrators and operations features in RavenDB 3.5, and in this case, I want to introduce the Administrator JS Console. This is a way for a server administrator to execute arbitrary code on a running system. Here is a small such example:  This is 100% the case of giving the administrator the option for running with scissors.  Yes, I&#x2019;m feeling a bit nostalgic . The idea here is that we have the ability to query and modify the state of the server directly. We don&#x2019;t have to rely on prepared-ahead-of-time end points, and only being able to do whatever it is we thought of beforehand.  If we run into a hard problem, we&#x2019;ll actually be able to ask the server directly, what ails you, and when we find out, we can tell it, so let us fix that. For example, interrogating the server about the state of its memory, then telling it to flush a particular cache, or changing (at runtime, without any restarts or downtime) the value of a particular configuration option, or giving the server additional information it is missing. We already saw three cases where having this ability would have been a major time saver, so we are really excited about this feature, and what it means to our ability to more easily support RavenDB in production.</p>
-        </article>
-        <article id="article-3150">
-            <a href="https://ardalis.com/speaker-alert/" target="_blank">
-                <h2 class="title mb-6" id="article-3150">Speaker Alert</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 26, 2016
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve wanted a decent speaker timer to use during my conference presentations for a while, now. Some of the fancier slide advancers have a&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="314.html"><span class="back arrow"></span></a>
