@@ -112,8 +112,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5261">
-            <a href="https://ayende.com/blog/4519/porting-mvc-music-store-to-raven-advanced-migrations" target="_blank">
+            <a href="https://ayende.com/blog/4521/porting-mvc-music-store-to-raven-storecontroller" target="_blank">
                 <h2 class="title mb-6" id="article-5261">Porting MVC Music Store to Raven</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 25, 2010
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We will start with the Index() method:     There are one this in this code that bothers me, and that is that this code is going to perform two DB queries. But that is beside the point, since we are going to modify the whole thing.  And here is my port:     As you can see, it is pretty much the same, and not really that interesting. Let us see what else we have:     Something that is important to note here is that we are doing a search on the name of a genre. The problem is that the genre name isn&#x2019;t the primary key, worse, there isn&#x2019;t even an index on the name column. Now, admittedly, the genre table contains ten rows, but it is the principal of the thing. (If you are smart, you only have to be read the riot act by the DBA about non index queries in production once).  Now, it would be trivial for us to implement this in Raven using the same approach, but I don&#x2019;t see a reason to do this. The genre that we get in the Browse method is dependant on the data that we return from the Index method, so there is no reason no to pass the id of the genre directly. I modified the Index() action to pass the entire genre, not just the genre name, and to pass the id back to the Browse() action, not the name.   I gotten started implementing this, but I got stuck on the association of Albums from the genre.      Document database doesn&#x2019;t normally have associations, and they don&#x2019;t have joins. So how can we do this?  By now, you should be pretty familiar with the answer, we need to define an index :-)     // AlbumsByGenre&#xA;from album in docs.Albums&#xA;where album.Genre != null&#xA;select new { Genre = album.Genre.Id }&#xA;&#xA;&#xA;&#xA;And this index allows us to write this code:&#xA;&#xA; &#xA;&#xA;And finally, we have the GenreMenu:&#xA;&#xA;&#xA;&#xA;Which we can port very easily: &#xA;&#xA; &#xA;&#xA;&#xA;&#xA;And that is all for the StoreController</p>
+        </article>
+        <article id="article-5262">
+            <a href="https://ayende.com/blog/4520/and-now-this-is-what-i-call-error-handling" target="_blank">
+                <h2 class="title mb-6" id="article-5262">And now this is what I call error handling</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 25, 2010
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20"></p>
+        </article>
+        <article id="article-5263">
+            <a href="https://ayende.com/blog/4519/porting-mvc-music-store-to-raven-advanced-migrations" target="_blank">
+                <h2 class="title mb-6" id="article-5263">Porting MVC Music Store to Raven</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I noticed that I had&#xA0; typo when I inserted the albums data, the artist data was stored as &#x201C;Arist&#x201D;. This give me a chance to show you how we can do a migration that is a bit more advanced.     using (var documentStore = new DocumentStore { Url = &quot;http://localhost:8080&quot; })&#xA;{&#xA;    documentStore.Initialise();&#xA;&#xA;    var count = 0;&#xA;&#xA;    do&#xA;    {&#xA;        var queryResult = documentStore.DatabaseCommands.Query(&quot;Raven/DocumentsByEntityName&quot;, new IndexQuery&#xA;        {&#xA;            Query = &quot;Tag:`Albums`&quot;,&#xA;            PageSize = 128,&#xA;            Start = count&#xA;        });&#xA;&#xA;&#xA;        if (queryResult.Results.Length == 0)&#xA;            break;&#xA;&#xA;        count &#x2B;= queryResult.Results.Length;&#xA;        var cmds = new List&lt;ICommandData&gt;();&#xA;        foreach (var result in queryResult.Results)&#xA;        {&#xA;            var arist = result.Value&lt;JObject&gt;(&quot;Arist&quot;);&#xA;            if(arist == null)&#xA;                continue;&#xA;                        &#xA;            result[&quot;Artist&quot;] = arist;&#xA;            result.Remove(&quot;Arist&quot;);&#xA;&#xA;            cmds.Add(new PutCommandData&#xA;            {&#xA;                Document = result,&#xA;                Metadata = result.Value&lt;JObject&gt;(&quot;@metadata&quot;),&#xA;                Key = result.Value&lt;JObject&gt;(&quot;@metadata&quot;).Value&lt;string&gt;(&quot;@id&quot;),&#xA;            });&#xA;        }&#xA;&#xA;        documentStore.DatabaseCommands.Batch(cmds.ToArray());&#xA;&#xA;    } while (true);&#xA;    &#xA;}&#xA;  &#xA;&#xA;The code itself should be hard to follow I think, it shows how we can manipulate documents by working with the JSON document directly, instead of having to go through an object layer.</p>
         </article>
-        <article id="article-5262">
+        <article id="article-5264">
             <a href="https://ayende.com/blog/4518/a-bug-that-drove-me-crazy" target="_blank">
-                <h2 class="title mb-6" id="article-5262">A bug that drove me crazy!</h2>
+                <h2 class="title mb-6" id="article-5264">A bug that drove me crazy!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am ashamed to say how much time and effort (and at least one complete re-design) this bug has cost me.  Take a look at the following test, meant to show that Raven can replicate deletes between servers:     There is a very subtle bug in this code, which completely tripped me.   Here is a hint, the session interface is the high level client API for Raven.   Can you spot the bug?</p>
         </article>
-        <article id="article-5263">
+        <article id="article-5265">
             <a href="https://ayende.com/blog/4517/porting-mvc-music-store-to-raven-migrations" target="_blank">
-                <h2 class="title mb-6" id="article-5263">Porting MVC Music Store to Raven</h2>
+                <h2 class="title mb-6" id="article-5265">Porting MVC Music Store to Raven</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">On my last post, I mention that we need to add a CountSold property to all the albums, in most SQL system, something like that can be pretty painful. The syntax for adding a new column is easy, but actually getting it done, and deployed, and versioned, is pretty hard. With Raven, if you add a new property, it will automatically be added to your document when you next save it. There is no action required on your part. The same, by the way, would happen when you remove a property. Raven will clean it up after you.  The question is what happens when we want to set that value to something, not just to the default value? We need to provide that logic somehow, and here is a simple way of doing so;     using (var documentStore = new DocumentStore { Url = &quot;http://localhost:8080&quot; })&#xA;{&#xA;    documentStore.Initialise();&#xA;    using (var session = documentStore.OpenSession())&#xA;    {&#xA;        IDictionary&lt;string,int&gt; albumToSoldCount = new Dictionary&lt;string, int&gt;();&#xA;        int count = 0;&#xA;&#xA;        do&#xA;        {&#xA;            var results = session.Query&lt;SoldAlbum&gt;(&quot;SoldAlbums&quot;)&#xA;                .Take(128)&#xA;                .Skip(count)&#xA;                .ToArray();&#xA;&#xA;            if (results.Length == 0)&#xA;                break;&#xA;            count &#x2B;= results.Length;&#xA;            foreach (var soldAlbum in results)&#xA;            {&#xA;                albumToSoldCount[soldAlbum.Album] = soldAlbum.Quantity;&#xA;            }&#xA;        } while (true);&#xA;&#xA;        count = 0;&#xA;        do&#xA;        {&#xA;            var albums = session.Query&lt;Album&gt;()&#xA;                .Skip(count)&#xA;                .Take(128)&#xA;                .ToArray();&#xA;            if (albums.Length == 0)&#xA;                break;&#xA;&#xA;            foreach (var album in albums)&#xA;            {&#xA;                int value;&#xA;                albumToSoldCount.TryGetValue(album.Id, out value);&#xA;&#xA;                album.CountSold = value;&#xA;            }&#xA;&#xA;            count &#x2B;= albums.Length;&#xA;&#xA;            session.SaveChanges();&#xA;            session.Clear();&#xA;        } while (true);&#xA;    }&#xA;}&#xA;  &#xA;&#xA;To those of you who haven&#x2019;t bother to read the code, this is reading the index that we previously created and remembering its value. Then we start reading batches of albums and update their counts. All in all, it is quite simple.&#xA;&#xA;An additional nice property of this script is that you can run it is safe to run it multiple times.</p>
         </article>
-        <article id="article-5264">
+        <article id="article-5266">
             <a href="https://ayende.com/blog/4516/nhibernate-workbench" target="_blank">
-                <h2 class="title mb-6" id="article-5264">NHibernate Workbench</h2>
+                <h2 class="title mb-6" id="article-5266">NHibernate Workbench</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It is good to see more tools showing up around NHibernate: http://www.felicepollano.com/2010/05/19/NHibernateWorkbench.aspx</p>
         </article>
-        <article id="article-5265">
+        <article id="article-5267">
             <a href="https://ayende.com/blog/4515/porting-mvc-music-store-to-raven-porting-the-homecontroller-the-right-way" target="_blank">
-                <h2 class="title mb-6" id="article-5265">Porting MVC Music Store to Raven</h2>
+                <h2 class="title mb-6" id="article-5267">Porting MVC Music Store to Raven</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As I mentioned, we can solve the GetTopSellingAlbums() problem using map/reduce, but that isn&#x2019;t really a good way of doing it. The problem with doing that (aside from the scared looks and pained sounds that you get when you mention it) is that it is trying to solve the problem in a relational way. Indeed, the previous solution was an near duplication of how a relational database would process that query. So, what is the doc db approach for solving this issue?  The answer is quit simple, remember that documents are independent, and think about the question. What we are asking is what are the top selling albums. If we add a CountSold property to the album, we would suddenly find it so much easier to handle this problem. This means that we would need to update all the albums that are part of a given order when an order is submitted, but that is acceptable (this exact same operation is commonly done in SQL databases as well).  For now, let us waive how we create the CountSold property and fill it with the right values (I&#x2019;ll discuss it in my next post), for now, assume that this happened, how can we GetTopSellingAlbums() problem?   Well, that is easy enough. All we need to do is define an index for CountSold.   // AlbumsByCountSold&#xA;from album in docs.Albums&#xA;select new { album.CountSold };&#xA;&#xA;&#xA;&#xA;With that, we can implement GetTopSellingAlbums like this:&#xA;&#xA; &#xA;&#xA;And now it is done, very simple, very efficient and quit elegant, eve if I say so myself.</p>
         </article>
-        <article id="article-5266">
+        <article id="article-5268">
             <a href="https://ayende.com/blog/4514/find-the-design-flaw" target="_blank">
-                <h2 class="title mb-6" id="article-5266">Find the design flaw</h2>
+                <h2 class="title mb-6" id="article-5268">Find the design flaw</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This method has a design flaw, can you see it?     Hint, it is using the yield keyword.</p>
         </article>
-        <article id="article-5267">
+        <article id="article-5269">
             <a href="https://ayende.com/blog/4513/the-ravendb-launch-video" target="_blank">
-                <h2 class="title mb-6" id="article-5267">The RavenDB launch video</h2>
+                <h2 class="title mb-6" id="article-5269">The RavenDB launch video</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A few days ago, RavenDB launched in Skills Matter UK office, a lot of people showed up and there seem to be a lot of interest in Raven.  The session was recorded and can be found here. I know you won&#x2019;t believe me, but that was planned to be a 60 &#x2013; 70 minutes talk, it went for twice that.</p>
         </article>
-        <article id="article-5268">
+        <article id="article-5270">
             <a href="https://ayende.com/blog/4512/porting-mvc-music-store-to-raven-porting-the-homecontroller-the-map-reduce-way" target="_blank">
-                <h2 class="title mb-6" id="article-5268">Porting MVC Music Store to Raven</h2>
+                <h2 class="title mb-6" id="article-5270">Porting MVC Music Store to Raven</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -238,38 +270,6 @@
                 posted on: May 21, 2010
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The current HomeController looks like this:     I really don&#x2019;t like the fact that the controller issues queries like that, but we will let it go for now.  This query (thanks to EF Prof) looks like this:       And here we run into a very interesting problem, we can&#x2019;t really replicate this query. The reason is that this query runs over multiple tables which our model says would be in different documents.  There are several ways in which we can fix this. One way of doing this would be to define a map / reduce index on top of orders.     Note: Yes, I am familiar with this comic.    The way that I am about to show you isn&#x2019;t the way I would recommend going for real, but I want to show it anyway. I&#x2019;ll discuss the idiomatic Raven way of handling this feature in my next post.   Map/reduce in Raven is just a couple of Linq queries, so it is nothing to be worried about. As a reminder, we have the following order documents in our database:       We define the index &#x201C;SoldAlbums&#x201D; using the following queries.     // map&#xA;from order in docs.Orders&#xA;from line in order.Lines&#xA;select new{ line.Album, line.Quantity }&#xA;&#xA;// reduce&#xA;from result in results&#xA;group result by result.Album into g&#xA;select new{ Album = g.Key, Quantity = g.Sum(x=&gt;x.Quantity) }&#xA;  &#xA;&#xA;As you can see, those are two very simple Linq queries.&#xA;&#xA;&#xA;&#xA;The result of which would be:&#xA;&#xA; &#xA;&#xA;Once we have that, it is trivial to derive the answer to GetTopSellingAlbums. Indeed, the following function implements the exact same logic and has the same output as the previous implementation:&#xA;&#xA; &#xA;&#xA;&#xA;&#xA;The way it work is pretty simple, we get the most sold albums (by sorting on descending quantity), then load them from the database. Because we might have less than count top selling albums, we need to top it off from regular albums. &#xA;&#xA;This mean that this code execute 2 &#x2013; 3 queries. I don&#x2019;t really like it, but on my machine, it takes about less than 10 ms to do all three requests, which is livable. &#xA;&#xA;The reason that I am posting this solution is that I want to show this as an approach to a problem, not as the recommended approach for how to solve it, I&#x2019;ll do that in my next post.</p>
-        </article>
-        <article id="article-5269">
-            <a href="https://ayende.com/blog/4511/c-coding-challenge-what-will-this-code-do" target="_blank">
-                <h2 class="title mb-6" id="article-5269">C# Coding Challenge: What will this code do?</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 21, 2010
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">What is the output of this code?   IDictionary&lt;object,string&gt; instanceToKey = new Dictionary&lt;object, string&gt;();&#xA;&#xA; IDictionary&lt;string, int&gt; keyToCost = new Dictionary&lt;string, int&gt;();&#xA;&#xA; var inst1 = new object();&#xA; var inst2 = new object();&#xA;&#xA; instanceToKey[inst1] = &quot;one&quot;;&#xA; keyToCost[&quot;one&quot;] = 1;&#xA;&#xA; instanceToKey[inst2] = &quot;two&quot;;&#xA; keyToCost[&quot;two&quot;] = 2;&#xA;&#xA; string value = null;&#xA; foreach (var key&#xA;     in (from inst in new[]{inst1, inst2, new object()}&#xA;         where instanceToKey.TryGetValue(inst, out value) &#xA;         select value))&#xA; {&#xA;     int cost;&#xA;     if(keyToCost.TryGetValue(key, out cost))&#xA;         Console.WriteLine(&quot;Key: {0}, Cost: {1}&quot;, key, cost);&#xA; }</p>
-        </article>
-        <article id="article-5270">
-            <a href="https://ayende.com/blog/4510/porting-mvc-music-store-to-raven-data-migration" target="_blank">
-                <h2 class="title mb-6" id="article-5270">Porting MVC Music Store to Raven</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 20, 2010
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is the code required to take the data in the MVC Music Store database and turn into the appropriate Raven documents:     using (var documentStore = new DocumentStore { Url = &quot;http://localhost:8080&quot; })&#xA;{&#xA;    documentStore.Initialise();&#xA;    using (var session = documentStore.OpenSession())&#xA;    {&#xA;        foreach (var album in storeDB.Albums.Include(&quot;Artist&quot;).Include(&quot;Genre&quot;))&#xA;        {&#xA;            session.Store(new&#xA;            {&#xA;                Id = &quot;albums/&quot; &#x2B; album.AlbumId,&#xA;                album.AlbumArtUrl,&#xA;                Arist = new { album.Artist.Name, Id = &quot;artists/&quot; &#x2B; album.Artist.ArtistId },&#xA;                Genre = new { album.Genre.Name, Id = &quot;genres/&quot; &#x2B; album.Genre.GenreId },&#xA;                album.Price,&#xA;                album.Title,&#xA;            });&#xA;        }&#xA;        foreach (var genre in storeDB.Genres)&#xA;        {&#xA;            session.Store(new&#xA;            {&#xA;                genre.Description,&#xA;                genre.Name,&#xA;                Id = &quot;genres/&quot; &#x2B; genre.GenreId&#xA;            });&#xA;        }&#xA;        session.SaveChanges();&#xA;    }&#xA;}&#xA;  &#xA;&#xA;As you can see, it is pretty simple and, even if I say so myself, pretty slick. &#xA;&#xA;I use anonymous types here because I am only concerned with porting the data, I don&#x2019;t really care about how to deal types right now.</p>
         </article>
         <div class="button flex justify-between">
             <a href="526.html"><span class="back arrow"></span></a>
