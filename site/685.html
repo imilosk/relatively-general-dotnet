@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6841">
+            <a href="https://ayende.com/blog/3207/nservicebus-review" target="_blank">
+                <h2 class="title mb-6" id="article-6841">NServiceBus Review</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 24, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have been planning to check this out for a while now, but I seem to never get the time. Today I made time for this. As usual in such cases, this post is a stream of consciousness. You get my thoughts as I am thinking them.  Before trying to understand anything about NServiceBus, you probably need to understand a bit about distributed systems and messaging. NServiceBus is structured around a bus (into which you can put messages) and message handlers (which handles messages for you). On top of this very simple idea, everything else is built. This forces you to think in a way that makes a lot of sense in distributed, high scalability, scenarios. I got a lot of the concepts behind NServiceBus because I read Programming Erlang, in which the same concepts are explained beautifully.  Just to note, I am probably not going to make a lot of sense to people who are trying to understand NServiceBus. I am going to go over the code here. Which is how I learn new stuff.  Let us get to the review. The first thing that I noticed was this:     AllProjects is really all projects. That include samples, tests, extras, etc.  Looking into the NServiceBus project itself made me much calmer, I can handle this:  &#xA0;  In fact, most of the projects contains very few files (one or two in many cases). This is probably done to allow you to pick &amp; choose your dependencies, without having to deal with unrelated stuff.  BaseMessageHandler is a simple base class that simply define the Bus property.  This, however, is annoying.     I don&#x27;t like to have camelCase exposed in my classes. Yes, it is just an issue of style, I know... The bracing styles in NServiceBus has a strange feel to it, but I have R#, and it can fix that ;-)  This is where the fun really starts:     Publish and Subscribe looks remarkably like their equivalent in Retlang. Same model, after all.  I am not really sure about the difference between Publish and Send yet. And SendLocal doesn&#x27;t really make any sort of sense yet.  I am not happy with Return(errorCode) either. I don&#x27;t like using codes for errors, it reminds me when I had to interface to a mainframe, and 12 was corrupted file and 14 corrupted header, etc. Reading further into the code reveals that typical usage of this is with enum   HandleCurrentMessageLater is interesting, and I have seen some samples on Udi&#x27;s blog on where it is used (handle the message after another transaction has finished running). Not sure what DoNotContinueDispatchingCurrentMessageToHandlers purpose is yet.  ICallback interface is interesting:     Need to check it out in more depth, when I figure it what you are registering for and the usage for that.  IMessage is a marker interface, nothing more.  There are a couple of interesting attributes as well:     Recoverable - this is a durable message, and it should survive transient failures en route.     TimeToBeReceived - what is the lifetime of this message. I am not really sure that this is a good way to specify this. I would assume that things like that are much more dynamic than the code. As a simple example, a burst scenario may cause high latency for processing work. I have a post dedicated to this issue here.    ReadyMessage (on the Messages.cs file) is interesting. I followed the references, but I don&#x27;t think that I understand what is going on when it is handled.  Moving on, NServiceBus.Saga:     A saga is a way to handle a series of messages that are related to one another.      A good example may be submitting a order. It needs a manager authorization before it can be done. So you send a message for it to be approved, and you will only continue processing the order after you got the authorization message. Udi has a sample here.  The reason for the large numbers of projects, and the reason many of them contains only a single class or two becomes clear when you track down the classes that implements this bit:     I don&#x27;t like either of the two implementers that are provided (not my style, basically), but it is going to be trivial to supply a new implementation that I would be happy with. I really like that ability. For that matter, the Persister.Deserialize() method is really fun to read. Really cool way to solve the problem.  Overall, I like the idea of Saga very much. It seems to me like there aren&#x27;t really better alternative to Erlang&#x27;s recieve keyword in C#.   Speaking of replacing the building blocks, NServiceBus use the following interface to abstract the container. You can usually guess what is the inspiration for the container abstraction. In this case, this is Spring.     For using Windsor, we would need to write a simple adapter. (Basically mapping Build() calls to Resolve() calls).  The only really interesting bit is with BuildAndDispatch. This is how NServiceBus deals with making calls to generic interfaces without knowing up front what the generic parameter would be. I don&#x27;t like it, but I don&#x27;t see any other choice.  NServiceBus.Testing.    Not much to say about it, except that it is a great example of how much of a difference building an explicit interface for testing can make.  TimeoutMessageHandler made my head hurt. Go on, take a look. Now figure out what it does... The code is deceptively simple, because you have to think in terms of reentrancy.  I figured out what the ICallback is for, it is the result of the Send()      bus.Send(command).Register(cb, extraData);   Okay, that just about finishes with the core services that NServiceBus has to offer. Next, the infrastructure components are Transport and Bus, there is also the concept of a distributor, but I am not sure what this is, looks like the manager in a grid.  Transport is how NServiceBus abstract the details of the network communication.   Bus manages the messages, correlation, translation between transport messages and application message, dispatching to message handlers, etc.  There is also subscription manager and subscription storage, which I understand conceptually, but not in detail.  The distributor section of NServiceBus is a thing of beauty. Which I&#x27;ll describe in the next post.</p>
+        </article>
+        <article id="article-6842">
             <a href="https://ayende.com/blog/3206/you-should-hard-code-the-idea-not-the-value" target="_blank">
-                <h2 class="title mb-6" id="article-6841">You should hard code the idea, not the value</h2>
+                <h2 class="title mb-6" id="article-6842">You should hard code the idea, not the value</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am reading NServiceBus&#x27; code at the moment, and I run into this idea:     [Serializable]     [Recoverable]      [TimeToBeReceived(&#x201C;0:01:00.000&quot;)]      public class ScheduleInterviewMessage : IMessage      {      &#xA0;&#xA0;&#xA0; public Guid InterviewerId;      &#xA0;&#xA0;&#xA0; public Guid CandidateId;      &#xA0;&#xA0;&#xA0; public DateTime RequestedTime;      }   I don&#x27;t like hard coding this value in the message. Obviously this is something that is tied very closed to the idea of the message. Time to live is certainly something that I would want to closely tie to the message itself. But hard coding the value goes against a lot of instincts.  A while ago I faced a similar issue, in that case, it was scheduling tasks. The timing of the task was tied to what it did. The last example that I had on that post is this:     [Occurances(OccureEvery.Day, At = &quot;08:00&quot;, RunAtHolidays = false)]&#xA;public class SendSmsTwoDaysBeforeEventStart : ScheduledTask&#xA;&#xA;&#xA;Notice the At = &quot;08:00&quot; ? It bothered me for a while, until I came to the conclusion that I was embedding the wrong piece of information in the code.&#xA;&#xA;I didn&#x27;t want this to run at 08:00, I want it to run in the morning. 08:00 was just a handy designation for that. That thought was quickly followed by:&#xA;&#xA;&#xA;  public enum ScheduledTimes&#xA;    {&#xA;&#xA;    &#xA0;&#xA0;&#xA0;&#xA0; Midnight,&#xA;&#xA;    &#xA0;&#xA0;&#xA0;&#xA0; EarlyMorning,&#xA;&#xA;    &#xA0;&#xA0;&#xA0;&#xA0; Morning,&#xA;&#xA;    &#xA0;&#xA0;&#xA0;&#xA0; Noon,&#xA;&#xA;    &#xA0;&#xA0;&#xA0;&#xA0; Afternoon,&#xA;&#xA;    &#xA0;&#xA0;&#xA0;&#xA0; Evening&#xA0;&#xA0;&#xA0;&#xA0; }&#xA;&#xA;&#xA;And the code turned to:&#xA;&#xA;&#xA;  [Occurances(OccureEvery.Day, At = ScheduledTimes.Morning, RunAtHolidays = false)] &#xA;    public class SendSmsTwoDaysBeforeEventStart : ScheduledTask &#xA;&#xA;&#xA;The difference here is that I no longer hard code a specific value, I put the idea there. During deployment, I could have modified what morning meant, very easily.&#xA;&#xA;Using the same approach, I would define something like:&#xA;&#xA;&#xA;  public enum TimeToLive&#xA;    {&#xA;&#xA;    &#xA0;&#xA0;&#xA0; Immediate,&#xA;&#xA;    &#xA0;&#xA0;&#xA0; Short,&#xA;&#xA;    &#xA0;&#xA0;&#xA0; Medium,&#xA;&#xA;    &#xA0;&#xA0;&#xA0; Long,&#xA;&#xA;    &#xA0;&#xA0;&#xA0; Forever&#xA;&#xA;    }&#xA;&#xA;&#xA;I would probably allow to configure the time that each of those values map to, as well.&#xA;&#xA;This allows to do things like update them on the fly (imagine having to survive a burst of traffic that slows the entire system), so you can increase the time to process a message without losing it.</p>
         </article>
-        <article id="article-6842">
+        <article id="article-6843">
             <a href="https://ayende.com/blog/3205/note-to-babylon-i-dont-installed-rude-programs" target="_blank">
-                <h2 class="title mb-6" id="article-6842">Note to Babylon: I don&#x27;t installed rude programs</h2>
+                <h2 class="title mb-6" id="article-6843">Note to Babylon: I don&#x27;t installed rude programs</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is the installer for Babylon 7, and the reason that I won&#x27;t be using it.</p>
         </article>
-        <article id="article-6843">
+        <article id="article-6844">
             <a href="https://ayende.com/blog/3204/welcome-to-2008" target="_blank">
-                <h2 class="title mb-6" id="article-6843">Welcome to 2008</h2>
+                <h2 class="title mb-6" id="article-6844">Welcome to 2008</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, this weekend I made the jump to 2008, both as my operating system of choice and Visual Studio 2008. This move was perpetuated by ReSharper being mature enough on VS2008 to make me happy, mostly, and by being really happy with testing Windows Server 2008.</p>
         </article>
-        <article id="article-6844">
+        <article id="article-6845">
             <a href="https://ayende.com/blog/3203/a-maintainable-environment-anti-corruption-as-a-way-of-life" target="_blank">
-                <h2 class="title mb-6" id="article-6844">A maintainable environment - anti corruption as a way of life</h2>
+                <h2 class="title mb-6" id="article-6845">A maintainable environment - anti corruption as a way of life</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently I had a number of conversations about how to create a maintainable environment, not only for advanced developers, but an environment that enables beginners and intermediate developers to create good, maintainable, scalable solutions.&#xA;This problem is not a simple one, and there aren&#x27;t really one off solutions. However, there is quite a lot that can be done, and I am very disturbed by the assumption that nothing can be done about it.&#xA;I noticed that a major part of the problem seems to be in the underlying assumption that in order to make it possible for beginners/intermediate developers to work with the application, you have to do one of two things. Embark on a long education period or dumb down the application to a level that beginners can deal with.&#xA;I am using the term &quot;dumb down&quot; on purpose. This approach goes for the easiest solution possible, those solutions tend to be very easy and supportive for trivial scenarios, but they get very complicate for any real world scenario. They also tend to be focused on RAD, with little regard to the overall maintainability of the solution. I am pretty sure that you have encounter such systems before, they are depressingly common.&#xA;The end result of choosing such an approach is an application whose complexity is not handled by the underlying platform, but rather at each individual case. This significantly complicate the applicatIon and working with in over time. As a quick example (which is sure to annoy a lot of people), I consider any application that has &quot;new SqlConnection()&quot; in it outside the infrastructure layer to be such a system.&#xA;The other alternative, however, is a lengthy training cycle, and slower productivity all around until you get to be proficient in the new approach. And, of course, some people will have really hard time adjusting.&#xA;Or so many people believe, at least. I strongly disagree with the previous statement.&#xA;The way I would choose for such a scenario (a team composed of developers of varying skills, being non trivial application) is to accept the fact that you cannot escape from the complexity and embrace that fact. Instead of trying to base the application on an overly simple foundation, I would base it on advance platform.&#xA;This advance platform would be able to scale to handle the complexity of the application, while concentrating that complexity into the infrastructure layer.&#xA;Some of the concepts involved in creating such an architecture are:&#xA;&#xA;  Infrastructure Ignorance - If I have to deal with my infrastructure explicitly, then I need to have developers dealing with it on a regular basis. That doesn&#x27;t mesh well with the idea of moving all the complexity to the infrastructure.&#xA;&#xA;  Fizz Buzz concepts - the code that a developer should write should be simple and easy to follow.&#xA;&#xA;  Follow good design principals - the code written should naturally lean toward single responsibility principal, separation of concerns, etc&#xA;&#xA;  Easy to figure out - It should be simpler than the alternative for any non trivial scenario. Ideally, you can explain how to solve most scenarios using this approach in half an hour or less (ignoring the infrastructure part, which may be very complex).&#xA;&#xA;  No training wheels - one of the things that drives me crazy is having two ways to do things. One for the average developer, the second for the architect. This usually comes out of putting training wheels on the first approach that make it hard to deal with in more advance scenarios. I see this as a sign of contempt for the rest of the members of the team. If you expect the rest of the team to work in a certain way, make damn sure that this is a way that this is a way that you can live with.&#xA;&#xA;I think that I manage to get fairly close to this in my previous project, and it has proven to be a successful one. I talk about it a bit in this post.&#xA;I based that system on IoC, NHibernate and WCF. None of this concepts was exposed to the other developers. In fact, after setting this up, we were able to focus on the actual business issues far more often than on the technology involved.&#xA;By the way, I would fully expect that during the project, significant attempts would be made to get the other developers to understand. This technique is about getting a project started and the team productive very early, and doing this using a stable foundation.&#xA;Now, what is this anti corruption stuff in the title of this post? This is very simple, actually. It is here as more than the anti corruption than the anti corruption layers that Feathers is talking about in Working Effectively With Legacy Code. In this case, we start with the assumption that the infrastructure that we will use (even if we are the one building it) is suspect and should not be trusted, so we will do everything in our power to isolate our code from the infrastructure.&#xA;An important benefit of this approach is that we get the ability to modify the infrastructure independently of our application. This means that we can make significant changes very easily, because there is little to no dependencies between the two.</p>
         </article>
-        <article id="article-6845">
+        <article id="article-6846">
             <a href="https://ardalis.com/mvc-source-code-available/" target="_blank">
-                <h2 class="title mb-6" id="article-6845">MVC Source Code Available</h2>
+                <h2 class="title mb-6" id="article-6846">MVC Source Code Available</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The ASP.NET MVC library&#x2019;s source code has been made available on CodePlex, ScottGu announced today. The project itself is still very much a&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6846">
+        <article id="article-6847">
             <a href="https://ardalis.com/gotta-love-orcsweb/" target="_blank">
-                <h2 class="title mb-6" id="article-6846">Gotta Love Orcsweb</h2>
+                <h2 class="title mb-6" id="article-6847">Gotta Love Orcsweb</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Does your host do this? Today I got an IM from one of my support folks atORCS Web, asking me about one of my dedicated servers on which I&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6847">
+        <article id="article-6848">
             <a href="https://ardalis.com/sql-2005-tools-install-experience-is-the-suck/" target="_blank">
-                <h2 class="title mb-6" id="article-6847">SQL 2005 Tools Install Experience is the suck</h2>
+                <h2 class="title mb-6" id="article-6848">SQL 2005 Tools Install Experience is the suck</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Just finished building a couple of ultimate developer rig machines for the office for Brendan and me, and was adding software today. So I&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6848">
+        <article id="article-6849">
             <a href="https://ayende.com/blog/3202/a-newbie-macbook-pro-owner-impressions" target="_blank">
-                <h2 class="title mb-6" id="article-6848">A newbie MacBook Pro owner impressions</h2>
+                <h2 class="title mb-6" id="article-6849">A newbie MacBook Pro owner impressions</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A couple of days ago my MacBook Pro has arrived. I didn&#x27;t have much chance to play with it until today, but right now I am trying to see how compatible we really are. I haven&#x27;t really ever used a Mac (short demo sessions on other people&#x27;s doesn&#x27;t count) so it is an interesting experience.&#xA;I can tell you right now that my biggest worry, the keyboard layout / shortcuts, is probably going to be fine, since I seem to be getting the hang of it without too much problem.&#xA;However, I am literally a newbie at this, and it is very hard to get back to this stage. I am going to detail some of the stuff that I run into, hopefully I&#x27;ll get some more information as I go along.&#xA;Safari - It kills me how it and Gmail interacts. To be rather exact, it kills me that it doesn&#x27;t consider buttons to be a valid target for &lt;Tab&gt;. I&#x27;ll probably try FireFox, but I want to try it out first.&#xA;&#xA;  I am writing this in Etco, and it seems like a reasonable application, very comparable to Live Writer, although with a completely different UI.&#xA;&#xA;  It took me a long time to figure out Command&#x2B;Tab vs. Command &#x2B; `, and it doesn&#x27;t help that it seems like all the Mac application open new windows like mad.&#xA;&#xA;  Close window vs. Close Application - that is strange.&#xA;&#xA;  Getting used to Command, Option, Ctrl, Alt - Oh my God, that is too much.&#xA;&#xA;  There are not context menus that I could find. It took forever to find out how you can do spell checking.&#xA;&#xA;  Can&#x27;t find a way to use the keyboard to access the application menu (Alt&#x2B;F, in Windows).&#xA;&#xA;Overall, I finding that it is obvious that I can like it, but the start seems to be tough. Just the scroll by moving two fingers is a delight.</p>
         </article>
-        <article id="article-6849">
+        <article id="article-6850">
             <a href="https://ayende.com/blog/3201/nhibernate-users-mailing-list" target="_blank">
-                <h2 class="title mb-6" id="article-6849">NHibernate users mailing list</h2>
+                <h2 class="title mb-6" id="article-6850">NHibernate users mailing list</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: March 21, 2008
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Bil Simser has create the NHibernate Users mailing list, which you can access here: http://groups.google.com/group/nhusers I find mailing lists much easier to work with than forums, so I am really happy about it.</p>
-        </article>
-        <article id="article-6850">
-            <a href="https://ayende.com/blog/3200/email-habits" target="_blank">
-                <h2 class="title mb-6" id="article-6850">Email habits</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 20, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Gmail just flagged me as a spammer. Apparently I am sending bulk email. All I was doing is going over the threads in the ALT.Net list</p>
         </article>
         <div class="button flex justify-between">
             <a href="684.html"><span class="back arrow"></span></a>
