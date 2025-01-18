@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-2051">
+            <a href="https://ayende.com/blog/183874-C/connection-handling-and-authentication-in-ravendb-4-0" target="_blank">
+                <h2 class="title mb-6" id="article-2051">Connection handling and authentication in RavenDB 4.0</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 20, 2018
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">An interesting question has popped up in the mailing list about the behavior of RavenDB. When will RavenDB client send the certificate to the server for authentication? SSL handshake typically takes multiple round trips to negotiate an SSL connection, and that a certificate can be a fairly large object. It makes sense that understanding this aspect of RavenDB behavior is going to be important for users.&#xA;In the mailing list, I gave the following answer:&#xA;&#xA;RavenDB doesn&#x2019;t send the certificate on a per request basis, instead, it send the certificate at the start of each connection.&#xA;&#xA;I was asked for a follow up, because I wasn&#x2019;t clear to the user. This is a problem, I was answering from my perspective, which is quite different from the way that a RavenDB user from the outside will look at things. Therefor, this post, and hopefully a more complete way of explaining how it all works.&#xA;RavenDB uses X509 Client Certificates for authentication, using SSL to both authenticate the remote client to the server (and the server to the client, using PKI) and to ensure that the communication between client and server are private. RavenDB utilizes TLS 1.2 for the actual low level wire transfer protocol. Given that .NET Core doesn&#x2019;t yet implement TLS 1.3 or FastOpen, that means that we need to do the full negotiation on each connection.&#xA;Now, what exactly is a connection in this regard? It this going to be every call to OpenSession? The answer is emphatically&#xA0;not. RavenDB is managing a connection pool internally (actually, we are relying on the HttpClient&#x2019;s pool to do that). This means that we are only ever going to have as many TCP connections to the server as you had concurrent requests. A session will effectively borrow a connection from the pool whenever it needs to talk to the server.&#xA;The connections in the pool are going to be re-used, potentially for a long time. This allow us to alleviate the cost of actually doing the TCP &amp; SSL handshake and amortize it over many requests. This also means that the entire cost of authentication isn&#x2019;t paid on a per request basis, but per connection. What actually happens is that on the beginning of the connection, the RavenDB server will validate the client certificate and remember what permissions are granted to it. Any and all requests on this connection can then just used the cached permissions for the lifetime of the connection. This stateful approach reduce the overall cost of authentication because we don&#x2019;t need to run full validation on every request.&#xA;This also means that OpenSession, for example, is basically free. All it does is allocate a bunch of dictionaries and some other data structures for the session. There is no wire traffic because the session is created, only when you actually make a request to the server (Load, Query, SaveChanges, etc). Most of the time, we don&#x2019;t need to create a new connection for that, but can use a pre-existing one from the pool. The entire system was explicitly designed to take advantage of best practices to optimize your overall performance.</p>
+        </article>
+        <article id="article-2052">
             <a href="https://ayende.com/blog/183841-C/spanification-in-ravendb" target="_blank">
-                <h2 class="title mb-6" id="article-2051">Spanification in RavenDB</h2>
+                <h2 class="title mb-6" id="article-2052">Spanification in RavenDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are nearly done with RavenDB 4.1. There are currently a few minor stuff that we are still handling, but we are gearing up to push this to our production systems as part of our usual test matrix. Naturally, this means that we are already thinking about what we should do next.There is a whole bunch of big ticket items that we want to look at, but the most important of which is the one that is likely to garner very little attention from the outside. We are going to take advantage of the new Span&lt;T&gt; API throughout the product. This is something that I really want to get to, since we have a lot of places where we touch native memory, memory mapped sections and in general pay a lot of attention to manual memory management. There are several cases where we had to copy data from unmanaged memory to managed memory just to make some API happy (I&#x2019;m looking at you, Stream). With the Span&lt;T&gt; API, that is no longer required, which means that we can usually just hand a pointer to the network that is mapped directly to a file and reduce the amount of work we need to do significantly.&#xA0; We are also going to also go over the codebase and see where else we can take advantage of this behavior. For example, moving our code to the System.IO.Pipes opens up some really interesting scenarios for simplifications of code and reducing of overhead. We are going to apply lessons learned about how we actually manage memory and apply them as part of that, so just calling it Span&lt;T&gt; is a bit misleading. The underlying reasoning is that we want to get to simplify both I/O and memory management, which are very closely tied together. This shouldn&#x2019;t actually matter to users, except that the intent is to improve performance once again.</p>
         </article>
-        <article id="article-2052">
+        <article id="article-2053">
             <a href="https://www.meziantou.net/how-to-document-an-asp-net-core-web-api-using-openapi-specification-swagger.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2052">How to document an ASP.NET Core Web API using OpenAPI Specification (swagger)</h2>
+                <h2 class="title mb-6" id="article-2053">How to document an ASP.NET Core Web API using OpenAPI Specification (swagger)</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Documenting your API is very important if you want people to be able to consume it. An API documentation should contain the list of accessible endpoints (URL, method), their parameters, and the response (http status code, body). The documentation should be readable by a human, but also by a compute</p>
         </article>
-        <article id="article-2053">
+        <article id="article-2054">
             <a href="https://andrewlock.net/converting-web-config-files-to-appsettings-json-with-a-net-core-global-tool/" target="_blank">
-                <h2 class="title mb-6" id="article-2053">Converting web.config files to appsettings.json with a .NET Core global tool</h2>
+                <h2 class="title mb-6" id="article-2054">Converting web.config files to appsettings.json with a .NET Core global tool</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe how I created a .NET Core global tool to easily convert configuration stored in web.config files to JSON files for ASP.NET Core.&#x2026;</p>
         </article>
-        <article id="article-2054">
+        <article id="article-2055">
             <a href="https://ayende.com/blog/183809-C/on-interns-and-hiring-people-at-the-first-stages-of-their-career" target="_blank">
-                <h2 class="title mb-6" id="article-2054">On interns and hiring people at the first stages of their career</h2>
+                <h2 class="title mb-6" id="article-2055">On interns and hiring people at the first stages of their career</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When looking for candidates, there is an ideal candidate. It is the ability to take one of the people already working for you, with all the domain knowledge and expertise and clone them. Hopefully multiple times. If you do this right, you can probably stick the clones in a basement with a bunch of computers, slide Pizza under the door every so often and get a lot of work done for the price of Pizza. While this (dystopian) scenario is quite nice in terms of overall effort, I do believe that there are some issues with it. Naturally the biggest hurdle is the medical bills for cloning people, there are also some noise about this being inhumane. The real issue, of course, is the lack of feasible technology to accelerate the growth of the clones. I&#x2019;m sure this will be solved at some point. My time machine comes back from the shop on Monday (and isn&#x2019;t that ironic), so I&#x2019;ll be investigating this further at that point.Setting the clone wars option aside, there is the need to get new hires. And there are several ways to do go about that. You can try getting people with some or all the skills that you require. Or you can get someone that is a blank slate and train them internally. This post is about the later option.The question is really what do you actually define as a blank slate. For example, hiring my 3 years old daughter as a software developer would be really nice. She is a blank slate, but given that we are currently teaching her to count to 20, I think that this might be premature. To be perfectly honest, the amount of knowledge that is required to be an efficient developer is staggering. If I was to start the clock from scratch, I think that I would be sitting there twiddling my thumbs to this day, scared of all the things that I must understand to be effective. In some way, not knowing how much I don&#x2019;t know was really helpful. It allowed me to go out and learn without being overwhelmed. If I looked at just C# and compare the language from 1.0 to 7.3, for example. Each change made sense at the time, and incrementally added to the language. Some of them were bigger than others (generics, linq) but they came in byte size chunks (typo intended). Trying to grok it all at once&#x2026; much harder.We actually hire fairly often directly from college. Either immediately after completing the degree or even beforehand. We usually look for people that have gone beyond the rote learning for the good grade but are actually able to understand why this are happening, not just what API to call. Our most junior hire ever had just finished high school and had a few months free before going to the army, effectively being an intern in the company for a short while. The approach we take for onboarding a new employee (with no practical experience) and an intern is quite different. For a full time employee, my priority is to get them well situated and familiar with how we work and the overall codebase. That means that the typical first assignments will be things that are on the sidelines. Things that are okay if they take a little longer, since they are used to get the new developer familiar with the landscape of the code. Examples include writing new clients, building internal applications using RavenDB, becnhmarking work and building diagnostics and debug tools for production analysis.For an intern, however, the situation is different. Given that I&#x2019;m only going to have the intern for a few short months,&#xA0; spending 2 &#x2013; 3 months training to the expected level of a full time employee is going to be a waste. Instead, we try to give the intern experimental and research projects. Things that we wished we could have done if we had the time, but typically do not. Some of them are pretty complex, but the key &#x201C;feature&#x201D; in this regard is that they are possible to approach without having to have a deep understanding of RavenDB.&#xA0; For example, SQL Migration, one of the main features of RavenDB 4.1, was actually initially developed by an intern.</p>
         </article>
-        <article id="article-2055">
+        <article id="article-2056">
             <a href="https://ayende.com/blog/183777-C/living-in-the-foundations-missing-all-the-amenities" target="_blank">
-                <h2 class="title mb-6" id="article-2055">Living in the foundations, missing all the amenities</h2>
+                <h2 class="title mb-6" id="article-2056">Living in the foundations, missing all the amenities</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We talked to a candidate recently with a CV that included topics such as Assembly, SQL and JavaScript.&#xA0; The list of skills was quite eclectic and we called the candidate to hear more about them. The candidate completed a two years degree focused on the foundations of development, but it looked like whoever designed it was looking primarily to get a good foundation more than anything else. In other words, the end result is someone that can write SQL queries, but never built a data driven application, who knows (about? I&#x2019;m not really clear at what level that was) assembly, but never written a real application. It doesn&#x2019;t sound bad, I know, but it was like moving into a new house just after the contractor is done with the foundation. Sure, that is a really important part, but you don&#x2019;t even have walls yet. In 1999, I did a year long course that was focused on teaching me C and C&#x2B;&#x2B;. I credit this course for much of my understanding of the basics of programming and how computers actually work. It has been an eye opening experience. I wouldn&#x2019;t hire my 1999&#x2019;s self, as I recall, that guy (can I deny knowing him?) wrote the following masterpieces:sparse_matrix&lt;T&gt; in C&#x2B;&#x2B; templates that used five (5!) levels of pointer indirection!The original single page application. I wrote an entire BBS system using a a single .VBS script that used three levels of recursive switch statements and included inline HTML, JS and VB code!These are horrible things to inflict on an innocent computer, but that got me started in actually working on software and understanding things beyond the basics of syntax and action. I usually take the other side, that people are focused far too much on the high level stuff and do not pay attention to what is actually going on under the hood. This was an interesting reversal, because the candidate was the opposite. They had some knowledge about the basics, but nothing to build upon that yet. And until you actually build upon the foundation, it is just a whole in the ground that was covered in some cement.</p>
         </article>
-        <article id="article-2056">
+        <article id="article-2057">
             <a href="https://ayende.com/blog/183745-C/failing-to-prove-you-are-human" target="_blank">
-                <h2 class="title mb-6" id="article-2056">Failing to prove you are human</h2>
+                <h2 class="title mb-6" id="article-2057">Failing to prove you are human</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I didn&#x2019;t intend to do another non technical post, but this was hilarious. My previous post was about taking my daughter to the ice cream shop.My wife, naturally, wanted to comment on the post. She told me she gave up after failing to complete the CAPTCHA. I&#x2019;m not sure if I should be worried about the UX of the blog or upgrade my wife&#x2019;s firmware.</p>
         </article>
-        <article id="article-2057">
+        <article id="article-2058">
             <a href="https://ayende.com/blog/183713-C/toddlers-cursing-and-preparing-ahead-of-time" target="_blank">
-                <h2 class="title mb-6" id="article-2057">Toddlers, cursing and preparing ahead of time</h2>
+                <h2 class="title mb-6" id="article-2058">Toddlers, cursing and preparing ahead of time</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My daughter is 3&#x200B;&#xBC; years old now. About the time that she was born, I decided that I needed to make a small change in my language. Whenever I felt the urge to curse, I would say a food&#x2019;s name. For example, after being puked on, my reaction would be some variant of: &#x201C;PASTA&#x201D;, &#x201C;PASTA BOLOGNESE&#x201D; or other pasta&#x2019;s favorites.As time went by, I got better and better at expressing emotion through increasingly disturbing food references. My current favorite is: &#x201C;Pasta Bolognese with pickled carrots in a bun with anchovies and raw eggs&#x201D;.A couple of days ago, I took my daughter and a friend to an ice cream shop. As expected of an ice cream shop in the middle of (very hot) summer, the place was packed. My daughter was quite excited to go there and expressed her emotions by standing up and shouting at the top of her lungs (she is three, with a voice that carry like a foghorn): &#x201C;PASTA! PASTA BOLOGNESE&#x201D; over and over again. This is a crowded shop, full of small kids and parents. I got some looks for the little girl holding up a full ice cream cone and shouting about pasta, but it was infinitely preferable to the alternative. An unforeseen side effect, however, is that because I can, I&#x2019;m very free with pasta based profanities. This had led to what is effectively a competition, with her trying to cause me to go overboard with that. And now I must go back to work, before the gluten police arrival.</p>
         </article>
-        <article id="article-2058">
+        <article id="article-2059">
             <a href="https://andrewlock.net/adding-validation-to-strongly-typed-configuration-objects-in-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-2058">Adding validation to strongly typed configuration objects in ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-2059">Adding validation to strongly typed configuration objects in ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe how to to verify your strongly typed configuration objects are correctly bound to your configuration at app startup&#x2026;</p>
         </article>
-        <article id="article-2059">
+        <article id="article-2060">
             <a href="https://www.stevejgordon.co.uk/httpclientfactory-asp-net-core-logging" target="_blank">
-                <h2 class="title mb-6" id="article-2059">HttpClientFactory in ASP.NET Core 2.1 (Part 5): Logging</h2>
+                <h2 class="title mb-6" id="article-2060">HttpClientFactory in ASP.NET Core 2.1 (Part 5): Logging</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: July 09, 2018
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the 2.1 release of IHttpClientFactory, the ASP.NET team included some built-in logging of the HTTP calls made via HttpClients created by the factory. This can be useful for the diagnosis of failures, as well as to understand the time taken to complete HTTP calls to external services.&#xA0; In this post, I want to explore [&#x2026;]</p>
-        </article>
-        <article id="article-2060">
-            <a href="https://ayende.com/blog/183681-A/full-stack-developer-master-of-none" target="_blank">
-                <h2 class="title mb-6" id="article-2060">Full Stack Developer, Master of None</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 09, 2018
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my previous post, I was asked:Is it reasonable to look for a developer who knows all the complexities of backend development (Particularly for the enterprise, at least while designing distributed applications or Micro-Services) and expect them to know React, Angular, TypeScript, and many other front-end technologies on the same level?In my experience, it is absolutely possible to have someone who is fluent in both front end (React, Angular, etc) technologies and backend technologies (databases, k8s, distributed systems, design patterns, etc). I can point at two or three of them without searching too hard. The problem, however, is that while it is possible, it is also rare. The people I have in mind who qualify for the full stack developer moniker are also people with about a decade plus of experience in the field.&#xA0; And make no mistakes, I don&#x2019;t include myself in that category. I can use a user interface, but don&#x2019;t ask me to build one. For the most part, I see people who exists on a spectrum, and are typically strong in certain areas and have passing familiarity in others. For example, you may have someone who is very strong in building client side user interface and calling back to the server, with some ability to create their own server side endpoints, but without the capabilities to build a full server side solution from end to end. On the other hand, someone who is capable of building the server side, maybe do some client side work, but is stumped on the more complex issues on the client. Now, I&#x2019;m speaking in generalizations here, because I&#x2019;m talking about large segments of developers, not individuals. But this seems to hold true for large swaths of them. It also make sense, there is quite a bit to learn, and you can either be a butterfly and skim through a lot of subjects, or you can dive deeper and become an expert on a few topics.Either option has its value, but it is important to remember that each also has its costs. If you have dipped your toes into many areas, you don&#x2019;t usually have the depth to actually handle the more complex and non trivial stuff. For example, I would generally not expect someone who spent most of their time on the client side to be aware of everything that needs to happen for a proper server side caching solution.When talking about skills in an area, I&#x2019;m talking about being able to develop, support, debug and maintain such a solution. Everyone can write code in most areas, but it takes effort, skill and knowledge to take a piece of code and turn that into production software.The term full stack developer is a way to punt. It usually says &#x201C;I do a little bit here, and little bit there&#x201D;. There is some meaning here, in the sense that these are the people you&#x2019;ll turn to when you want to build a full application from scratch. The problem is that they are usually only able to deliver an application that does OK across the board. When you need to do more than OK (and I&#x2019;m willing to admit that in many cases you don&#x2019;t), you start to need to specialize. And that takes time, and effort. I would rather the term application developer, rather than full stack. If seems to be more accurate and it doesn&#x2019;t ping my spider sense about false advertising.</p>
         </article>
         <div class="button flex justify-between">
             <a href="205.html"><span class="back arrow"></span></a>
