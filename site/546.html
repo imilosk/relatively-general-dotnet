@@ -112,8 +112,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5451">
+            <a href="https://ayende.com/blog/4358/the-problem-with-compression-streaming" target="_blank">
+                <h2 class="title mb-6" id="article-5451">The problem with compression &amp; streaming</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 10, 2010
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I spent some time today trying to optimize the amount of data the profiler is sending on the wire. My first thought was that I could simply wrap the output stream with a compressing stream and use that, indeed, in my initial testing, it proved to be quite simple to do and reduced the amount of data being sent by a factor of 5. I played around a bit more and discovered that different compression implementation can bring me up to a factor of 50!  Unfortunately, I did all my initial testing on files, and while the profiler is able to read files just fine, it is most commonly used for live profiling, to see what is going on in the application right now. The problem here is that adding compression is a truly marvelous way to screw that up. Basically, I want to compress live data, and most compression libraries are not up for that task. It gets a bit more complex when you realize that what I actually wanted was a way to get compression to work on relatively small data chunks.  When you think how most compression algorithm works (there is a dictionary in there somewhere), you realize what the problem is. You need to keep updating the dictionary while you are compressing the stream, and at the same time, you need the dictionary to uncompress things. That make it&#x2026; difficult to handle things. I thought about compressing small chunks (say, every 256Kb), but then I run into problems of figuring out when exactly I am supposed to be flushing them, how to handle partial messages, and more.  In the end, I decided that while it was a very interesting trial run, this is not something that is likely to show good ROI.</p>
+        </article>
+        <article id="article-5452">
+            <a href="https://ayende.com/blog/4357/nhibernate-polymorphic-associations-and-ghost-objects" target="_blank">
+                <h2 class="title mb-6" id="article-5452">NHibernate, polymorphic associations and ghost objects</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 09, 2010
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the more interesting points of my posts about Entity Framework &amp; NHibernate is the discovery of things that Entity Framework can do that NHibernate cannot. In fact, if you&#x2019;ll read the posts, instead of the comments, you can see that this is precisely what I asked, but people didn&#x2019;t really read the text.  I wanted to dedicate this post to ghost objects, and how NHibernate deals with them.  Before we start, let me explain what ghost objects are. Let us say that you have a many to one polymorphic association, such as the one represented as Comment.Post.  A post may be either a Post or an Article, and since NHibernate by default will lazy load the association, NHibernate will generate a proxy object (also called a ghost object). That, in turn, result in several common issues: Leaking this and the inability to cast to the proper type are the most common ones.  In practice, this is something that you would generally run into when you are violating the Liskov Substitution Principle, so my general recommendation is to just fix your design.  Nevertheless, since the question pop up occasionally, I thought that I might write a bit more details on how to resolve this. Basically, the main issue is that at the point in time where we are loading the Comment entity, we don&#x2019;t have enough information to know what the actual entity type is. The simplest way to work around this issue is to tell NHibernate to load the associated entity as part of the parent entity load.  In the case of the comment, we can do it like this:     &lt;many-to-one name=&quot;Post&quot; &#xA;             lazy=&quot;false&quot;&#xA;             outer-join=&quot;true&quot;&#xA;             column=&quot;PostId&quot;/&gt;&#xA;  &#xA;&#xA;The lazy=&#x201D;false&#x201D; tell NHibernate to load the association eagerly, while the outer-join will add a join to load it in a single query. One thing to note, however, is that (by design) HQL queries will ignore any hints in the mapping, so you would have to specify join fetch explicitly in the mapping, otherwise it would generate a separate query for that.&#xA;&#xA;Since we eagerly load the associated entity, and we know its type, we don&#x2019;t have to deal with any proxies, and can avoid the ghost objects problem completely.</p>
+        </article>
+        <article id="article-5453">
             <a href="https://ardalis.com/software-craftsmanship-at-codemash/" target="_blank">
-                <h2 class="title mb-6" id="article-5451">Software Craftsmanship at CodeMash</h2>
+                <h2 class="title mb-6" id="article-5453">Software Craftsmanship at CodeMash</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This week at CodeMash I will be co-hosting a Precompiler session on Software Craftsmanship with Brendan Enrick on behalf of the Hudson&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5452">
+        <article id="article-5454">
             <a href="https://ardalis.com/whew-made-it-through-2009/" target="_blank">
-                <h2 class="title mb-6" id="article-5452">Whew! Made It Through 2009</h2>
+                <h2 class="title mb-6" id="article-5454">Whew! Made It Through 2009</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So, 2009 is over. It was an interesting year, wasn&#x27;t it? Talking to many of my friends and peers, especially entrepreneurs like other&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5453">
+        <article id="article-5455">
             <a href="https://ardalis.com/most-popular-2009-posts/" target="_blank">
-                <h2 class="title mb-6" id="article-5453">Most Popular 2009 Posts</h2>
+                <h2 class="title mb-6" id="article-5455">Most Popular 2009 Posts</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x27;re one of my subscribers, you&#x27;re probably a software developer, or perhaps someone I know personally. You might be surprised to find&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5454">
+        <article id="article-5456">
             <a href="https://ardalis.com/personal-goals-and-transparency-2009/" target="_blank">
-                <h2 class="title mb-6" id="article-5454">Personal Goals and Transparency 2009</h2>
+                <h2 class="title mb-6" id="article-5456">Personal Goals and Transparency 2009</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I find that if I commit to things in writing, they have a much higher chance of getting done. And if I commit to them in writing on the&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5455">
+        <article id="article-5457">
             <a href="https://ardalis.com/is-extreme-programming-dying-is-agile-growing-in-popularity/" target="_blank">
-                <h2 class="title mb-6" id="article-5455">Is Extreme Programming Dying? Is Agile Growing in Popularity?</h2>
+                <h2 class="title mb-6" id="article-5457">Is Extreme Programming Dying? Is Agile Growing in Popularity?</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It&#x2019;s interesting to compare the interest over time in various software development methodologies and practices. Google Trends is a great&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5456">
+        <article id="article-5458">
             <a href="https://ayende.com/blog/4356/vote-for-the-uberprof-case-study-in-mix-2010" target="_blank">
-                <h2 class="title mb-6" id="article-5456">Vote for the UberProf case study in Mix 2010</h2>
+                <h2 class="title mb-6" id="article-5458">Vote for the UberProf case study in Mix 2010</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Christopher Bennage has submitted a Mix talk that I think is interesting :-)   LinqToSQL and EntityFramework Profilers: Case Study    If you aren&#x2019;t already familiar with the UberProf suite of ORM profilers, you can read tales of the development on Ayende&#x2019;s blog. Rob and I built the UI side of the application, and we learned a lot in the process. I&#x2019;d like to do a talk were we discuss the challenges of the project, how we solved them, and what we did wrong.    Yes, NHProf will be included too. (I submitted a case study for it last year, and it didn&#x2019;t get picked. I have to sneak it in).     A few interesting aspects:         we built this using MVVM, but well before Caliburn reached maturity.       the four separate apps (NHProf, EFProf, L2SProf, HProf) all use a single code base.       we&#x2019;re about to port the project from WPF to Silverlight.      Please vote for this session.</p>
         </article>
-        <article id="article-5457">
+        <article id="article-5459">
             <a href="https://ayende.com/blog/4355/responding-to-effectus-commentary" target="_blank">
-                <h2 class="title mb-6" id="article-5457">Responding to Effectus commentary</h2>
+                <h2 class="title mb-6" id="article-5459">Responding to Effectus commentary</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Jose was kind enough to post a review of my sample Effectus application. This post is a reply to that.  The first thing that Jose didn&#x2019;t like was the fact that I didn&#x2019;t put an abstraction layer in front of NHibernate&#x2019;s usage in my application. There are several reasons for that, the first, and simplest, is that I was trying to explain how to use NHibernate, and for that, I wanted to deal with the lowest common denominator, not show off a particular wrapper implementation. Showing NHibernate usage directly means that even if you are using another library with it, you would still be able to take advantage of the information that I give you.  Second, and quite important, is that by using NHibernate directly I can take advantage of NHibernate features explicitly meant to support certain scenarios, but which are not likely to be expose when libraries wrap NHibernate. A good example of that is in Jose&#x2019;s sample code, which make use of an ISession instead of IStatelessSession to load the data for the main screen. As explained in the article, the difference between the two is important, and in the context where it is used it introduce what is effectively a memory leak into Jose&#x2019;s implementation, as well as the chance for some really interesting errors down the road if the session will run into an error.  Third, Jose bring up the following:     This presenter is GLUED to NHibernate. And this means for instance that you can&#x2019;t test it without NHibernate, and this means that you can&#x2019;t change your persistence layer.   Yes, and that is intentional. That is the very task that those presenters are for. Trying to abstract that away just means that I put an additional layer of abstraction that does absolutely nothing. For that matter, let us look at Jose&#x2019;s implementation using an abstraction layer compared to mine.  Here is my implementation:     private void LoadPage(int page)&#xA;{&#xA;    using (var tx = StatelessSession.BeginTransaction())&#xA;    {&#xA;        var actions = StatelessSession.CreateCriteria&lt;ToDoAction&gt;()&#xA;            .SetFirstResult(page * PageSize)&#xA;            .SetMaxResults(PageSize)&#xA;            .List&lt;ToDoAction&gt;();&#xA;&#xA;        var total = StatelessSession.CreateCriteria&lt;ToDoAction&gt;()&#xA;            .SetProjection(Projections.RowCount())&#xA;            .UniqueResult&lt;int&gt;();&#xA;&#xA;        this.NumberOfPages.Value = total / PageSize &#x2B; (total % PageSize == 0 ? 0 : 1);&#xA;        this.Model = new Model&#xA;        {&#xA;            Actions = new ObservableCollection&lt;ToDoAction&gt;(actions),&#xA;            NumberOfPages = NumberOfPages,&#xA;            CurrentPage = CurrentPage &#x2B; 1&#xA;        };&#xA;        this.CurrentPage.Value = page;&#xA;&#xA;        tx.Commit();&#xA;    }&#xA;}&#xA;  &#xA;&#xA;And here is Jose&#x2019;s:&#xA;&#xA;&#xA;  private void LoadPage(int page)&#xA;{&#xA;    var actions = _toDoActionsDao.RetrieveAll()&#xA;                                 .Skip(page * PageSize)&#xA;                                 .Take(PageSize).ToList();&#xA;&#xA;    var total = _toDoActionsDao.RetrieveAll().Count();&#xA;    &#xA;    NumberOfPages.Value = total / PageSize &#xA;                        &#x2B; (total % PageSize == 0 ? 0 : 1);&#xA;    &#xA;    Model = new Model&#xA;    {&#xA;        Actions = new ObservableCollection&lt;ToDoAction&gt;(actions),&#xA;        NumberOfPages = NumberOfPages,&#xA;        CurrentPage = CurrentPage &#x2B; 1&#xA;    };&#xA;    &#xA;    CurrentPage.Value = page;&#xA;}&#xA;  &#xA;&#xA;The code is still doing the exact same thing, in other words, we haven&#x2019;t moved any logic away, and most of the code is dealing with data access details. My approach for testing this is to make use of an in memory database, which result in a single test that make sure that the code works, instead of a series of tests that verifies that each piece work independently and then my single test. I find it much more effective in terms of time &amp; effort.&#xA;&#xA;As for the idea of changing your persistence layer, forget about it. It isn&#x2019;t going to happen in any real world application without a lot of effort, so you might as well save yourself the effort of working with the lowest common denominator and take full advantage of the framework. Just to note, when I ported the NerdDinner code to NHibernate (an application that make use of a single table), I had to make major changes to the application.&#xA;&#xA;Jose didn&#x2019;t like this method:&#xA;&#xA;&#xA;  public void OnSave()&#xA;{&#xA;    bool successfulSave;&#xA;    try&#xA;    {&#xA;        using (var tx = Session.BeginTransaction())&#xA;        {&#xA;            // this isn&#x27;t strictly necessary, NHibernate will &#xA;            // automatically do it for us, but it make things&#xA;            // more explicit&#xA;            Session.Update(Model.Action);&#xA;&#xA;            tx.Commit();&#xA;        }&#xA;        successfulSave = true;&#xA;    }&#xA;    catch (StaleObjectStateException)&#xA;    {&#xA;        var mergeResult = Presenters.ShowDialog&lt;MergeResult?&gt;(&quot;Merge&quot;, Model.Action);&#xA;        successfulSave = mergeResult != null;&#xA;&#xA;        ReplaceSessionAfterError();&#xA;    }&#xA;&#xA;    // we call ActionUpdated anyway, either we updated the value ourselves&#xA;    // or we encountered a concurrency conflict, in which case we _still_&#xA;    // want other parts of the application to update themselves with the values&#xA;    // from the db&#xA;    EventPublisher.Publish(new ActionUpdated&#xA;    {&#xA;        Id = Model.Action.Id&#xA;    }, this);&#xA;&#xA;    if (successfulSave)&#xA;        View.Close();&#xA;}&#xA;  &#xA;&#xA;Because:&#xA;&#xA;&#xA;  ReplaceSessionAfterError, to much responsibility for a presenter. &#xA;&#xA;  Session/Transaction again. &#xA;&#xA;  There is a BUG, the publish mechanism work in sync with the rest of the code. This means&#x2026; that this windows is not going to close until others have finished handling the event. For the given example, the Edit windows is not going to close until the main window finish to refresh the current page. &#xA;&#xA;  Too much logic for this method = hard to test.&#xA;&#xA;&#xA;I fully agree that this is a complex method, and Jose&#x2019;s refactoring for that is an improvement indeed.&#xA;&#xA;&#xA;  [PersistenceConversation(ConversationEndMode = EndMode.End)]public virtual void OnSave()&#xA;{&#xA;    _toDoActionsDao.Update(Model.Action);&#xA;&#xA;    EventPublisher.Enlist(new ActionUpdated&#xA;    {&#xA;        Id = Model.Action.Id&#xA;    }, this);&#xA;&#xA;    View.Close();&#xA;}&#xA;&#xA;public override void OnException(Exception exception)&#xA;{&#xA;    if(exception is StaleEntityException)&#xA;    {&#xA;        Presenters.ShowDialog&lt;MergeResult?&gt;(&quot;Merge&quot;, Model.Action);&#xA;&#xA;        EventPublisher.Enlist(new ActionUpdated&#xA;        {&#xA;            Id = Model.Action.Id&#xA;        }, this);&#xA;&#xA;    }&#xA;}&#xA;  &#xA;&#xA;Jose has implemented the following changes:&#xA;&#xA;&#xA;  I&#x2019;ve defined a new convention, if a public method in the presenter throw an exception, the OnException method will be called. This is done by a castle interceptor, and this is the last line of defense for unhandled exceptions. &#xA;&#xA;  I&#x2019;m using &#x201C;StaleEntityException&#x201D; rather than &#x201C;StaleObjectStateException&#x201D;, this is MY exception. This is easily done by a CpBT artifact. &#xA;&#xA;  I&#x2019;m not calling &#x201C;EventPublisher.Publish&#x201D; anymore, this code use EventPublisher.Enlist. Here, I&#x2019;ve split the &#x201C;Publish&#x201D; code in two different methods one for Enlist and other for Raise. The enlisted events will be raised right after the OnSave method is called and thus after the windows is closed. &#xA;&#xA;  Also, notice that here is the conversation per business transaction pattern with all its splendor. The two former methods are conversation participants, with EndMode equals to continue. This means that the NH Session will remain opened. The OnSave method has EndMode equals to End, this means that right after the method finished, CpBT internally will flush the Unit of Work and close it.&#xA;&#xA;&#xA;This is better than the original implementation, but I think it can be made better still. First, OnException as a generic method is a bad idea. For the simple reason that the exception logic for different method is different, I would probably define a [MethodName]Error(Exception e) convention instead, which would make it easier to separate the error logic for different methods.&#xA;&#xA;Again, I don&#x2019;t find any usefulness in abstracting the underlying framework, I haven&#x2019;t seen a single case where it was useful, but I have seen a lot of cases where it was hurting the team &amp; the project.&#xA;&#xA;The idea about splitting the publication and raising is really nice, I agree.&#xA;&#xA;However, there is a problem in the code with regards to session handling in cases of error. There is a pretty good reason why I introduced the ReplaceSessionAfterError method. In general, I want to keep my session alive for the duration of the form, because I get a lot of benefits out of that. But, if the session has run into an error, I need to replace it and all the objects associated with it. Closing the session no matter what is going on is not a good solution, and you can&#x2019;t really solve the problem in a generic way without calling back to the presenter that generated the error.</p>
         </article>
-        <article id="article-5458">
+        <article id="article-5460">
             <a href="https://ayende.com/blog/4354/on-comments-and-social-interaction" target="_blank">
-                <h2 class="title mb-6" id="article-5458">On comments and social interaction</h2>
+                <h2 class="title mb-6" id="article-5460">On comments and social interaction</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -238,38 +270,6 @@
                 posted on: January 07, 2010
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I got a request in email to add something like Disqus to my blog, which would allow a richer platform for the commenting that goes on here. I think that the request and my reply are interesting enough to warrant this blog post.   My comment system is the default subtext one, but there are several advantages to the way it works. You can read the full explanation in Joel on Software post about the matter, but basically, threading encourages people to go off in tangents, single thread of conversation make it significantly easier to have only one conversation.  There is another reason, which is personally important to me, which is that I want to &quot;own&quot; the comments. Not own in terms of copyright, but own in terms of having control of the data itself. Having the comments (a hugely important part of the blog) being managed by a 3rd party which might shut down and take all the comments with it is not acceptable.  That is probably a false fear, but it is something that I take under consideration. The reasoning about the type of interaction going on in the comments is a lot more important. There is also something else to consider, if a post gets too hot (generating too many comments), I am either going to close comments on it, or open a new post with summary of what went on in the previous post comment thread anyway, so it does have some checks &amp; balances that keep a comment thread from growing too large.</p>
-        </article>
-        <article id="article-5459">
-            <a href="https://ayende.com/blog/4353/nih-alert-writing-my-own-rpc-systems" target="_blank">
-                <h2 class="title mb-6" id="article-5459">NIH alert! Writing my own RPC systems</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 06, 2010
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let us see if you can help me here, I found myself facing a rather unpleasant realization, in that I need to communicate between two processes (that compose a single system) with some rather draconian measures about how they are going to be used.  Quite simply, I need to expose an interface with ~25 methods on it to the second process. So far, it is pretty easy to do, right?  The problem is that the first process is a standard .NET executable, which may also be run on the Mono platform while the second is a Silverlight application. My first thought, just use remoting to handle this, failed because remoting isn&#x2019;t available to Silverlight. My second thought, to use WCF, failed because that isn&#x2019;t available on Mono.  Building a simple RPC system is pretty easy, so that doesn&#x2019;t worry me. The reason I am reluctant to do so is that I really don&#x2019;t want to build yet another infrastructure. At some point, even to me, NIH flag starts to pop up.</p>
-        </article>
-        <article id="article-5460">
-            <a href="https://ayende.com/blog/4352/why-all-the-performance-posts-the-shocking-truth" target="_blank">
-                <h2 class="title mb-6" id="article-5460">Why all the performance posts? The shocking truth!</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 05, 2010
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was quite amazed by the number of conspiracy theories that were brought up by this post. Some of them in the comments, some of them in private communications.  The reason, the real &amp; only one, that I had so many posts lately about performance is quite simple. I did a lot of that recently, and one aspect of perf testing that I didn&#x2019;t talk about is that most perf test run takes a long time, that means that I had a lot of free time. Free time for me usually translate into posting time :-)</p>
         </article>
         <div class="button flex justify-between">
             <a href="545.html"><span class="back arrow"></span></a>

@@ -112,8 +112,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6171">
+            <a href="https://ayende.com/blog/3740/the-shopping-cart-rule-engine-dsl" target="_blank">
+                <h2 class="title mb-6" id="article-6171">The shopping cart rule engine DSL</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 08, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As the final example in the book, I am showing off a DSL for processing a shopping cart. Here is how it looks like: behavior of preferred_customer&#xA;&#xA;upon bad_credit:&#xA;&#x9;authorize_funds cart.Total * 0.5,  &quot;For preferred customers we only authorize half the amount&quot;&#xA;&#xA;upon cart_update:&#xA;&#x9;when cart.Total &gt; 1000:&#xA;  &#x9;&#x9;add_cart_discount 5, &quot;Preferred members gets 5% discount for orders over 1,000$&quot;&#xA;&#xA;And this:&#xA;&#xA;behavior of default_customer &#xA;upon bad_credit:&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; authorize_funds cart.Total,&#xA0; &quot;We require full authorization of the amount in low credit rating scenarios&quot;&#xA;Where we defined preferred customer and default customer as:&#xA;define preferred_customer:&#xA;&#x9;customer.TotalPurchaseAmount &gt; 5000&#xA;&#x9;&#xA;define default_customer:&#xA;&#x9;customer.TotalPurchaseAmount &lt;= 5000&#xA;The implementation is surprisingly easy, and I was able to walk through the reasoning for this implementation rather than the usual when [condition] in a way that I hope would make sense.&#xA;You can look at the implementation here: https://rhino-tools.svn.sourceforge.net/svnroot/rhino-tools/BDSLiB/trunk</p>
+        </article>
+        <article id="article-6172">
+            <a href="https://ayende.com/blog/3739/shopping-cart-sample-design-considerations" target="_blank">
+                <h2 class="title mb-6" id="article-6172">Shopping Cart sample design considerations</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 07, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">While it is highly likely that you have created a shopping cart in the past, this shopping cart design is slightly different. One thing that should be obvious is that this is still a simplified example, and in the real world you are likely to need to do more, but it is a good example of an important concept. In the image, you can see that we have the fairly standard Shopping Cart, Product and Item classes, where item represent the quantity of a particular product in the shopping cart. But why do we need such things as Discounts, or why do we have a ChangeItemQuantity class? And most shopping carts don&#x27;t have the concept of messages. This shopping cart is build in this manner in order to make sure that we can easily integrate a versatile back end into this, without creating cascading changes throughout the system. It is also a good way to structure things in general, because we have an object model to which we are mostly only adding things, and only rarely modifying. This is important because using the addition only approach, we have a domain model that is auditable, and more flexible in the long term. It also means that we can walk into any shopping cart, and ask it to explain what caused it to reached that particular total. Another important design consideration is the difference between an item in the cart (this is something that the user has explicitly added) and a change to the quantity of items in the cart (something that the back end did for the user). As usual, I find that an example tends to make everything clearer. We have the following requirement: if you buy all seven of Harry Potter&#x27;s books, you will actually pay for the Harry Potter bundle (for a reduced price). Now, the user may select the bundle explicitly, or he may simply order each of the books, without being aware of the existence of that particular sale. In the domain model that we have in figure 13.1, we will model the second case as shopping cart with:  Items - One item for each of the Harry Potter books Changes:  One ChangeItemQuantity for each of the Harry Potter books, with AmountToChangeQuantity set to -1 (essentially removing all the books that the user has selected from the cart). One ChangeItemQuantity for the Harry Potter bundle, with AmountToChangeQuantity set to 1 (adding it to the cart). Messages - a message saying that you are now buying the Harry Potter bundle for a reduced price. Note that in order to get that requirement working, we didn&#x27;t have to modify the items that the user has selected. For presentation purposes, we also have a simplified view on top of a shopping cart, called, surprisingly enough, ShoppingCartView.The ShoppingCartView is very similar to a traditional Shopping Cart, it only have the concepts of items and messages. Items are what the user will end up buying (one bundle of Harry Potter books), and messages are information for the user. A discount, for example, is translated in the view into directly affecting the prices that you see on an item, as well as a message notifying the user that he got a particular discount.</p>
+        </article>
+        <article id="article-6173">
             <a href="https://ayende.com/blog/3738/designing-a-shopping-cart" target="_blank">
-                <h2 class="title mb-6" id="article-6171">Designing a shopping cart</h2>
+                <h2 class="title mb-6" id="article-6173">Designing a shopping cart</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I needed to create a sample shopping cart, and this is what I came up with.    Thoughts?</p>
         </article>
-        <article id="article-6172">
+        <article id="article-6174">
             <a href="https://ayende.com/blog/3737/nh-prof-getting-to-zero-friction" target="_blank">
-                <h2 class="title mb-6" id="article-6172">NH Prof</h2>
+                <h2 class="title mb-6" id="article-6174">NH Prof</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is a new (passing) integration test in the NHibernate Profiler:&#xA;&#xA;Just to give you an idea, here is the implementation of this rule, which has to be one of the more complex ones that we have at the moment, because the data for it comes from several sources, so we need to actually execute the logic in an event, instead of directly.&#xA;public class TooManyRowsReturnedPerQuery : IStatementProcessor{    private ProfilerConfiguration configuration;    public TooManyRowsReturnedPerQuery(ProfilerConfiguration configuration)    {        this.configuration = configuration;    }    public void AfterAttachingToSession(SessionInformation sessionInformation, FormattedStatement statement,                                        OnNewAction newAction)    {        statement.ValuesRefreshed &#x2B;= delegate         {             if (statement.CountOfRows == null)                return;            if (statement.CountOfRows &gt; configuration.MaxRowCountThatWouldGenerateWarning)                newAction(new ActionInformation                {                    Severity = Severity.Warning,                    Title = &quot;This query returned an excessive number of rows.&quot;                });            else if (statement.CountOfRows &gt; configuration.MaxRowCountThatWouldGenerateSuggestion)                newAction(new ActionInformation                {                    Severity = Severity.Suggestion,                    Title = &quot;This query returned a large number of rows.&quot;                });        };    }}&#xA;This is what I when I am talking about zero friction software. Assuming that you understand the architecture of the system, which isn&#x27;t hard, you can just plug things in. Not only that, but the system follows the Open Close Principle. By far, most changes to the system involves adding new code, rather than modifying existing code.&#xA;Another interesting aspect, notice just how many things are handled for you by the infrastructure, and what the resulting code looks like.</p>
         </article>
-        <article id="article-6173">
+        <article id="article-6175">
             <a href="https://ardalis.com/head-first-design-patterns/" target="_blank">
-                <h2 class="title mb-6" id="article-6173">Head First Design Patterns</h2>
+                <h2 class="title mb-6" id="article-6175">Head First Design Patterns</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I picked up Head First Design Patterns a couple of months ago and read it last month. I have to say that this book is totally different from&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6174">
+        <article id="article-6176">
             <a href="https://ardalis.com/func-mousepads/" target="_blank">
-                <h2 class="title mb-6" id="article-6174">Func Mousepads</h2>
+                <h2 class="title mb-6" id="article-6176">Func Mousepads</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I bought an Alienware laptop a few years ago as sort of a gift to myself after coming back home from Iraq. As it turned out,that computer&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6175">
+        <article id="article-6177">
             <a href="https://ardalis.com/seo-tip-move-hidden-aspnet-fields-to-bottom-of-page/" target="_blank">
-                <h2 class="title mb-6" id="article-6175">SEO Tip Move Hidden ASPNET Fields To Bottom of Page</h2>
+                <h2 class="title mb-6" id="article-6177">SEO Tip Move Hidden ASPNET Fields To Bottom of Page</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here&#x2019;s a quick SEO tip from Teemu (via email) that I&#x2019;ve been meaning to mention &#x2013; there&#x2019;s a new feature in .NET 3.5 SP1 that lets you&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6176">
+        <article id="article-6178">
             <a href="https://ardalis.com/personal-goals-2008-update/" target="_blank">
-                <h2 class="title mb-6" id="article-6176">Personal Goals 2008 Update</h2>
+                <h2 class="title mb-6" id="article-6178">Personal Goals 2008 Update</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My progress bar for 2008&#x2019;s goals completed is resembling a Windows Vista file transfer dialog in terms of its responsiveness and accuracy&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6177">
+        <article id="article-6179">
             <a href="https://ayende.com/blog/3736/windows-activation-sucks-how-to-give-someone-a-heart-attack" target="_blank">
-                <h2 class="title mb-6" id="article-6177">Windows Activation SUCKS: How to give someone a heart attack</h2>
+                <h2 class="title mb-6" id="article-6179">Windows Activation SUCKS: How to give someone a heart attack</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">On a day that I have to give 3 presentations, I open up windows and I refuse to log me in, instead, I get this thing:&#xA;&#xA;And then it refuse to activate! Turning the window installation to a brick!&#xA;I solved that eventually, but that was a really scary time.</p>
         </article>
-        <article id="article-6178">
+        <article id="article-6180">
             <a href="https://ardalis.com/codemash-2009/" target="_blank">
-                <h2 class="title mb-6" id="article-6178">CodeMash 2009</h2>
+                <h2 class="title mb-6" id="article-6180">CodeMash 2009</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -238,38 +270,6 @@
                 posted on: December 03, 2008
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The 2009 Conference Season kicks off early in Ohio with CodeMash 3.0. This is the third year of the event and promises to be a valuable&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-6179">
-            <a href="https://ardalis.com/asp-net-mvc-at-dogfood-developers-conference/" target="_blank">
-                <h2 class="title mb-6" id="article-6179">ASP.NET MVC at DogFood Developers Conference</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 03, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I gave a presentation a couple of weeks ago at the Columbus Ohio Microsoft Dogfood Developers conference. Danilo, the main organizer of the&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-6180">
-            <a href="https://ayende.com/blog/3735/nh-prof-a-moment-in-time" target="_blank">
-                <h2 class="title mb-6" id="article-6180">NH Prof</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 03, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just&#xA0; had a major moment in using NH Prof.&#xA;I run into a problem with NHibernate and was able to use the NH Profiler in order to figure out what the problem was.&#xA;Wow!</p>
         </article>
         <div class="button flex justify-between">
             <a href="617.html"><span class="back arrow"></span></a>
