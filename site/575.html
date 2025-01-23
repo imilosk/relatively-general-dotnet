@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5741">
+            <a href="https://ayende.com/blog/4099/nh-prof-new-feature-detect-cross-thread-session-usage" target="_blank">
+                <h2 class="title mb-6" id="article-5741">NH Prof New Feature</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 05, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">NHibernate sessions are not thread safe, and attempting to use them in multiple threads requires careful synchronization. It is generally better to consider a session only useful within the thread that created it.  There are valid scenarios for cross thread session usage (background loading with careful sync, multi request spanning session), but the invalid scenarios are far more common.  Let us take a look at the following code:     public class CrossThreadSession : IScenario&#xA;{&#xA;&#x9;public void Execute(ISessionFactory factory)&#xA;&#x9;{&#xA;&#x9;&#x9;using(var session = factory.OpenSession())&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;var @event = new ManualResetEvent(false);&#xA;&#xA;&#x9;&#x9;&#x9;ThreadPool.QueueUserWorkItem(state =&gt;&#xA;&#x9;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;&#x9;using(var tx = session.BeginTransaction())&#xA;&#x9;&#x9;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;session.Get&lt;Blog&gt;(1);&#xA;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;tx.Commit();&#xA;&#x9;&#x9;&#x9;&#x9;}&#xA;&#xA;&#x9;&#x9;&#x9;&#x9;@event.Set();&#xA;&#x9;&#x9;&#x9;});&#xA;&#xA;&#x9;&#x9;&#x9;@event.WaitOne();&#xA;&#x9;&#x9;}&#xA;&#x9;}&#xA;}&#xA;&#xA;&#xA;If you&#x2019;ll try to execute it with NH Prof listening, you are going to see this:&#xA;&#xA; &#xA;&#xA;NH Prof is properly detecting and warning that we are using a single session in multiple threads. &#xA;&#xA;I did mention that there are valid scenarios for that, so you can either just tell NHibernate to ignore this specific alert by clicking the link, or disable this alert completely if you are doing cross thread session usage extensively and you know it to be safe:&#xA;&#xA; &#xA;&#xA;&#xA;&#xA;Nice enough feature, for about 30 minutes of work. I love working on NH Prof code base.&#xA;&#xA;And just for fun, here is the test for this:&#xA;&#xA;&#xA;  public class DetectCrossThreadSessionUsage : IntegrationTestBase&#xA;{&#xA;&#x9;[Fact]&#xA;&#x9;public void CanDetectCrossThreadSessionUsage()&#xA;&#x9;{&#xA;&#x9;&#x9;ExecuteScenarioInDifferentAppDomain&lt;CrossThreadSession&gt;();&#xA;&#xA;&#x9;&#x9;var first = model.Sessions.First();&#xA;&#xA;&#x9;&#x9;Assert.Equal(1, first.Statistics.NumberOfStatements);&#xA;&#x9;&#x9;Assert.Equal(2, first.Statistics.NumberOfTransactionsStatements);&#xA;&#x9;&#x9;foreach (var statement in first.StatementsModel.Statements)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;Assert.True(&#xA;&#x9;&#x9;&#x9;&#x9;statement.Alerts.Any(alert =&gt; alert.HelpTopic == &quot;CrossThreadSessionUsage&quot;));&#xA;&#x9;&#x9;}&#xA;&#x9;}&#xA;}&#xA;&#xA;&#xA;And for additional fun, here is the code to implement the feature:&#xA;&#xA;&#xA;  public class CrossThreadSessionUsage : AbstractStatementProcessor&#xA;{&#xA;&#x9;public override void AfterAttachingToSession(SessionInformation session, TransactionStatement transaction)&#xA;&#x9;{&#xA;&#x9;&#x9;AfterAttachingToSession(session, (SqlStatement)transaction);&#xA;&#x9;}&#xA;&#xA;&#x9;public override void AfterAttachingToSession(SessionInformation sessionInformation, SqlStatement statement)&#xA;&#x9;{&#xA;&#x9;&#x9;if (sessionInformation.SessionId.IdentifierId.ThreadId ==&#xA;&#x9;&#x9;&#x9;statement.SessionId.IdentifierId.ThreadId)&#xA;&#x9;&#x9;&#x9;return;&#xA;&#x9;&#x9;statement.AcceptAlert(AlertInformation.CrossThreadSessionUsage());&#xA;&#x9;}&#xA;}&#xA;&#xA;&#xA;I did have to change some of the innards so NH Prof will track both the session id and the thread id, but that was quite easy to do and the only thing that actually took any time at all.</p>
+        </article>
+        <article id="article-5742">
             <a href="https://ardalis.com/ad-landing-pages-and-customer-conversations/" target="_blank">
-                <h2 class="title mb-6" id="article-5741">Ad Landing Pages and Customer Conversations</h2>
+                <h2 class="title mb-6" id="article-5742">Ad Landing Pages and Customer Conversations</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of Lake Quincy Media&#x2019;s clients recently wrote to me in response to my previous post about the Principle of Least Surprise and its&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5742">
+        <article id="article-5743">
             <a href="https://ardalis.com/art-of-agile-development/" target="_blank">
-                <h2 class="title mb-6" id="article-5742">Review - The Art of Agile Development</h2>
+                <h2 class="title mb-6" id="article-5743">Review - The Art of Agile Development</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Summary This book provides an excellent field manual for implementing agile software techniques.  It includes practical advice with&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5743">
+        <article id="article-5744">
             <a href="https://ayende.com/blog/4098/watermarking-and-security" target="_blank">
-                <h2 class="title mb-6" id="article-5743">Watermarking and Security</h2>
+                <h2 class="title mb-6" id="article-5744">Watermarking and Security</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was reading Jamie Fraser&#x2019;s blog when I run into this post. In the post, Jamie talks about how he want to make it to fake data that the user is able to print from a site.   The example given is a payslip, which we don&#x2019;t want the user to be able to successfully change. The solution that Jamie came up with is to watermark the image. His example is:              Unmodified        Watermarked                                    But what aroused my curiosity is:     The one issue I&#x27;ve encountered however is that it is simply not possible to completely prevent editing of the files - a skilled Photoshop user could work around pretty much any watermark, and of course detecting tampering is quite difficult for the casual viewer   Well, that is true enough, but you don&#x2019;t have to do it this way. Instead of thinking in terms of making it hard to the user to fake the data, sign it.   You can just do this:     The numbers at the bottom compromise a cryptographically meaningful signing of the data. So without knowing your private key, no one can actually fake the data, no matter how good their photoshopping skills are. Now, you may want to go with the watermarking anyway, to make it harder for the casual user to do so, and because even with signing, how many people are going to actually check the signature?  But if you need to take it to court, or something similar, proving that this is a fake or not would be a very easy task.</p>
         </article>
-        <article id="article-5744">
+        <article id="article-5745">
             <a href="https://ayende.com/blog/4097/or-m-suitability" target="_blank">
-                <h2 class="title mb-6" id="article-5744">OR/M suitability</h2>
+                <h2 class="title mb-6" id="article-5745">OR/M suitability</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A few days ago, I run into this tweet:    My answer to that is composed of two parts.  People usually think that I am being facetious when they ask me when they should use NHibernate, and I answer: &#x201C;Whenever you are using a relational database&#x201D;. I am not, I am quite serious in that regard. Well, there is a small subtext here in which I assume that you are talking about OLTP rather than reporting or other BI activities.   The reason for that is quite simple, NHibernate (and other OR/Ms, I guess) is doing a lot to make working with RDMBS easy. To try to assume that you can do better than that is&#x2026; quite a challenge, shall we say? I have seen quite a few people try, and I have seen very few get something reasonable working. I have seen no one that has been served well by that decision when you sit down to make the ROI.  Now, the second part of the answer is that I am not sure that Twitter, as I would design it, would make much use of a relational database. Twitter seems to be ideally suited for a hierarchical database, rather than a relational one.</p>
         </article>
-        <article id="article-5745">
+        <article id="article-5746">
             <a href="https://ayende.com/blog/4096/infrastructure-is-king-the-to-do-app" target="_blank">
-                <h2 class="title mb-6" id="article-5745">Infrastructure is king: The To Do app</h2>
+                <h2 class="title mb-6" id="article-5746">Infrastructure is king: The To Do app</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I spent the last few days writing the NHibernate in Desktop Apps sample. Since I didn&#x2019;t feel like doing something adventurous, I choose to use the age old ToDo app as the sample.  Now that I have finished it, I run some stats on it, and it is&#x2026; interesting.  Here is the number of lines split into infrastructure and application code:     The funny part about this is that this is for an application that has three forms altogether and very little behavior.   The not so funny part is that I fully expect that extending the application would require very few modifications to infrastructure code, while the support of the infrastructure means that I can churning out new features without really having to think about anything but that specific feature.</p>
         </article>
-        <article id="article-5746">
+        <article id="article-5747">
             <a href="https://ayende.com/blog/4095/your-domain-model-isnt-in-the-entity-relationship-diagram" target="_blank">
-                <h2 class="title mb-6" id="article-5746">Your domain model isn&#x2019;t in the Entity Relationship Diagram</h2>
+                <h2 class="title mb-6" id="article-5747">Your domain model isn&#x2019;t in the Entity Relationship Diagram</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As usual, reading Udi&#x2019;s articles is an interesting experience, and his latest one, Employing the Domain Model Pattern is no exception.  I am actually a proponent about thinking twice before approaching a domain model architecture, but not because I see it as a way to manage change. I see it as a way to manage complexity, and you need a fairly high threshold of complexity before the domain model pattern starts to justify itself. And I enthusiastically agree about the domain events model.   But probably the most important topic raised in the article is that when you sit down to think about your domain model, the last thing you should do is start drawing an Entity Relationship Diagram.  As a matter of fact, I would go a step further and say that if you are starting with the ERD, or even if you just think about your domain model mainly in terms of ERD, then you are working with an anemic domain model.  Now, take heart, as Udi mentioned, not every persistent object model is a domain model. I don&#x2019;t have a problem with people mapping their persistence model using an ERD, for that matter, that is what it is for.  The problem starts when you try to use this as a domain model. And a domain model&#x2019;s chief reason for existence is to incorporate both behavior and data. And you can&#x2019;t do behaviors with ERD. You usually won&#x2019;t notice that until it is too late, for that matter.   There are different ways to approach building different types of models. A persistence model vs. a domain model vs. transport model. All of them have their own requirements and needs. And while it is often possible to combine those needs into a single model when those needs are small, as the application grows larger, things are going to start creaking.  At that point, you&#x2019;ll find that more and more you are going to put behaviors outside of the model, because it is too painful to add additional behavior inside.  This is part of the reason why I like the idea of domain events, the handlers for the domain events are part of the domain, since they form what is sure to be the most interesting (from business perspective) layer of the application.</p>
         </article>
-        <article id="article-5747">
+        <article id="article-5748">
             <a href="https://ayende.com/blog/4094/macto-authorization-decisions" target="_blank">
-                <h2 class="title mb-6" id="article-5747">Macto, Authorization decisions</h2>
+                <h2 class="title mb-6" id="article-5748">Macto, Authorization decisions</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Authorization is one of the few ubiquitous requirements, you are going to have to handle them in pretty much every system that you are going to build.  The users are the staff, and the securables are the inmates. The problem is that we have fairly different authorization requirements for different parts of the system.  For example, any authenticated user can lookup pretty much any inmate&#x2019;s data (except for medical records, of course), but changing release date is something that only Legal can do. Only the staff on the enclosure that the inmate is located in can Sign Out the inmate. Actually releasing an inmate requires Legal and On Duty Officer approval, etc.  However, during weekends, the on duty staff assume responsibility for the entire prison. That is, an officer from enclosure C can Sign Out an inmate from enclosure A if that officer is the on duty officer.   There are a few more complications, but we will ignore them for now. One thing that is fairly clear, we have fairly complex authorization requirements, and they are different for each part of the system. For that matter, the way we make security decisions itself is different.  And since authorization decisions are synchronous (you can make them async, sort of, but at very high cost), performance is a critical concern. This is especially true because there is a strong tendency to call authorization decisions many times.  Given that, and given the complexity inherit to authorization, I think that we can skip the entire problem entirely by changing the rules of the game.  Most authentication systems would have you do something like:     auth.IsAllowed(CurrentUser, &quot;/Inmate/Move&quot;, inmate);&#xA;&#xA;&#xA;And rely on the system to do its magic this way. The problem in this manner is that we provide the authorization system with very little information with which it can work. That means that in order to make authorization decisions, the system has to have a way to access other data (such as in what enclosures the current user is in charge of, where the inmate is, what is its status, etc).&#xA;&#xA;The problem then become more an issue of data retrieval complexity rather than the authorization rules complexity. I think that we can avoid this by designing the system with more flexibility by providing the required data to the authorization system explicitly.&#xA;&#xA;What do I mean? Well, just take a look:&#xA;&#xA;&#xA;  auth.IsAllowed(&#xA;&#x9;new SignOutAuthorization&#xA;&#x9;{&#xA;&#x9;&#x9;OfficerRank = CurrentUser.Rank,&#xA;&#x9;&#x9;OfficerRoles = CurrenUser.GetAllCurrentRoles(),&#xA;&#x9;&#x9;OfficerEnclosures = CurrentUser.GetEnclosuresUserIsResponibleFor(),&#xA;&#x9;&#x9;InmateEnclosure = inmate.Enclosure,&#xA;&#x9;&#x9;InmateStatus = inmate.Status,&#xA;&#x9;}&#xA;);&#xA;&#xA;&#xA;In other words, we are explicitly providing the authorization system with all the data that it needs for a particular task. That means, in turn, that we can now execute the authorization decision completely locally, without having to go somewhere to fetch the data. It also open the option of using a DSL to build the authorization rules, which will make things more dynamic and easier to work with.</p>
         </article>
-        <article id="article-5748">
+        <article id="article-5749">
             <a href="https://ayende.com/blog/4093/reviewing-nerddinner-the-select-n-1-pitfall" target="_blank">
-                <h2 class="title mb-6" id="article-5748">Reviewing NerdDinner: The Select N&#x2B;1 pitfall</h2>
+                <h2 class="title mb-6" id="article-5749">Reviewing NerdDinner: The Select N&#x2B;1 pitfall</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">During my review of NerdDinner, I came across the following piece of code:     And I knew that there is a Select N&#x2B;1 problem here. This is quite similar to the problem that I described here. RSVPs is a lazily loaded collection. As such, calling Any() on it will result in a database query.   Now the question was whatever or not it is used somewhere in a loop. ReSharper will help us figure that one out:     The first usage location is here:     And this certainly doesn&#x2019;t look like it can cause a Select N&#x2B;1, right. Just to be sure, I checked where it is called from the client side as well:     This looks all right, we will have a query, but it is only one per request.  Great, now let us take a look at the second usage. You can tell that this is going to be a problem just by the ascx suffix. The code is pretty simple:     I have a moral issue with the view generating a call to the database, but at least it isn&#x2019;t being done in a loop.  I am certain, however, that we are going to find this .ascx file in a grid, which will cause a loop. This .ASCX file is being used in Details.aspx and is used like this:     However, it is not actually being used in a loop.  There is not a Select N&#x2B;1 issue, which renders this entire post moot.   However, while it is not an active Select N&#x2B;1, it is a dormant one. It would be very easy to have a new requirements that would make use of the RSVPStatus.ascx file in a loop and cause the issue.</p>
         </article>
-        <article id="article-5749">
+        <article id="article-5750">
             <a href="https://ayende.com/blog/4092/reviewing-nerddinner" target="_blank">
-                <h2 class="title mb-6" id="article-5749">Reviewing NerdDinner</h2>
+                <h2 class="title mb-6" id="article-5750">Reviewing NerdDinner</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: July 30, 2009
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Scott Hanselman has asked me to see if I can port NerdDinner to NHibernate, now that Linq for NHibernate has made RTM. I thought that I might as well take the time to look at the code and do a code review.     I would like to say a few things before actually even starting to look at the code. I am not going to review the code as a sample application, I am going to review it as if it was a standard production project. I am assuming that (remember, haven&#x2019;t seen the code yet) there are things there that are done that way explicitly because they are easier to explain as a sample app than a more complex project would be.   The first thing that I opened was HomeController, which I am going to show you in full.       There are two things that I don&#x2019;t like here.   First, the empty actions (return View() is empty as far as I am concerned) resulting in what is, for all intents and purposes, an empty controller (one that contains empty actions). In other words, the only reason that this controller exists is because it is the way ASP.Net MVC want it to. A brief overview of the codebase show me that there are more than a few of method like that.   I would deal with something like that completely on the view side, having a routing action that would check the view directly and just render the view, rather than creating empty actions and controllers.  Second, [HandleErrorWithELMAH], such things should not be on controllers (and that attribute appears on all controllers). It should be on a base controller, because right now, it is a violation of DRY, and it is easy to forget.  Then there are the tests for HomeController, which are&#x2026; less than useful, shall we say?     Next, let us take a look at the following interface:       I have a serious problem with the Save() method. I had to look at the implementation to figure out what it is doing. It should be called FlushToDatabase, or SubmitChanges. Save() is a totally unexpected name for the method who implementation is:     You are not, actually, saving anything.  As an aside, I don&#x2019;t like seeing things like this one:     Linq to SQL actually have a way of handling cascading deletes, and it should have been used.  For that matter, coming back to the tests, there aren&#x2019;t any persistence tests. Since there are some complexity involved in the queries (geo located queries), I would have liked to see at least those queries being covered.  I don&#x2019;t want to rehash the poor man&#x2019;s IoC story, but this is really pissing me off:     I mean, if you want to do poor man&#x2019;s IoC, go ahead. But please don&#x2019;t create this bastard child.   This is more about code style than hygiene, but I don&#x2019;t like it:         Those classes should be in separated files, they should not be in AccountController.  Overall, I don&#x2019;t see too many issues with the codebase. The only thing that pissed me off was the Mad Man IoC.</p>
-        </article>
-        <article id="article-5750">
-            <a href="https://ayende.com/blog/4091/macto-defining-centralized-service-distributed-service-and-localized-component" target="_blank">
-                <h2 class="title mb-6" id="article-5750">Macto, defining Centralized Service, Distributed Service and Localized Component</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 30, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I lately come into the conclusion that I need a few new terms to describe a few common ways to talk about the way that I structure different components in my applications.  Those are Centralized Service, Distributed Service and Localized Component. Mostly, I use them as a way to express the distribution semantics of the item in question.  As you can probably guess, I am using the term service to refer to something that we make remote calls to, while I am using the term component to refer to something that is running locally.  Centralized Service is probably the classic example of a web service. It is a server that is running somewhere to which we make remote calls to. As far as the system is built, there is only one such server. It may be implemented with clustering or load balancing, but logically (and quite often, physically), it is a single server that is processing requests. This is probably the easiest model to work with, since it more or less remove the entire question of concurrency conflicts from the system. Internally, the Centralized Service is using transactions or locks to ensure coherency in the face of concurrency.  Distributed Service is a built upfront to run on a set of server, and the need to handle concurrency conflicts is built into the design of the system. That may be done using sharding, Paxos or other methods. Usually, we build Distributed Service for very high scalability / reliability cases, since it tend to be the more complex solution. An example of a Distributed Service would be DNS, where we explicitly design the system to be resilient to failure, but accept the more complex concurrency issues (slow updates).  Localized Component is a solution to the chatty interface problem. There are quite a few scenarios where we need to make calls to a separated subsystem, but the cost of network traffic completely outweigh the cost of actually performing the operation on the other side. In this case, we may switch from a Centralized Service to a Localized Component. What this means is that instead of executing the operation on the other side, we perform it locally.  In practice, this means that we need to design our system in a way that any data that we would like to have is structured in such a way that it can be brought locally or retrieved very cheaply. An example of such a system appears in this post, although that is a fairly complex one. A more common situation is a component that deals with a set of rule, and we simply need to get the rule from the rule repository and execute it locally.  Another alternative for Localized Components is to structure it in such a way that retrieving and persisting the data is cheap, and processing it is done on locally. That way, the sharing of the data and the actual processing of the data are two distinct issues, which can be resolved separately. A common issue that needs to be resolved with Localized Components is consistency, if the component allow writes, how do other instances of the component, running on different machine get notified about it.  I tend to avoid Distributed Services in favor of Centralized Services and Localized Components, which tend to be easier to work with. It is also easier to lean on existing infrastructure then write an implementation from scratch. For example, I am using Rhino DHT (which I consider to be a Distributed Service) to handle a lot of the complexity inherit to one of those.</p>
         </article>
         <div class="button flex justify-between">
             <a href="574.html"><span class="back arrow"></span></a>
