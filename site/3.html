@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-21">
+            <a href="https://www.meziantou.net/exploring-collectionsmarshal-for-dictionary.htm" target="_blank">
+                <h2 class="title mb-6" id="article-21">Exploring CollectionsMarshal for Dictionary</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 06, 2025
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Unlike ConcurrentDictionary, Dictionary does not have a GetOrAdd method. This method is useful when you want to add a key-value pair to the dictionary if the key does not exist, or return the value if the key already exists. The naive implementation of this method looks like this:C#copypublic stati</p>
+        </article>
+        <article id="article-22">
             <a href="https://ayende.com/blog/201860-C/performance-discovery-managed-vs-unmanaged-memory" target="_blank">
-                <h2 class="title mb-6" id="article-21">Performance discovery</h2>
+                <h2 class="title mb-6" id="article-22">Performance discovery</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When building RavenDB, we occasionally have to deal with some ridiculous numbers in both size and scale. In one of our tests, we ran into an interesting problem. Here are the performance numbers of running a particular query 3 times.First Run: 19,924 msSecond Run: 3,181 msThird Run: 1,179 msThose are not good numbers, so we dug into this to try to figure out what is going on. Here is the query that we are running:from index &#x27;IntFloatNumbers-Lucene&#x27; where Int &gt; 0And the key here is that this index covers 400 million documents, all of which are actually greater than 0. So this is actually a pretty complex task for the database to handle, mostly because of the internals of how Lucene works. Remember that we provide both&#xA0;the first page of the results as well as its total number. So we have to go through the entire result set to find out how many items we have. That is a lot of work. But it turns out that most of the time here isn&#x2019;t actually processing the query, but dealing with the GC. Here are some entries from the GC log while the queries were running:2024-12-12T12:39:40.4845987Z, Type: GC, thread id: 30096, duration: 2107.9972ms, index: 25, generation: 2, reason: Induced&#xD;&#xA;2024-12-12T12:39:53.1359744Z, Type: GC, thread id: 30096, duration: 1650.9207ms, index: 26, generation: 2, reason: Induced&#xD;&#xA;2024-12-12T12:40:07.5835527Z, Type: GC, thread id: 30096, duration: 1629.1771ms, index: 27, generation: 2, reason: Induced&#xD;&#xA;2024-12-12T12:40:20.2205602Z, Type: GC, thread id: 30096, duration: 776.24ms, index: 28, generation: 2, reason: InducedThat sound you heard was me going: Ouch!Remember that this query actually goes through 400M results. Here are the details about its Memory Usage &amp; Object Count:Number of objects for GC&#xA0;(under LuceneIndexPersistence): 190M (~12.63GB)Managed Memory: 13.01GBUnmanaged Memory: 4.53MBWhat is going on? It turns out that Lucene handles queries such as Int&gt;0&#xA0;by creating an array with all the unique values, something similar to:string[] sortedTerms = new string[190_000_000];&#xD;&#xA;long[] termPostingListOffset = new long[190_000_000];This isn&#x2019;t exactly&#xA0;how it works, mind. But the details don&#x2019;t really matter for this story. The key here is that we have an array with a sorted list of terms, and in this case, we have a lot&#xA0;of terms.Those values are cached, so they aren&#x2019;t actually allocated and thrown away each time we query. However, remember that the .NET GC uses a Mark &amp; Sweep algorithm. Here is the core part of the Mark portion of the algorithm:long _marker;&#xD;&#xA;void Mark()&#xD;&#xA;{&#xD;&#xA;    var currentMarker = &#x2B;&#x2B;_marker;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    foreach (var root in GetRoots())&#xD;&#xA;    {&#xD;&#xA;        Mark(root);&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    void Mark(object o)&#xD;&#xA;    {&#xD;&#xA;        // already visited&#xD;&#xA;        if (GetMarket(o) == currentMarker)&#xD;&#xA;            return;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;        foreach (var child in GetReferences(node))&#xD;&#xA;        {&#xD;&#xA;            Mark(child);&#xD;&#xA;        }&#xD;&#xA;    }&#xD;&#xA;}Basically, start from the roots (static variables, items on the stack, etc.), scan the reachable object graph, and mark all the objects in use. The code above is generic, of course (and basically pseudo-code), but let&#x2019;s consider what the performance will be like when dealing with an array of 190M strings. It has to scan&#xA0;the entire thing, which means it is proportional to the number of objects. And we do have quite a lot of those. The problem was the number of managed objects, so we pulled all of those out. We moved the term storage to unmanaged memory, outside the purview of the GC. As a result, we now have the following Memory Usage &amp; Object Count:Number of objects for GC&#xA0;(under LuceneIndexPersistence): 168K (~6.64GB)Managed Memory: 6.72GBUnmanaged Memory: 1.32GBLooking at the GC logs, we now have:2024-12-16T18:33:29.8143148Z, Type: GC, thread id: 8508, duration: 93.6835ms, index: 319, generation: 2, reason: Induced&#xD;&#xA;2024-12-16T18:33:30.7013255Z, Type: GC, thread id: 8508, duration: 142.1781ms, index: 320, generation: 2, reason: Induced&#xD;&#xA;2024-12-16T18:33:31.5691610Z, Type: GC, thread id: 8508, duration: 91.0983ms, index: 321, generation: 2, reason: Induced&#xD;&#xA;2024-12-16T18:33:37.8245671Z, Type: GC, thread id: 8508, duration: 112.7643ms, index: 322, generation: 2, reason: InducedSo the GC time is now in the range of 100ms, instead of several seconds. This change helps both reduce overall GC pause times and greatly reduce the amount of CPU spent on managing garbage. Those are still big queries, but now we can focus on executing the query, rather than managing maintenance tasks. Incidentally, those sorts of issues are one of the key reasons why we built Corax, which can process queries directly on top of persistent structures, without needing to materialize anything from the disk.</p>
         </article>
-        <article id="article-22">
+        <article id="article-23">
             <a href="https://ayende.com/blog/201859-C/sometimes-its-the-hardware" target="_blank">
-                <h2 class="title mb-6" id="article-22">Sometimes it&#x27;s the hardware</h2>
+                <h2 class="title mb-6" id="article-23">Sometimes it&#x27;s the hardware</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">An issue&#xA0;was recently raised with a really scary title: Intermittent Index corruption: VoronUnrecoverableErrorException. Those are the kinds of issues that you know&#xA0;are going to be complex. Fixing such issues in the past was usually a Task Force effort and quite a challenge. We asked for more information and started figuring out who would handle the issue (given the time of the year) when the user came back with:After pressing the disk check issue with our hosting provider, we found out that one of the disks was reporting an error but according to our hosting, it was only because the manufacturer&#x27;s guarantee expired, and not the actual disk failure. We swapped the disk anyway, and so far we are not seeing the issue.I&#x2019;m so happy that I can close that issue &#x1F642;</p>
         </article>
-        <article id="article-23">
+        <article id="article-24">
             <a href="https://devblogs.microsoft.com/dotnet/top-dotnet-videos-live-streams-of-2024/" target="_blank">
-                <h2 class="title mb-6" id="article-23">Top .NET Videos &amp; Live Streams of 2024</h2>
+                <h2 class="title mb-6" id="article-24">Top .NET Videos &amp; Live Streams of 2024</h2>
             </a>
             <p class="mb-2">by James Montemagno</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let&#x27;s take a look back at the amazing .NET videos, events, and live streams from 2024!</p>
         </article>
-        <article id="article-24">
+        <article id="article-25">
             <a href="https://www.meziantou.net/signing-commits-in-git-using-ssh-keys-on-windows.htm" target="_blank">
-                <h2 class="title mb-6" id="article-24">Signing commits in Git using SSH keys on Windows</h2>
+                <h2 class="title mb-6" id="article-25">Signing commits in Git using SSH keys on Windows</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Signing commits in Git is a way to verify the authenticity and integrity of your commits. This ensures that the commits are indeed made by you and have not been tampered with. On Windows, it&#x27;s easy to set up SSH-Agent for easy signature. Here&#x27;s how you can do it.First, you need to install SSH on Wi</p>
         </article>
-        <article id="article-25">
+        <article id="article-26">
             <a href="https://devblogs.microsoft.com/dotnet/critical-dotnet-install-links-are-changing/" target="_blank">
-                <h2 class="title mb-6" id="article-25">Critical: .NET Install links are changing</h2>
+                <h2 class="title mb-6" id="article-26">Critical: .NET Install links are changing</h2>
             </a>
             <p class="mb-2">by Richard Lander</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The .NET installers and archives distribution method is currently changing unexpectedly. This change may impact your development, CI, and production infrastructure. It is crucial to validate if you are affected and monitor for any downtime or disruptions.</p>
         </article>
-        <article id="article-26">
+        <article id="article-27">
             <a href="https://ayende.com/blog/201828-B/isnt-it-ironic-money-isnt-transactional" target="_blank">
-                <h2 class="title mb-6" id="article-26">Isn&#x27;t it ironic: Money isn&#x27;t transactional</h2>
+                <h2 class="title mb-6" id="article-27">Isn&#x27;t it ironic: Money isn&#x27;t transactional</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I write a transactional database for a living, and the best example of why we want transactions is transferring money between accounts. It is ironic, therefore, that there is no&#xA0;such thing as transactions for money transfers in the real world.&#xD;&#xA;If you care to know why, go back 200 years and consider how a bank would operate in an environment without instant communication. I would actually recommend doing that, it is a great case study in distributed system design. For example, did you know that the Templars used cryptography to send money almost a thousand years ago?&#xD;&#xA;Recently I was reviewing my bank transactions and I found the following surprise. This screenshot is from yesterday (Dec 18), and it looks like a payment that I made is still &#x201C;stuck in the tubes&#x201D; two and a half weeks later.&#xD;&#xA;&#xA0;&#xD;&#xA;I got in touch with the supplier in question to apologize for the delay. They didn&#x2019;t understand what I was talking about. Here is what they see when they go to their bank, they got&#xA0;the money.&#xD;&#xA;&#xA0;&#xD;&#xA;For fun, look at the number of different dates that you can see in their details.&#xD;&#xA;Also, as of right now, my bank account still shows the money as pending approval (to be sent out from my&#xA0;bank).&#xD;&#xA;I might want to recommend that they use a different database. Or maybe I should just convince the bank to approve the payment by the time of the next&#xA0;invoice and see if I can get a bit of that infinite money glitch.</p>
         </article>
-        <article id="article-27">
+        <article id="article-28">
             <a href="https://devblogs.microsoft.com/dotnet/top-dotnet-blogs-posts-of-2024/" target="_blank">
-                <h2 class="title mb-6" id="article-27">Top .NET Blogs Posts of 2024</h2>
+                <h2 class="title mb-6" id="article-28">Top .NET Blogs Posts of 2024</h2>
             </a>
             <p class="mb-2">by James Montemagno</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let&#x27;s take a look back at the top .NET blogs from 2024 from exciting announcements, deep dives on new features, and so much more.</p>
         </article>
-        <article id="article-28">
+        <article id="article-29">
             <a href="https://www.meziantou.net/reading-usn-journal-with-dotnet.htm" target="_blank">
-                <h2 class="title mb-6" id="article-28">Reading USN Journal with .NET</h2>
+                <h2 class="title mb-6" id="article-29">Reading USN Journal with .NET</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you want to detect when a file is created, modified, or deleted, you can use the FileSystemWatcher class in .NET. However, this is only available when the application is running. What if you want to detect changes that occurred while the application was not running? The USN Journal is a feature</p>
         </article>
-        <article id="article-29">
+        <article id="article-30">
             <a href="https://devblogs.microsoft.com/dotnet/dotnet-conf-2024-recap/" target="_blank">
-                <h2 class="title mb-6" id="article-29">.NET Conf 2024 Recap &#x2013; Celebrating .NET 9, AI, Community, &amp; More</h2>
+                <h2 class="title mb-6" id="article-30">.NET Conf 2024 Recap &#x2013; Celebrating .NET 9, AI, Community, &amp; More</h2>
             </a>
             <p class="mb-2">by .NET Team</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: December 17, 2024
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">.NET Conf 2024 is over, but you can catch up with all the announcement and fun with video recordings, slides, demos, and more.</p>
-        </article>
-        <article id="article-30">
-            <a href="https://andrewlock.net/building-latex-projects-on-windows-easily-with-docker/" target="_blank">
-                <h2 class="title mb-6" id="article-30">Building LaTeX projects on Windows easily with Docker</h2>
-            </a>
-            <p class="mb-2">by Andrew Lock</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 17, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe how I build LaTeX projects on a Windows machine by using Docker and the blang/latex image&#x2026;</p>
         </article>
         <div class="button flex justify-between">
             <a href="2.html"><span class="back arrow"></span></a>
