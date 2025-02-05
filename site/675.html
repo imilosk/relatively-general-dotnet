@@ -112,8 +112,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6741">
+            <a href="https://ayende.com/blog/3301/matching-svk-revision-numbers-to-the-svn-revision-number" target="_blank">
+                <h2 class="title mb-6" id="article-6741">Matching SVK revision numbers to the SVN revision number</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 04, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am using SVK as a way to learn Distributed SCM, and it has been fine so far, except for one big issue. I am trying to apply SVN patches against SVK repositories. Actually, I setup SVK so I work against a local mirror, so the workflow is exactly the same, but the revision numbers are different. Trying to apply a patch just doesn&#x27;t work because of that.  You can go into the patch and edit the root revision, so it is not hard to make this work, except...  SVK doesn&#x27;t give me any mapping between the local revision and the source revisions (maybe it does, and someone will tell me). This means that in order to find the right version I have to do some annoying digging.  Here is a small program to solve the problem. Usage: svkrev [repository path] [source revision to look for]  Example:     C:\Users\Administrator&gt;svkrev //mirror/nhcontrib 195     exec: svk log --xml //mirror/nhcontrib      exec: svk propget svm:headrev //mirror/nhcontrib --revprop -r 10298      exec: svk propget svm:headrev //mirror/nhcontrib --revprop -r 10260      :=349      exec: svk propget svm:headrev //mirror/nhcontrib --revprop -r 10092      :=195      Found: 10092   By the way, can you find the huge perf boost here?     class Program&#xA;{&#xA;    static void Main(string[] args)&#xA;    {&#xA;        string path = args[0]; // &quot;//mirror/nhcontrib&quot;&#xA;        var revisionToSearchFor = int.Parse(args[1]); // 195&#xA;        string logAsXml = ExecuteProcessAndReturnOutput(&quot;log --xml &quot;&#x2B; path);&#xA;        var doc = new XmlDocument();&#xA;        doc.LoadXml(logAsXml);&#xA;        var list = new ArrayList();&#xA;        foreach (var node in doc.SelectNodes(&quot;/log/logentry/@revision&quot;))&#xA;        {&#xA;            list.Add(node);&#xA;        }&#xA;        for (int i = 0; i &lt; list.Count;i&#x2B;&#x2B; )&#xA;        {&#xA;            XmlNode node = (XmlNode)list[i];&#xA;            int revision = int.Parse(node.Value);&#xA;            string output = ExecuteProcessAndReturnOutput(&quot;propget svm:headrev &quot; &#x2B; path &#x2B; &quot; --revprop -r &quot; &#x2B; revision);&#xA;            if (string.IsNullOrEmpty(output.Trim()) == false)&#xA;            {&#xA;                var currentRevision = int.Parse(output.Split(&#x27;:&#x27;)[1].Trim());&#xA;                Console.WriteLine(&quot;:=&quot; &#x2B; currentRevision);&#xA;                if (currentRevision == revisionToSearchFor)&#xA;                {&#xA;                    Console.WriteLine(&quot;Found: &quot; &#x2B; revision);&#xA;                    return;&#xA;                }&#xA;                i &#x2B;= (currentRevision - revisionToSearchFor -1);&#xA;            }&#xA;        }&#xA;    }&#xA;&#xA;    public static string ExecuteProcessAndReturnOutput(string args)&#xA;    {&#xA;        var output = new StringBuilder();&#xA;        string err = null;&#xA;        var psi = new ProcessStartInfo&#xA;                      {&#xA;                          FileName = @&quot;c:\Program Files\svk\svk.bat&quot;,&#xA;                          Arguments = args,&#xA;                          RedirectStandardOutput = true,&#xA;                          RedirectStandardError = true,&#xA;                          CreateNoWindow = true,&#xA;                          UseShellExecute = false&#xA;                      };&#xA;        Console.WriteLine(&quot;exec: svk &quot;&#x2B; args);&#xA;        Process svk = Process.Start(psi);&#xA;        ThreadPool.QueueUserWorkItem(delegate&#xA;        {&#xA;            err = svk.StandardError.ReadToEnd();&#xA;        });&#xA;        ThreadPool.QueueUserWorkItem(delegate&#xA;        {&#xA;            string line;&#xA;            while ((line = svk.StandardOutput.ReadLine()) != null)&#xA;            {&#xA;                Debug.WriteLine(line);&#xA;                output.AppendLine(line);&#xA;            }&#xA;        });&#xA;        svk.WaitForExit();&#xA;        if (string.IsNullOrEmpty(err) == false)&#xA;            throw new InvalidOperationException(err);&#xA;        svk.WaitForExit();&#xA;        Thread.Sleep(500);&#xA;        return output.ToString();&#xA;    }&#xA;}</p>
+        </article>
+        <article id="article-6742">
+            <a href="https://ayende.com/blog/3300/rhino-mocks-new-feature-persistent-mock-repository" target="_blank">
+                <h2 class="title mb-6" id="article-6742">Rhino Mocks new feature: Persistent Mock Repository</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 04, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is something that most people just don&#x27;t think about, but it hits some people at the high end. Rhino Mocks is extremely efficient mocking framework, for just about any scenario. However, when it comes the time to mock large amount of interfaces (where large is in the hundreds to thousands), or if you have large interfaces (with dozens or hundreds of methods), it is costly to create the mocks. Rhino Mocks does some caching internally, but it is noticeable issue to some people.  We are talking about an extra second or two for even most pathological cases here, so in general it wouldn&#x27;t warrant anything special from the library, except that there is a twist to that. Under the debugger, the amount of time spent actually generating the mock can go up by several orders of magnitudes. To add insult to injury, Visual Studio 2005 has several bugs in the debugger that will cause it to crush &amp; burn under several such scenarios.  Karl Lew has been kind enough to not only provide a patch for Rhino Mocks to help this problem, but also document it.  Thanks, and sorry for taking so long to get to it.</p>
+        </article>
+        <article id="article-6743">
             <a href="https://ayende.com/blog/3299/solving-the-impendence-mismatch-between-hierarchical-data-and-xml" target="_blank">
-                <h2 class="title mb-6" id="article-6741">Solving the impendence mismatch between Hierarchical Data and XML</h2>
+                <h2 class="title mb-6" id="article-6743">Solving the impendence mismatch between Hierarchical Data and XML</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was very impressed when I saw how Subversion handles the complexity of having data of hierarchical nature that needs to be serialized to XML. Check this out.     &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;&#xA;&lt;S:editor-report xmlns:S=&quot;svn:&quot;&gt;&#xA;  &lt;S:target-revision rev=&quot;11&quot;/&gt;&#xA;  &lt;S:open-root rev=&quot;-1&quot;/&gt;&#xA;  &lt;S:open-directory name=&quot;tags&quot; rev=&quot;-1&quot;/&gt;&#xA;  &lt;S:add-directory name=&quot;tags/asd&quot;/&gt;&#xA;  &lt;S:close-directory/&gt;&#xA;  &lt;S:close-directory/&gt;&#xA;  &lt;S:close-directory/&gt;&#xA;&lt;/S:editor-report&gt;&#xA;&#xA;&#xA;And here is another one:&#xA;&#xA;&#xA;  &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;&#xA;&lt;S:editor-report xmlns:S=&quot;svn:&quot;&gt;&#xA;  &lt;S:target-revision rev=&quot;15&quot;/&gt;&#xA;  &lt;S:open-root rev=&quot;-1&quot;/&gt;&#xA;  &lt;S:open-directory name=&quot;trunk&quot; rev=&quot;-1&quot;/&gt;&#xA;  &lt;S:open-file name=&quot;trunk/a.txt&quot; rev=&quot;-1&quot;/&gt;&#xA;  &lt;S:apply-textdelta checksum=&quot;eabc96676e7defda414a1eed33bdfb09&quot;&gt;&#xA;    U1ZOAAAQEwETk2FzZDENCjINCjMNCjQNCjUNCjY=&#xA;  &lt;/S:apply-textdelta&gt;&#xA;  &lt;S:close-file checksum=&quot;c6301e5dad1330a7b9bd5491702c801b&quot;/&gt;&#xA;  &lt;S:close-directory/&gt;&#xA;  &lt;S:close-directory/&gt;&#xA;&lt;/S:editor-report&gt;&#xA;&#xA;&#xA;I was, as they say incredibly happy with this Work Time Fun.</p>
         </article>
-        <article id="article-6742">
+        <article id="article-6744">
             <a href="https://ayende.com/blog/3298/go-with-high-end-solutions" target="_blank">
-                <h2 class="title mb-6" id="article-6742">Go with High End Solutions</h2>
+                <h2 class="title mb-6" id="article-6744">Go with High End Solutions</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">About a year and a half ago, I start an exciting new project (there is a demo of the actual project here). The actual application is fairly complex, and has some it gave me the chance to explore some very interesting ideas. Rhino Security is a generalization of the security scheme used in this project, and it is pretty much the driving force for Rhino Igloo. But that is not what I want to talk about.&#xA;What I do want to talk about is the infrastructure that we used for the project. We used IoC, OR/M, AoP, MVC and many other buzz worthy TLD. It was the first time that I had the chance in implementing real high end complexity reduction techniques. I left the team 10 months ago. In the meantime, the application was under active development, got a few new team members and had two major releases.&#xA;I am really proud of that system.&#xA;A few weeks ago I got a phone call from the current team lead, asking me about the windsor.boo file that is sitting there. The last time anyone touched it was shortly after I left, after which, it just... existed. I had the chance to do a code review on the new stuff that the team developed, about three months ago. I couldn&#x27;t find any real difference between the code develop before and after I left.&#xA;Anyway, I had to spend 15 minutes on the phone, explaining the process that was going on there. Before I left (and during the time I was the team lead), I made sure that I passed on all the knowledge that I had about the system, the design decisions and the overall picture. However, there was a period of nearly three months in which I forgot that we even had this infrastructure, because we hadn&#x27;t have to deal with it for that time period. After I left...&#xA;&#xA;  9 months.&#xA;&#xA;  2 major releases.&#xA;&#xA;  Zero issues with the infrastructure.&#xA;&#xA;I asked the team lead what she thinks about that. Since it is her project now, and if she thinks that it was the right decision to make. She love the infrastructure, and wouldn&#x27;t hear about using a lower end solution. Most of what we did was actually going over the file and explaining historical decisions, for that matter.&#xA;As an additional data point, I was able to look at a piece of code I have last seen over a year ago and figure out not only what it does, but the how and why of it with no ramp up time.&#xA;I consider this a success.</p>
         </article>
-        <article id="article-6743">
+        <article id="article-6745">
             <a href="https://ayende.com/blog/3297/how-to-test-this" target="_blank">
-                <h2 class="title mb-6" id="article-6743">How to test this?</h2>
+                <h2 class="title mb-6" id="article-6745">How to test this?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have an interesting problem. I am currently working on adding sync support to SvnBridge. This mostly involves tracking down what SVN does and duplicating it myself. There isn&#x27;t that many new code (I had to add a class and a method). I have nothing that I can _unit_ test. Oh, I could probably craft something, but I am reluctant to mock the world when what I want is to test the actual integration between the SVN client and the TFS server.&#xA;The problem is that I have no real way of testing this. Why do I mean by that? syncing is an operation that works over the entire repository, from start to finish. I can&#x27;t perform an integration test, because that would take too long in most scenarios. I would need to setup a whole new TFS server per test. Not really a good solution, no matter how you turn the dice. And the other problem is that I need a rich set of situations to actually test this.&#xA;Right now I am driving that by going against the production CodePlex servers, and trying to see if I can get all the information from there. This is incredibly valuable, because it gives me access to a lot of source control practices that are out there, and expose a lot of false assumptions. But I can&#x27;t write tests for those, because they are too big a scenario.&#xA;I can probably set an integration test that would execute against the production servers (they are publicly exposed, after all, so no issue there), but I am... less than thrill about having a single test that can potentially run for hours or days.&#xA;Right now I think that I am leaning toward partial fake of both the client and the server. That is, create a set of input values which, while not being the real world values, would still test that logic.&#xA;Considering that the actual interaction we are talking about take place over many requests, this is tricky, but possible.&#xA;Suggestions?</p>
         </article>
-        <article id="article-6744">
+        <article id="article-6746">
             <a href="https://ayende.com/blog/3296/avoid-retrofitting-unit-tests" target="_blank">
-                <h2 class="title mb-6" id="article-6744">Avoid retrofitting unit tests</h2>
+                <h2 class="title mb-6" id="article-6746">Avoid retrofitting unit tests</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was asked this a few days ago, should we spend time creating proper unit tests for our code?&#xA;The team in question already have a set of integration tests, but very few tests that qualify as unit tests.&#xA;My response was rambling and long, but it can be put down to the following statement: TDD is a design technique, not a testing technique. TDD, and especially test first, have the nice side affect of leaving tests as part of the process, which can be incredibly helpful when you are working with the code. But retrofitting tests? That tends to be a waste of time.&#xA;Writing a unit test before touching the code is absolutely the way to go, but going and adding unit tests, as a task of its own? I don&#x27;t see the value in that.&#xA;If you have integration tests there, that tends to be good enough, and you will write unit tests when you change the code, so eventually you&#x27;ll have enough unit tests ( eventually you will have enough unit tests on the hot spots ).</p>
         </article>
-        <article id="article-6745">
+        <article id="article-6747">
             <a href="https://ardalis.com/comments-in-code-indicate-functions-trying-to-escape/" target="_blank">
-                <h2 class="title mb-6" id="article-6745">Comments in Code Indicate Functions Trying To Escape</h2>
+                <h2 class="title mb-6" id="article-6747">Comments in Code Indicate Functions Trying To Escape</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I interviewed a couple of college students earlier this week for internship positions with Lake Quincy Media, and one of them reminded me of&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6746">
+        <article id="article-6748">
             <a href="https://ayende.com/blog/3295/playing-with-numbers" target="_blank">
-                <h2 class="title mb-6" id="article-6746">Playing with numbers</h2>
+                <h2 class="title mb-6" id="article-6748">Playing with numbers</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For some reason, it looks like it is a good day to be impressed by numbers, here it the most interesting one...&#xA;&#xA;And here is the reason you don&#x27;t want to use the file system as your database:</p>
         </article>
-        <article id="article-6747">
+        <article id="article-6749">
             <a href="https://ayende.com/blog/3294/dynamic-mapping-with-nhibernate" target="_blank">
-                <h2 class="title mb-6" id="article-6747">Dynamic Mapping with NHibernate</h2>
+                <h2 class="title mb-6" id="article-6749">Dynamic Mapping with NHibernate</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A while ago I posted how to handle dynamic mapping with Active Record, it was incredibly easy to do, because Active Record has a lot of smarts internally, and output the XML, on top of which NHibernate adds quite a bit of convention over configuration as well. Doing the same using NHibernate directly is possible, but a bit long winded. Here is the sample code, which link all the Employee properties to the correct entity:     Configuration cfg = new Configuration()&#xA;    .AddAssembly(typeof (Employee).Assembly)&#xA;    .AddAssembly(typeof(ScheduledTask).Assembly);&#xA;Mappings mappings = cfg.CreateMappings();&#xA;foreach (PersistentClass persistentClass in mappings.Classes)&#xA;{&#xA;    if (persistentClass.MappedClass.GetProperty(&quot;Employee&quot;) == null)&#xA;        continue;&#xA;    Property prop = new Property();&#xA;    PersistentClass employeeClass = cfg.GetClassMapping(typeof (Employee));&#xA;    Table table = employeeClass.Table;&#xA;    ManyToOne value = new ManyToOne(table);&#xA;    value.ReferencedEntityName = typeof (Employee).FullName;&#xA;    Column column = new Column(&quot;Employee&quot;);&#xA;    value.AddColumn(column);&#xA;    prop.Value = value;&#xA;    prop.Name = &quot;Employee&quot;;&#xA;    prop.PersistentClass = employeeClass;&#xA;    persistentClass.AddProperty(prop);&#xA;    persistentClass.Table.AddColumn(column);&#xA;    persistentClass.Table.CreateForeignKey(&quot;FK_EmployeeTo&quot; &#x2B; persistentClass.MappedClass.Name,&#xA;                                           new Column[] {column,}, typeof (Employee).FullName);&#xA;}&#xA;cfg.BuildSessionFactory();&#xA;new SchemaExport(cfg).Execute(true, true, false, true);&#xA;&#xA;&#xA;As you can see, there is a lot that needs to be done, we have to tell NHibernate a lot of things it would generally be able to figure out on its own. We can shove this to an extension method and get really nice syntax:&#xA;&#xA;&#xA;  public static void MapManyToOne&lt;TEntityInterface, TEntity&gt;(this Configuration cfg)&#xA;{&#xA;    Mappings mappings = cfg.CreateMappings();&#xA;    foreach (PersistentClass persistentClass in mappings.Classes)&#xA;    {&#xA;        var propertyNames = new List&lt;string&gt;();&#xA;        foreach (PropertyInfo property in persistentClass.MappedClass.GetProperties())&#xA;        {&#xA;            if (property.PropertyType == typeof (TEntityInterface))&#xA;            {&#xA;                propertyNames.Add(property.Name);&#xA;            }&#xA;        }&#xA;        if (propertyNames.Count == 0)&#xA;            continue; &#xA;&#xA;        var prop = new Property();&#xA;        PersistentClass targetClass = cfg.GetClassMapping(typeof (TEntity)); &#xA;&#xA;        foreach (string propertyName in propertyNames)&#xA;        {&#xA;            Table table = targetClass.Table;&#xA;            var value = new ManyToOne(table);&#xA;            value.ReferencedEntityName = typeof (TEntity).FullName;&#xA;            var column = new Column(propertyName);&#xA;            value.AddColumn(column);&#xA;            prop.Value = value;&#xA;            prop.Name = propertyName;&#xA;            prop.PersistentClass = targetClass;&#xA;            persistentClass.AddProperty(prop);&#xA;            persistentClass.Table.AddColumn(column);&#xA;            string fkName = string.Format(&quot;FK_{0}To{1}&quot;, propertyName, persistentClass.MappedClass.Name);&#xA;            persistentClass.Table.CreateForeignKey(fkName,&#xA;                                                   new[] {column,}, typeof (TEntity).FullName);&#xA;        }&#xA;    }&#xA;}&#xA;&#xA;&#xA;Now we can use this with the following syntax:&#xA;&#xA;&#xA;  cfg.MapManyToOne&lt;IEmployee, Employee&gt;();&#xA;&#xA;&#xA;Which is much nicer.</p>
         </article>
-        <article id="article-6748">
+        <article id="article-6750">
             <a href="https://ayende.com/blog/3293/the-single-line-bug-fix" target="_blank">
-                <h2 class="title mb-6" id="article-6748">The single line bug fix</h2>
+                <h2 class="title mb-6" id="article-6750">The single line bug fix</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -238,38 +270,6 @@
                 posted on: May 01, 2008
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It is amazing how much time you can hunt for the exact cause of a bug. In this case, it took me almost two days (intersperse with other work, however) to track down and find the issue.  Remember, there is no reason to use ASCII, ever. I actually run a blame on the code (a new feature for SvnBridge!) to find out who wrote it. And then I sent a nasty email about it to /dev/null, just to clear my mind.</p>
-        </article>
-        <article id="article-6749">
-            <a href="https://ardalis.com/techbash-is-coming-to-pa/" target="_blank">
-                <h2 class="title mb-6" id="article-6749">TECHbash is Coming to PA</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 30, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In just 10 days (May 10th, 2008), TECHbash 2008 will kick off in northeastern Pennsylvania. The show has been around since 2005 and will&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-6750">
-            <a href="https://ayende.com/blog/3292/extreme-patterns-video" target="_blank">
-                <h2 class="title mb-6" id="article-6750">Extreme Patterns Video</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 30, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was asked a few times about recording a course, so I think that a few people would be happy to know that Glenn Block has posted a discussions that we had about a month ago.&#xA;You can find it here</p>
         </article>
         <div class="button flex justify-between">
             <a href="674.html"><span class="back arrow"></span></a>
