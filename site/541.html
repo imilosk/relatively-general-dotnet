@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5401">
+            <a href="https://ayende.com/blog/4422/is-select-system-uri-broken" target="_blank">
+                <h2 class="title mb-6" id="article-5401">Is select (System.Uri) broken?</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 04, 2010
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I can&#x2019;t really figure out what is going on!  Take a look:       The value :  http://localhost:58080/indexes/categoriesByName?query=CategoryName%3ABeverages&amp;start=0&amp;pageSize=25  And the problem is that I can&#x2019;t figure out why calling this once would fail, but calling it the second time would fail. That is leaving aside the fact this looks like a pretty good url to me.  Any ideas? This is perfectly reproducible on one project, but I can&#x2019;t reproduce this on another project.  Updates:     This is System.Uri    The issue that it fails the first time, and works the second!    The exception is:    System.ArgumentNullException: Value cannot be null.     Parameter name: str      &#xA0;&#xA0; at System.Security.Permissions.FileIOPermission.HasIllegalCharacters(String[] str)      &#xA0;&#xA0; at System.Security.Permissions.FileIOPermission.AddPathList(FileIOPermissionAccess access, AccessControlActions control, String[] pathListOrig, Boolean checkForDuplicates, Boolean needFullPath, Boolean copyPathList)      &#xA0;&#xA0; at System.Security.Permissions.FileIOPermission..ctor(FileIOPermissionAccess access, String path)      &#xA0;&#xA0; at System.Uri.ParseConfigFile(String file, IdnScopeFromConfig&amp; idnStateConfig, IriParsingFromConfig&amp; iriParsingConfig)      &#xA0;&#xA0; at System.Uri.GetConfig(UriIdnScope&amp; idnScope, Boolean&amp; iriParsing)      &#xA0;&#xA0; at System.Uri.InitializeUriConfig()      &#xA0;&#xA0; at System.Uri.InitializeUri(ParsingError err, UriKind uriKind, UriFormatException&amp; e)      &#xA0;&#xA0; at System.Uri.CreateThis(String uri, Boolean dontEscape, UriKind uriKind)      &#xA0;&#xA0; at System.Uri..ctor(String uriString)      &#xA0;&#xA0; at Raven.Scenarios.Scenario.GetUri_WorkaroundForStrangeBug(String uriString) in C:\Work\ravendb\Raven.Scenarios\Scenario.cs:line 155    This is a console application.   Okay, I can reproduce this now, here it how it got there:     public class Strange : MarshalByRefObject&#xA;{&#xA;    public void WTF()&#xA;    {&#xA;        Console.WriteLine(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile);&#xA;        new Uri(&quot;http://localhost:58080/indexes/categoriesByName?query=CategoryName%3ABeverages&amp;start=0&amp;pageSize=25&quot;);&#xA;    }&#xA;}&#xA;&#xA;public class Program&#xA;{&#xA;    private static void Main()&#xA;    {&#xA;        var instanceAndUnwrap = (Strange) AppDomain.CreateDomain(&quot;test&quot;, null, new AppDomainSetup&#xA;        {&#xA;            ConfigurationFile = &quot;&quot;&#xA;        }).CreateInstanceAndUnwrap(&quot;ConsoleApplication5&quot;, &quot;ConsoleApplication5.Strange&quot;);&#xA;        instanceAndUnwrap.WTF();&#xA;    }&#xA;}&#xA;  &#xA;&#xA;That took some time to figure out.&#xA;&#xA;The reason that I got this issue is that I am running this code as part of a unit test, and the xUnit seems to be running my system under the following conditions.</p>
+        </article>
+        <article id="article-5402">
             <a href="https://ayende.com/blog/4421/scenario-based-testing-in-rhino-divandb" target="_blank">
-                <h2 class="title mb-6" id="article-5401">Scenario based testing in Rhino DivanDB</h2>
+                <h2 class="title mb-6" id="article-5402">Scenario based testing in Rhino DivanDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is a unit test testing Rhino DivanDB:         Here is a test that tests the same thing, using scenario based approach:     What are those strange files? Well, let us take a pick at the first one:              0_PutDoc.request        0_PutDoc.response                           PUT /docs HTTP/1.1            Content-Length: 283           {            &#xA0;&#xA0;&#xA0; &quot;_id&quot;: &quot;ayende&quot;,             &#xA0;&#xA0;&#xA0; &quot;email&quot;: &quot;ayende@ayende.com&quot;,             &#xA0;&#xA0;&#xA0; &quot;projects&quot;: [             &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;rhino mocks&quot;,             &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;nhibernate&quot;,             &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;rhino service bus&quot;,             &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;rhino divan db&quot;,             &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;rhino persistent hash table&quot;,             &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;rhino distributed hash table&quot;,             &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;rhino etl&quot;,             &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;rhino security&quot;,             &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &quot;rampaging rhinos&quot;             &#xA0;&#xA0;&#xA0; ]             }                        HTTP/1.1 201 Created            Connection: close             Content-Length: 15             Content-Type: application/json; charset=utf-8             Date: Sat, 27 Feb 2010 08:12:08 GMT             Server: Kayak           {&quot;id&quot;:&quot;ayende&quot;}                     Those are just test files, corresponding to the request and the expected response.  RBD&#x2019;s turn those into tests, by issuing each request in turn and asserting on the actual output. This is slightly more complicated than it seems, because some requests contains things like dates, or generated guids. The scenario runner is aware of those and resolve those automatically. Another issue is dealing with potentially stale requests, especially because we are issuing requests on the same data immediately Again, this is something that the scenario runner handles internally, and we don&#x2019;t have to worry about it.  There are some things here that may not be immediately apparent. We are doing pure state base testing, in fact, this is black box testing. The scenarios define the external API of the system, which is a nice addition.  We don&#x2019;t care about the actual implementation, look at the unit test, we need to setup a db instance, start the background threads, etc. If I modify the DocumentDatabase constructor, or the initialization process, I need to touch each test that uses it. I can try to encapsulate that, but in many cases, you really can&#x2019;t do that upfront. SpinBackgroundWorkers, for example, is something that is required in only some of the unit tests, and it is a late addition. So I would have to go and add it to each of the tests that require it.   Because the scenarios don&#x2019;t have any intrinsic knowledge about the server, any require change is something that you would have to do in a single location, nothing more.  Users can send me a failure scenarios. I am using this extensively with NH Prof (InitializeOfflineLogging), and it is amazing. When a user runs into a problem, I can tell them, please send me a Fiddler trace of the issue, and I can turn that into a repeatable test in a matter of moments.  I actually thought about using Fiddler&#x2019;s saz files as the format for my scenarios, but I would have to actually understand them first. :-) It doesn&#x2019;t look hard, but flat files seemed easier still.  Actually, I went ahead and made the modification, because now i have even less friction, just record a Fiddler session, drop it in a folder, and I have a test. Turned out that the Fiddler format is very easy to work with.</p>
         </article>
-        <article id="article-5402">
+        <article id="article-5403">
             <a href="https://ayende.com/blog/4420/challenge-robust-enumeration-over-external-code" target="_blank">
-                <h2 class="title mb-6" id="article-5402">Challenge</h2>
+                <h2 class="title mb-6" id="article-5403">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is an interesting little problem:     public class Program&#xA;{&#xA;    private static void Main()&#xA;    {&#xA;        foreach (int i in RobustEnumerating(Enumerable.Range(0, 10), FaultyFunc))&#xA;        {&#xA;            Console.WriteLine(i);&#xA;        }&#xA;    }&#xA;&#xA;    public static IEnumerable&lt;T&gt; RobustEnumerating&lt;T&gt;(&#xA;        IEnumerable&lt;T&gt; input,Func&lt;IEnumerable&lt;T&gt;, IEnumerable&lt;T&gt;&gt; func)&#xA;    {&#xA;        // how to do this?&#xA;        return func(input);&#xA;&#xA;    }&#xA;&#xA;    public static IEnumerable&lt;int&gt; FaultyFunc(IEnumerable&lt;int&gt; source)&#xA;    {&#xA;        foreach (int i in source)&#xA;        {&#xA;            yield return i/(i%2);&#xA;        }&#xA;    }&#xA;}&#xA;  &#xA;&#xA;This code should not throw, but print: &#xA;&#xA;&#xA;  1&#xA;    3&#xA;&#xA;    5&#xA;&#xA;    7&#xA;&#xA;    9&#xA;&#xA;&#xA;Can you make this happen? You can only change the RobustEnumerating method, nothing else in the code</p>
         </article>
-        <article id="article-5403">
+        <article id="article-5404">
             <a href="https://ardalis.com/open-visual-studio-files-as-administrator/" target="_blank">
-                <h2 class="title mb-6" id="article-5403">Open Visual Studio Files As Administrator</h2>
+                <h2 class="title mb-6" id="article-5404">Open Visual Studio Files As Administrator</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Working with IIS as your web server, or working with Azure projects, are two examples of situations in which Visual Studio (2008&#x2B;) needs to&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5404">
+        <article id="article-5405">
             <a href="https://ayende.com/blog/4419/git-is-teh-suck" target="_blank">
-                <h2 class="title mb-6" id="article-5404">Git is teh SUCK</h2>
+                <h2 class="title mb-6" id="article-5405">Git is teh SUCK</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today, I had two separate incidents in which my git repository was corrupted! To the point that nothing, git fsck or git reflog or git just-work-or-i-WILL-shoot-you didn&#x2019;t work.  The first time, there was no harm done, I just cloned my repository again, and moved on. The second time that it happened, it was after I had ~10 commits locally that weren&#x2019;t pushed. I had my working copy intact, but I didn&#x2019;t want to lose the history. I asked around, and got a couple of suggestion to move to mercurial instead, because git has no engineering behind it.  Based on that feedback, I &#x2026;  Oh, wait, it isn&#x2019;t this sort of a post.  What I actually did was setup Process Monitor and watched what git.exe was actually doing. I noticed that it was searching for a .git/objects directory, and couldn&#x2019;t find it anywhere in the path. Indeed, looking there myself, it appeared clear that there was no objects directory under the .git dir. And checking in other repositories showed that they had it. So now I knew why, but I still had no idea who the #*@# decided to randomly @#$%( my repository, totally derailing my productivity.  That is where having multiple personalities come in handy, he did it. The one that isn&#x2019;t writing this blog post, at some point during the day, there was a need to zip the repository and send it somewhere. Since the working copy is full of crap, that idiot issued the following:      ls -R obj | rm &#x2013;F    ls -R bin | rm &#x2013;F   (Not the exact commands, the idiot used the UI to do a search &amp; delete).   You can guess the following from there. At this point, having come to this astounding discovery, I heroically went to the recycle bin, found the objects directory there, and rescued it! All is well, except that there is still a thrashing for uncommon stupidity owed.  And remember, it wasn&#x2019;t me, it was the other one who did that!  And yes, the spelling mistake in the title is intentional.</p>
         </article>
-        <article id="article-5405">
+        <article id="article-5406">
             <a href="https://ardalis.com/612/" target="_blank">
-                <h2 class="title mb-6" id="article-5405">Eliminate Repetition with Action&lt;T&gt;</h2>
+                <h2 class="title mb-6" id="article-5406">Eliminate Repetition with Action&lt;T&gt;</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday I was looking at some old code and refactoring it to clean it up (in this case I wasn&#x2019;t the original author, but I&#x2019;ve written code&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5406">
+        <article id="article-5407">
             <a href="https://ayende.com/blog/4418/dotnetrocks-on-domain-specific-languages" target="_blank">
-                <h2 class="title mb-6" id="article-5406">DotNetRocks on Domain Specific Languages</h2>
+                <h2 class="title mb-6" id="article-5407">DotNetRocks on Domain Specific Languages</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last week I recorded a DNR session about Domain Specific Languages.  I also talked just a bit about writing your own DSL, some challenges that I run into since the book, the Boo language and why it is suitable for DSLs and how the entire process works.   Looking forward for your comments.</p>
         </article>
-        <article id="article-5407">
+        <article id="article-5408">
             <a href="https://ayende.com/blog/4417/where-do-git-repositories-go-when-they-die" target="_blank">
-                <h2 class="title mb-6" id="article-5407">Where do git repositories go when they die?</h2>
+                <h2 class="title mb-6" id="article-5408">Where do git repositories go when they die?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My RDB repository started giving me this error;     fatal: Not a git repository (or any of the parent directories): .git   I don&#x2019;t think that I did anything to it, but it is still dead.     Any ideas how to recover this?  Update: Found why Git doesn&#x27;t like my repository, it doesn&#x27;t have .git\objects, but I have no idea where it could have gone to&#x2026; or why.</p>
         </article>
-        <article id="article-5408">
+        <article id="article-5409">
             <a href="https://ayende.com/blog/4416/rhino-divandb-a-full-coding-sample-embedded" target="_blank">
-                <h2 class="title mb-6" id="article-5408">Rhino DivanDB &#x2013; A full coding sample &#x2013; Embedded</h2>
+                <h2 class="title mb-6" id="article-5409">Rhino DivanDB &#x2013; A full coding sample &#x2013; Embedded</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Rhino Divan DB is going to come in at least two forms, embedded, and remote. The following is a full example of starting DivanDB, defining a view, adding some documents and then querying the database.  Note that here we want to ensure that we get the most up to date result, so we refuse to accept a potentially stale query.     This outputs the right result, by the way :-)</p>
         </article>
-        <article id="article-5409">
+        <article id="article-5410">
             <a href="https://ardalis.com/sqlite-error-idbcommand-and-idbconnection-implementation-in-the-assembly-system-data-sqlite-could-not-be-found/" target="_blank">
-                <h2 class="title mb-6" id="article-5409">SQLite Error IDbCommand and IDbConnection implementation in the assembly System.Data.SQLite could not be found.</h2>
+                <h2 class="title mb-6" id="article-5410">SQLite Error IDbCommand and IDbConnection implementation in the assembly System.Data.SQLite could not be found.</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: February 26, 2010
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just ran into a problem with SQLite and NHibernate, which was giving me this error message: The IDbCommand and IDbConnection&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-5410">
-            <a href="https://ardalis.com/untrusted-projects-and-blocked-files-in-visual-studio/" target="_blank">
-                <h2 class="title mb-6" id="article-5410">Untrusted Projects and Blocked Files in Visual Studio</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 25, 2010
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was just trying to open a project I was emailed as a zip file from a colleague. VS2010 opens up saying:  Which is fine&#x2026; but in this case I&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="540.html"><span class="back arrow"></span></a>

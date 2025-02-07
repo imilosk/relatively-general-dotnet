@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5831">
+            <a href="https://ayende.com/blog/4040/nhibernate-coarse-grained-locks" target="_blank">
+                <h2 class="title mb-6" id="article-5831">NHibernate &#x2013; Coarse Grained Locks</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 30, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the challenges that DDD advocates face when using an OR/M is the usage of Coarse Grained Locks on Aggregate Roots, I&#x2019;ll leave the discussion of you would want to do that to Fowler and Evans, but it seems that a lot of people run into a lot of problems with this.   It is actually not complicated at all, all you have to do is call:     session.Lock(person, LockMode.Force);   This will make NHibernate issue the following statement:     This allow us to update the version of the aggregate even if it wasn&#x2019;t actually changed.  Of course, if you wanted a physical lock, you can do that as well:     session.Lock(person, LockMode.Upgrade);   Which would result in:     Pretty easy, even if I say so myself.</p>
+        </article>
+        <article id="article-5832">
             <a href="https://ayende.com/blog/4039/poor-mans-guide-to-database-optimization-by-the-marquis-de-sade" target="_blank">
-                <h2 class="title mb-6" id="article-5831">Poor man&#x2019;s guide to database optimization - by the Marquis de Sade</h2>
+                <h2 class="title mb-6" id="article-5832">Poor man&#x2019;s guide to database optimization - by the Marquis de Sade</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the more common problems that I see over and over again in many applications is that test databases are too fast. As I have shown, this can easily lead to really sever cases of chattiness with the database, and all while the developer is totally oblivious.  This is especially true when you develop against a local database with almost no data, and deploy to a network database with lots of data. SELECT N&#x2B;1 is bad enough, but when N is in the hundreds or more, it gets bad. The main problem is that developers aren&#x2019;t really aware of that. This don&#x2019;t see the problem, or feel it. And while they could fix it if they caught it in time, trying to come back to an existing application and fix all the many places where they assumed database access is free is a daunting task.  Therefore, I have set out to solve the problem. Obviously it is a problem with the developers not paying attention, but how can we deal with that?  Well, you could buy the NHibernate Profiler, which is my official recommendation. Or, if you don&#x2019;t feel like spending money on this, you can utilize the following interceptor. That will make the developers sit up and notice when they start talking to the database.          public class SlowDownDudeInterceptor : EmptyInterceptor&#xA;{&#xA;    public override SqlString OnPrepareStatement(SqlString sql)&#xA;    {&#xA;        return sql.Insert(0, &quot;waitfor delay &#x27;0:0:0.5&#x27;&quot; &#x2B; Environment.NewLine);&#xA;    }&#xA;}&#xA;  &#xA;&#xA;&#xA;Don&#x2019;t go to production with this!</p>
         </article>
-        <article id="article-5832">
+        <article id="article-5833">
             <a href="https://ayende.com/blog/4038/why-defer-loading-in-entity-framework-isnt-going-to-work" target="_blank">
-                <h2 class="title mb-6" id="article-5832">Why Defer Loading in Entity Framework isn&#x2019;t going to work</h2>
+                <h2 class="title mb-6" id="article-5833">Why Defer Loading in Entity Framework isn&#x2019;t going to work</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When I finished reading this post I let out a heavy sigh. It is not going to work. Basically, the EF is going the same way that NHibernate was in NHibernate 1.0 (circa 2005!).  Let me show you how. in the post, the example given is:          public class Category&#xA;{&#xA;    public int CategoryID { get; set; }&#xA;    public string CategoryName { get; set; }&#xA;    public virtual List&lt;Product&gt; Products { get; set; }&#xA;    ...&#xA;}&#xA;  &#xA;&#xA;&#xA;This looks like it would work, right? The way the EF is doing this is by creating a proxy of your class (similar to the way that NHibernate is doing that) and intercepting the call to get_Products.&#xA;&#xA;It has a few problems, however. Let us start from the most obvious one, program to interface not to implementation. Exposing List&lt;T&gt; means that you have no control whatsoever about what is going on with the collection. It also means that they have to intercept the access to the property, not using the collection. That is bad, it means that they are going to have to do eager loading in all too many cases where NHibernate can just ignore it.&#xA;&#xA;Let us more on a bit, and talk about the inability to support any interesting scenario. If we look at collections with NHibernate, we can take this:&#xA;&#xA;&#xA;  &#xA;    Console.WriteLine(category.Products.Count);&#xA;  &#xA;&#xA;&#xA;To this SQL:&#xA;&#xA;&#xA;  &#xA;    select count(*) from Products&#xA;where CategoryId = 1&#xA;  &#xA;&#xA;&#xA;With the approach that the EF uses, they will have to load the entire collection.&#xA;&#xA;But all of those are just optimizations, not the make-or-break for the feature. Here is a common scenario that is going to break it:&#xA;&#xA;&#xA;  &#xA;    public class Category&#xA;{&#xA;    private List&lt;Product&gt; _products;&#xA;    public int CategoryID { get; set; }&#xA;    public string CategoryName { get; set; }&#xA;    public virtual List&lt;Product&gt; Products { get { return _products; } set { _products = value; } }&#xA;&#xA;    public void AddProduct(Product p)&#xA;    {&#xA;        // do something interesting here&#xA;        _products.Add(p);&#xA;    }&#xA;    ...&#xA;}&#xA;  &#xA;&#xA;&#xA;There is a reason why the default proxies for NHibernate force all members of the entities to be virtual. It is not just because we think everything should be virtual (it should, but that is not a discussion for now). It is all about being able to allow the user to use a real POCO.&#xA;&#xA;In the scenario outlined above, what do you think is going to happen? &#xA;&#xA;AddProduct is a non virtual method call, so it cannot be intercepted. Accessing the _products field also cannot be intercepted. &#xA;&#xA;The end result is a NullReferenceException that will seem to appear randomly, based on whatever something else touched the Property or not. And however nice auto properties are, there are plenty of reason to use fields. Using auto properties just mask the problem, but it is still there.&#xA;&#xA;Oh, and if we want to use our POCO class with EF, forget about the new operator, you have to use:&#xA;&#xA;&#xA;  &#xA;    Category category = context.CreateObject&lt;Category&gt;();&#xA;  &#xA;&#xA;&#xA;Hm, this just breaks just about anything that relies on creating new classes. Want to use your entity as parameter for ASP.Net MVC action, to be automatically bounded? Forget about it. You have to create your instances where you have access to the context, and that is a database specific thing, not something that you want to have all over the place.&#xA;&#xA;And I really liked this as well:&#xA;&#xA;&#xA;  The standard POCO entities we have talked about until now rely on snapshot based change tracking &#x2013; i.e. the Entity Framework will maintain snapshots of before values and relationships of the entities so that they can be compared with current values later during Save. However, this comparison is relatively expensive when compared to the way change tracking works with EntityObject based entities.&#xA;&#xA;&#xA;Hm, this is how NHibernate and Hibernate have always worked. Somehow, I don&#x2019;t see this showing up as a problem very often. &#xA;&#xA;Final thought, why is the EF calling it Defer Loading? Everyone else call it lazy loading.</p>
         </article>
-        <article id="article-5833">
+        <article id="article-5834">
             <a href="https://ardalis.com/regular-expressions-cookbook/" target="_blank">
-                <h2 class="title mb-6" id="article-5833">Regular Expressions Cookbook</h2>
+                <h2 class="title mb-6" id="article-5834">Regular Expressions Cookbook</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just received a notice that O&#x2019;Reilly is publishing a new Regular Expressions Cookbook. It&#x2019;s not available yet, so I can&#x2019;t offer a review&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5834">
+        <article id="article-5835">
             <a href="https://ayende.com/blog/4037/nhibernate-executable-dml" target="_blank">
-                <h2 class="title mb-6" id="article-5834">NHibernate &#x2013; Executable DML</h2>
+                <h2 class="title mb-6" id="article-5835">NHibernate &#x2013; Executable DML</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a new feature of NHibernate that Fabio has recently ported. Using the same model that I have talked about before:     With the following schema:     The feature is basically this, NHibernate can now execute set based operation on your model. This include all Data Modification Language operations, so we are talking about Update, Insert and Delete. Let us make things a bit interesting and talk about the following statement, which hopefully will make things clearer:          s.CreateQuery(&quot;update Owner o set o.Name = &#x27;a&#x27; where o.Name = &#x27;b&#x27;&quot;)&#xA;    .ExecuteUpdate();&#xA;  &#xA;&#xA;&#xA;Executing this code will make NHibernate execute the following SQL statements:&#xA;&#xA; &#xA;&#xA; &#xA;&#xA; &#xA;&#xA; &#xA;&#xA; &#xA;&#xA; &#xA;&#xA;As you can see, we have executed a very simple query against the model, which translate to a fairly complex data model (needing to update three separate tables. We can also see that we are doing significant effort to maintain the illusion of a single query (that is why we need the temp table here).&#xA;&#xA;But we are not limited to just updates, we can also do deletes:&#xA;&#xA;&#xA;  &#xA;    s.CreateQuery(&quot;delete Owner o where o.Name = &#x27;b&#x27;&quot;)&#xA;    .ExecuteUpdate();&#xA;  &#xA;&#xA;&#xA;Which result in:&#xA;&#xA; &#xA;&#xA; &#xA;&#xA; &#xA;&#xA; &#xA;&#xA; &#xA;&#xA; &#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;I think that by now you are already familiar with the pattern :-)&#xA;&#xA;As for insert statements, they are supported as well, but there are some limitations. In particular, you have to use an identifiers generation strategy that can generate identifiers in the database (sequence or identity), and there are some limitation on how you can make this work in several complex hierarchies. Using a simple Table Per Class, the following HQL works:&#xA;&#xA;&#xA;  &#xA;    s.CreateQuery(&quot;insert into Individual (Name, Email) select i.Name, i.Email from Individual i&quot;)&#xA;    .ExecuteUpdate();&#xA;  &#xA;&#xA;&#xA;And generates:&#xA;&#xA; &#xA;&#xA;All in all, this is a really awesome feature.&#xA;&#xA;Thanks, Fabio.</p>
         </article>
-        <article id="article-5835">
+        <article id="article-5836">
             <a href="https://ardalis.com/teched-2009-session-aftermath/" target="_blank">
-                <h2 class="title mb-6" id="article-5835">TechEd 2009 Session Aftermath</h2>
+                <h2 class="title mb-6" id="article-5836">TechEd 2009 Session Aftermath</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m a bit later than usual in posting my slides and demos from my talks, and for that I apologize. TechEd this year was a lot of fun, albeit&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5836">
+        <article id="article-5837">
             <a href="https://ardalis.com/vista-disconnect-from-network-share-or-unc-path/" target="_blank">
-                <h2 class="title mb-6" id="article-5836">Vista Disconnect From Network Share or UNC Path</h2>
+                <h2 class="title mb-6" id="article-5837">Vista Disconnect From Network Share or UNC Path</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Occasionally I&#x27;ll try to connect to a UNC share or network device and I&#x27;ll forget my proper username and password for the device (NAS&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5837">
+        <article id="article-5838">
             <a href="https://ayende.com/blog/4036/a-good-refactoring-session-is" target="_blank">
-                <h2 class="title mb-6" id="article-5837">A good refactoring session is&#x2026;</h2>
+                <h2 class="title mb-6" id="article-5838">A good refactoring session is&#x2026;</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One in which I get to remove a lot of code. Here is a particularly interesting tidbits, SqlStatement is one of the core classes in NH Prof, look what I did to it:     For those of you not used to reading diffs, the orange marking on the side bars are removed lines. It dropped from a 484 lines to 153.</p>
         </article>
-        <article id="article-5838">
+        <article id="article-5839">
             <a href="https://ayende.com/blog/4035/challenge-find-the-bug" target="_blank">
-                <h2 class="title mb-6" id="article-5838">Challenge</h2>
+                <h2 class="title mb-6" id="article-5839">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This piece of code caused a crashing bug on a QA server ( and we are lucky it didn&#x2019;t go to production ).&#xA; &#xA;Can you spot the bug?&#xA;I will give you a hint, it is the code that isn&#x2019;t there.</p>
         </article>
-        <article id="article-5839">
+        <article id="article-5840">
             <a href="https://ayende.com/blog/4034/nhibernate-why-do-we-need-to-specify-the-query-type-twice" target="_blank">
-                <h2 class="title mb-6" id="article-5839">NHibernate</h2>
+                <h2 class="title mb-6" id="article-5840">NHibernate</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: May 25, 2009
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Why do we have to do something like that?          var blogs = s.CreateCriteria&lt;Blog&gt;()&#xA;    .Add(Restrictions.Eq(&quot;Title&quot;, &quot;Ayende @ Rahien&quot;))&#xA;    .List&lt;Blog&gt;();&#xA;  &#xA;&#xA;&#xA;We have to specify Blog twice, isn&#x2019;t that redundant?&#xA;&#xA;Yes and no. The problem is that we can&#x2019;t assume that we are going to return instances of Blog. For example:&#xA;&#xA;&#xA;  &#xA;    var blogs = s.CreateCriteria&lt;Blog&gt;()&#xA;    .Add(Restrictions.Eq(&quot;Title&quot;, &quot;Ayende @ Rahien&quot;))&#xA;    .SetProjection(Projections.Id())&#xA;    .List&lt;int&gt;();</p>
-        </article>
-        <article id="article-5840">
-            <a href="https://ayende.com/blog/4033/nh-prof-why-you-should-use-it" target="_blank">
-                <h2 class="title mb-6" id="article-5840">NH Prof</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 24, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a screen shot one of NH Prof&#x2019;s users has sent me:&#xA; &#xA;A picture is worth a thousand words, I believe is the saying. But in this case, I think it is worth about 1755 queries.</p>
         </article>
         <div class="button flex justify-between">
             <a href="583.html"><span class="back arrow"></span></a>
