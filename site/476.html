@@ -112,8 +112,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4751">
+            <a href="https://ayende.com/blog/57345/macto-looking-at-warrants" target="_blank">
+                <h2 class="title mb-6" id="article-4751">Macto</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 17, 2011
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After spending so much time talking about how important Warrants are, it is actually surprising to see the UI for a warrant:   It is pretty simple, because from a data entry perspective, there isn&#x2019;t really much to it. It is the effects of the Warrants that make it such an interesting concept. One thing to note here is that the date that we care about for the Warrant isn&#x2019;t the date it was issued, but when the guy was actually arrested, that is where the clock starts ticking. Adding a Warrant is also not that complex from a data entry perspective:    As you can see, thus far, it is pretty simple. But when you click the Finish button the complexity starts. We need to check that the Warrant is valid (issued by someone with the authority to do so), and then calculate the new duration for the Inmate. And that is enough for today, I just wrote ~10 posts on Macto in the last 24 hours, it is time to do something else.</p>
+        </article>
+        <article id="article-4752">
+            <a href="https://ayende.com/blog/63490/answer-modifying-execution-approaches" target="_blank">
+                <h2 class="title mb-6" id="article-4752">Answer</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 16, 2011
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In RavenDB, we had this piece of code:         internal T[] LoadInternal&lt;T&gt;(string[] ids, string[] includes)&#xA;        {&#xA;            if(ids.Length == 0)&#xA;                return new T[0];&#xA;&#xA;            IncrementRequestCount();&#xA;            Debug.WriteLine(string.Format(&quot;Bulk loading ids [{0}] from {1}&quot;, string.Join(&quot;, &quot;, ids), StoreIdentifier));&#xA;            MultiLoadResult multiLoadResult;&#xA;            JsonDocument[] includeResults;&#xA;            JsonDocument[] results;&#xA;#if !SILVERLIGHT&#xA;            var sp = Stopwatch.StartNew();&#xA;#else&#xA;            var startTime = DateTime.Now;&#xA;#endif&#xA;            bool firstRequest = true;&#xA;            do&#xA;            {&#xA;                IDisposable disposable = null;&#xA;                if (firstRequest == false) // if this is a repeated request, we mustn&#x27;t use the cached result, but have to re-query the server&#xA;                    disposable = DatabaseCommands.DisableAllCaching();&#xA;                using (disposable)&#xA;                    multiLoadResult = DatabaseCommands.Get(ids, includes);&#xA;&#xA;                firstRequest = false;&#xA;                includeResults = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Includes).ToArray();&#xA;                results = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Results).ToArray();&#xA;            } while (&#xA;                AllowNonAuthoritiveInformation == false &amp;&amp;&#xA;                results.Any(x =&gt; x.NonAuthoritiveInformation ?? false) &amp;&amp;&#xA;#if !SILVERLIGHT&#xA;                sp.Elapsed &lt; NonAuthoritiveInformationTimeout&#xA;#else &#xA;                (DateTime.Now - startTime) &lt; NonAuthoritiveInformationTimeout&#xA;#endif&#xA;                );&#xA;&#xA;            foreach (var include in includeResults)&#xA;            {&#xA;                TrackEntity&lt;object&gt;(include);&#xA;            }&#xA;&#xA;            return results&#xA;                .Select(TrackEntity&lt;T&gt;)&#xA;                .ToArray();&#xA;        }&#xA;&#xA;&#xA;And we needed to take this same piece of code and execute it in:&#xA;&#xA;Async fashion &#xA;As part of a batch of queries (sending multiple requests to RavenDB in a single HTTP call).&#xA;Everything else is the same, but in each case the marked line is completely different.&#xA;I chose to address this by doing a Method Object refactoring. I create a new class, and moved all the local variables to fields, and moved each part of the method to its own method. I also explicitly gave up control on executing, deferring that to whoever it calling us. We ended up with this:&#xA;    public class MultiLoadOperation&#xA;    {&#xA;        private static readonly Logger log = LogManager.GetCurrentClassLogger();&#xA;&#xA;        private readonly InMemoryDocumentSessionOperations sessionOperations;&#xA;        private readonly Func&lt;IDisposable&gt; disableAllCaching;&#xA;        private string[] ids;&#xA;        private string[] includes;&#xA;        bool firstRequest = true;&#xA;        IDisposable disposable = null;&#xA;        JsonDocument[] results;&#xA;        JsonDocument[] includeResults;&#xA;                &#xA;#if !SILVERLIGHT&#xA;        private Stopwatch sp;&#xA;#else&#xA;        private    DateTime startTime;&#xA;#endif&#xA;&#xA;        public MultiLoadOperation(InMemoryDocumentSessionOperations sessionOperations, &#xA;            Func&lt;IDisposable&gt; disableAllCaching,&#xA;            string[] ids, string[] includes)&#xA;        {&#xA;            this.sessionOperations = sessionOperations;&#xA;            this.disableAllCaching = disableAllCaching;&#xA;            this.ids = ids;&#xA;            this.includes = includes;&#xA;        &#xA;            sessionOperations.IncrementRequestCount();&#xA;            log.Debug(&quot;Bulk loading ids [{0}] from {1}&quot;, string.Join(&quot;, &quot;, ids), sessionOperations.StoreIdentifier);&#xA;&#xA;#if !SILVERLIGHT&#xA;            sp = Stopwatch.StartNew();&#xA;#else&#xA;            startTime = DateTime.Now;&#xA;#endif&#xA;        }&#xA;&#xA;        public IDisposable EnterMultiLoadContext()&#xA;        {&#xA;            if (firstRequest == false) // if this is a repeated request, we mustn&#x27;t use the cached result, but have to re-query the server&#xA;                disposable = disableAllCaching();&#xA;            return disposable;&#xA;        }&#xA;&#xA;        public bool SetResult(MultiLoadResult multiLoadResult)&#xA;        {&#xA;            firstRequest = false;&#xA;            includeResults = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Includes).ToArray();&#xA;            results = SerializationHelper.RavenJObjectsToJsonDocuments(multiLoadResult.Results).ToArray();&#xA;&#xA;            return    sessionOperations.AllowNonAuthoritiveInformation == false &amp;&amp;&#xA;                    results.Any(x =&gt; x.NonAuthoritiveInformation ?? false) &amp;&amp;&#xA;#if !SILVERLIGHT&#xA;                    sp.Elapsed &lt; sessionOperations.NonAuthoritiveInformationTimeout&#xA;#else &#xA;                    (DateTime.Now - startTime) &lt; sessionOperations.NonAuthoritiveInformationTimeout&#xA;#endif&#xA;                ;&#xA;        }&#xA;&#xA;        public T[] Complete&lt;T&gt;()&#xA;        {&#xA;            foreach (var include in includeResults)&#xA;            {&#xA;                sessionOperations.TrackEntity&lt;object&gt;(include);&#xA;            }&#xA;&#xA;            return results&#xA;                .Select(sessionOperations.TrackEntity&lt;T&gt;)&#xA;                .ToArray();&#xA;        }&#xA;    }&#xA;&#xA;&#xA;&#xA;&#xA;Note that this class doesn&#x2019;t contain two very important things:&#xA;&#xA;The actual call to the database, we gave up control on that. &#xA;The execution order for the methods, we don&#x2019;t control that either.&#xA;That was ugly, and I decided that since I have to write another implementation as well, I might as well do the right thing and have a shared implementation. The key was to extract everything away except for the call to get the actual value. So I did just that, and we got a new class, that does all of the functionality above, except control where the actual call to the server is made and how.&#xA;Now, for the sync version, we have this code:&#xA;internal T[] LoadInternal&lt;T&gt;(string[] ids, string[] includes)&#xA;{&#xA;    if(ids.Length == 0)&#xA;        return new T[0];&#xA;&#xA;    var multiLoadOperation = new MultiLoadOperation(this, DatabaseCommands.DisableAllCaching, ids, includes);&#xA;    MultiLoadResult multiLoadResult;&#xA;    do&#xA;    {&#xA;        using(multiLoadOperation.EnterMultiLoadContext())&#xA;        {&#xA;            multiLoadResult = DatabaseCommands.Get(ids, includes);&#xA;        }&#xA;    } while (multiLoadOperation.SetResult(multiLoadResult));&#xA;&#xA;    return multiLoadOperation.Complete&lt;T&gt;();&#xA;}&#xA;&#xA;&#xA;&#xA;&#xA;This isn&#x2019;t the most trivial of methods, I&#x2019;ll admit, but it is ever so much better than the alternative, especially since now the async version looks like:&#xA;/// &lt;summary&gt;&#xA;/// Begins the async multi load operation&#xA;/// &lt;/summary&gt;&#xA;public Task&lt;T[]&gt; LoadAsyncInternal&lt;T&gt;(string[] ids, string[] includes)&#xA;{&#xA;    var multiLoadOperation = new MultiLoadOperation(this,AsyncDatabaseCommands.DisableAllCaching, ids, includes);&#xA;    return LoadAsyncInternal&lt;T&gt;(ids, includes, multiLoadOperation);&#xA;}&#xA;&#xA;private Task&lt;T[]&gt; LoadAsyncInternal&lt;T&gt;(string[] ids, string[] includes, MultiLoadOperation multiLoadOperation)&#xA;{&#xA;    using (multiLoadOperation.EnterMultiLoadContext())&#xA;    {&#xA;        return AsyncDatabaseCommands.MultiGetAsync(ids, includes)&#xA;            .ContinueWith(t =&gt;&#xA;            {&#xA;                if (multiLoadOperation.SetResult(t.Result) == false)&#xA;                    return Task.Factory.StartNew(() =&gt; multiLoadOperation.Complete&lt;T&gt;());&#xA;                return LoadAsyncInternal&lt;T&gt;(ids, includes, multiLoadOperation);&#xA;            })&#xA;            .Unwrap();&#xA;    }&#xA;}&#xA;&#xA;&#xA;Again, it isn&#x2019;t trivial, but at least the core stuff, the actual logic that isn&#x2019;t related to how we execute the code is shared.</p>
+        </article>
+        <article id="article-4753">
+            <a href="https://ayende.com/blog/56321/macto-talking-to-nasty-people" target="_blank">
+                <h2 class="title mb-6" id="article-4753">Macto</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 15, 2011
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, so far we have looked at the main screen and the Counting screen, it is time we introduce ourselves to the Inmate screen as well:  As you can see, there isn&#x2019;t a lot going on here. We have the Inmate&#x2019;s Id, name and location (including noting where he is located, if he is known to be outside the prison). We don&#x2019;t usually care for things like detailed information in the normal course of things (the Inamte&#x2019;s national id, for example). That information is important, but usually not relevant, we relegate it to a separate screen. The dates for incarceration and scheduled release are also important, but they aren&#x2019;t available for editing, they are there only for information purposes. The note is there to make sure that highly important information (such as whatever the Inmate is suicidal / flight risk) would be clearly available. The same is true for the Cliff Notes version of the Record. It is there not for casual use, but to ensure that pertinent information is available. Most importantly, note the last line there. Which means that if this Inmate is about to be released, we have to notify someone and get their approval for that. Well, approval is a strong word, we notify them that they need to give us a new Warrant for the Inmate, but we can delay releasing him (say, until midnight the day he is to be released) waiting for that Warrant. Warrants are important, and you can see the ones that this guy have listed here. The last Warrant is the important one, the others are shown for completion sake and to ensure that we have continuous Warrants. There are also several actions that we can do to an Inmate. We can Transfer him to another prison, Release him or Add a Warrant. Each of those is a complex process of its own, and I&#x2019;ll discuss them later on.</p>
+        </article>
+        <article id="article-4754">
             <a href="https://benfoster.io/blog/structuremap-resourcefactory-wcf-webapi/" target="_blank">
-                <h2 class="title mb-6" id="article-4751">Creating a StructureMap Resource Factory for WCF Web API</h2>
+                <h2 class="title mb-6" id="article-4754">Creating a StructureMap Resource Factory for WCF Web API</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I demonstrate how to register a custom IResourceFactory in WCF Web Api that uses StructureMap to create our resources.</p>
         </article>
-        <article id="article-4752">
+        <article id="article-4755">
             <a href="https://benfoster.io/blog/new-fabrik-theme-system-preview/" target="_blank">
-                <h2 class="title mb-6" id="article-4752">A look at the new fabrik theme system</h2>
+                <h2 class="title mb-6" id="article-4755">A look at the new fabrik theme system</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I give you a preview of the new fabrik theme system and discuss some of the technical challenges I faced in creating it.</p>
         </article>
-        <article id="article-4753">
+        <article id="article-4756">
             <a href="https://benfoster.io/blog/removing-the-tableserviceentity-dependency/" target="_blank">
-                <h2 class="title mb-6" id="article-4753">Removing the TableServiceEntity dependency</h2>
+                <h2 class="title mb-6" id="article-4756">Removing the TableServiceEntity dependency</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I demonstrate how to use Azure Table storage without inheriting your classes from TableServiceEntity.</p>
         </article>
-        <article id="article-4754">
+        <article id="article-4757">
             <a href="https://www.meziantou.net/singleton-and-lazy-t.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4754">Singleton and Lazy&lt;T&gt;</h2>
+                <h2 class="title mb-6" id="article-4757">Singleton and Lazy&lt;T&gt;</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In software engineering, the singleton pattern is a software design pattern that restricts the instantiation of a class to one object. This is useful when exactly one object is needed to coordinate actions across the system. The concept is sometimes generalized to systems that operate more efficien</p>
         </article>
-        <article id="article-4755">
+        <article id="article-4758">
             <a href="https://ardalis.com/validating-emails-for-system-net-mail/" target="_blank">
-                <h2 class="title mb-6" id="article-4755">Validating Emails for System.Net.Mail</h2>
+                <h2 class="title mb-6" id="article-4758">Validating Emails for System.Net.Mail</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;ve worked with the System.Net.Mail API to send out messages, you may have run into the fact that when you add an email address to a&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4756">
+        <article id="article-4759">
             <a href="https://ayende.com/blog/61441/the-customer-is-always-right" target="_blank">
-                <h2 class="title mb-6" id="article-4756">The customer is always right?</h2>
+                <h2 class="title mb-6" id="article-4759">The customer is always right?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When you get this sort of an email, you almost always know that this is going to be bad:  Let us start with: Which product? What license key? What order? What do you expect me to do about it? At least he is polite.   Hm, I wonder what is going on in here&#x2026;  This error can occur because of a trial that has expired or a subscription that has not been renewed.     He attached a Trial licensed to this email.   It is like a Greek tragedy, you know that at some point this is going to arrive at the scene.  I mean, we explicitly added the notion of subscriptions to handle just such cases, of people who want to use the profiler just for a few days and don&#x2019;t want to pay the full version price. And you can cancel that at any time, incurring no additional charges.      Sigh&#x2026;</p>
         </article>
-        <article id="article-4757">
+        <article id="article-4760">
             <a href="https://ayende.com/blog/55297/macto-counting-is-the-holy-grail" target="_blank">
-                <h2 class="title mb-6" id="article-4757">Macto</h2>
+                <h2 class="title mb-6" id="article-4760">Macto</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -222,54 +270,6 @@
                 posted on: August 11, 2011
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I might have mentioned before that Counting is somewhat important in prison. That is about as accurate as saying that you would somewhat prefer it to keep breathing. Counting is the heartbeat of the prison, the thing that the entire operation revolves around. Here we can see the counting screen:  You can see that we have an Open Count here, that is a count that is still in progress. Some cell blocks have reported their counts, and some are still in the process of making the count. A Count is Closed when we know where are the Inmates are. (When the two numbers line up properly). You probably noticed that there are two ways to report a count, the first is for Inmates who are outside the prison (court, hospital, etc). Because they are outside the prison, we track them by name. For internal counts, we don&#x2019;t really care about names, just the numbers. There is another type of a Count, a Named Count, which is a process that happen very rarely, but is usually used to reconcile what is in the computer and what is actually in the cells.  It is important to understand the &#x201C;Officer in charge&#x201D; field, basically, it is the guy who has the legal responsibility and is signing off on those numbers. In other words, if there is something wrong, that guy is going to take a hard fall.</p>
-        </article>
-        <article id="article-4758">
-            <a href="https://benfoster.io/blog/windows-azure-my-experience-so-far/" target="_blank">
-                <h2 class="title mb-6" id="article-4758">Windows Azure - My experience so far</h2>
-            </a>
-            <p class="mb-2">by Ben Foster</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: August 11, 2011
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I discuss my experience developing on the Windows Azure platform and make some general recommendations that will ease the pain of developing &#x201C;for the cloud&#x201D;.</p>
-        </article>
-        <article id="article-4759">
-            <a href="https://ayende.com/blog/51201/macto-getting-started-you-never-forget-your-first-inmate" target="_blank">
-                <h2 class="title mb-6" id="article-4759">Macto</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: August 10, 2011
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">People always love to start with CRUD, but it is almost never that simple. In this post, we will review the process required to accept an Inmate into the prison. That process is composed of the following parts:  Identification   Who is the guy?  Id number  Names  Photo  If we can&#x2019;t identify / refuse to identify, we still need to be able to accept him. Lawful chain of incarceration   Go over all the documents for his arrest  Ensure that they are all in order  Ensure that they are continuous and valid  Check if there are any urgent things to do with him. For example, he may need to be at court today or the next day. Medical exam   Is it okay to hold the guy in prison?  If he is not healthy, can we take care of him in prison?  Does he require hospitalization?  Does he require medicine / treatment?  Are there any medical consideration into where to put him? Intelligence   Interviewing the guy  Report interesting details that are known about him Acceptability   Does he fit the level of Inmates we can accept? We usually don&#x2019;t put murderers in minimum security prisons, for example.  Does he have any medical reason to reject him?  Are there any problems with the incarceration documents?  Is there any intelligence warning about the guy? Placement   Decide where to put the Inmate  What type of an Inmate is he? (Just arrested, sentenced, sentenced for a long period, etc)  Why is he in prison for?  What kind is he? (You want to avoid Inmate infighting, it creates paperwork, so you avoid putting them in conflict if possible)  Where there is room available? Another important aspect to remember is that while we are allowed to reject invalid input (for example, we are allowed to say that the id number has to consist of only numeric characters), we are not allowed to reject input that is wrong. What do I mean by that. Let us say that we have an Inmate at the door, and he doesn&#x2019;t have his incarceration paperwork in order (well, not he, whoever brought him in, but you get the point). That means that legally, we can&#x2019;t hold him. But Macto isn&#x2019;t where things are actually happening, it is merely a support system that tracks what is going on in the real world. And the prison commander can decide to accept that guy anyway (say, because the paperwork in en route), and we have to allow for that. If we try to stop people from doing this, it is going to be worked around, and we don&#x2019;t want that. The system is allowed, even encouraged, to warn the users when they are doing something wrong, but it cannot block it. The first part, Identification, is actually pretty easy, all told. This is fairly simple data entry process. We&#x2019;ll want to do some checkups on the data, such as that the id number is valid or to check the id against the name, etc. But we basically have to have some level of trust in the documents that we have. You usually don&#x2019;t have an arrest warrant for &#x201C;tall guy in brown shirt&#x201D;. If we find any problems there, we can Flag the Dossier as a potentially fraudulent name. This is also the stage where we want to check if the Inmate is a returned visit, and bring the life the old Dossier.  The second part is more complex, because there are many different types of Warrants, each with their own implications. Arrest Warrant is valid for 24 hours, Remand Warrant is good until sentencing, etc. We need to input all of those Warrants, ensure that they are consistent, valid and continuous. If there is a problem with that, we need to Flag the Dossier, but we can&#x2019;t reject it. We will discuss this in more detail in the next post. The third part is basically external to Macto, we may need to provide the Inmate ID, for correlation purposes, but nothing beyond that. We do need to get approval from the doctor that the Inmate is in an OK condition to be held in the prison. That does get recorded in Macto. The forth part is again, external to us. Usually any information is classified and wouldn&#x2019;t appear in Macto. We may get some intelligence brief about the guy, but usually we won&#x2019;t. The fifth part is important, this is where we actually take legal and physical ownership for the Inmate. Up until that point, we had him in our hands, but we weren&#x2019;t responsible for him. Accepting the Inmate is a simple matter if everything is good, but if the Dossier was Flagged, we might need approval from the officer in charge. Accepting an Inmate means that he is added to the prison&#x2019;s Roster.  The sixth part is pretty much &#x201C;where do I have a spare bed&#x201D;, after which he is added to the Roster of the cell block he is now in care of. It is important to note that Placement always happens. Even if immediately after Accepting an Inmate you rushed him to the hospital, that Inmate still has to be assigned to a cell block, because that assignment means that the cell block commander is in charge of him. That way we avoid potential mishaps when an Inmate is assigned to no one, doesn&#x2019;t get Counted. Okay, I think that this is enough for now, in the next post, we will discuss what exactly goes on in the second part, it is a pretty complex piece, and it deserve its own post.</p>
-        </article>
-        <article id="article-4760">
-            <a href="https://benfoster.io/blog/model-binder-dependency-injection-structuremap/" target="_blank">
-                <h2 class="title mb-6" id="article-4760">Model Binder Dependency Injection with Structuremap</h2>
-            </a>
-            <p class="mb-2">by Ben Foster</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: August 10, 2011
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I demonstrate how we can use a custom IModelBinderProvider to allow for dependency injection in an ASP.NET MVC ModelBinder.</p>
         </article>
         <div class="button flex justify-between">
             <a href="475.html"><span class="back arrow"></span></a>

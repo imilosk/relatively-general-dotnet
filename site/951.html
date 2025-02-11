@@ -112,8 +112,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-9501">
+            <a href="https://ayende.com/blog/911/mocking-challange-mocking-tdd-and-multi-threading" target="_blank">
+                <h2 class="title mb-6" id="article-9501">Mocking Challange: Mocking, TDD and Multi Threading</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 19, 2005
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A few days ago, Ron Jeffries offered a challange, find a way to use mocks to battle dead locks using mutexes. This is following a huge debate on the Test Driven Deveopment list about mocks, pros &amp; cons. I think you can guess where I am on this debate. Anyway, this is exactly the kind of a challange that I like, so I gave it a shot.    Now, it&#x27;s not a 100% solution, I&#x27;ll be the first to admit, but it&#x27;s good enough as a proof of concept as well as answering the challange. Now, for the purpose of discussion, I limited myself to the following properties of mutexes:            You can only acquire &amp; release a mutex, you can&#x27;t pulse it, try acquiring, etc.                 An actual mutex is not involved, as a matter of fact (I could add it, but then what would happen with a real dead lock?), beside, it would complicate the implementation, and this is a PoC only.    I track the following issues within a thread:            Acquiring but not releasing.                 Releasing an unaquired mutex.                 Releasing out of order.    Between mutliply threads:            Acquiring &amp; releasing not on the same order on different threads.    All in all, it took me about an hour to write this, so take that into account when you read it. Here is a sample code that explains how it works, first, here are our threads:             private&#xA0;static&#xA0;void&#xA0;OneTwoThreeAquireRelease()        {        &#xA0;&#xA0; IMutex&#xA0;one&#xA0;=&#xA0;MutexRepository.Get(&quot;One&quot;);        &#xA0;&#xA0; IMutex&#xA0;two&#xA0;=&#xA0;MutexRepository.Get(&quot;Two&quot;);        &#xA0;&#xA0; IMutex&#xA0;three&#xA0;=&#xA0;MutexRepository.Get(&quot;Three&quot;);                &#xA0;&#xA0; one.Aquire();        &#xA0;&#xA0; two.Aquire();        &#xA0;&#xA0; three.Aquire();                &#xA0;&#xA0; three.Release();        &#xA0;&#xA0; two.Release();        &#xA0;&#xA0; one.Release();                        &#xA0;&#xA0; Assert.IsTrue(VerifyingMockMutexRepository.NoAcquiredMutexesOnThread);        }        private&#xA0;static&#xA0;void&#xA0;TwoOneThreeAquireRelease()        {        &#xA0;&#xA0; IMutex&#xA0;one&#xA0;=&#xA0;MutexRepository.Get(&quot;One&quot;);        &#xA0;&#xA0; IMutex&#xA0;two&#xA0;=&#xA0;MutexRepository.Get(&quot;Two&quot;);        &#xA0;&#xA0; IMutex&#xA0;three&#xA0;=&#xA0;MutexRepository.Get(&quot;Three&quot;);        &#xA0;&#xA0;&#xA0;        &#xA0;&#xA0; two.Aquire();        &#xA0;&#xA0; one.Aquire();&#xA0;        &#xA0;&#xA0; three.Aquire();        &#xA0;&#xA0;&#xA0;        &#xA0;&#xA0; three.Release();        &#xA0;&#xA0; one.Release();&#xA0;        &#xA0;&#xA0; two.Release();        &#xA0;&#xA0; Assert.IsTrue(VerifyingMockMutexRepository.NoAcquiredMutexesOnThread);        }             Notice that within each thread, they are perfectly okay, but when you mix them... you get a potential dead lock. And here is the test:             [Test]        public&#xA0;void&#xA0;AcuireAndReleaseInWrongOrderOnDifferentThreads()        {        &#xA0;&#xA0;&#xA0; Thread[]&#xA0;threads&#xA0;=&#xA0;new&#xA0;Thread[2];        &#xA0;&#xA0;&#xA0; threads[0]&#xA0;=&#xA0;new&#xA0;Thread(OneTwoThreeAquireRelease);        &#xA0;&#xA0;&#xA0; threads[1]&#xA0;=&#xA0;new&#xA0;Thread(TwoOneThreeAquireRelease);                &#xA0;&#xA0;&#xA0; RunAllThreadsAndWaitForCompletion(threads);        &#xA0;&#xA0;&#xA0;&#xA0;        &#xA0;&#xA0;&#xA0; IList&lt;string&gt;&#xA0;problems&#xA0;=&#xA0;VerifyingMockMutexRepository.GetAllProblems();        &#xA0;&#xA0;&#xA0; Assert.AreEqual(2,&#xA0;problems.Count);        &#xA0;&#xA0;&#xA0; Assert.AreEqual(&quot;Mutex&#xA0;One&#xA0;is&#xA0;in&#xA0;circular&#xA0;relationship&#xA0;with&#xA0;Two&quot;,&#xA0;problems[0]);        &#xA0;&#xA0;&#xA0; Assert.AreEqual(&quot;Mutex&#xA0;Two&#xA0;is&#xA0;in&#xA0;circular&#xA0;relationship&#xA0;with&#xA0;One&quot;,&#xA0;problems[1]);        }                private&#xA0;static&#xA0;void&#xA0;RunAllThreadsAndWaitForCompletion(ICollection&lt;Thread&gt;&#xA0;threads)        {        &#xA0;&#xA0;&#xA0; foreach&#xA0;(Thread&#xA0;thread&#xA0;in&#xA0;threads)        &#xA0;&#xA0;&#xA0; {        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; thread.Start();        &#xA0;&#xA0;&#xA0; }        &#xA0;&#xA0;&#xA0; foreach&#xA0;(Thread&#xA0;thread&#xA0;in&#xA0;threads)        &#xA0;&#xA0;&#xA0; {        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; thread.Join();        &#xA0;&#xA0;&#xA0; }        }                    Viola! Success, we have liftoff :-D We have successfully detected a potential deadlock. The code is structure to a IMutex and IMutexRepository, where the MutexRepository is merely the access point for that, so it&#x27;s very easy to switch that for tests (or you can use DI or Castle to do it for you.)    You can get the code here. Again, this is a Proof Of Concept only, so have pity on me when you point out that when this or that happens, everything blows apart. I tried to make it work correctly in all cases, but I probably missed something.    Why I didn&#x27;t use Rhino Mocks? Well, I could, but it just wasn&#x27;t worth the time &amp; trouble when I started from scratch and I had to execute behavior on the tests. If I had an existing interface, I would&#x27;ve probably used it, though.</p>
+        </article>
+        <article id="article-9502">
+            <a href="https://ayende.com/blog/910/nhibernate-generics-ilist-t" target="_blank">
+                <h2 class="title mb-6" id="article-9502">NHibernate Generics &amp; IList&lt;T&gt;</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 19, 2005
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is an interesting question, I got several reqeusts to add an EntityList&lt;T&gt; to NHibernate Generics. One of the more interesting attributes on NHibernate Generics&#xA0;is that I can execute an action when an item is added or removed to the set. The problem that I&#x27;ve now is adapting it to the indexer of IList&lt;T&gt;, how I should behave with regard to it? There are three possibilities:            Override a value with the same value - do nothing            Override a value with a new value - call remove on the old value and add on the new value            Override a value with a ne value already on the list - what do I do here?    Any suggestions?</p>
+        </article>
+        <article id="article-9503">
+            <a href="https://ayende.com/blog/909/more-on-sql" target="_blank">
+                <h2 class="title mb-6" id="article-9503">More on SQL</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 19, 2005
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Just thought to let you know, I just&#xA;changed a cursor-based query to use a set base approach, and the performance&#xA;just shot thought the roof. From over 5 minutes for the cursor approach&#xA;(which examined the data and then executed several statements for each row) to set&#xA;base approach (which execute several statements for the whole set) and run at roughly&#xA;half a minute.&#xA;&#xA;I will be the first to admit that&#xA;I&#x27;m not a SQL guru, not even close to a Zen student level, actually. But I think&#xA;that I can begin to like it, the possibilities are great, and I like to be able&#xA;to say what, and not how. It gives the engine much more space to&#xA;work with, and, I assume, Microsoft spent more time optimizing their engine&#xA;than I can spend on optimizing my query J&#xA;&#xA;Now all I need to do is wait for the&#xA;whole process to run, and see if the results are any good, I&#x27;ve a pretty good&#xA;feeling about it. Just to give you a hint about the difference in performance,&#xA;the cursor based query (which run on test data, much smaller than the real one,&#xA;of course) would issue ~80,001 queries. The set base approach issues 2.</p>
+        </article>
+        <article id="article-9504">
             <a href="https://ayende.com/blog/908/sql-fun" target="_blank">
-                <h2 class="title mb-6" id="article-9501">SQL Fun</h2>
+                <h2 class="title mb-6" id="article-9504">SQL Fun</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently&#xA;I&#x27;ve been dealing with a lot of SQL code, and it&#x27;s has been very&#xA;interesting to see all the myriad of ways that you can botch a query J. &#xA0;One thing that I&#xA;encountered is the tendecy to keep thinking procedurally instead of set-base. A&#xA;lot of people seems to be famliar with inserting from select, like this:&#xA;&#xA;(This&#xA;will duplicate all the blogs in the table, not very useful in this instance,&#xA;admittedly, but very useful elsewhere):&#xA;&#xA;insert&#xA;into Blogs&#xA;&#xA;( &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; blog name&#xA;&#xA;&#xA;)&#xA;&#xA;select&#xA;blog name&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; from Blogs&#xA;&#xA;&#xA0;&#xA;&#xA;But&#xA;not a lot of people seem to be familiar with the Update counterpart for this statement.&#xA;Let&#x27;s take an example, I&#x27;m hosting a blogging server, and I found out that some&#xA;of my users where using nasty words in their blog&#x27;s name. Therefor, I decided&#xA;that I want to set all the blogs&#x27; names to &lt;User Name&gt;&#x27;s Blog. How do I&#xA;do that? The code that I&#x27;ve seen lately opens a cursor, and iterate over each&#xA;and every one of the rows, update each in turn. &#xA0;This is procedural&#xA;thinking, and usually ineffiecnt. It&#x27;s much better to do it via a set base&#xA;command, like this one:&#xA;&#xA;&#xA0;&#xA;&#xA;update&#xA;Blogs&#xA;&#xA;set&#xA;blog name = u.user name &#x2B; &#x27;&#x27;&#x27;s Blog&#x27;&#xA;&#xA;from&#xA;Users u, UsersBlogs ub&#xA;&#xA;where&#xA;u.user id = ub.user id and &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Blogs.blog id = ub.blog id&#xA;&#xA;&#xA0;&#xA;&#xA;This&#xA;command even hanldes a many-to-many relationship between users and blogs (it&#xA;uses the one of the blog&#x27;s owners). It&#x27;s not as obvious, and it&#x27;s a bit harder&#xA;to discover, but I think it is better. It was actually quite fun to re-write it&#xA;this way, it made it much easier to read and understand. I spares you&#xA;the reams of code that you would need to write this command using cursors.</p>
         </article>
-        <article id="article-9502">
+        <article id="article-9505">
             <a href="https://ayende.com/blog/907/rhino-mocks-2-5-5-mocking-delegates" target="_blank">
-                <h2 class="title mb-6" id="article-9502">Rhino Mocks 2.5.5: Mocking Delegates</h2>
+                <h2 class="title mb-6" id="article-9505">Rhino Mocks 2.5.5: Mocking Delegates</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A brand new release of Rhino Mocks, with a twist.    Jeff emailed me a patch yesterday, that enabled the mocking of delegates. This is not something that I would&#x27;ve ever considered, to tell you the truth, but the idea (and the code) were sound, and I can certainly see uses for this. Consider all the possibilities for near-functional programming that .Net 2.0 opens for us, and you&#x27;ll see what I&#x27;m excited about.    Here is an example of using this new functionality:[Test]    public&#xA0;void&#xA0;GenericDelegate()    {    &#xA0;&#xA0;Action&lt;int&gt;&#xA0;action&#xA0;=&#xA0;mocks.CreateMock&lt;Action&lt;int&gt;&gt;();    &#xA0;&#xA0;for&#xA0;(int&#xA0;i&#xA0;=&#xA0;0;&#xA0;i&#xA0;&lt;&#xA0;10;&#xA0;i&#x2B;&#x2B;)    &#xA0;&#xA0;{    &#xA0;&#xA0;&#xA0;&#xA0;action(i);    &#xA0;&#xA0;}    &#xA0;&#xA0;mocks.ReplayAll();    &#xA0;&#xA0;ForEachFromZeroToNine(action);    &#xA0;&#xA0;mocks.VerifyAll();    }    private&#xA0;void&#xA0;ForEachFromZeroToNine(Action&lt;int&gt;&#xA0;act)    {    &#xA0;&#xA0;for&#xA0;(int&#xA0;i&#xA0;=&#xA0;0;&#xA0;i&#xA0;&lt;&#xA0;10;&#xA0;i&#x2B;&#x2B;)    &#xA0;&#xA0;{    &#xA0;&#xA0;&#xA0;&#xA0;act(i);    &#xA0;&#xA0;}    }    The other big change is removing IDisposable from the MockRepository. This is a breaking change for somet people, but it is a must. The problem is that the #1 problem that we have with new users of Rhino Mocks is exceptions masking. Removing the IDisposable means that it takes a bit longer to setup the mock repository, but I hope it will also encourage the recommended use of putting the setup &amp; verification in the [SetUp] and [TearDown] methods.    Another change that I made was a bug fix for SetupResult not respecting IgnoreParameters(), which drove me crazy for a while. I&#x2019;ve updated the documentation and the API docs&#xA0;to reflect the changes . As usualy, you can download or get the source.</p>
         </article>
-        <article id="article-9503">
+        <article id="article-9506">
             <a href="https://ayende.com/blog/906/i-hate-mysql" target="_blank">
-                <h2 class="title mb-6" id="article-9503">I Hate MySQL</h2>
+                <h2 class="title mb-6" id="article-9506">I Hate MySQL</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">An interesting discovery: TEXT columns in MySQL will only hold 65,000 bytes.    The problem is that when you hit this limit, MySQL will just silently corrupt your data, instead of throwing an exception, like it should be.    I got this problem when I tried to edit Rhino Mocks&#x27; documentation, and the size of it was just over 64Kb. I wasted quite a bit of time over this, thinking that maybe the limitation was in ASP.Net, Cuyahoga, NHibernate, etc.    Ugly, Ugly, Ugly.     I know that a lot of people have complained about MySQL liberalalism when saving saving data, but I just can&#x27;t believe that they are doing this. What is the point in putting the&#xA0;burden of validation on the developer? That is what database are for!!</p>
         </article>
-        <article id="article-9504">
+        <article id="article-9507">
             <a href="https://ardalis.com/disk-output-cache/" target="_blank">
-                <h2 class="title mb-6" id="article-9504">Disk Output Cache</h2>
+                <h2 class="title mb-6" id="article-9507">Disk Output Cache</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">DmitryR writes about an implementation of using Output Cache to Disk (instead of memory) via an HttpModule. Definitely an interesting topic&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-9505">
+        <article id="article-9508">
             <a href="https://ardalis.com/the-next-p2p-revolution-&#x2013;-napster-for-television/" target="_blank">
-                <h2 class="title mb-6" id="article-9505">The Next P2P Revolution &#x2013; Napster for Television</h2>
+                <h2 class="title mb-6" id="article-9508">The Next P2P Revolution &#x2013; Napster for Television</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a bit off-topic from my usual .NET stuff, so I apologize. Recently Clemens showed me an application he&#x2019;d written that allowed me to&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-9506">
+        <article id="article-9509">
             <a href="https://ardalis.com/shipping-from-fog-creek-software/" target="_blank">
-                <h2 class="title mb-6" id="article-9506">Shipping from Fog Creek Software</h2>
+                <h2 class="title mb-6" id="article-9509">Shipping from Fog Creek Software</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Joel writes about his experience shipping many, many DVDs: How to Ship Anything. An interesting read, especially since this is the time of&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-9507">
+        <article id="article-9510">
             <a href="https://ayende.com/blog/905/nhibernate-generics-update" target="_blank">
-                <h2 class="title mb-6" id="article-9507">NHibernate.Generics Update</h2>
+                <h2 class="title mb-6" id="article-9510">NHibernate.Generics Update</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -222,54 +270,6 @@
                 posted on: December 13, 2005
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Okay, it&#x27;s about time that I update this thing. Now it&#x27;s properly versions in the NQA repository, and you can reach it via: svn://svn.berlios.de/nqa/NHibernate.Generics/ or via: http://svn.berlios.de/wsvn/nqa/NHibernate.Generics/.&#xA;There are some new stuff there as well:&#xA;&#xA;Tests for ManyToMany, which a lot of people requested. &#xA;&#xA;Pay attention to many-to-many, lazy loading, and the edge case I talk about here. &#xA;I added an overload for this, and you must use this overload when you are creating the collection that will be the authoritative&#xA0;source (inverse=false, in the mapping). Check the User class in the tests for the detials.&#xA;Proper handling of Clear() on EntitySet &#xA;Introducing the AllowModification, and this one require some explenation. I found myself needing to modify the EntitySet&lt;T&gt; from within the action for adding and removing items. This caused problems, because ordinarily this would mean that I would get an infinite loop, but no worries, you can see how I solved it below (which is why I need the DisposableAction for). There is a similar property for the EntityRef&lt;T&gt;.   1:  //Require a class member variable, can&#x27;t use a local   2:  //variable, because of delegates rules.   3:  _posts = new EntitySet&lt;Post&gt;(   4:  delegate(Post p)   5:  {   6:      using (_posts.AllowModifications)   7:      {   8:          _posts.Add(new Post(&quot;Duplicate&quot;));   9:      }  10:  }, null);  11:  _posts.Add(new Post(&quot;Original&quot;));  12:  Assert.AreEqual(2, _posts.Count);&#xA;That is all for now, I think. I changed the download to be just the compiled dll (you can get the source from the repository above). Most important of them all, I updated the documentation with the new stuff.&#xA;One interesting tidbit, so far I had over 950 dowloads of NHibernate Generics!</p>
-        </article>
-        <article id="article-9508">
-            <a href="https://ayende.com/blog/904/and-the-magic-number-is-800" target="_blank">
-                <h2 class="title mb-6" id="article-9508">And the magic number is: 800</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 13, 2005
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Right now I&#x27;ve made 766 posts (I&#x27;m not really sure how it got so high, but what the heck). My goal is to post enough (real) content to the end of the year to push it beyond 800.    BTW, in all of 2004, I posted 117 messages.</p>
-        </article>
-        <article id="article-9509">
-            <a href="https://ayende.com/blog/903/resharper-211-impressions" target="_blank">
-                <h2 class="title mb-6" id="article-9509">Resharper 211: Impressions</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 13, 2005
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I can see some big improvements that were made on generics support. It&#x27;s still far from perfect, but it&#x27;s much better than even 210. It&#x27;s not surprising that memory is still an issue, since the performance tuning has not started yet.    One thing I can tell you is that it&#x27;s nearly like having an old friend back, tips &amp; tricks at your fingertips, just amazing. I&#x27;ve just began to use it, so it&#x27;s a bit early to tell how good it is, but I already found some new stuff that I liked.</p>
-        </article>
-        <article id="article-9510">
-            <a href="https://ayende.com/blog/902/commons-is-out" target="_blank">
-                <h2 class="title mb-6" id="article-9510">Commons Is Out</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 13, 2005
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It&#x27;s mainly there because I need to access it from a different computer and it&#x27;s a hassle to create a public SVN Repository, but you can get it here. Right now there isn&#x27;t much there, but where there is, is promising, I think. :-)    At worst, it&#x27;s a hell of a test case for ReSharper :-D</p>
         </article>
         <div class="button flex justify-between">
             <a href="950.html"><span class="back arrow"></span></a>

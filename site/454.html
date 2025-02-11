@@ -112,8 +112,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4531">
+            <a href="https://ardalis.com/kanban-book-review/" target="_blank">
+                <h2 class="title mb-6" id="article-4531">Kanban Book Review</h2>
+            </a>
+            <p class="mb-2">by Ardalis</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 16, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">While researching material for my Kanban Fundamentals video training course on Pluralsight, I read Kanban: Successful Evolutionary Change&#x2026;Keep Reading &#x2192;</p>
+        </article>
+        <article id="article-4532">
+            <a href="https://ayende.com/blog/153704/composite-entities" target="_blank">
+                <h2 class="title mb-6" id="article-4532">Composite entities</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 16, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my previous post, I discussed some of the problems that you run into when you try to have a single source of truth with regards to an entity definition. The question here is, how do we manage something like a Customer across multiple applications / modules. For the purpose of discussion, I am going to assume that all of the data is either:  All sitting in the same physical database (common if we are talking about different modules in the same application). Spread across multiple databases with some data being replicate to all databases (common if we are talking about different applications). We will focus on the customer entity as an example, and we will deal with billing and help desk modules / applications. There are some things that everyone can agree on with regards to the customer. Most often, a customer has a id, which is shared across the entire system, as well as some descriptive details, such as a name. But even things that you would expect to be easily agreed upon aren&#x2019;t really that easy. For example, what about contact information? The person handling billing at a customer is usually different than the person that we contact for help desk inquires. And that is the stuff that we are supposed to agree on. We have much bigger problems when we have to deal with things like customer&#x2019; payment status vs. outstanding helpdesk calls this month. The way to resolve this is to forget about trying to shove everything into a single entity. Or, to be rather more exact, we need to forget about trying to thing about the Customer entity as a single physical thing. Instead, we are going to have the following:  There are several things to note here:  There is no inheritance relationship between the different aspect of a customer. We don&#x2019;t give in and try to put what appears to be shared properties (ContactDetails) in the root Customer. Those details have different meaning for each entity. There are several ways to handle actually storing this information. If we are using a single database, then we will usually have something like:  The advantage of that is that it makes it very easy to actually look at the entire customer entity for debugging purposes. I say for debugging specifically because for production usage, there really isn&#x2019;t anything that needs to look at the entire thing, every part of the system only care for its own details. You can easily load the root customer document and your own customer document whenever you need to. More to the point, because they are different physical things, that solves a lot of the problems that we had with the shared model. Versioning is not an issue, if billing needs to make a change, they can just go ahead and change things. They don&#x2019;t need to talk to anyone, because no one else is touching their data.  Concurrency is not an issue, if you make a concurrent modification to billing and help desk, that is not a problem, they are stored into two different locations. That is actually what you want, since it is perfectly all right for having those concurrent changes. It free us from having to have everyone&#x2019;s acceptance on any change for everything except on the root document. But as you can probably guess, the amount of information that we put on the root is minimal, precisely to avoid those sort of situations. This is how we handle things with a shared database, but what is going on when we have multiple applications, with multiple databases? As you can expect, we are going to have one database which contains all of the definitions of the root Customer (or other entities), and from there we replicate that information to all of the other databases. Why not have them access two databases? Simple, it makes things so much harder. It is easier to have a single database to access to and have replication take care of that. What about updates in that scenario? Well, updates to the local part is easy, you just do that, but updates to the root customer details have to be handled differently. The first thing to ask is whatever there really is any need for any of the modules to actually update the root customer details. I can&#x2019;t see any reason why you would want to do that (billing shouldn&#x2019;t update the customer name, for example). But even if you have this, the way to handle that is to have a part of the system that is responsible for the root entities database, and have it do the update, from where it will replicate to all of the other databases.</p>
+        </article>
+        <article id="article-4533">
+            <a href="https://ayende.com/blog/153703/there-aint-no-such-thing-the-definitive-entity-definition" target="_blank">
+                <h2 class="title mb-6" id="article-4533">There ain&#x2019;t no such thing, the definitive entity definition</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 15, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was at a customer site, and we were talking about a problem they had with modeling their domain. Actually, we were discussing a proposed solution, a central and definitive definition for all of their entities, so all of the applications could use that. I had a minor seizure upon hearing that, but after I recovered, I was able to articulate my objections to this approach.  To start with, it breaks the Single Responsibility Principle, the Open Closed Principle and the Interface Segregation Principle. It also makes versioning hard, and introduce a central place where everyone must coordinate with. Think about the number of people that has to be involved whenever you make a change. Let us take the customer as the representative entity for this discussion. We can all agree that a customer has to have a name, an email and an id. But billing also need to know his credit card information, help desk needs to track what support contracts he has and sales needs to know what sort of products we sold the guy, so we can sell him upgrades. Now, would you care to be the guy who has to mediate between of all of those different concerns?  And what about changes and updates? Whenever you need to make a change, you have to wait for all of those teams and application to catch up and update and deploy their apps,. And what about actual usage? You actually don&#x2019;t want the help desk system to be able to access the billing information, and you most certainly don&#x2019;t want them to change anything there. And does it matter if we have concurrent modifications to the entity by both help desk and billing?  All of those things argue very strongly against having a single source of truth about what an entity is. In my next post, I&#x2019;ll discuss a solution for this problem, Composite Entities.</p>
+        </article>
+        <article id="article-4534">
             <a href="https://ayende.com/blog/155265/ravendb-session-management-in-asp-net-web-api" target="_blank">
-                <h2 class="title mb-6" id="article-4531">RavenDB session management in ASP.Net Web API</h2>
+                <h2 class="title mb-6" id="article-4534">RavenDB session management in ASP.Net Web API</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This was brought up in the mailing list, and I thought it was an interesting solution, therefor, this post.  A couple of things to note here. I would actually rather use the Initialize() / Dispose() methods for this, but the problem is that we don&#x2019;t really have a way at the Dispose() to know if the action threw an exception. Hence, the need to capture the ExecuteAsync() operation. For fun, you can also use the async session as well, which will integrate very nicely into the async nature of most of the Web API.</p>
         </article>
-        <article id="article-4532">
+        <article id="article-4535">
             <a href="https://ayende.com/blog/155330/sharding-with-ravendb-webinar" target="_blank">
-                <h2 class="title mb-6" id="article-4532">Sharding with RavenDB Webinar</h2>
+                <h2 class="title mb-6" id="article-4535">Sharding with RavenDB Webinar</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Sharding allows you to horizontally partition your database. RavenDB includes builtin support for sharding, and in this webinar, we will discuss in detail how to utilize it, how it works and how you can best use it in your own projects Date: Wednesday, March 28, 2012 Time: 9:00 AM - 10:00 AM PDT After registering you will receive a confirmation email containing information about joining the Webinar. Space is limited.Reserve your Webinar seat now at:https://www2.gotomeeting.com/register/729216138</p>
         </article>
-        <article id="article-4533">
+        <article id="article-4536">
             <a href="https://ardalis.com/personal-kanban-book-review/" target="_blank">
-                <h2 class="title mb-6" id="article-4533">Personal Kanban Book Review</h2>
+                <h2 class="title mb-6" id="article-4536">Personal Kanban Book Review</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Not long ago, while preparing my Kanban Fundamentals video training class for Pluralsight, I read Personal Kanban, by Jim Benson and&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4534">
+        <article id="article-4537">
             <a href="https://ardalis.com/how-to-give-feedback-on-microsoft-developer-products/" target="_blank">
-                <h2 class="title mb-6" id="article-4534">How to Give Feedback on Microsoft Developer Products</h2>
+                <h2 class="title mb-6" id="article-4537">How to Give Feedback on Microsoft Developer Products</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the last few years, a number of Microsoft dev teams have started using online tools to manage how the community can offer feedback. If&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4535">
+        <article id="article-4538">
             <a href="https://benfoster.io/blog/reference-lists-in-ravendb/" target="_blank">
-                <h2 class="title mb-6" id="article-4535">Reference lists in RavenDB</h2>
+                <h2 class="title mb-6" id="article-4538">Reference lists in RavenDB</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post we look at how to manage lists of reference data when using RavenDB.</p>
         </article>
-        <article id="article-4536">
+        <article id="article-4539">
             <a href="https://benfoster.io/blog/using-a-ravendb-listener-to-update-entities/" target="_blank">
-                <h2 class="title mb-6" id="article-4536">Using a RavenDB listener to update entities</h2>
+                <h2 class="title mb-6" id="article-4539">Using a RavenDB listener to update entities</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I demonstrate how to update fields on an entity using a RavenDB listener</p>
         </article>
-        <article id="article-4537">
+        <article id="article-4540">
             <a href="https://ayende.com/blog/153441/taking-a-look-at-s-arp-lite-part-i" target="_blank">
-                <h2 class="title mb-6" id="article-4537">Taking a look at S#arp Lite, Part I</h2>
+                <h2 class="title mb-6" id="article-4540">Taking a look at S#arp Lite, Part I</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -222,54 +270,6 @@
                 posted on: March 01, 2012
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a review of the S#arp Lite project, the version from Nov 4, 2011. I was asked to review this project a long time ago, but I never got around to it. I had some time and I decided that I might take a look and see how it goes. I don&#x2019;t like the S#arp Arch project, because it seems too complex and heavy weight for the purpose. The project comes with a sample application, which is good, because it is easy to see how the framework is intended to be used. Unfortunately, it is yet another online store example, I am getting heartily sick of that. On the other hand, it is a fairly simple model and easy to understand, so I grok why this keeps getting chosen.  Review Rule, I look at the code. If I wanted to deal with documentation, I would write some for our products. I am doing this because I find it fun to look at other people&#x2019;s code. So skip any comments about &#x201C;if you read the docs&#x2026;&#x201D;.  We start from the project structure:  I am not sure if I like it, I don&#x2019;t know if I agree that all of those splits are needed, but this is well within reasonable limits, so I am willing to let it slide on the grounds that this is personal taste more than anything else. Looking at the dependencies, we see:  The Init project contains two files, which are responsible for&#x2026; well, starting up, it seems. Again, I don&#x2019;t see any reason why this would be a separate project, but that is about it so far. Next in line is the NHibernateProvider project, in this case, we have the following:  So far, I am cautiously optimistic. All of the files / folders marked with red are actually all about setting NHibernate up, not about hiding it. But then we get to the read me file, which reads in part:  This folder contains any concrete, NHibernate-specific query classes.There should only be classes in here for any respective query *interfaces* found in /MyStore.Domain/Queries/ This folder will usually be empty except for very exceptive cases. This is&#x2026; interesting. Can&#x2019;t say whatever I agree or not yet. Looking at the QueryForProductOrderSummaries, we see:  Note the comment, there are better ways to do it, but we demonstrate an ugly way, and how to nicely encapsulate it. That is enough for now, I think, next post, I&#x2019;ll touch on the actual model&#x2026;</p>
-        </article>
-        <article id="article-4538">
-            <a href="https://ayende.com/blog/153377/what-are-you-in-for" target="_blank">
-                <h2 class="title mb-6" id="article-4538">What are you in for?</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 29, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There is a level of tension between what a developer wants and what the client wants. As a developer, I want to use the coolest technologies, the freshest methodologies, to be so far on the bleeding edge that they have an ER dedicated just for my team. As a client? I want to be as conservative as possible, for the most part, I don&#x2019;t care for new technologies unless they have some significant feature that I can&#x2019;t get anywhere else. I value speed of development over having the devs geek out. I spoke about before, the tendency of developers to start building castles in the sky in favor of getting things done. I call it Stealing From Your Client, because you are introducing additional things that aren&#x2019;t necessary, won&#x2019;t bring additional value or just plain make things hard.  For example, in just about any project that I have seen, putting an IRepository in front of an OR/M or putting an IRepository in front of RavenDB was a mistake. It created no value and actually made things harder to use. Other pet peeves of mine was raised in a discussion about architecture in a recent lecture that I gave. One of the participants asked me for my opinion about CQRS. But when I asked him for what sort of an application, he answer was somewhere along the lines of: &#x201C;I want to build my next application using CQRS and I like to hear your opinion.&#x201D; This sort of thinking drives me bananas. (Editor note: That sounds like a very painful thing, and I am not sure why I would do that, but it appears that this is an English expression that fit this location in the post). Dictating the architecture of an application, before you even have an application? Hell, making any decisions about the application (including what technologies to use) before you actually have a good idea about what is going on is a Big No! No! Here is the most important piece of this post. For the most part, all those cool technologies that you hear about? They aren&#x2019;t relevant for your scenario. And even if you are convinced that they are a perfect fit, there is a cost associated with them, which you have to consider before attempting them. Especially if this is the first time that you are using something. The really annoying part? Most people who come up with these exciting new technologies spent an inordinate amount of their time saying not how to build apps using them, but when you shouldn&#x2019;t. Evans&#x2019; DDD book quite explicitly state that DDD shouldn&#x2019;t be your default architecture, that it has a cost and should be carefully considered. The industry as a whole (me included) just ignored him and started to write DDD applications. Greg Young just lectured in Oredev about why you shouldn&#x2019;t use CQRS. For much the same reason. At the end, we are there to provide value to the customer. Yes, it is cool to work on the newest thing on the block, but that is why you have hobby projects.</p>
-        </article>
-        <article id="article-4539">
-            <a href="https://benfoster.io/blog/oauth-providers/" target="_blank">
-                <h2 class="title mb-6" id="article-4539">Getting started with OAuth Providers</h2>
-            </a>
-            <p class="mb-2">by Ben Foster</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 29, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post we look at how to register with, test and retrieve profile information from popular OAuth providers such as Google, Facebook and Twitter.</p>
-        </article>
-        <article id="article-4540">
-            <a href="https://ayende.com/blog/153700/ask-ayende-aggregates-and-repositories" target="_blank">
-                <h2 class="title mb-6" id="article-4540">Ask Ayende</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 28, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">With regards to my recommendation to avoid the repository, Stan asks:   You returned to explain why repository pattern is evil. Just interesting to know what are you doing when you need in your model to access another aggregate. Do you reference NH from your model? I prefer to leave my model POCOed and wrap DB calls by repository pattern. Sleeping good with it. This is an interesting question. There are several ways to answer that. To start with, assuming that we are using DDD model (which the usage of a repository would imply), you don&#x2019;t have references between aggregates. But let us assume that we somehow need that, Stan seems to suggest something like this proposed solution: public class Person &#xA;{&#xA;    public static readonly DateTime ImportantDate;&#xA;    public BirthPlace BirthPlace { get; set; } &#xA;&#xA;    public DateTime BirthDate &#xA;    { &#xA;        get; private set;&#xA;    } &#xA;&#xA;    public void CorrectBirthDate(IRepository&lt;BirthPlace&gt; birthPlaces, DateTime date)&#xA;    {&#xA;        if (BirthPlace != null &amp;&amp; date &lt; ImportantDate &amp;&amp; BirthPlace.IsSpecial) &#xA;        { &#xA;            BirthPlace = birthPlaces.GetForDate(date); &#xA;        }&#xA;    }&#xA;}&#xA;&#xA;&#xA;Here we have a business rule that states that this is required.&#xA;But do we actually need a repository here? What if we just said that whoever calls us need to provide us with a way to get the birth place by date?&#xA;public void CorrectBirthDate(&#xA;        Func&lt;DateTime, BirthPlace&gt; getBirthPlaceFordate, &#xA;        DateTime date)&#xA;{&#xA;    if (BirthPlace != null &amp;&amp; date &lt; ImportantDate &amp;&amp; BirthPlace.IsSpecial) &#xA;    { &#xA;        BirthPlace = getBirthPlaceFordate(date); &#xA;    }&#xA;}&#xA;&#xA;&#xA;This can be done with a simple delegate, no need to introduce a heavy weight abstraction. This is a local solution for a local problem. It keeps the database out from your entities and more importantly, it allows you to actually craft the appropriate response to this at the time of the call.</p>
         </article>
         <div class="button flex justify-between">
             <a href="453.html"><span class="back arrow"></span></a>
