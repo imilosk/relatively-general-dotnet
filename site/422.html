@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4211">
+            <a href="https://ayende.com/blog/160835/ravendb-new-feature-highlights" target="_blank">
+                <h2 class="title mb-6" id="article-4211">RavenDB new feature: Highlights</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 25, 2013
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Before anything else, I need to thank Sergey Shumov for this feature. This is one of the features that we got as a pull request, and we were very happy to accept it. What are highlights? Highlights are important when you want to give the user better search UX. For example, let us take the Google Code data set and write the following index for it:\ public class Projects_Search : AbstractIndexCreationTask&lt;Project, Projects_Search.Result&gt;&#xA;{&#xA;    public class Result&#xA;    {&#xA;        public string Query { get; set; }&#xA;    }&#xA;&#xA;    public Projects_Search()&#xA;    {&#xA;        Map = projects =&gt;&#xA;              from p in projects&#xA;              select new&#xA;              {&#xA;                  Query = new[]&#xA;                  {&#xA;                      p.Name,&#xA;                      p.Summary&#xA;                  }&#xA;              };&#xA;        Store(x =&gt; x.Query, FieldStorage.Yes);&#xA;        Index(x=&gt;x.Query, FieldIndexing.Analyzed);&#xA;    }&#xA;}&#xA;&#xA;&#xA;And now, we are going to search it:&#xA;using(var session = store.OpenSession())&#xA;{&#xA;    var prjs = session.Query&lt;Projects_Search.Result, Projects_Search&gt;()&#xA;        .Search(x =&gt; x.Query, q)&#xA;        .Take(5)&#xA;        .OfType&lt;Project&gt;()&#xA;        .ToList();&#xA;&#xA;    var sb = new StringBuilder().AppendLine(&quot;&lt;ul&gt;&quot;);&#xA;&#xA;    foreach (var project in prjs)&#xA;    {&#xA;        sb.AppendFormat(&quot;&lt;li&gt;{0} - {1}&lt;/li&gt;&quot;, project.Name, project.Summary).AppendLine();&#xA;    }&#xA;    var s = sb&#xA;        .AppendLine(&quot;&lt;/ul&gt;&quot;)&#xA;        .ToString();&#xA;}&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;The value of q is: source&#xA;Using this, we get the following results:&#xA;&#xA;hl2sb-src - Source code to Half-Life 2: Sandbox - A free and open-source sandbox Source engine modification. &#xA;mobilebughunter - BugHunter Platfrom is am open source platform that integrates with BugHunter Platform is am open source platform that integrates with Mantis Open Source Bug Tracking System. The platform allows anyone to take part in the test phase of mobile software proj &#xA;starship-troopers-source - Starship Troopers: Source is an open source Half-Life 2 Modification. &#xA;static-source-analyzer - A Java static source analyzer which recursively scans folders to analyze a project&#x27;s source code &#xA;source-osa - Open Source Admin - A Source Engine Administration Plugin &#xA;And this make sense, and it is pretty easy to work with. Except that it would be much nicer if we could go further than this, and let the user know why we selecting those results. Here is were highlights come into play. We will start with the actual output first, because it is more impressing:&#xA;&#xA;hl2sb-src - Source code to Half-Life 2: Sandbox - A free and open-source sandbox Source engine modification. &#xA;mobilebughunter - open source platform that integrates with BugHunter Platform is am open source platform that integrates with Mantis Open Source &#xA;volumetrie - code source - Volumetrie est un programme permettant de r&#xC3;&#x192;&#xC2;&#xA9;cup&#xC3;&#x192;&#xC2;&#xA9;rer des informations sur un code source - Volumetrie is a p &#xA;acoustic-localization-robot - s the source sound and uses a lego mindstorm NXT and motors to point a laser at the source. &#xA;bamboo-invoice-ce - The source-controlled Community Edition of Derek Allard&#x27;s open source &quot;Bamboo Invoice&quot; project &#xA;And here is the code to make this happen:&#xA;using(var session = store.OpenSession())&#xA;{&#xA;    var prjs = session.Query&lt;Projects_Search.Result, Projects_Search&gt;()&#xA;        .Customize(x=&gt;x.Highlight(&quot;Query&quot;, 128, 1, &quot;Results&quot;))&#xA;        .Search(x =&gt; x.Query, q)&#xA;        .Take(5)&#xA;        .OfType&lt;Project&gt;()&#xA;        .Select(x=&gt; new&#xA;        {&#xA;            x.Name,&#xA;            Results = (string[])null&#xA;        })&#xA;        .ToList();&#xA;&#xA;    var sb = new StringBuilder().AppendLine(&quot;&lt;ul&gt;&quot;);&#xA;&#xA;    foreach (var project in prjs)&#xA;    {&#xA;        sb.AppendFormat(&quot;&lt;li&gt;{0} - {1}&lt;/li&gt;&quot;, project.Name, string.Join(&quot; || &quot;, project.Results)).AppendLine();&#xA;    }&#xA;    var s = sb&#xA;        .AppendLine(&quot;&lt;/ul&gt;&quot;)&#xA;        .ToString();&#xA;}&#xA;&#xA;&#xA;&#xA;For that matter, here is me playing with things, searching for: lego mindstorm&#xA;&#xA;acoustic-localization-robot - ses a lego mindstorm NXT and motors to point a laser at the source. &#xA;dpm-group-3-fall-2011 - Lego Mindstorm Final Project &#xA;hivemind-nxt - k for Lego Mindstorm NXT Robots &#xA;gsi-lego - with Lego Mindstorm using LeJos &#xA;lego-xjoysticktutorial - l you Lego Mindstorm NXT robot with a joystick &#xA;You can play around with how it highlight the text, but as you can see, I am pretty happy with this new feature.</p>
+        </article>
+        <article id="article-4212">
             <a href="https://ayende.com/blog/160834/floss-moling-with-ravendb" target="_blank">
-                <h2 class="title mb-6" id="article-4211">FLOSS Moling with RavenDB</h2>
+                <h2 class="title mb-6" id="article-4212">FLOSS Moling with RavenDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There is the FLOSS Mole data set, which provide a lot of interesting information about open source projects. As I am always interested in testing RavenDB with different data sets, I decided that this would be a great opportunity to do that, and get some additional information about how things are working as well. The data is provided in a number of formats, but most of them aren&#x2019;t really easy to access. SQL statements and raw text files that I assume to be tab separated, but I couldn&#x2019;t really figure out quickly. I decided that this would be a great example of actually migrating content from a SQL System to a RavenDB System. The first thing to do was to install MySQL, as that seems to be the easiest way to get the data out. (As a note, MySQL Workbench is really not what I would call nice.) The data looks like this, this is the Google Code projects, and you can also see that a lot of the data is driven from the notion of a project.  I explored the data a bit, and I came to the conclusion that this is pretty simple stuff, overall. There are a few many to one associations, but all of them were capped (the max was 20 or so). That meant, in turn, that we had a really simple work to do for the import process. I started by creating the actual model which we will use to save to RavenDB:  The rest was just a matter of reading from MySQL and writing to RavenDB. I chose to use Peta Poco for the SQL access, because it is the easiest. The following code sucks. It is written with the assumption that I know what the data sizes are, that the cost of making so many queries (roughly a 1,500,000 queries) is acceptable, etc. using (var docStore = new DocumentStore&#xA;    {&#xA;        ConnectionStringName = &quot;RavenDB&quot;&#xA;    }.Initialize())&#xA;using (var db = new PetaPoco.Database(&quot;MySQL&quot;))&#xA;using (var bulk = docStore.BulkInsert())&#xA;{&#xA;    foreach (var prj in db.Query&lt;dynamic&gt;(&quot;select * from gc_projects&quot;).ToList())&#xA;    {&#xA;        string name = prj.proj_name;&#xA;        bulk.Store(new Project&#xA;            {&#xA;                Name = name,&#xA;                CodeLicense = prj.code_license,&#xA;                CodeUrl = prj.code_url,&#xA;                ContentLicense = prj.content_license,&#xA;                ContentUrl = prj.content_url,&#xA;                Description = prj.project_description,&#xA;                Summary = prj.project_summary,&#xA;                Labels = db.Query&lt;string&gt;(&quot;select label from gc_project_labels where proj_name = @0&quot;, name)&#xA;                                .ToList(),&#xA;                Blogs = db.Query&lt;dynamic&gt;(&quot;select * from gc_project_blogs where proj_name = @0&quot;, name)&#xA;                            .Select(x =&gt; new Blog { Link = x.blog_link, Title = x.blog_title })&#xA;                            .ToList(),&#xA;                Groups = db.Query&lt;dynamic&gt;(&quot;select * from gc_project_groups where proj_name = @0&quot;, name)&#xA;                            .Select(x =&gt; new Group { Name = x.group_name, Url = x.group_url })&#xA;                            .ToList(),&#xA;                Links = db.Query&lt;dynamic&gt;(&quot;select * from gc_project_links where proj_name = @0&quot;, name)&#xA;                            .Select(x =&gt; new Link { Url = x.link, Title = x.link_title })&#xA;                            .ToList(),&#xA;                People = db.Query&lt;dynamic&gt;(&quot;select * from gc_project_people where proj_name = @0&quot;, name)&#xA;                    .Select(x =&gt; new Person&#xA;                        {&#xA;                            Name = x.person_name,&#xA;                            Role = x.role,&#xA;                            UserId = x.user_id&#xA;                        })&#xA;                    .ToList(),&#xA;            });&#xA;    }&#xA;}&#xA;&#xA;&#xA;But, it does the work, and it was simple to write. Using this code, I was able to insert 299,949 projects in just under 13 minutes. Most of the time went to making those 1.5 million queries to the db, by the way.&#xA;Everything is cool, and it is quite nice. On the next post, I&#x2019;ll talk about why I wanted a new dataset. Don&#x2019;t worry, it is going to be cool.</p>
         </article>
-        <article id="article-4212">
+        <article id="article-4213">
             <a href="https://ayende.com/blog/160833/todays-comic-relief" target="_blank">
-                <h2 class="title mb-6" id="article-4212">Today&#x2019;s comic relief</h2>
+                <h2 class="title mb-6" id="article-4213">Today&#x2019;s comic relief</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20"></p>
         </article>
-        <article id="article-4213">
+        <article id="article-4214">
             <a href="https://ayende.com/blog/160801/you-are-not-allowed-to-understand-us-it-is-the-law" target="_blank">
-                <h2 class="title mb-6" id="article-4213">You are not allowed to understand us, it is the LAW!</h2>
+                <h2 class="title mb-6" id="article-4214">You are not allowed to understand us, it is the LAW!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It is not just developers that are making life interesting. Here is an exchange from today:  I am very happy to sell you whatever you want, but I would really like to know what it is that you want.</p>
         </article>
-        <article id="article-4214">
+        <article id="article-4215">
             <a href="https://ayende.com/blog/160769/elections" target="_blank">
-                <h2 class="title mb-6" id="article-4214">Elections</h2>
+                <h2 class="title mb-6" id="article-4215">Elections</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So today we had elections, and by tonight you will have a lot of people doing a lot of electoral math. I don&#x2019;t like elections, because of an assumption problem. It isn&#x2019;t linear. This is how we usually portray the choices in elections. You pick a candidate / party that fit where you are on this line.   In reality, this isn&#x2019;t nearly as simple. Mostly because this one line assumes that there is a central idea that is important being anything else. But let us take a few examples:  Tax policy Security policy Gay marriage Religion Social justice Climate change Now, they don&#x2019;t fit on a single line. Your position on gay marriage doesn&#x2019;t impact what you want with regards to tax policy, for example. The real scenario is:  Now, usually there is some concentration of ideas, so it is typical that if you give me your idea about gay marriage, I can guess what your ideas about climate change are.  By the way, I am taking gay marriage and climate change as examples that are common in more than a single country.  But that is guessing. And in many cases, people are a lot more complex than that. We are limited to choosing a candidate, but what happens when we have someone who we support on issue X and oppose on issue Y? We have to make tradeoffs. So you are limited to one vote, and have to choose something on this line. Yes, as a result of that you get commonalities, a lot of people that like position X also like position Y, but not always, and sometimes I find it abhorrent that someone with whom I share the position on X also have an opposed idea on Y.</p>
         </article>
-        <article id="article-4215">
+        <article id="article-4216">
             <a href="https://ayende.com/blog/160737/design-patterns-in-the-test-of-time-mediator" target="_blank">
-                <h2 class="title mb-6" id="article-4215">Design patterns in the test of time</h2>
+                <h2 class="title mb-6" id="article-4216">Design patterns in the test of time</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The mediator pattern defines an object that encapsulates how a set of objects interact. This pattern is considered to be a behavioral pattern due to the way it can alter the program&#x27;s running behavior.  More about this pattern can be found here. Like the Fa&#xE7;ade pattern, I can absolutely see the logic of wanting to use a mediator. It is supposed to make it easier to work with a set of objects, because it hides their interactions. In practice, almost all known cases are bad ones. In fact, in most systems that I have seen any association of the name to the actual pattern it is supposed to represent is not very associated at all. The differences between fa&#xE7;ade and mediator are minute, and you would think the same advice would apply. However, while you can find a lot of usages of facades (or at least things people would call facades), there are very few real world examples of mediator pattern in use. And almost all of them carry the marks that say: &#x201C;Just read GoF book, @w$0m3!!!&#x201D;</p>
         </article>
-        <article id="article-4216">
+        <article id="article-4217">
             <a href="https://ayende.com/blog/160706/design-patterns-in-the-test-of-time-iterator" target="_blank">
-                <h2 class="title mb-6" id="article-4216">Design patterns in the test of time</h2>
+                <h2 class="title mb-6" id="article-4217">Design patterns in the test of time</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In object-oriented programming, the iterator pattern is a design pattern in which an iterator is used to traverse a container and access the container&#x27;s elements. The iterator pattern decouples algorithms from containers; in some cases, algorithms are necessarily container-specific and thus cannot be decoupled.  More about this pattern. It is really hard to think about any other pattern that has been more successful. In particular, patterns have long been about overcoming shortcoming of the language or platform. In this case, iterators has became part of both language and platform in most modern systems.  System.Collection.IEnumerable java.util.Iterator Python&#x2019;s __iter__() Basically, it is so good, it is everywhere.</p>
         </article>
-        <article id="article-4217">
+        <article id="article-4218">
             <a href="https://ayende.com/blog/160705/design-patterns-in-the-test-of-time-interpreter" target="_blank">
-                <h2 class="title mb-6" id="article-4217">Design patterns in the test of time</h2>
+                <h2 class="title mb-6" id="article-4218">Design patterns in the test of time</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In computer programming, the interpreter pattern is a design pattern that specifies how to evaluate sentences in a language. The basic idea is to have a class for each symbol (terminal or nonterminal) in a specialized computer language. The syntax tree of a sentence in the language is an instance of the composite pattern and is used to evaluate (interpret) the sentence.  More about this pattern. Along with the visitor pattern, this is still a very useful pattern, but in a very small but important context. Parsing and executing code. We see those quite often. In particular, JavaScript is probably the most common place where we see interpreters. That said, unless you are actually dealing with executing code, there is very little reason for you to want to apply this pattern. In fact, I have seem people go for that several times for purposes that I really can&#x2019;t explain. Interpreter is for code execution. It has some interesting differences from compiling the code. For one, it is a lot easier to write, and for the most part, performance is great. This is especially true because the hard parts (the text parsing) are usually done up front and then you are just executing the AST. From my perspective, we use Jint, a JS interpreter in RavenDB because compiling to IL and running that was complex. Any bugs there was complex to figure out, and most important from our point of view, we really needed to be able to place limits on what you could do. The number of steps that can be taken, the recursion depth, and so on. Doing so with compiled code requires you to have kernel level access, or doing things like Thread Abort. So Interpreters are good, but watch out when you use it, if it ain&#x2019;t code that you are going to run, why are you writing this in the first place?</p>
         </article>
-        <article id="article-4218">
+        <article id="article-4219">
             <a href="https://ayende.com/blog/160673/bug-fixes-nightmares" target="_blank">
-                <h2 class="title mb-6" id="article-4218">Bug fixes &amp; nightmares</h2>
+                <h2 class="title mb-6" id="article-4219">Bug fixes &amp; nightmares</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This just happened. I am working on clearing my mail box, when I got a repro for a high CPU load from a user.  Spent an hour trying to figure out what is going on. Found that the problem is something with map/reduce under extreme load. Couldn&#x2019;t figure it out. Went to bed depressed after midnight. Got up at 4 AM, sat down on the same problem. Solved it (root cause, that @ayende guy doing O(N Scary) stuff) in under 15 minutes. Now I need to figure out what to do with the rest of the night. Also, currently in Denmark (Copenhagen) and it is bloody cold out here. This is what I look like when I am cold:</p>
         </article>
-        <article id="article-4219">
+        <article id="article-4220">
             <a href="https://ayende.com/blog/160641/ravendb-2-1-features-robust-sql-replication" target="_blank">
-                <h2 class="title mb-6" id="article-4219">RavenDB 2.1 Features: Robust SQL Replication</h2>
+                <h2 class="title mb-6" id="article-4220">RavenDB 2.1 Features: Robust SQL Replication</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: January 14, 2013
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We had the ability to replicate things to SQL for a long while. But I was never really happy with the implementation. It was awkward, hard to use/configure/setup and didn&#x2019;t really give us a lot of options in general. After we finished working on 2.0, I had some free time and used that to create the new SQL Replication bundle, which is much nicer. Basically, we go from this guy:  To those guys:   And the fun part is that we no longer require to do this using indexing, or have to worry about connectivity issues. RavenDB will automatically handle disruptions in connectivity, and would heal rifts automatically. But probably the best part is that this is how we define the transformation function between RavenDB and your RDBMS of choice:</p>
-        </article>
-        <article id="article-4220">
-            <a href="https://ardalis.com/presenting-at-telerik-software-pros-conference-in-new-delhi-india/" target="_blank">
-                <h2 class="title mb-6" id="article-4220">Presenting at Telerik Software Pros Conference in New Delhi India</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 12, 2013
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today I gave two sessions at the Telerik Software Professionals Conference in New Delhi, India. The event is still ongoing (Chris Sells is&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="421.html"><span class="back arrow"></span></a>
