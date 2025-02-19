@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-8611">
+            <a href="https://ayende.com/blog/1691/thinking-about-apis-advance-usages" target="_blank">
+                <h2 class="title mb-6" id="article-8611">Thinking about APIs: Advance Usages</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: September 18, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You may have noticed that I have create some wrappers around NHibernate, to make it easier to work with.&#xA0;NHibernate&#x27;s API is very rich, and it can get pretty long if you are not careful. Consider the following:             Session.CreateCriteria(typeof(Post))                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; .Add(Expression.Gt(&quot;PostedAt&quot;, DateTime.Now.AddDays(-3)))                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; .Add(Expression.Eq(&quot;ShowInMainPage&quot;, true))                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; .AddOrder(Order.Desc(&quot;PostedAt&quot;))                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; .SetFirstResult(0)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; .SetMaxResults(25)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; .List();         The above is very clear way, if long winded,&#xA0;to say &quot;give me the last 25 posts in the last 3 days that should be shown in the main page&quot;. I swim around this API like fish in the water, until it comes to testing.     Trying to mock the above sentence is a PITA of the first order, and I say this as someone who wrote a mocking library :-)     Partly because of this, partly because I liked the API from Active Record, partly because I wanted a mode DDD model to work with, and partly because a client wanted to avoid commitment to a specific OR/M, I created a wrapper around it that gave some very nice features, adding code generation didn&#x27;t hurt, so the above query now looks like this:             Repository&lt;Post&gt;.FindAll(0,25,Order.Desc(&quot;PostedAt&quot;),                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Where.Post.PostedAt.Gt(DateTime.Now.AddDays(-3)),                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Where.Post.ShowInMainPage.Eq(true));         Using the Repository&lt;T&gt; is very simple, you can check the API here:          Most of the saving are done by removing the fluent interface, and while I feel that this is simpler in most cases, there are some things that it just can&#x27;t express.     I have talked before about cachable queries, in NHibernate, the are expressed by calling SetCachable(true), and setting the Cache Region, if neccecary. My API doesn&#x27;t allow for it. Oh, I could add another parameter, but I already have a possible parameter explosion (check out the number of overloads on FindAll() ), and going this route would force me to add a parameter that would force bypassing the cache, etc.     Clearly, NHibernate&#x27;s approach is much more reasonable now, it is easily extensible to support more options, and it doesn&#x27;t break down when the complexity goes up.     I really like the fact that I have intellisense at my hands, and that I don&#x27;t have to scroll through the 50&#x2B; methods (I counted) that some of the interfaces in NHibernate have. In addition to that, I have a problem where I want to cache a particular query, part of the time, and only for a very specific part of the time. In the part in question the queryis called roughly 3,650,000 times during the process of executing a certain&#xA0;web request [three points to the first fellow who can tell me what I&#x27;m doing]. Obviously going to the database per each query isn&#x27;t going to be worth my time.     This query is sitting very low in the stack, and I really don&#x27;t want to have to change / modify it in place, and I don&#x27;t really like the idea of a caching version vs. non-caching version. After getting up and hitting the wall a couple of time with someone else head (What, you expected me to use mine? I use it for thinking. :-) ), I came up with the following solution:          The usage is fairly simple:             using(With.QueryCache())                        {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ICollection&lt;Post&gt; postsToShow = Repository&lt;Post&gt;.FindAll(0, 25, Order.Desc(&quot;PostedAt&quot;),                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Where.Post.PostedAt.Gt(DateTime.Now.AddDays(-3)),                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Where.Post.ShowInMainPage.Eq(true));                        }         I&#x27;ll be the first to admit that the &quot;using(With ...&quot; syntax is not the best there is, but in this case, I don&#x27;t need to special case the exception case, so I don&#x27;t think that I need to use a function that takes a delegate here.    The really interesting part is the TemporaryQueryCache(), which will enable the query cache for the duration of the using() statement. This means that I can selectively turn it on/off for a part of the code that require caching without actually modifying any code lower in the stack. This enables me to make much better decisions with regard to how and when I can use caching.    I commited my changes, but they are still in the proof of concept stage, and may change.    You can check them out here, or check out the entire tree using:    svn co http://svn.berlios.de/svnroot/repos/rhino-mocks/trunk/rhino-commons</p>
+        </article>
+        <article id="article-8612">
             <a href="https://ayende.com/blog/1690/jeff-ide-is-hot" target="_blank">
-                <h2 class="title mb-6" id="article-8611">Jeff IDE is Hot</h2>
+                <h2 class="title mb-6" id="article-8612">Jeff IDE is Hot</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Take a look at this, it certainly looks cool. I&#x27;m trying it out at the moment, I had to enlarge the font size a bit, probably because I&#x27;m on 1280x1024 on these monitors.</p>
         </article>
-        <article id="article-8612">
+        <article id="article-8613">
             <a href="https://ayende.com/blog/1689/the-case-of-the-not-so-innocent-typo" target="_blank">
-                <h2 class="title mb-6" id="article-8612">The Case of the not so innocent typo...</h2>
+                <h2 class="title mb-6" id="article-8613">The Case of the not so innocent typo...</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Life gets interesting with creative spelling error. I was checking a problem with a page today when I noticed the... interesting name it had... &quot;EmployeeAssassinationValidatorRules.aspx&quot;     No, I don&#x27;t work on that kind of system.    The name should haved been named &quot;EmployeeAssignationValidatorRules.aspx&quot;, or better yet, &quot;EmployeeAssignmentsValidatorRules.aspx&quot;. But creative mispelling and taking the first result from Babylon spelling fixer.    I wonder what would happen if I didn&#x27;t both to actually read the page name, how long it would go unnoticed...</p>
         </article>
-        <article id="article-8613">
+        <article id="article-8614">
             <a href="https://ardalis.com/temporary-post-used-for-style-detection-e3d843b1-a1dd-4d7f-849e-13d424d94655/" target="_blank">
-                <h2 class="title mb-6" id="article-8613">Temporary Post Used For Style Detection (e3d843b1-a1dd-4d7f-849e-13d424d94655)</h2>
+                <h2 class="title mb-6" id="article-8614">Temporary Post Used For Style Detection (e3d843b1-a1dd-4d7f-849e-13d424d94655)</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a temporary post that was not deleted. Please delete this manually. (f57df40f-2ff7-4942-9d90-d7bd327f8b2a)Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8614">
+        <article id="article-8615">
             <a href="https://ardalis.com/strange-issue-with-httpcontext-current-with-webdevserver/" target="_blank">
-                <h2 class="title mb-6" id="article-8614">Strange Issue with HttpContext.Current with WebDevServer</h2>
+                <h2 class="title mb-6" id="article-8615">Strange Issue with HttpContext.Current with WebDevServer</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m working with a Trace class that I wrote back in .NET 1.1 that wraps System.Diagnostics and System.Web tracing. The class looks like this&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8615">
+        <article id="article-8616">
             <a href="https://ardalis.com/conditional-attribute-and-trace-in-asp-net-2-0/" target="_blank">
-                <h2 class="title mb-6" id="article-8615">Conditional Attribute and TRACE in ASP.NET 2.0</h2>
+                <h2 class="title mb-6" id="article-8616">Conditional Attribute and TRACE in ASP.NET 2.0</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In ASP.NET 1.x I had created some helper classes that wrapped the ASP.NET Trace class. These included methods like this one: [Conditional&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8616">
+        <article id="article-8617">
             <a href="https://ayende.com/blog/1688/more-on-binsor-natrual-component-references" target="_blank">
-                <h2 class="title mb-6" id="article-8616">More On Binsor: Natrual Component References</h2>
+                <h2 class="title mb-6" id="article-8617">More On Binsor: Natrual Component References</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, I just added the last piece in what I consider the major features to Binsor, which is component references. I&#x27;m a big fan of decorators and chains of responsabilities, which mean that I tend to create a lot of references between objects.    In Binsor, it is as natural as this:            import Rhino.Commons                                &#xA0;                        Component(defualt_repository, IRepository, NHRepository)                                &#xA0;                        customer_repository = Component(customer_repository,                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; IRepository of Customer,&#xA0;                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; CustomerValidationRepository of Customer)                        #notice that I&#x27;m using @ here for compnent reference                        customer_repository.inner = @defualt_repository         Just by defining the component, it is automagically&#xA0;expose it for references as @component_name. You can also define it in the Component itself as a compiled literal string, instead of a string. I can even use generic types there (which is a weakness in Boo), although not in a very nice syntax.    Update: The syntax weakness in generics in Boo was fixed (about 12 hours from the moment that I posted it), so the code above is very clean again. I know why I like OSS now!    With this done, I&#x27;m not in that blissful world where you got what you wanted and everything is fuzzy around the edges. I got three major things done in the last 12 hours, Windosr&#x27;s IOC-29, Binsor (which required IOC-29, and NHibernate batching. I haven&#x27;t done this amount of coding in what feels like ages.    Damn, that feels good.    The source can be found here</p>
         </article>
-        <article id="article-8617">
+        <article id="article-8618">
             <a href="https://ayende.com/blog/1687/introducting-binsor-the-boo-dsl-for-windsor" target="_blank">
-                <h2 class="title mb-6" id="article-8617">Introducting Binsor: The Boo DSL For Windsor</h2>
+                <h2 class="title mb-6" id="article-8618">Introducting Binsor: The Boo DSL For Windsor</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">On the on-going battle between yours truly and XML, there has been a score on the good side!     I just finished implementing most of the usable functionality in Binsor, which is a Boo DSL* that is directed at configuring Windsor. Before I get into the details, take a look at the most minimal xml configuration possible for Windsor:            &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;                        &lt;configuration&gt;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &lt;components&gt;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &lt;component id=&quot;default.repository&quot;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA0;&#xA0; service =&quot;Rhino.Commons.IRepository`1, Rhino.Commons&quot;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA0;&#xA0; type=&quot;Rhino.Commons.NHRepository`1, Rhino.Commons&quot;/&gt;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &lt;/components&gt;                        &lt;/configuration&gt;         Now, let us take a look at the same configuration using Binsor:            import Rhino.Commons                        Component(&quot;defualt_repository&quot;, IRepository, NHRepository)        This is it!    What is even more fun, is that you get to treat the component as if it was a real object, instead of a lump of configuration data that you need to work with. Take a look at how you do it for Windsor using XML here.    Take a look at how you do it using Binsor:            import Rhino.Commons                        email = Component(&quot;email_sender&quot;, ISender, EmailSender)                        email.Host = &quot;example.dot.org&quot;        It can&#x27;t get any more natural than that.    Of course, the problem with the XML configuration for Windsor only start when&#xA0;you crazy with it and build an object graph of arbitrary depth no less than five. I stopped trying to make it work when I got 15 different XML files, mostly containing the same information.    Now, if I want to add the same component to listen for each of my server, I can simple do this:            import Rhino.Commons                                &#xA0;                        servers = [&#xA0;&#xA0; &quot;server1&quot;,&#xA0;&#xA0;&#xA0; &quot;server2&quot;,&#xA0;&#xA0;&#xA0; &quot;server3&quot;]                                &#xA0;                        for server in servers:                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; listerner = Component(&quot;listener_for_${server}&quot;, IListener, WSListener)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; listener.Server = server         If I want to make a change to the configuration, I can make it in one place, and all the listeners are updated.    Did I mention already that it is debuggable ?!    * Maybe DSL is taking it a bit too much, though. It is a single class that has some fancy sticks in it, and a lot of Boo magic.</p>
         </article>
-        <article id="article-8618">
+        <article id="article-8619">
             <a href="https://ayende.com/blog/1686/batching-support-in-nhibernate" target="_blank">
-                <h2 class="title mb-6" id="article-8618">Batching support in NHibernate</h2>
+                <h2 class="title mb-6" id="article-8619">Batching support in NHibernate</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As of about 90 minutes ago, NHibernate has batching support. :-D    All the tests are green, but there may be things that broke in exciting ways, so I encourage you to try it out and see if you can break it. This functionality exists only for SQL Server, and only on .Net 2.0 (for complaints, go directly to the ADO.Net team).    You can enable this functionality by adding this to your hibernate configuration.             &lt;    add key=&quot;hibernate.batch_size&quot; value=&quot;10&quot; /&gt;        Setting this size to very large number and treating NHibernate as an OO tool for bulk inserts is still&#xA0;not recommended.    My previous tests showed about 50% performance benefits over normal calls, I decided to try to take the new code for a speed using NHibernate&#x27;s perf tests. They are fairly simple, but they are at least an indication of what is going on. The tests I run were all run against a local instance of SQL Server, with log level set to WARN. The test just compare similar operations using NHibernate and direct ADO.Net for some operations, usually inserts / deletes in increasing amounts. (For reference, I&#x27;m running the Simultanous() test from PerformanceTest fixture).    I should also mention that these are by no mean real benchmarks, it is more in the way of an indication.    With no batching:        As you can see, there isn&#x27;t much of a performance difference between the two, NHibernate has about 15% overhead, mostly it can be seen as a background noise, especially on the lower ranges.    Let us try with a batching of 25, shall we?        Now the roles are reversed, and it is NHibernate that is faster. In fact, in this benchmark, it was on average faster by 25% - 30% than the direct ADO.Net code (without batching). Just for kicks, I run the benchmark with batch size of 256, and got about 30% - 45% improvements.        All in all, I think that I like this :-DAs a&#xA0;side note, most of the performance in an ORM is not in the INSERT / UPDATE / DELETE side of things, but rather in how smart the engine in SELECTing the data. Issuing a thousands unnececary SELECTs is going to be a performance hog no matter what you do.</p>
         </article>
-        <article id="article-8619">
+        <article id="article-8620">
             <a href="https://ardalis.com/ultimate-asp-net-base-page-class/" target="_blank">
-                <h2 class="title mb-6" id="article-8619">Ultimate ASP.NET Base Page Class</h2>
+                <h2 class="title mb-6" id="article-8620">Ultimate ASP.NET Base Page Class</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: September 15, 2006
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m working on a base page for a new application and it seems like this is about the 5th or 6th time I&#x27;m building one of these things, so it&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-8620">
-            <a href="https://ayende.com/blog/1685/where-data-sets-breaks-down" target="_blank">
-                <h2 class="title mb-6" id="article-8620">Where data sets breaks down...</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 15, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Another thing that came up in conversation today, a very good example of where the data set model breaks down. Take a look at the following (highly simplified) tables:          Each type of employee gets a different salary calculation for overtime per the (current) salary type:                                                                                                                             Global                                            Hourly                                            Global &#x2B; Hourly                                                                            Manager                                            None                                            15% over hourly rate                                            15% over hourly rate, to a max of totally 20% of monthly salary over a calendar month                                                                            Employee                                            None                                            12% over hourly rate                                            12% precentage                                                                            Freelance                                            10$ hour                                            9% over hourly rate                                            10$ hour or 9% over hourly rate, lowest one                                            Given the above business rules, how do you propose to write the AddOverTime() method using the dataset model in a maintainable fashion? There will be additonal employee types and additional salary types in the future.</p>
         </article>
         <div class="button flex justify-between">
             <a href="861.html"><span class="back arrow"></span></a>
