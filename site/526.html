@@ -112,8 +112,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5251">
+            <a href="https://ayende.com/blog/4559/real-world-authorization-implementation-considerations" target="_blank">
+                <h2 class="title mb-6" id="article-5251">Real world authorization implementation considerations</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 23, 2010
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Nitpicker corner: this post discusses authorization, which assumes that you already know who the user is. Discussion of authentication methods, how we decide who the user is, would be outside the scope of this post.   I had a lot of experience with building security systems. After all, sooner or later, whatever your project is, you are going to need one. At some point, I got tired enough of doing that that I wrote Rhino Security, which codify a lot of the lessons that I learned from all of those times. And I learned a lot from using Rhino Security in real world projects as well.  When coming to design the authorization bundle for RavenDB, I had decided to make a conscious effort to detail the underlying premise that I have when I am approaching the design of a security system.  You can&#x2019;t manage authorization at the infrastructure level  That seems to be an instinctual response by most developers when faced with the problem, &#x201C;we will push it to the infrastructure and handle this automatically&#x201D;. The usual arguments is that we want to avoid the possibility of the developer forgetting to include the security checks and that it makes it easier to develop.  The problem is that when you put security decisions in the infrastructure, you are losing the context in which a certain operation is performed. And context matters. It matters even more when we consider the fact that there are actually two separate levels of security that we need to consider:     Infrastructure related &#x2013; can I read / write to this document?     Business related &#x2013; can I perform [business operation] on this entity?    Very often, we try to use the first to apply the second. This is often the can when we have a business rule that specify that a user shouldn&#x2019;t be able to access certain documents which we try to apply at the infrastructure level.  For a change, we will use the example of a debt collection agency.      As a debt collector, I can negotiate a settlement plan with a debtor, so the agency can resolve the debt.         Debt collectors can only negotiate settlement plans for debts under 50,000$       Only managers can negotiate settlement plans for debts over 50,000$      Seems simple, right? We will assume that we have a solution in store and say that the role of DebtCollectors can&#x2019;t read/write to documents about settlement plans of over 50K$. I am not sure how you would actually implement this, but let us say that we did just that. We solved the problem at the infrastructure level and everyone is happy.  Then we run into a problem, a Debt Collector may not be allow to do the actual negotiation with a heavy debtor, but there is a whole lot of additional work that goes on that the Debt Collector should do (check for collateral, future prospects, background check, etc).  The way that the agency works, the Debt Collector does a lot of the preliminary work, then the manager does the actual negotiation. That means that for the same entity, under different contexts, we have very different security rules. And these sort of requirements are the ones that are going to give you fits when you try to apply them at the infrastructure level.  You can argue that those sort of rules are business logic, not security rules, but the way the business think of them, that is exactly what they are.   The logged on user isn&#x2019;t the actual user  There is another aspect for this. Usually when we need to implement security system like this, people throw into the ring the notion of Row Level Security and allowing access to specific rows by specific logins. That is a non starter from the get go, for several reasons. The previous point about infrastructure level security applies here as well, but the major problem is that it just doesn&#x2019;t work when you have more than a pittance of users.  All Row Level Security solutions that I am aware of (I am thinking specifically of some solutions provided by database vendors) requires you to login into the database using a specific user, from which your credentials can be checked against specific rows permissions.  Consider the case where you have a large number of users, and you have to login to the database for each user using their credentials. What is going to be the affect on the system?  Well, there are going to be two major problems. The first is that you can wave goodbye to small &amp; unimportant things like connection pooling, since each user have their own login, they can&#x2019;t share connections, which is going to substantially increase the cost of talking to the database.  The second is a bit more complex to explain. When the system perform an operation as a result of a user action, there are distinct differences between work that the system performs on behalf of the user and work that the system performs on behalf of the system.  Let us go back to our Debt Collection Agency and look at an example:     As a Debt Collector, I can finalize a settlement plan with a debtor, so the agency can make a lot of money.         A Debt Collector may only view settlement plans for the vendors that they handle debt collection for.      Settlement plan cannot be finalized if (along with other plans that may exists) the settlement plan would result in over 70% of the debtor salary going into paying debts.      This is pretty simple scenario. If I am collecting debts for ACME, I can&#x2019;t take a peek and see how debts handle be EMCA, ACME&#x2019;s competitor, are handled. And naturally, if the debtor&#x2019;s income isn&#x2019;t sufficient to pay the debt, it is pretty obvious that the settlement plan isn&#x2019;t valid, and we need to consider something else.  Now, let us look at how we would actually implement this, the first rule specifies that we can&#x2019;t see other settlement plans, but for us to enforce the second rule, we must see them, even if they belong to other creditors. In other words, we have a rule where the system need to execute in the context of the system and not in the context of the user.  You will be surprised how often such scenarios come up when building complex systems. When your security system is relying on the logged on user for handling security filtering, you are going to run into a pretty hard problem when it comes the time to handle those scenarios.  Considerations  So, where does this leave us? It leave us with the following considerations when the time comes to build&#xA0; an authorization implementation:     You can&#x2019;t handle authorization in the infrastructure, there isn&#x2019;t enough context to make decisions there.    Relying on the logged on user for row/document level security is a good way to have a wall hit your head in a considerable speed.    Authorization must be optional, because we need to execute some operations to ensure valid state outside the security context of a single user.    Authorization isn&#x2019;t limited to the small set of operations that you can perform from infrastructure perspective (Read / Write) but have business meaning that you need to consider.</p>
+        </article>
+        <article id="article-5252">
+            <a href="https://ayende.com/blog/4558/an-interesting-ravendb-bug" target="_blank">
+                <h2 class="title mb-6" id="article-5252">An interesting RavenDB bug</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 22, 2010
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I got a very strange bug report recently,   The following index:     from movie in docs.Movies&#xA;from actor in movie.Actors&#xA;select new { Actor = actor }&#xA;  &#xA;&#xA;&#xA;&#xA;Will produce multiple results from a single document, which poses a pretty big problem when you try to page through that. Imagine that each movie has 10 actors, and you are trying to page through this index for the first two documents of movies by Charlie Chaplin. The first movie that matches Charlie Chaplin will have ten results returned from the index, and simple paging at the index level will give us the wrong results.&#xA;&#xA;Here is my solution for that, which works, but make me just a tad uneasy:&#xA;&#xA;public IEnumerable&lt;IndexQueryResult&gt; Query(IndexQuery indexQuery)&#xA;{&#xA;    IndexSearcher indexSearcher;&#xA;    using (searcher.Use(out indexSearcher))&#xA;    {&#xA;        var previousDocuments = new HashSet&lt;string&gt;();&#xA;        var luceneQuery = GetLuceneQuery(indexQuery);&#xA;        var start = indexQuery.Start;&#xA;        var pageSize = indexQuery.PageSize;&#xA;        var skippedDocs = 0;&#xA;        var returnedResults = 0;&#xA;        do&#xA;        {&#xA;            if(skippedDocs &gt; 0)&#xA;            {&#xA;                start = start &#x2B; pageSize;&#xA;                // trying to guesstimate how many results we will need to read from the index&#xA;                // to get enough unique documents to match the page size&#xA;                pageSize = skippedDocs * indexQuery.PageSize; &#xA;                skippedDocs = 0;&#xA;            }&#xA;            var search = ExecuteQuery(indexSearcher, luceneQuery, start, pageSize, indexQuery.SortedFields);&#xA;            indexQuery.TotalSize.Value = search.totalHits;&#xA;            for (var i = start; i &lt; search.totalHits &amp;&amp; (i - start) &lt; pageSize; i&#x2B;&#x2B;)&#xA;            {&#xA;                var document = indexSearcher.Doc(search.scoreDocs[i].doc);&#xA;                if (IsDuplicateDocument(document, indexQuery.FieldsToFetch, previousDocuments))&#xA;                {&#xA;                    skippedDocs&#x2B;&#x2B;;&#xA;                    continue;&#xA;                }&#xA;                returnedResults&#x2B;&#x2B;;&#xA;                yield return RetrieveDocument(document, indexQuery.FieldsToFetch);&#xA;            }&#xA;        } while (skippedDocs &gt; 0 &amp;&amp; returnedResults &lt; indexQuery.PageSize);&#xA;    }&#xA;}</p>
+        </article>
+        <article id="article-5253">
+            <a href="https://ayende.com/blog/4557/itunes-full-screen-movies-incompatible-with-large-font-sizes" target="_blank">
+                <h2 class="title mb-6" id="article-5253">iTunes full screen movies incompatible with Large Font sizes?</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 20, 2010
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have a PC hooked to my TV, but the problem is that there seems to be a bug in iTunes, when I set the font site to be large enough to actually be readable, like so:     I lose the ability to view full screen movies in iTunes, when I switch the movie to full screen, it continues playing (I can hear it) but the display switch back to the iTunes library, rather than the movie.  I verified the resetting the font size fixes this problem, and this is in iTunes 9.2.1.  Anyone run into this? Any solutions?</p>
+        </article>
+        <article id="article-5254">
             <a href="https://ayende.com/blog/4556/tikal-net-forum-introduction-to-nhibernate" target="_blank">
-                <h2 class="title mb-6" id="article-5251">Tikal .NET forum: Introduction to NHibernate</h2>
+                <h2 class="title mb-6" id="article-5254">Tikal .NET forum: Introduction to NHibernate</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ll be presenting on July 25th 10:00-11:30 in the Tikal .NET forum:     Tikal .NET forum is delighted to present an introduction to NHibernate, the&#xA0; leading and most advanced open source ORM&#xA0; (Object Relational Mapping) in the .NET domain with integrated support for concurrency, distribution, fault tolerance and incremental code loading.&#xA0; ORM&#xA0; takes care of the burden of mapping between your .NET entities and the underlying relational database.    Following a concise introduction into the motivation for the rising interests ORM, we will provide an general idea of the key features of the&#xA0; NHibernate framework compared to other frameworks , and talk about the impact they have on the production of highly scalable and fault-tolerant systems.    See you all on July 25th at 10:00 in Krypton,&#xA0; Hakfar-Hayarok Ramat-Hasharon.</p>
         </article>
-        <article id="article-5252">
+        <article id="article-5255">
             <a href="https://ayende.com/blog/4555/buy-vs-build-yagni" target="_blank">
-                <h2 class="title mb-6" id="article-5252">Buy vs. Build &amp; YAGNI</h2>
+                <h2 class="title mb-6" id="article-5255">Buy vs. Build &amp; YAGNI</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was recently at the Israeli ALT.Net tools night, and I had a very interesting discussion on installers. Installers are usually a very painful part of the release procedure. The installer format for Windows is MSI, which is&#x2026; strange. It takes time to understand how MSI work, and even after you got that, it is still painful to work with. Wix is a great improvement when it comes to building MSI installations, but that doesn&#x2019;t make it good. Other installer builders, such as InstallSheild and NSIS are just as awkward.  The discussion that I had related to the complexity of building an installer on those technologies.  My argument was that it simply made no sense to try to overcome the hurdles of the installer technologies, instead, we can write our own installer more easily than fussing about the existing ones. The installer already assumes the presence of the .NET framework, so that make things even easier.  This is an application of a principle that I strongly believes in: Single purpose, specially built tools &amp; components can be advantageous over more generic ones, for your specific scenarios.  Case in point, the installer. Installers are complicated beasts because they must support a lot of complex scenarios (upgrading from 5.3.2 to 6.2.1, for example), be transactional, support installation, etc. But for the installer in question, upgrade is always an uninstall of the previous version &amp; install of the new one, and the only tasks it requires is copying files and modifying registry entries.  Given that set of requirements, we can design the following installer framework:     public interface IInstallerTask&#xA;{&#xA;     void Install();&#xA;     void Uninstall();&#xA;}&#xA;&#xA;public class FileCopyTask : IInstallerTask&#xA;{&#xA;    public string Source { get;set; }&#xA;    public string Destination { get;set; }&#xA;    &#xA;    public void Install()&#xA;    {&#xA;        File.Copy(Source, Destination,overwrite:true);&#xA;    }&#xA;    &#xA;    public void Uninstall()&#xA;    {&#xA;        File.Delete(Destination);&#xA;    }&#xA;}&#xA;  &#xA;&#xA;And building a particular installer would be:&#xA;&#xA;&#xA;  ExecuteInstaller(&#xA;    Directory.GetFiles(extractedTempLocation)&#xA;        .Select( file =&gt;&#xA;            new FileCopyTask&#xA;            {&#xA;                Source = file,&#xA;                Destination = Path.Combine(destinationPath, file)&#xA;            }        &#xA;        ),&#xA;    new RegistryKeyTask&#xA;    {&#xA;        Key = &quot;HKLM/Windows/CurrentVersion...&quot;,&#xA;        Value = 9&#xA;    }&#xA;);&#xA;  &#xA;&#xA;This gives the ExecuteInstaller method a list of tasks to be executed, which can then be used to installer or uninstall everything.&#xA;&#xA;Yes, it is extremely simple, and yes, it wouldn&#x2019;t fit many scenarios. But, it is quick to do, match the current and projected requirements, doesn&#x2019;t introduce any new technology to the mix and it works.&#xA;&#xA;Contrast that with having someone on the team that is the Installer expert (bad) or having to educate the entire team about installer (expensive).</p>
         </article>
-        <article id="article-5253">
+        <article id="article-5256">
             <a href="https://ayende.com/blog/4554/nhprof-new-feature-expensive-queries-report" target="_blank">
-                <h2 class="title mb-6" id="article-5253">NHProf new feature: Expensive queries report</h2>
+                <h2 class="title mb-6" id="article-5256">NHProf new feature: Expensive queries report</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It has been a while since we had a new major feature for the profiler, but here it is:       The expensive queries report will look at all your queries and surface the most expensive ones across all the sessions. This can give you a good indication on where you need to optimize things.  Naturally, this feature is available across all the profiler profiles (NHibernate Profiler, Entity Framework Profiler, Linq to SQL Profiler and Hibernate Profiler).</p>
         </article>
-        <article id="article-5254">
+        <article id="article-5257">
             <a href="https://ayende.com/blog/4553/find-the-issue" target="_blank">
-                <h2 class="title mb-6" id="article-5254">Find the issue</h2>
+                <h2 class="title mb-6" id="article-5257">Find the issue</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There is a design issue that is revealed in the following tests, can you figure out why I changed the behavior and removed the tests?</p>
         </article>
-        <article id="article-5255">
+        <article id="article-5258">
             <a href="https://ardalis.com/working-with-application-pool-identities/" target="_blank">
-                <h2 class="title mb-6" id="article-5255">Working with Application Pool Identities</h2>
+                <h2 class="title mb-6" id="article-5258">Working with Application Pool Identities</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There a new feature of IIS called Application Pool Identities that was apparently introduced with SP2 of Windows Server 2008. There&#x27;s a nice&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5256">
+        <article id="article-5259">
             <a href="https://ardalis.com/software-engineering-101-in-cleveland/" target="_blank">
-                <h2 class="title mb-6" id="article-5256">Software Engineering 101 in Cleveland</h2>
+                <h2 class="title mb-6" id="article-5259">Software Engineering 101 in Cleveland</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Next week I&#x2019;ll be one of several speakers at a free one-day event being held at the Microsoft office in Independence, Ohio. The event is&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5257">
+        <article id="article-5260">
             <a href="https://ardalis.com/set-up-build-agents-by-project-in-teamcity/" target="_blank">
-                <h2 class="title mb-6" id="article-5257">Set Up Build Agents By Project in TeamCity</h2>
+                <h2 class="title mb-6" id="article-5260">Set Up Build Agents By Project in TeamCity</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -222,54 +270,6 @@
                 posted on: July 06, 2010
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We&#x2019;re using TeamCity to manage our continous integration builds for CodeProject.com and LakeQuincy.com. Before TeamCity, I was using&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-5258">
-            <a href="https://ardalis.com/how-can-i-determine-the-current-controller-or-action-in-an-html-helper/" target="_blank">
-                <h2 class="title mb-6" id="article-5258">How Can I Determine The Current Controller or Action in an Html Helper</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 02, 2010
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;re writing an HTML Helper for ASP.NET MVC you may want to do something different based on whether the page that is to be rendered was&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-5259">
-            <a href="https://ayende.com/blog/4552/nosql-and-data-warehousing" target="_blank">
-                <h2 class="title mb-6" id="article-5259">NoSQL and Data Warehousing</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 01, 2010
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently got this question on email, and I thought it would be a good subject for a post.     I wanted to get your thoughts about using NoSQL for data warehouse solutions. I have read mixed thoughts about this and curious where you stand.   Before we can talk about this, we need to understand what data warehousing is, using wise geek definition, that is:     Data warehousing is combining data from multiple and usually varied sources into one comprehensive and easily manipulated database. Common accessing systems of data warehousing include queries, analysis and reporting. Because data warehousing creates one database in the end, the number of sources can be anything you want it to be, provided that the system can handle the volume, of course. The final result, however, is homogeneous data, which can be more easily manipulated.   And if you follow that definition, it make an absolute sense to ask about data warehousing in a NoSQL situation. But remember, one of the things that tend to lead people to the NoSQL land is the desire to scale in some manner (more data, more users, higher concurrency, cheaper TCO) than is possible using a SQL solution. In order to achieve that goal, you have to be willing to accept the tradeoff associated with that, which is reduced flexibility. You can query a relational database every which way, but most NoSQL solutions have very strict rules about how you can query them, for example.  By the way, I am probably abusing the term SQL here. I meant the whole set of technologies generally associated with relational databases, so in this case, I am talking about OLAP data stores, which are the typical solution for data warehousing scenarios. OLAP is usually queried with MDX, which looks like this:     SELECT&#xA;    { [Measures].[Sales Amount], &#xA;        [Measures].[Tax Amount] } ON COLUMNS,&#xA;    { [Date].[Fiscal].[Fiscal Year].&amp;[2002], &#xA;        [Date].[Fiscal].[Fiscal Year].&amp;[2003] } ON ROWS&#xA;FROM [Adventure Works]&#xA;WHERE ( [Sales Territory].[Southwest] )&#xA;&#xA;&#xA;OLAP &amp; MDX, like the relational database &amp; SQL, gives us a lot of flexibility and power. But like relational databases, those come at a cost. At some point, if you have enough data, it gets impractical to store it all in a single server, and the usual arguments for NoSQL solutions come to the fore.&#xA;&#xA;At that point, we have to decide what is it that we want to get from the data warehouse. In other words, we need to design our solution to match the kind of reports that we want to get out. Of the NoSQL solutions out there (Key/Value stores, Document Databases, Graph Databases, Column Family Databases) I would probably choose a Column Family database for such a task, since my primary concern is probably being able to handle large amount of data.&#xA;&#xA;The type of reports that I would need would dictate how I would store the data itself, but once I built the schema, everything else should just work.&#xA;&#xA;In short, for data warehousing, I think that the relational / OLAP world has significant advantages, mostly because in many BI scenarios, you want to allow the users to explore the data, which is easy with the SQL toolset, and harder with NoSQL solutions. But when you get too large (and large in OLAP scenarios is really large), you might want to consider limiting the users&#x2019; options and going with a NoSQL solution tailor to what they need.</p>
-        </article>
-        <article id="article-5260">
-            <a href="https://ayende.com/blog/4551/building-distributed-apps-with-nhibernate-and-rhino-service-bus" target="_blank">
-                <h2 class="title mb-6" id="article-5260">Building Distributed Apps with NHibernate and Rhino Service Bus</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 30, 2010
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The first part of a two parts article about NHibernate and Rhino Service bus in now on MSDN.</p>
         </article>
         <div class="button flex justify-between">
             <a href="525.html"><span class="back arrow"></span></a>
