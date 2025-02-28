@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-2461">
+            <a href="https://ayende.com/blog/180161/re-different-i-o-access-methods-for-linux" target="_blank">
+                <h2 class="title mb-6" id="article-2461">re</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 09, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The &#x201C;Different I/O Access Methods for Linux, What We Chose for Scylla, and Why&#x201D; is quite fascinating. It is a pleasure to be able to read in depth into another database implementation strategy and design decisions. In particular where they don&#x2019;t match what we are doing, because we can learn from the differences.The article is good both in terms of discussing the general I/O approaches on Linux in general and the design decisions and implications for ScyllaDB in particular. ScyllaDB chose to use AIO/DIO (async direct I/O) using a dedicated library called Seastar. And they are effectively managing their own memory and I/O scheduling internally, skipping the kernel entirely. Given how important I/O is for a database, I can say that I strongly resonate with this approach, and it is something that we have tried for a while with RavenDB. That included paying careful attention to how we are sending I/O, controlling our own caching, etc.We are in a different position from Scylla, of course, since we are using managed code, which introduced a different set of problems (and benefits), but during the design of RavenDB 4.0, we chose to go in a very different direction.But first, let me show you the single statement in the post that caused me to write this blog post:The great advantage of letting the kernel control caching is that great effort has been invested by the kernel developers over many decades into tuning the algorithms used by the cache. Those algorithms are used by thousands of different applications and are generally effective. The disadvantage, however, is that these algorithms are general-purpose and not tuned to the application. The kernel must guess how the application will behave next, and even if the application knows differently, it usually has no way to help the kernel guess correctly.This statement is absolutely correct. The kernel caching algorithms (and the kernel behavior in general) is tailored to suit a generic set of requirements, which means that if you deviate from the way the kernel expects, it is going to be during extra work and you can experience significant problems (performance and otherwise).Another great resource that I want to point you to is the following article: &#x201C;You&#x2019;re Doing It Wrong&#x201D; which had a major effect on the way RavenDB 4.0 is designed. What we did, basically, is to look at how the kernel is doing things, and then see how we can fit our own behavior to what the kernel is expecting. Actually, I&#x2019;m lying here, because there is no one kernel here. RavenDB runs on Windows, Linux and OSX (Darwin kernel). So we have three very different systems with wildly different optimizations that we need to run optimally on. Actually, to be fair, we consider Windows &amp; Linux as the main targets for deployment, but that still give us very different stacks to work on. The key here was to be predictable in all things and be sure that whatever operations we make, the kernel can successfully predict them. This can be a lot of work, but not something that you&#x2019;ll usually see in the code. It involves laying out the data so it is nearby in the file and ensuring that we have hotspots that the kernel can recognize and optimize for us, etc. And it involves a lot of work with the guts of the system to make sure that we match what the kernel expects.For example, consider this statement from the article:&#x2026;application-level caching allows us to cache not only the data read from disk but also the work that went into merging data from multiple files into a single cache item.This is a good example of the different behavior. ScyllaDB is using LSM model, which means that in order to read data, they typically need to lookup in multiple files. RavenDB uses a different model (B&#x2B;Tree with MVCC) which typically means that store all the data in a single file. Furthermore, the way we store the information, we can access it directly via memory map without doing any work to prepare it ahead of time. That means that we can lean entirely on the page cache and gain all the benefits thereof. The ScyllaDB approach also limits them to running only on Linux and only on specific configurations. Because they rely on async direct I/O, which is a&#x2026; fiddly beast in Linux at the best of times, you need to make sure that everything matches just so in order to be able to get it working. Just running this on a stock Ubuntu won&#x2019;t work, since ext4 will block for many operations. Another problem in my view is that this assumes that they are the only player on the machine. If you need to run with additional software on the machine, that can cause fights over resources. For production, this is less of a problem, but for running on a developer machine, that is frequently something that you need to take into account. The kernel will already do that for you (which is useful even in production when people put SQL Server &amp; RavenDB on the same box) so you don&#x2019;t have to worry about it too much. I&#x2019;m not sure that this concern is even valid for ScyllaDB, since they tend to be deployed in clusters of dedicated machines (or at least Docker instances) so they have better control over the environment. That certainly make it easier if you can dictate such things.Another consideration for the RavenDB approach is that we want to be, as much as possible, friendly to the administrator. When we lean on what the kernel does, we usually get that for free. The administrator can usually dictate policies to the kernel and have it follow them, and good sys admins both know how and know when to do that. On the other hand, if we wrote it all ourselves, we would also need to provide the hooks to modify the behavior (and monitor it, and train users in how it works, etc).Finally, it is not a small thing to remember that if you let the kernel cache your data, that means that that cache is still around if you restart the database (but not the machine), which means that your mostly alleviate the issue of slow cold start if you needed to do things like update configuration or the database binaries.</p>
+        </article>
+        <article id="article-2462">
             <a href="https://www.meziantou.net/typescript-external-helpers-library.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2461">TypeScript - External Helpers Library</h2>
+                <h2 class="title mb-6" id="article-2462">TypeScript - External Helpers Library</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">TypeScript allows you to use ES next features while targeting ES5. The compiler will rewrite the code to be compatible with the targeted version. To rewrite some functionalities, the compiler emits helper functions. There are currently 15 functions:__extends for inheritance__awaiter and __generator</p>
         </article>
-        <article id="article-2462">
+        <article id="article-2463">
             <a href="https://ayende.com/blog/180033/re-entity-framework-core-performance-tuning-part-ii" target="_blank">
-                <h2 class="title mb-6" id="article-2462">re</h2>
+                <h2 class="title mb-6" id="article-2463">re</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After looking at this post detailing how to optimize data queries in EF Core, I obviously decided that I need to test how RavenDB handles the same load.To make things fair, I tested this on my laptop, running on battery mode. The size of the data isn&#x2019;t that much, only 100,000 books and half a million reviews, so I decided to increase that by an order of magnitude.The actual queries we make from the application are pretty simple and static. We can sort by votes / publication date / price (ascending /descending) and we can filter by number of votes and the publication year. This means that we don&#x2019;t have an explosion of querying options, so that simplify the kind of work we are doing. To make things simple for myself, I kept the same model of books / authors and reviews as separate collections. This isn&#x2019;t the best model for document database, but it allows us to compare apples to apples against the work the EF Core based solution and the RavenDB solution need to do.A major cost in Jon&#x2019;s solution is the need to aggregate the reviews for a book (so the average for the review can be computed). In the end, the only way to get the solution required was to just manually calculate the average reviews for each book and store the computation in the book. We&#x2019;ll discuss this a bit more in a few minutes, for now, I want to turn our eyes toward the simplest possible query in this page, getting 100 books sorted by the book id.Because we aren&#x2019;t running on the same machine, it is hard to make direct parallels, but on Jon&#x2019;s machine he got 80 ms for this kind of query on 100,000 books. When increasing the data to half a million&#xA0; books, the query time rose to 150ms. Running the same query gives us the results instantly (zero ms). Querying and sorting by the title, for example, give us the results in 19 ms for a page size of 100 books.Now, let us look at the major complexity for this system, sorting and filtering by the number of votes in the system. This is hard because the reviews are stored separately from the books. With EF Core, there is the need to join between the tables, which is quite expensive and eventually led Jon to take upon himself the task of manually maintaining the values. With RavenDB, we can use a map/reduce index to handle this all for us. More specifically, we are going to use a multi map/reduce index.Here is what the index definition looks like:We map the results from both the Books and the BookReviews into the same shape, and then reduce them together into the final output, which contains the relevant aggregation. Now, let us do some queries, shall we? Here is us querying over the entire dataset (an order of magnitude higher than the EF Core sample set), filtering by the published date and ordering by the computed votes average. In here, we get the first 100 items, and you can see that we got over 289,753 total results:One very interesting feature of this query is that we are asking to include the book document for the results. This is handled after the query (so no need to do a join to the entire 289K&#x2B; results), and we are able to get everything we want in a very simple fashion. Oh, and the total time? 17 ms. Compared to the 80ms result for EF with 1/10 of the data size. That is pretty nice (and yes, different machines, hard to compare, etc).I&#x2019;ll probably have another post on this topic, showing off some of the cool things that you can do with RavenDB and queries.</p>
         </article>
-        <article id="article-2463">
+        <article id="article-2464">
             <a href="https://ayende.com/blog/180001/ravendb-4-0-unsung-heroes-the-design-of-the-security-error-flow" target="_blank">
-                <h2 class="title mb-6" id="article-2463">RavenDB 4.0 Unsung heroes</h2>
+                <h2 class="title mb-6" id="article-2464">RavenDB 4.0 Unsung heroes</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is again a feature that very few people will even notice exist, but a lot of time, effort and thinking went into building. How should RavenDB handle a case when a user make a request that it is not authorize to make. In particular, we need to consider the case of a user pointing the browser to a server or database that they aren&#x2019;t authorized to see or without having the x509 certificate properly registered.To understand the problem we need to figure out what the default experience will be like, and if we require a client certificate to connect to RavenDB, and the client does not provide it, by default the response is some variation of just closing the TCP connection. That result in the client getting an error that looks like this:TCP connection closed unexpectedlyThat is not conductive for a good error experience and will typically cause a user to spend a lot of time trying to figure out what the network problem is, while everything is working just fine, the server just doesn&#x2019;t want to talk to the user.The problem is that at the TLS level, there isn&#x2019;t really a good way to give back some meaningful error. We are too low level, all we can do is just terminate the connection. Instead of doing that, RavenDB will accept the connection, regardless of whatever it has a valid certificate (or even any certificate) and pass the connection to one level up in the chain. At that point, we can check whatever the certificate is valid and if it isn&#x2019;t (or if it doesn&#x2019;t have the permissions to do what we want it to do we can use the protocol&#x2019;s own mechanism to report errors.With HTTP, that means we can return a 403 error to the user, including an explanation on why we rejected the connection (no certificate, expired certificate, certificate doesn&#x2019;t have the right permissions, etc). This make things much easier when you need to troubleshoot permissions issues.</p>
         </article>
-        <article id="article-2464">
+        <article id="article-2465">
             <a href="https://ardalis.com/aspnet-core-inmemorydatabase-upgrade-breaking-change/" target="_blank">
-                <h2 class="title mb-6" id="article-2464">ASPNET Core InMemoryDatabase Upgrade Breaking Change</h2>
+                <h2 class="title mb-6" id="article-2465">ASPNET Core InMemoryDatabase Upgrade Breaking Change</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There&#x2019;s a minor breaking change in ASP.NET Core 2.0 that I&#x2019;ve encountered while updating my Clean Architecture sample. In 1.x, you could&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-2465">
+        <article id="article-2466">
             <a href="https://ayende.com/blog/179969/re-entity-framework-core-performance-tuning-part-i" target="_blank">
-                <h2 class="title mb-6" id="article-2465">re</h2>
+                <h2 class="title mb-6" id="article-2466">re</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I run into a really interesting article about performance optimizations with EF Core and I thought that it deserve a second &amp; third look. You might have noticed that I have been putting a lot of emphasis on performance and I had literally spent years on optimizing relational database access patterns, including building a profiler dedicated for inspecting what an OR/M is doing. I got the source and run the application. I have a small bet with myself, saying that in any application using a relational database, I&#x2019;ll be able to find a SELECT N&#x2B;1 issue within one hour. So far, I think that my rate is 92% or so. In this case, I found the SELECT N&#x2B;1 issue on the very first page load.Matching this to the code, we have:Which leads to:And here we can already tell that there is a problem, we aren&#x2019;t accessing the authors. This actually happens here:So we have the view that is generating 10 out of 12 queries. And the more results per page you have, the more this costs.But this is easily fixed once you know what you are looking at. Let us look at something else, the actual root query, it looks like this:Yes, I too needed a minute to recover from this. We have:One JOINTwo correlated sub queriesJon was able to optimize his code by 660ms to 80ms, which is pretty awesome. But that is all by making modifications to the access pattern in the database. Given what I do for a living, I&#x2019;m more interested in what it does inside the database, and here is what the query plan tells us:There are only a few tens of thousands of records and the query is basically a bunch of index seeks and nested loop joins. But note that the way the query is structured forces the database to evaluate all possible results, then filter just the top few. That means that you have to wait until the entire result set has been processed, and as the size of your data grows, so will the cost of this query.I don&#x2019;t think that there is much that can be done here, given the relational nature of the data access ( no worries, I&#x2019;m intending to write another post in this series, you guess what I&#x2019;m going to write there, right? ).</p>
         </article>
-        <article id="article-2466">
+        <article id="article-2467">
             <a href="https://enterprisecraftsmanship.com/posts/domain-events-simple-reliable-solution/" target="_blank">
-                <h2 class="title mb-6" id="article-2466">Domain events: simple and reliable solution</h2>
+                <h2 class="title mb-6" id="article-2467">Domain events: simple and reliable solution</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today, I&#x2019;d like to write about a simple and reliable way to implement domain events.</p>
         </article>
-        <article id="article-2467">
+        <article id="article-2468">
             <a href="https://ayende.com/blog/179940/ravendb-4-0-unsung-heroes-the-indexing-threads" target="_blank">
-                <h2 class="title mb-6" id="article-2467">RavenDB 4.0 Unsung Heroes</h2>
+                <h2 class="title mb-6" id="article-2468">RavenDB 4.0 Unsung Heroes</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A major goal in RavenDB 4.0 is to eliminate as much as possible complexity from the codebase. One of the ways we did that is to simplify thread management. In RavenDB 3.0 we used the .NET thread pool and in RavenDB 3.5 we implemented our own thread pool to optimize indexing based on our understanding of how indexing are used. This works, is quite fast and handles things nicely as long as everything works. When things stop working, we get into a whole different story.A slow index can impact the entire system, for example, so we had to write code to handle that, and noisy indexing neighbors can impact overall indexing performance&#xA0; and tracking costs when the indexing work is interleaved is anything but trivial. And all the indexing code must be thread safe, of course.Because of that, we decided we are going to dramatically simplify our lives. An index is going to use a single dedicated thread, always. That means that each index gets their own thread and are only able to interfere with their own work. It also means that we can have much better tracking of what is going on in the system. Here are some stats from the live system.And here is another:What this means is that we have fantastically detailed view of what each index is doing, in terms of CPU, memory and even I/O utilization is needed. We can also now define fine grained priorities for each index:The indexing code itself can now assume that it single threaded, which free a lot of complications and in general make things easier to follow.There is the worry that a user might want to run 100 indexes per database and 100 databases on the same server, resulting in a thousand of indexing threads. But given that this is not a recommended configuration and given that we tested it and it works (not ideal and not fun, but works), I&#x2019;m fine with this, especially given the other alternative that we have today, that all these indexes will fight over the same limited number of threads and stall indexing globally. The end result is that thread per index allow us to have fine grained control over the indexing priorities, account for memory and CPU costs as well simplify the code and improve the overall performance significantly. A win all around, in my book.</p>
         </article>
-        <article id="article-2468">
+        <article id="article-2469">
             <a href="https://ardalis.com/your-api-and-view-models-should-not-reference-domain-models/" target="_blank">
-                <h2 class="title mb-6" id="article-2468">Your API and View Models Should Not Reference Domain Models</h2>
+                <h2 class="title mb-6" id="article-2469">Your API and View Models Should Not Reference Domain Models</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;re organizing your application following Clean Architecture and Domain-Driven Design, with your Core domain model in one project that&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-2469">
+        <article id="article-2470">
             <a href="https://andrewlock.net/creating-and-trusting-a-self-signed-certificate-on-linux-for-use-in-kestrel-and-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-2469">Creating and trusting a self-signed certificate on Linux for use in Kestrel and ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-2470">Creating and trusting a self-signed certificate on Linux for use in Kestrel and ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: October 03, 2017
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I show how to create a self-signed certificate on Linux. I show how you can trust the certificate, and how to configure Kestrel to use it.&#x2026;</p>
-        </article>
-        <article id="article-2470">
-            <a href="https://ayende.com/blog/179939/ravendb-4-0-unsung-heroes-indexing-related-data" target="_blank">
-                <h2 class="title mb-6" id="article-2470">RavenDB 4.0 Unsung Heroes</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 02, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB is a non relational database, which means that you typically don&#x2019;t model documents as having strong relations. A core design principle &#xA;for modeling documents is that they should be independent, isolated and coherent, or more specifically,Independent &#x2013; meaning a document should have its own separate existence from any other documents. &#xA; Isolated &#x2013; meaning a document can change independently from other documents. &#xA; Coherent &#x2013;  meaning a document should be legible on its own, without referencing other documents.That said, even when following proper modeling procedures there are still cases when you want to search a document by its relationship. For example, you might want to search for all for all the employees whose manage name is John, and you don&#x2019;t care if this is John Doe or John Smith for some reason.RavenDB allows you to handle this scenario by using LoadDocument during the index phase. That creates a relationship between the two documents and ensures that whenever the referenced document is updated, the referencing documents will be re-indexed to catch up to the new details. It is quite an elegant feature, even if I say so myself, and I&#x2019;m really proud of it.It is also the source of much abuse in the wild. If you don&#x2019;t model properly, it is often easy to paper over that using LoadDocument in the indexes. The problem is that in RavenDB 3.x an update to a document that was referenced using LoadDocument was also required to touch all of the referencing documents. This slowed down writes, which is something that we generally try really hard to avoid and could also caused availability issues if there were enough referencing documents (as in, all of them, which happened more frequently then you might think).With RavenDB 4.0, we knew that we had to do better. We did this by completely changing how we are handling LoadDocument tracking. Instead of having to re-index all the relevant values globally, we are now tracking them on a per index basis. In each index, we track the relevant references on a per collection basis, and as part of the indexes we&#x2019;ll check if there has been any updates to any of the documents that we have referenced. If we do have an document that has a lot of referencing documents, it will still take some time to re-index all of them, but that cost is now limited to just the index in question.You can still create an index and slow it down in this manner, but the pay to play model is much nicer and there is no affect on the write speed for documents and no general impact on the whole database, which is pretty sweet. The only way you would ever run into this feature is if you run into this problem in 3.x and try to avoid it, which is now not necessary for the same reason (although the same modeling concerns apply).</p>
         </article>
         <div class="button flex justify-between">
             <a href="246.html"><span class="back arrow"></span></a>
