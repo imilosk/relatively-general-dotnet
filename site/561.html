@@ -112,8 +112,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5601">
+            <a href="https://ayende.com/blog/4262/msmq-insufficient-resources-to-perform-operation" target="_blank">
+                <h2 class="title mb-6" id="article-5601">MSMQ: Insufficient resources to perform operation.</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 23, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I run into an annoyingly persistent error on a production server:&#xA;&#xA;&#xA;System.Messaging.MessageQueueException: Insufficient resources to perform operation.   at System.Messaging.MessageQueue.SendInternal(Object obj, MessageQueueTransaction internalTransaction, MessageQueueTransactionType transactionType)   at System.Messaging.MessageQueue.Send(Object obj)   at ConsoleApplication1.Program.Main(String[] args)&#xA;&#xA;&#xA;This was generated from the following code:&#xA;&#xA;&#xA;class Program{    static void Main(string[] args)    {        try        {            var queue = new MessageQueue(@&quot;.\private$\MyQueue&quot;);            queue.Send(&quot;test msg&quot;);            Console.WriteLine(&quot;success&quot;);         }        catch (Exception e)        {            Console.WriteLine(e);        }    }}&#xA;&#xA;&#xA;&#xA;The error was happening on all queues, and persisted even after rebooting the machine. I should mention that we had a runaway message generation, and we have queues with lots of messages currently.&#xA0; The queue that I was trying to send the message to was empty, however. And there was no reading/writing on the queues.&#xA;Nasty issue to figure out, I was pointed to this post, and indeed, suggestion #7 was it, we run over the machine quota for MSMQ, so it started rejecting messages.&#xA;No one really thought about it, because we never set the quota, but it seems that by default there is a 1GB quota for the entire machine. This is usually more than enough to handle things, I would assume, but when you run into a convoy situation, bad things will happen.</p>
+        </article>
+        <article id="article-5602">
+            <a href="https://ayende.com/blog/4261/database-independence-with-nhibernate" target="_blank">
+                <h2 class="title mb-6" id="article-5602">Database independence with NHibernate</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 22, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Karl has posted about his experience of porting an NHibernate application from SQL Server to PostgreSQL, long story short, he did it in 1 hour.  He does bring up a few points where the database that he was using bled into the code, hurting the database independence goal. I wanted to look at those and point out the builtin solutions that NHibernate provides for those.  Handling unique constraints violations, Karl has code like this:     try&#xA;{&#xA;    Session.SaveOrUpdate(user);&#xA;    transaction.Commit();&#xA;    return true;&#xA;}&#xA;catch (GenericADOException ex)&#xA;{&#xA;    transaction.Rollback();&#xA;    var sql = ex.InnerException as SqlException;&#xA;    if (sql != null &amp;&amp; sql.Number == 2601)&#xA;    {&#xA;        return false;&#xA;    }&#xA;    throw;&#xA;}&#xA;catch (Exception)&#xA;{&#xA;    transaction.Rollback();&#xA;    throw;&#xA;}&#xA;  &#xA;&#xA;Obviously, this code relies heavily on internal knowledge of SQL Server error codes, and wouldn&#x2019;t translate to PostgreSQL.&#xA;&#xA;With NHibernate, you deal with those issues by writing ISqlExceptionConverter, you can read Fabio&#x2019;s post about this, but the gist of it is that you can provide your own exceptions in a database independent way.&#xA;&#xA;The count function may return different types on different databases. NHibernate tries to stay true to whatever the database is giving it, so it wouldn&#x2019;t truncate information. You can force the issue by overriding the count function definition by writing a derived dialect. You can see an example of that in this post.&#xA;&#xA;Bits &amp; Booleans, while SQL Server accepts 1 as a Boolean value, PostgreSQL requires that you would use &#x2018;1&#x2019; instead. This is where NHibernate&#x2019;s query.substitutions supports come in. I usually define substitutions for true and false and then use true and false in the queries. Based on the database that I am running on, I can select what will be substituted for those values.&#xA;&#xA;Achieving database independence with NHibernate is very easy, as Karl&#x2019;s 1 hour porting story proves.</p>
+        </article>
+        <article id="article-5603">
             <a href="https://ayende.com/blog/4260/emergency-fixes-the-state-of-your-code-base" target="_blank">
-                <h2 class="title mb-6" id="article-5601">Emergency fixes &amp; the state of your code base</h2>
+                <h2 class="title mb-6" id="article-5603">Emergency fixes &amp; the state of your code base</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the most horrible things that can happen to a code base is a production bug that needs to be fixed right now. At that stage, developers usually throw aside all attempts of creating well written code and just try to fix the problem using brute force.  Add to that the fact that very often we don&#x2019;t have the exact cause of the production bug, and you get an interesting experiment in the scientific method. The devs form a hypothesis, try to build a fix, and &#x201C;test&#x201D; that on production. Repeat until something make the problem go away, which isn&#x2019;t necessarily one of the changes that the developers intended to make.  Consider that this is a highly stressful period of time, with very little sleep (if any), and you get into a cascading problem situation. A true mess.   Here is an example from me trying to figure out an error in NH Prof&#x2019;s connectivity:     This is not how I usually write code, but it was very helpful in narrowing down the problem.  But this post isn&#x2019;t about the code example, it is about the implications on the code base. It is fine to cut corners in order to resolve a production bug. One thing that you don&#x2019;t want to do is to commit those to source control, or to keep them in production. In one memorable case, during the course of troubleshooting a production issue, I enabled full logging on the production server, then forgot about turning them off when we finally resolved the issue. Fast forward three months later, and we had a production crash because of a full hard disk.   Another important thing is that you should only try one thing at a time when you try to troubleshoot a production error. I often see people try something, and when it doesn&#x2019;t work, they try something else on top of the modified code base.  That change that you just made may be important, so by all means save it in a branch and come back to it later, but for production emergency fixes, you want to always work from the production code snapshot, not on top of increasingly more franticly changed code base.</p>
         </article>
-        <article id="article-5602">
+        <article id="article-5604">
             <a href="https://ayende.com/blog/4259/core-nhibernate-persistence-with-nhibernate-coming-to-paris" target="_blank">
-                <h2 class="title mb-6" id="article-5602">Core NHibernate</h2>
+                <h2 class="title mb-6" id="article-5604">Core NHibernate</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My 3 days course about NHibernate will be delivered at Paris , on 04 Nov 2009 by Sebastien Lambla.  This course is squeezing into 3 days everything that you need to go from an NHibernate newbie to a proficient craftsman.   An interesting tidbit, the last time that Sebastien gave the course, I got amazing feedback about the course.  You can register here.</p>
         </article>
-        <article id="article-5603">
+        <article id="article-5605">
             <a href="https://ayende.com/blog/4258/challenge-can-you-spot-the-bug" target="_blank">
-                <h2 class="title mb-6" id="article-5603">Challenge</h2>
+                <h2 class="title mb-6" id="article-5605">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have this piece of code:          public static string FirstCharacters(this string self, int numOfChars)&#xA;{&#xA;    if (self == null)&#xA;        return &quot;&quot;;&#xA;    if (self.Length &lt; numOfChars)&#xA;        return self;&#xA;    return self&#xA;        .Replace(Environment.NewLine, &quot; &quot;)&#xA;        .Substring(0, numOfChars - 3) &#x2B; &quot;...&quot;;&#xA;}&#xA;  &#xA;&#xA;&#xA;And the following exception was sent to me:&#xA;&#xA;&#xA;  &#xA;    System.ArgumentOutOfRangeException: Index and length must refer to a location within the string.&#xA;Parameter name: length&#xA;  at System.String.InternalSubStringWithChecks(Int32 startIndex, Int32 length, Boolean fAlwaysCopy)&#xA;  at StringExtensions.FirstCharacters(String self, Int32 numOfChars)&#xA;  &#xA;&#xA;&#xA;It actually took me a while to figure out what is going on. Partly that is because we have an &#x201C;impossible&#x201D; stack trace (the JIT seems to have inlined the Substring call). When I did figure what the bug was, i is a head slapping moment.</p>
         </article>
-        <article id="article-5604">
+        <article id="article-5606">
             <a href="https://ardalis.com/a-first-pass-at-potterkata/" target="_blank">
-                <h2 class="title mb-6" id="article-5604">A First Pass at PotterKata</h2>
+                <h2 class="title mb-6" id="article-5606">A First Pass at PotterKata</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Tonight at Hudson Software Craftsmanship, I paired with another group member and worked on the PotterKata for the first time. I&#x2019;d seen&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5605">
+        <article id="article-5607">
             <a href="https://ayende.com/blog/4257/jaoo-more-on-evolving-the-key-value-programming-model-to-a-higher-level-from-billy-newport" target="_blank">
-                <h2 class="title mb-6" id="article-5605">JAOO</h2>
+                <h2 class="title mb-6" id="article-5607">JAOO</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As I already mentioned, this presentation had me thinking. Billy presented a system called Redis, which is a Key/Value store which is intended for an attribute based storage.  That means that storing something like User { Id = 123, Name = &#x201C;billy&#x201D;, Email = &#x201C;billy@example.org&#x201D;} is actually stored as:          { &quot;uid:123:name&quot;: &quot;billy&quot; } &#xA;{ &quot;uid:123:email&quot;: &quot;billy@example.org&quot; }&#xA;{ &quot;uname:billy&quot;: &quot;123&quot; } &#xA;  &#xA;&#xA;&#xA;Each of those lines represent a different key/value pair in the Redis store. According to Billy, this has a lot of implications. On the advantage side, you get no schema and very easy support for just adding stuff as you go along. On the other hand, Redis supports not transactions and it is easy to &#x201C;corrupt&#x201D; the database during development (usually as a result of a programming bug).&#xA;&#xA;What actually bothered me the most was the implications on the number of remotes calls that are being made. The problem shows itself very well in this code sample, (a twitter clone), which show inserting a new twit:&#xA;&#xA;&#xA;  &#xA;    long postid = R.str_long.incr(&quot;nextPostId&quot;); &#xA;long userId = PageUtils.getUserID(request); &#xA;long time = System.currentTimeMillis(); &#xA;string post = Long.toString(userId)&#x2B;&quot;|&quot; &#x2B; Long.toString(time)&#x2B;&quot;|&quot;&#x2B;status; &#xA;R.c_str_str.set(&quot;p:&quot;&#x2B;Long.toString(postid), post);&#xA;List&lt;long&gt; followersList = R.str_long.smembers(Long.toString(userId)&#x2B;&quot;:followers&quot;); &#xA;if(followersList == null) &#xA;   followersList - new ArrayList&lt;Long&gt;(); &#xA;HashSet&lt;long&gt; followerSet = new HashSet&lt;long&gt;(followersList); &#xA;followerSet.add(userid); &#xA;long replyId = PageUtils.isReply(status); &#xA;if(replyId != -1) &#xA;   followerSet.add(replyId); &#xA;for(long i : followerSet) &#xA;    R.str_long.lpush(Long.toString(i)&#x2B;&quot;:posts&quot;, postid); &#xA;// -1 uid is global timeline &#xA;String globalKey = Long.toString(-l)&#x2B;&quot;:posts&quot;; &#xA;R.str_long.lpush(globalKey,postid); &#xA;R.str_long.ltrim(globolKey, 200);&#xA;  &#xA;&#xA;&#xA;I really don&#x2019;t like the API, mostly because it reminds me of C, but the conventions are pretty easy to figure out. &#xA;&#xA;&#xA;  R is the static gateway into the Redis API&#xA;&#xA;  str_long = store ong&#xA;&#xA;  c_str_str &#x2013; store string and keep it in nearby cache&#xA;&#xA;&#xA;The problem with this type of code is the number of remote calls and the locality of those calls. With a typical sharded set of servers, you are going to have lots of calls going all over the place. And when you get into people that have thousands and millions of followers, the application is simply going to die.&#xA;&#xA;A better solution is required. Billy suggested using async programming or sending code to the data store to execute there.&#xA;&#xA;I have a different variant on the solution.&#xA;&#xA;We will start from the assumption that we really want to reduce remote calls, and that the system performance in the face of large amount of writes (without impacting reads) is important. The benefits of using something like Redis is that it is very easy to get started, very easy to change things around and great for rapid development mode. We want to keep that for now, so I am going to focus on a solution based on the same premise.&#xA;&#xA;The first thing to go is the notion that a key can sit anywhere that it wants. In a key/value store, it is important to be able to control locality of reference. We change the key format so it is now: [server key]@[local key]. What does this mean? It means that for the previously mentioned user, this is the format it will be stored as:&#xA;&#xA;&#xA;  &#xA;    { &quot;uid:123@name&quot;: &quot;billy&quot; } &#xA;{ &quot;uid:123@email&quot;: &quot;billy@example.org&quot; }&#xA;{ &quot;uname@billy&quot;: &quot;123&quot; } &#xA;  &#xA;&#xA;&#xA;We use the first part of the key (before the @) to find the appropriate server. This means that everything with a prefix of &#x201C;uid:123&#x201D; is known to reside on the same server. This allow you to do things like transactions on a single operation of setting multiple keys.&#xA;&#xA;Once we have that, we can start adding to the API. Instead of getting a single key at a time, we can get a set of values in one remote call. That has the potential of significantly reducing the number of remote calls we will make.&#xA;&#xA;Next, we need to consider repeated operations. By that I mean anything where we have a look in which we call to the store. That is a killer when you are talking about any data of significant size. We need to find a good solution for this.&#xA;&#xA;Billy suggested sending JRuby script to the server (or similar) and executing it there, saving the network roundtrips. Which this is certainly possible, I think it would be a mistake. I have a much simpler solution. Teach the data store about repeated operations. Let us take as a good example the copying that we are doing of a new twit to all your followers. Instead of reading the entire list of followers into memory, and then writing the status to every single one of them, let us do something different:&#xA;&#xA;&#xA;  &#xA;    Redis.PushToAllListFoundIn(&quot;uid:&quot;&#x2B;user_id&#x2B;&quot;@followers&quot;, status, &quot;{0}@posts&quot;);&#xA;  &#xA;&#xA;&#xA;I am using the .NET conventions here because otherwise I would go mad. As you can see, we instruct Redis to go to a particular list, and copy the status that we pass it to all the keys found in the list ( after formatting the key with the pattern). This gives the data store enough information about this to be able to optimize this operation considerably.&#xA;&#xA;With just these few changes, I think that you gain enormously, and you retain the very simple model of using a key/value store.</p>
         </article>
-        <article id="article-5606">
+        <article id="article-5608">
             <a href="https://ardalis.com/which-visual-studio-2010-is-team-suite/" target="_blank">
-                <h2 class="title mb-6" id="article-5606">Which Visual Studio 2010 is Team Suite?</h2>
+                <h2 class="title mb-6" id="article-5608">Which Visual Studio 2010 is Team Suite?</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The new VS 2010 has a new lineup of versions which you can find described on the Visual Studio 2010 Products page. Some things to note&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5607">
+        <article id="article-5609">
             <a href="https://ayende.com/blog/4256/rant-compilers-parsers" target="_blank">
-                <h2 class="title mb-6" id="article-5607">Rant</h2>
+                <h2 class="title mb-6" id="article-5609">Rant</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is just something that really annoys me. There is a common misconception that compilers are mostly about parsing the code. This couldn&#x2019;t be further from the truth. About the easiest step in building a compiler is parsing the text into some form of machine readable format. There are great tools to help you there, and a lot of information.   It is the next stage that is complex, taking the machine readable format (AST) and turning that into executable. There is a lot less information about that, and that tends to be a pretty gnarly sort of a problem.  As the title says, this post is here just to make sure that people distinguish between the two.</p>
         </article>
-        <article id="article-5608">
+        <article id="article-5610">
             <a href="https://ayende.com/blog/4255/linqtosql-profiler-nhibernate-profiler-what-is-happening" target="_blank">
-                <h2 class="title mb-6" id="article-5608">LinqToSql Profiler &amp; NHibernate Profiler &#x2013; What is happening?</h2>
+                <h2 class="title mb-6" id="article-5610">LinqToSql Profiler &amp; NHibernate Profiler &#x2013; What is happening?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -238,38 +270,6 @@
                 posted on: October 18, 2009
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">About two weeks ago I posted my spike results of porting NHProf to Linq to SQL, a few moments ago I posted screenshots of the code that is going to private beta.&#xA;I spent most of the last week working on the never-ending book, but that is a subject for a different post. Most of the time that I actually spent on the profiler wasn&#x2019;t spent on integrating with Linq to SQL. To be frank, it took me two hours to do basic integration to Linq to SQL. That is quite impressive, considering that is from the point of view of someone who never did anything more serious with it than the hello world demo, and it was years ago. The Linq to SQL codebase is really nice.&#xA;Most of the time went into refactoring the profiler. I know that I am going to want to add additional OR/Ms (and other stuff) there, so I spent the time to make the OR/M into a concept in the profiler. That was a big change, but it was mostly mechanical. All the backend changes are done, and plugging in a new OR/M should take about two hours, I guess.&#xA;For Linq to SQL, however, the work is far from over, while we are now capable of intercepting, displaying and analyzing Linq to SQL output, the current Linq to SQL profiler, as you can see in the screen shots, is using the NHibernate Profiler skin, we need to adapt the skin to match Linq to SQL (different names, different options, etc).&#xA;That is the next major piece of work that we have left to do before we can call the idea of OR/Ms as a concept done, and release Linq to SQL as a public beta.</p>
-        </article>
-        <article id="article-5609">
-            <a href="https://ayende.com/blog/4254/linqtosql-profiler-private-beta-the-screen-shot-gallery" target="_blank">
-                <h2 class="title mb-6" id="article-5609">LinqToSql Profiler private Beta &#x2013; the screen shot gallery</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 18, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is just to give you some ideas about what the new LinqToSql Profiler can do.&#xA;It can track statements and associate them to their data context, gives you properly formatted and highlighted SQL, including the parameters, in a way that you can just copy and execute in SQL Server: &#xA; &#xA;The profiler can tell you when you are hitting the database too often.&#xA; &#xA;All the usual reports, what methods caused what queries to be executed?&#xA; &#xA;Reports about unique queries across the entire profiling session:&#xA; &#xA;And overall usage reports:</p>
-        </article>
-        <article id="article-5610">
-            <a href="https://ayende.com/blog/4253/challenge-why-is-this-wrong" target="_blank">
-                <h2 class="title mb-6" id="article-5610">Challenge</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 18, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Can you figure out why this is a horribly wrong thing to do?&#xA;&#xA;[ThreadStatic]private static readonly MySingleton mySingleton = CreateSingleInstance();&#xA;&#xA;A free license of Rhino Mocks will be raffled between the people who will correctly answer it.</p>
         </article>
         <div class="button flex justify-between">
             <a href="560.html"><span class="back arrow"></span></a>

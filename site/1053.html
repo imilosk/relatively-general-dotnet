@@ -112,8 +112,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-10521">
+            <a href="https://ayende.com/blog/75/svn-ssh-on-windows" target="_blank">
+                <h2 class="title mb-6" id="article-10521">svn&#x2B;ssh on windows</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 04, 2004
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How to create a svn server on windows is explained elsewhere, but there is a real problem when trying to do this over ssh.&#xA;    Here is how you do it.&#xA;    This nessage&#xA0;lies the foundation to how I did it. &#xA;&#xA;&#xA;    You need a SSH Server such as OpenSSH for Windows.&#xA;    Follow the installation instructions quickstart.txt file. &#xA;&#xA;&#xA;    Make sure that you can connect using &quot;ssh localhost&quot; &#xA;&#xA;&#xA;    Now comes the tough part, svn on ssh uses the following command to connect to your computer:&#xA;    ssh &#xA;    &#xA;        svnserve -t &#xA;    &#xA;&#xA;&#xA;    This works in case you are want to access you repository like svn&#x2B;ssh://server/path/to/repos&#xA;    But if you want a different path, or if your repository reside on a different drive than your SSH server, you are in a problem.&#xA;    You can fix this by passing the -r arguement to svnserve, but you can&#x27;t do that normally because svn calls to svnserve directly. &#xA;&#xA;&#xA;    The solution to this problem is to have a wrapper around svnserve that calls to svnserve with the correct paramters. The problem is that on windows, batch of .cmd files aren&#x27;t executed when the SSH server atempts to call svnserve (this is probably a because it attempt to CreateProcess, instead of using a command interepter). So, you need an executable file that will be a warpper. &#xA;&#xA;&#xA;    I experimented with a lot of standard&#xA0;input / output redirections schemes&#xA0;but none of them worked correctly, and I didn&#x27;t want to try to solve that. &#xA;&#xA;&#xA;    What I did finally is using the system() call in C/C&#x2B;&#x2B; which does exactly what I want.&#xA;    So I wrote a small wrapper exe that reads from a redirect.inf file that is located in the same directory as the exe, and then run the command in the file as well as any command line parameters that were passed to it.&#xA;    You can download it here&#xA0;(source below).&#xA;    My redirect.inf file contain the following line: &#xA;&#xA;&#xA;    svnserve2 -r D:\path\to\repos &#xA;&#xA;&#xA;    I renamed svnserve.exe to svnserve2.exe and renamed svnproxy.exe svnserve.exe, then put both the proxy and the redirect.inf file in Subverion\bin directory and that was it, I had secured access to my repository. &#xA;&#xA;&#xA;    &#xA;    Note: The following code is neither elegant nor very robust, but it does the job. &#xA;&#xA;&#xA;    #include &lt;WINDOWS.H&gt;&#xA;    #include &lt;FSTREAM&gt;&#xA;    #include &lt;IOSTREAM&gt; &#xA;    &#xA;    #include &lt;TCHAR.H&gt; &#xA;    &#xA;    using&#xA0;namespace&#xA0;std;&#xA;    int&#xA0;_tmain(int&#xA0;argc,&#xA0;TCHAR&#xA0;*&#xA0;argv[])&#xA;    {&#xA;    &#xA0;char&#xA0;str[2000];&#xA;    &#xA0;string&#xA0;full;&#xA;    &#xA0;fstream&#xA0;in;&#xA;    &#xA0;&#xA;    &#xA0;GetModuleFileName(0,str,2000);&#xA;    &#xA0;string&#xA0;filename(str);&#xA;    &#xA0;int&#xA0;s&#xA0;=&#xA0;filename.find_last_of(&#x27;\\&#x27;);&#xA;    &#xA0;filename&#xA0;=&#xA0;filename.substr(0,s);&#xA;    &#xA0;filename&#xA0;&#x2B;=&#xA0;&quot;\\Redirect.inf&quot;;&#xA;    &#xA0;in.open(filename.c_str(),ios_base::in);&#xA;    &#xA0;if(!in.is_open())&#xA;    &#xA0;{&#xA;    &#xA0;&#xA0;cout&lt;&lt;&quot;File&#xA0;not&#xA0;open&quot;&lt;ENDL&lt;&lt;FILENAME.C_STR()&lt;&lt;ENDL&lt;&lt;&lt;&quot;Error:&#xA0;&quot;&lt; &#xA0;&#xA0;return&#xA0;-1;&#xA;    &#xA0;}&#xA;    &#xA0;while(!in.eof())&#xA;    &#xA0;{&#xA;    &#xA0;&#xA0;in.getline(str,2000);&#xA;    &#xA0;&#xA0;full&#xA0;&#x2B;=&#xA0;str;&#xA;    &#xA0;}&#xA;    &#xA0;for(int&#xA0;i=1;i &#xA0;{&#xA;    &#xA0;&#xA0;full&#xA0;&#x2B;=&#xA0;&#x27;&#xA0;&#x27;;&#xA;    &#xA0;&#xA0;full&#xA0;&#x2B;=&#xA0;argv[i];&#xA;    &#xA0;}&#xA;    &#xA0;return&#xA0;system(full.c_str());&#xA;    }</p>
+        </article>
+        <article id="article-10522">
+            <a href="https://ayende.com/blog/74/no-longer-a-c-programmer" target="_blank">
+                <h2 class="title mb-6" id="article-10522">No longer a C&#x2B;&#x2B; programmer</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 04, 2004
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The first time that I learned (rather than absorb) to program was in C&#x2B;&#x2B;,   and I liked it. I loved C&#x2B;&#x2B; with all its warts, the exception-aware programming,   the resource allocation issues, the memory overflows, the leaks, etc. When I got .Net,   I jumped on C# and didn&#x27;t look back (much), I&#x27;ve no programmed in C&#x2B;&#x2B; in roughly four   years.   Recently I needed to do a small application in C&#x2B;&#x2B;, total final size 43 lines,   and it took me nearly half a day. I had to unlearn a lot of stuff about .Net and relearn   how to program in C&#x2B;&#x2B;.   It took me nearly an hour to properly read from a text file, mainly because I kept   trying to find the ReadLine() and ReadToEnd() and because of horrendous tool support   (no ReSharper for C&#x2B;&#x2B;, yuck!).   Anyway, I recall reading Effective   C&#x2B;&#x2B; &amp; More Effective C&#x2B;&#x2B;&#xA0;for fun, and&#xA0;Stroustrup was   for bedtime reading.   I read C&#x2B;&#x2B; code with no problems, but I don&#x27;t think that I can call myself a C&#x2B;&#x2B; programmer   anymore, too many .Net insticts.   I&#x27;ll need a refresher before I could honestly call myself a C&#x2B;&#x2B; programmer.</p>
+        </article>
+        <article id="article-10523">
             <a href="https://ayende.com/blog/73/progress" target="_blank">
-                <h2 class="title mb-6" id="article-10521">Progress</h2>
+                <h2 class="title mb-6" id="article-10523">Progress</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I moved my mother today to use FireFox.The transfer was smooth (I worry because she surf in a lot of Hebrew sites, and FireFoxused to have problems with it).The only problem so far was with Globes&#x27; site&#xA0;which is radically different in FireFox than IE.</p>
         </article>
-        <article id="article-10522">
+        <article id="article-10524">
             <a href="https://ayende.com/blog/72/testdriven-net" target="_blank">
-                <h2 class="title mb-6" id="article-10522">TestDriven.Net</h2>
+                <h2 class="title mb-6" id="article-10524">TestDriven.Net</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a me too post :-)    TestDriven.Net is now a dotOne version, and a must have tool for any serious developer.</p>
         </article>
-        <article id="article-10523">
+        <article id="article-10525">
             <a href="https://ayende.com/blog/71/no-hebrew-on-the-command-line-confirmed" target="_blank">
-                <h2 class="title mb-6" id="article-10523">No hebrew on the command line, confirmed... :-(</h2>
+                <h2 class="title mb-6" id="article-10525">No hebrew on the command line, confirmed... :-(</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">According to Achim Ruopp, there is no   support for hebrew on the command line.   The call hebrew a comlex script.   I don&#x27;t know what is so complex about it, I speak it since I was&#xA0;three and could   read when I was five years old.</p>
         </article>
-        <article id="article-10524">
+        <article id="article-10526">
             <a href="https://ayende.com/blog/70/hebrew-on-the-command-line" target="_blank">
-                <h2 class="title mb-6" id="article-10524">Hebrew on the command line</h2>
+                <h2 class="title mb-6" id="article-10526">Hebrew on the command line</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m searching for a way to display hebrew text on the command line {cmd.exe} correctly.   There is a command, chcp that allows you to change the active code page, but it doesn&#x27;t   work!   c:&gt;chcp   Displays or sets the active code page number.   CHCP [nnn]   &#xA0; nnn&#xA0;&#xA0; Specifies a code page number.   Type CHCP without a parameter to display the active code page number.    The code page for&#xA0;Windows {ISO}&#xA0;Hebrew is 1255, and I also tried several   others {862 - DOS Hebrew, 28598 - Punctionless Hebrew, 10005 - Mac Hebrew, 65001 -   UTF8} and nothing gives me the ability to see hebrew on the command line,   instead, I get gibberish!   If anyone knows how to solve it, I would really like to know.</p>
         </article>
-        <article id="article-10525">
+        <article id="article-10527">
             <a href="https://ayende.com/blog/69/to-the-linux-kernel-hackers" target="_blank">
-                <h2 class="title mb-6" id="article-10525">To the linux kernel hackers...</h2>
+                <h2 class="title mb-6" id="article-10527">To the linux kernel hackers...</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A very good reason not to touch the kernel: Linux   lover says he &quot;tweaks and changes&quot; things</p>
         </article>
-        <article id="article-10526">
+        <article id="article-10528">
             <a href="https://ardalis.com/whats-a-blog/" target="_blank">
-                <h2 class="title mb-6" id="article-10526">What&#x27;s a Blog?</h2>
+                <h2 class="title mb-6" id="article-10528">What&#x27;s a Blog?</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;re asking this question, or wondering what B-L-O-G could possibly stand for, you&#x2019;re not alone. Blog was the #1 most looked up word in&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-10527">
+        <article id="article-10529">
             <a href="https://ayende.com/blog/68/reading-habbits" target="_blank">
-                <h2 class="title mb-6" id="article-10527">Reading habbits</h2>
+                <h2 class="title mb-6" id="article-10529">Reading habbits</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just noticed how I use RSS Bandit to read blogs, I read all the blogs, and on each interesting link, just click it and resume reading.Right now I finished going over my subscribed feeds about counted how many openedlinks (tabs in FireFox) I&#x27;ve.37 opened pages, cool.</p>
         </article>
-        <article id="article-10528">
+        <article id="article-10530">
             <a href="https://ayende.com/blog/67/ten-most-wanted-design-bugs" target="_blank">
-                <h2 class="title mb-6" id="article-10528">Ten most wanted design bugs...</h2>
+                <h2 class="title mb-6" id="article-10530">Ten most wanted design bugs...</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -238,38 +270,6 @@
                 posted on: November 29, 2004
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Just found this&#xA0;out, maybe I&#x27;ll do something about item four &quot;ASCII Sort&quot;, looks like an interesting, nice project.</p>
-        </article>
-        <article id="article-10529">
-            <a href="https://ayende.com/blog/66/i-shaved-since-then" target="_blank">
-                <h2 class="title mb-6" id="article-10529">I shaved since then...</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 28, 2004
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Thought that I should post a picture of me, but the only one that I had was from the   army, so here it is...&#xA;I hope you like the background.&#xA;The gun on my right hand is a FN   9m, standard military issue, the second is a Colt   Revolver 0.45 PeaceMaker&#xA0;(Same model as the one from the Wild West).&#xA;That was me trying to show a friend what MDK2 is like :-D&#xA;   Btw, I shaved since then.</p>
-        </article>
-        <article id="article-10530">
-            <a href="https://ardalis.com/flag-patches-and-uniforms/" target="_blank">
-                <h2 class="title mb-6" id="article-10530">Flag Patches and Uniforms</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 27, 2004
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One thing that has bugged me ever since I first saw it is the use of the flag patch on Army uniforms. I&#x27;m not against having the patch&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="1052.html"><span class="back arrow"></span></a>
