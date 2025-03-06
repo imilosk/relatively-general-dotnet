@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3371">
+            <a href="https://ayende.com/blog/172162/recording-available-architecture-tower-of-babel" target="_blank">
+                <h2 class="title mb-6" id="article-3371">Recording available: Architecture Tower of Babel</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 23, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this talk, I talked about the common issue of tacking complexity into systems, with real world examples from various projects, and presented better alternatives for simplifying your codebase and your overall architecture.</p>
+        </article>
+        <article id="article-3372">
             <a href="https://ayende.com/blog/172163/psa-ravendb-books-are-on-sale" target="_blank">
-                <h2 class="title mb-6" id="article-3371">PSA - RavenDB books are on sale</h2>
+                <h2 class="title mb-6" id="article-3372">PSA - RavenDB books are on sale</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For the next two weeks, you can get both of the RavenDB books below for 50% discount for the ebook version.&#xA;Use discount code: DQCyxhd&#xA;&#xA;RavenDB 2.x Beginner&#x2019;s Guide: http://bit.ly/1Ko3RKx&#xA;RavenDB High Performance: http://bit.ly/1RVLJy5</p>
         </article>
-        <article id="article-3372">
+        <article id="article-3373">
             <a href="https://ayende.com/blog/172161/production-postmortem-the-case-of-the-slow-index-rebuild" target="_blank">
-                <h2 class="title mb-6" id="article-3372">Production postmortem</h2>
+                <h2 class="title mb-6" id="article-3373">Production postmortem</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A customer called to complain that the indexing times that they were seeing on an index rebuild were very high, and that caused them issues. The customer was kind enough to actually provide us with a duplicate machine of their system, including duplicate data, which made the whole process so much easier. Unlike most scenarios, where we have to poke the logs, the debug endpoints and to try to figure out what is going on in a production system that we can&#x2019;t really touch without causing downtime, here we had a complete freedom of action during the investigation. The database in question is in the many tens of GB in size, and like most production databases, it has its own.. gravity, shall we say? Unlike a test data set where you can do something over the entire set and get immediate return, here the problem often was that to reproduce the issue we&#x2019;ll have to start the action, then wait for ten or twenty minutes for it to pick up steam and actually start exhibiting the problem. But being able to actually run those tests repeatedly was very valuable in both narrowing down on exactly what was going on and how to resolve it. The problem boiled down to an issue with how we were handling document prefetching. Before I get down into the details of that, let me explain what prefetching is. Quite a lot of RavenDB code is concerned with reducing the time a request has to spend waiting for I/O. In particular, creation of a new index require us to read all the documents in the database so we can index them. On large databases, that can mean that we need to read tens of GB (and on very large databases, running an index that cover half a TB is very likely) from disk, index them, then write the index results to disk again. Initially (as in, five or six years ago), we wrote the indexing code like so:  while (there are documents to index):   Load a batch of documents  Index those documents  Write them to disk The problem is that this kind of code is very simple an easy to understand, but it also results in spending a lot of time doing:  Wait for load documents (no CPU usage)  Index documents (CPU usage)  Wait to write to disk (no CPU usage) So a lot of the time was spent just waiting for I/O. Time that could have been much better spent doing something useful. Because of that, we introduced the idea of prefetching. Basically, whenever we finish loading stuff from disk, we also immediately start a background task that will read the next batch of documents to member. The idea is that while we are indexing / writing the index results to disk, we&#x2019;ll load the next batch of documents to memory, and we&#x2019;ll have them immediately available to the indexing code, so we&#x2019;ll have to do less waits, and we get the benefit of parallel I/O and execution. This is a really high level overview of what is going on there, of course, and we need to balance quite a few competing concerns (memory, I/O pipeline size, I/O speed, other work being done, CPU utilization, etc, etc). But that is a pretty good description. The problem in this case was that the customer in question have the following pattern of documents:   Our code mostly assumes that you have a roughly uniform distribution of documents sizes. Given the distribution above, assume we have a batch size of 2. We&#x2019;ll read the first two documents (taking 25Kb), and then start indexing them. At this time we start loading the next 2 documents. But the msgs/4 document is large, so it takes time to load, which means that indexing is now stalled on I/O. What is work, the problem exacerbated, since the bigger documents tended to be toward the end (later documents tend to be bigger), it means that our heuristics about the data kept misleading us. Now, to make things worse, we actually do care about the size of the documents that we load, so instead of indexing the documents in big batches, those big documents would cause both I/O stalls, and then cause us to send much smaller batches to the indexes. That means that we have a lot more indexing batches, and a lot more I/O stalls.  The solution was to allow the prefetching code to give the indexes &#x201C;whatever I have on hand&#x201D;, and then continue with prefetching the additional documents while the indexes are working. It means more batches, but far less time waiting for the documents to be loaded from disk. Another change we did was to parallelize the I/O further. When we notice that we get into this kind of situation, instead of firing off a single background task to load the next document batch, we are actually going to spin off multiple prefetching tasks, to load the next few batches in parallel. That means that we put more load on the I/O system, but especially on cloud machines, that is actually a&#xA0; good thing (they they to have a shallow but wide I/O behavior).  Here the ability to actually test those changes on real system was invaluable, because our initial attempt was a bit&#x2026; too active and actually placed serious I/O strain on the system, because we would try to make a lot of parallel reads for a lot of data at the same time. The implementation that we ended up with knows to scale the amount of pressure we put on the I/O system based on the actual system we use, the (current) I/O throughput we see, the document sizes in recent history, etc. The end result is that we were able to shave about 20% &#x2013; 25% of the indexing time under those conditions, and keep the system alive and functioning while we are doing so. We also introduced the customer to the side by side, which allows them to deploy indexes in production without any interruption in service while the indexing is rebuilding.</p>
         </article>
-        <article id="article-3373">
+        <article id="article-3374">
             <a href="https://ayende.com/blog/172129/micro-benchmark-reading-the-results" target="_blank">
-                <h2 class="title mb-6" id="article-3373">Micro benchmark, reading the results</h2>
+                <h2 class="title mb-6" id="article-3374">Micro benchmark, reading the results</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the previous posts, I discussed various options for accessing a value through a pointer, either by using a casted pointer, or casting it whenever we need to use it. The good news from the benchmark is that all results are close enough to one another to be effectively equal. That means that there really isn&#x2019;t any difference between the two options. Except, that there is. By only having to keep track of a single pointer field (instead of two fields, one that is byte* and one that is PageHeader*), we can save a field. That means that we save 8 bytes on every page we allocate. And we can allocate a lot of pages.  The end result is that the casting approach is much faster, not because it runs faster, but because it reduces the size of allocations we make. And reducing the size of allocation end up using less memory, which end up being faster overall.</p>
         </article>
-        <article id="article-3374">
+        <article id="article-3375">
             <a href="https://enterprisecraftsmanship.com/posts/stages-of-competence-2-ways-of-learning/" target="_blank">
-                <h2 class="title mb-6" id="article-3374">Stages of competence: 2 ways of learning</h2>
+                <h2 class="title mb-6" id="article-3375">Stages of competence: 2 ways of learning</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When you enter some field as a novice, there is a lot of stuff you must learn in order to become proficient in it. The learning path can usually be broken down into 4 stages of competence which you can traverse in 2 different ways.</p>
         </article>
-        <article id="article-3375">
+        <article id="article-3376">
             <a href="https://ayende.com/blog/172098/mistakes-in-micro-benchmarks" target="_blank">
-                <h2 class="title mb-6" id="article-3375">Mistakes in micro benchmarks</h2>
+                <h2 class="title mb-6" id="article-3376">Mistakes in micro benchmarks</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So on my last post I showed a bunch of small micro benchmark, and aside from the actual results, I wasn&#x2019;t really sure what was going on there. Luckily, I know a few perf experts, so I was able to lean on them. In particular, the changes that were recommended were:  Don&#x2019;t make just a single tiny operation, it is easy to get too much jitter in the setup for the call if the op is too cheap.  Pay attention to potential data issues, the compiler / jit can decide to put something on a register, in which case you are benching the CPU directly, which won&#x2019;t be the case in the real world. I also learned how to get the actual assembly being run, which is great. All in all, we get the following benchmark code:  [BenchmarkTask(platform: BenchmarkPlatform.X86,&#xA;            jitVersion: BenchmarkJitVersion.RyuJit)]&#xA;[BenchmarkTask(platform: BenchmarkPlatform.X86,&#xA;            jitVersion: BenchmarkJitVersion.LegacyJit)]&#xA;[BenchmarkTask(platform: BenchmarkPlatform.X64,&#xA;                jitVersion: BenchmarkJitVersion.LegacyJit)]&#xA;[BenchmarkTask(platform: BenchmarkPlatform.X64,&#xA;                jitVersion: BenchmarkJitVersion.RyuJit)]&#xA;public unsafe class ToCastOrNotToCast&#xA;{&#xA;    byte* p1, p2, p3, p4;&#xA;    FooHeader* h1, h2,h3,h4;&#xA;    public ToCastOrNotToCast()&#xA;    {&#xA;        p1 = (byte*)Marshal.AllocHGlobal(1024);&#xA;        p2 = (byte*)Marshal.AllocHGlobal(1024);&#xA;        p3 = (byte*)Marshal.AllocHGlobal(1024);&#xA;        p4 = (byte*)Marshal.AllocHGlobal(1024);&#xA;        h1 = (FooHeader*)p1;&#xA;        h2 = (FooHeader*)p2;&#xA;        h3 = (FooHeader*)p3;&#xA;        h4 = (FooHeader*)p4;&#xA;    }&#xA;&#xA;    [Benchmark]&#xA;    [OperationsPerInvoke(4)]&#xA;    public void NoCast()&#xA;    {&#xA;        h1-&gt;PageNumber&#x2B;&#x2B;;&#xA;        h2-&gt;PageNumber&#x2B;&#x2B;;&#xA;        h3-&gt;PageNumber&#x2B;&#x2B;;&#xA;        h4-&gt;PageNumber&#x2B;&#x2B;;&#xA;    }&#xA;&#xA;    [Benchmark]&#xA;    [OperationsPerInvoke(4)]&#xA;    public void Cast()&#xA;    {&#xA;        ((FooHeader*)p1)-&gt;PageNumber&#x2B;&#x2B;;&#xA;        ((FooHeader*)p2)-&gt;PageNumber&#x2B;&#x2B;;&#xA;        ((FooHeader*)p3)-&gt;PageNumber&#x2B;&#x2B;;&#xA;        ((FooHeader*)p4)-&gt;PageNumber&#x2B;&#x2B;;&#xA;    }&#xA;}&#xA;&#xA;And the following results:&#xA;&#xA;          Method | Platform |       Jit |   AvrTime |    StdDev |             op/s |&#xA;---------------- |--------- |---------- |---------- |---------- |----------------- |&#xA;            Cast |      X64 | LegacyJit | 0.2135 ns | 0.0113 ns | 4,683,511,436.74 |&#xA;          NoCast |      X64 | LegacyJit | 0.2116 ns | 0.0017 ns | 4,725,696,633.67 |&#xA;            Cast |      X64 |    RyuJit | 0.2177 ns | 0.0038 ns | 4,593,221,104.97 |&#xA;          NoCast |      X64 |    RyuJit | 0.2097 ns | 0.0006 ns | 4,769,090,600.54 |---------------- |--------- |---------- |---------- |---------- |----------------- |&#xA;            Cast |      X86 | LegacyJit | 0.7465 ns | 0.1743 ns | 1,339,630,922.79 |&#xA;          NoCast |      X86 | LegacyJit | 0.7474 ns | 0.1320 ns | 1,337,986,425.19 |&#xA;            Cast |      X86 |    RyuJit | 0.7481 ns | 0.3014 ns | 1,336,808,932.91 |&#xA;          NoCast |      X86 |    RyuJit | 0.7426 ns | 0.0039 ns | 1,346,537,728.81 |&#xA;&#xA;Interestingly enough, the NoCast approach is faster in pretty much all setups.&#xA;Here is the assembly code for LegacyJit in x64:&#xA;&#xA;For RyuJit, the code is identical for the cast code, and the only difference in the no casting code is that the mov edx, ecx is mov rdx,rcx in RyuJit.&#xA;As an aside, X64 assembly code is much easier to read than x86 assembly code.&#xA;In short, casting or not casting has a very minor performance difference, but not casting allows us to save a pointer reference in the object, which means it will be somewhat smaller, and if we are going to have a lot of them, then that can be a pretty nice space saving.</p>
         </article>
-        <article id="article-3376">
+        <article id="article-3377">
             <a href="https://ardalis.com/get-started-with-dnx-watch/" target="_blank">
-                <h2 class="title mb-6" id="article-3376">Get Started With dnx-watch</h2>
+                <h2 class="title mb-6" id="article-3377">Get Started With dnx-watch</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">With the release of ASP.NET 5 / DNX Beta 8, there is now a new command line tool, dnx-watch, that can be used to automatically re-run dnx&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3377">
+        <article id="article-3378">
             <a href="https://ayende.com/blog/172097/micro-benchmarks-and-hot-paths" target="_blank">
-                <h2 class="title mb-6" id="article-3377">Micro benchmarks and hot paths</h2>
+                <h2 class="title mb-6" id="article-3378">Micro benchmarks and hot paths</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m doing some work to refactor a complex piece of code, and I have a piece of memory that is allocated, then accessed via a struct pointer. This piece of code gets called a lot, so I wondered about the tradeoff of holding a pointer that is already casted to the right struct pointer vs the cost of another pointer in the object. Note, those are objects that are created a lot, and used a lot. Those are not the kind of things that you would usually need to worry about. Because I wasn&#x2019;t sure, I decided to test this out. And I used BenchmarkDotNet to do so:  public struct FooHeader&#xA;{&#xA;    public long PageNumber;&#xA;    public int Size;&#xA;}&#xA;&#xA;[BenchmarkTask(platform: BenchmarkPlatform.X86,&#xA;           jitVersion: BenchmarkJitVersion.LegacyJit)]&#xA;[BenchmarkTask(platform: BenchmarkPlatform.X64,&#xA;               jitVersion: BenchmarkJitVersion.LegacyJit)]&#xA;[BenchmarkTask(platform: BenchmarkPlatform.X64,&#xA;               jitVersion: BenchmarkJitVersion.RyuJit)]&#xA;public unsafe class ToCastOrNotToCast&#xA;{&#xA;    byte* p;&#xA;    FooHeader* h;&#xA;    public ToCastOrNotToCast()&#xA;    {&#xA;        p = (byte*)Marshal.AllocHGlobal(1024);&#xA;        h = (FooHeader*)p;&#xA;    }&#xA;&#xA;    [Benchmark]&#xA;    public void NoCast()&#xA;    {&#xA;        h-&gt;PageNumber&#x2B;&#x2B;;&#xA;    }&#xA;&#xA;    [Benchmark]&#xA;    public void Cast()&#xA;    {&#xA;        ((FooHeader*)p)-&gt;PageNumber&#x2B;&#x2B;;&#xA;    }&#xA;&#xA;    [Benchmark]&#xA;    public void DirectCastArray()&#xA;    {&#xA;        ((long*)p)[0]&#x2B;&#x2B;;&#xA;    }&#xA;&#xA;&#xA;    [Benchmark]&#xA;    public void DirectCastPtr()&#xA;    {&#xA;        (*(long*)p)&#x2B;&#x2B;;&#xA;    }&#xA;}&#xA;&#xA;&#xA;The last two tests are pretty much just to have something to compare to, because if needed, I would just calculate memory offsets manually, but I doubt that those would be needed.&#xA;The one downside of BenchmarkDotNet is that it takes a very long time to actually run those tests. I&#x2019;ll save you the suspense, here are the results:&#xA;&#xA;I was expected the NoCast method to be faster, to be honest. But the Cast method is consistently (very slightly) the fastest one. Which is surprising.&#xA;Here is the generated IL:&#xA;&#xA;And the differences in assembly code are:&#xA;&#xA;Note that I&#x2019;m not 100% sure about the assembly code. I got it from the disassembly windows in VS, and it is possible that it changed what is actually going on.&#xA;So I&#x2019;m not really sure why this would be difference, and it is really is a small difference. But it is there.</p>
         </article>
-        <article id="article-3378">
+        <article id="article-3379">
             <a href="https://enterprisecraftsmanship.com/posts/most-valuable-software-development-principles/" target="_blank">
-                <h2 class="title mb-6" id="article-3378">Most valuable software development principles</h2>
+                <h2 class="title mb-6" id="article-3379">Most valuable software development principles</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;d like to wrap up the &quot;Most valuable software development principles&quot; article series with this post.</p>
         </article>
-        <article id="article-3379">
+        <article id="article-3380">
             <a href="https://benfoster.io/blog/how-to-test-owin-oauth-middleware/" target="_blank">
-                <h2 class="title mb-6" id="article-3379">How to test OWIN OAuth Middleware</h2>
+                <h2 class="title mb-6" id="article-3380">How to test OWIN OAuth Middleware</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: October 09, 2015
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I cover how to test OWIN OAuth Middleware using NSubstitute and NSpec.</p>
-        </article>
-        <article id="article-3380">
-            <a href="https://enterprisecraftsmanship.com/posts/making-implicit-assumptions-explicit/" target="_blank">
-                <h2 class="title mb-6" id="article-3380">Making implicit assumptions explicit</h2>
-            </a>
-            <p class="mb-2">by Vladimir Khorikov</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 05, 2015
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Another software development principle I advocate you follow is making implicit assumptions explicit in your code. Let&#x2019;s see what that means.</p>
         </article>
         <div class="button flex justify-between">
             <a href="337.html"><span class="back arrow"></span></a>
