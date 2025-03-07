@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4151">
+            <a href="https://ayende.com/blog/161537/querying-your-way-to-madness-the-facebook-timeline" target="_blank">
+                <h2 class="title mb-6" id="article-4151">Querying your way to madness: the Facebook timeline</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: April 22, 2013
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Facebook certainly changed the way we are doing things. Sometimes, that ain&#x2019;t always for the best, as can be seen from the way too much time humanity as a whole spend watching cat videos.  One of the ways that Facebook impacted our professional lives is that a lot of people look at that as a blue print of how they want their application to be. I am not going to touch on whatever that is a good thing or not, suffice to say that this is a well known model that is very easy for a lot of users to grasp. It is also a pretty hard model to actually design and build. I recently had a call from a friend who was tasked with building a Facebook like timeline. Like most such tasks, we have the notion of social network, with people following other people. I assume that this isn&#x2019;t actually YASNP (yet another social network project), but I didn&#x2019;t check too deeply. The question was how to actually build the timeline. The first thing that most people would try is something like this:      1: var user = session.Load&lt;User&gt;(userId);   2: var timelineItems =    3:    session.Query&lt;Items&gt;()   4:       .Where(x=&gt;x.Source.In(user.Following))   5:       .OrderByDescending(x=&gt;x.PublishedAt)   6:       .Take(30)   7:       .ToList();&#xA;Now, this looks good, and it would work, as long as you have small number of users and no one follows a lot of people. And as long as you don&#x2019;t have&#xA0; a lot of items. And as long as you don&#x2019;t have to do any additional work.&#xA0; When any of those assumption is broken&#x2026; well, welcome to unpleasantville, population: you.&#xA;It can&#x2019;t work. And I don&#x2019;t care what technology you are using for storage. You can&#x2019;t create a good solution using queries for something like the timeline.&#xA;&#xA;Nitpicker corner:&#xA;&#xA;If you have users that are following a LOT of people (and you will have those), you are likely to get into problems with the query.&#xA;The more items you have, the slower this query becomes. Since you need to sort them all before you can return results. And you are likely to have a LOT of them.&#xA;You can&#x2019;t really shard this query nicely or easily.&#xA;You can&#x2019;t apply additional filtering in any meaningful way.&#xA;Let us consider the following scenario. Let us assume that I care for this Rohit person. But I really don&#x2019;t care for Farmville. &#xA;&#xA;And then:&#xA;&#xA;Now, try to imagine doing this sort of thing in a query. For fun, assume that I do care for Farmville updates from some people, but not from all. That is what I mean when I said that you want to do meaningful filtering.&#xA;You can&#x2019;t do this using queries. Not in any real way.&#xA;Instead, you have to turn it around. You would do something like this:&#xA;&#xA;&#xA;   1: var user = session.Load&lt;User&gt;(userId);   2: var timelineItmes = session.Query&lt;TimeLineItems&gt;()    3:       .Where(x=&gt;x.ForUser == userId)   4:       .OrderBy(x=&gt;x.Date)   5:       .ToList();&#xA;Note how we structure this. There is a set of TimeLineItems objects, which store a bit of information about a set of items. Usually we would have one per user per day. Something like:&#xA;&#xA;users/123/timeline/2013-03-12&#xA;users/123/timeline/2013-03-13&#xA;users/123/timeline/2013-03-14&#xA;That means that we get well scoped values, we only need to search on a single set of items (easily sharded, with a well known id, which means that we can also just load them by id, instead of querying for them).&#xA;Of course, that means that you have to have something that builds those timeline documents. That is usually an async process that run whenever you have a user that update something. It goes something like this:&#xA;&#xA;&#xA;   1: public void UpdateFollowers(string itemId)   2: {   3:     var item = session.Include&lt;Item&gt;(x=&gt;x.UserId)   4:         .Load(itemId);   5:&#xA0;    6:     var user = session.Load&lt;User&gt;(item.UserId);   7:&#xA0;    8:     // user.Followers list of documents with batches of followers   9:     // we assume that we might have a LOT, so we use this techinque  10:     // to avoid loading them all into memory at once  11:     // http://ayende.com/blog/96257/document-based-modeling-auctions-bids  12:     foreach(var followersDocId in user.Followers)  13:     {  14:         NotifyFollowers(followersDocId, item);  15:     }  16: }  17:&#xA0;   18: public void NotifyFollowers(string followersDocId, Item item)  19: {  20:     var followers = session.Include&lt;FollowersCollection&gt;(x=&gt;x.Followers)  21:         .Load(followersDocId);  22:&#xA0;   23:     foreach(var follower in followers.Followers)  24:     {  25:         var user = session.Load&lt;User&gt;(follower);  26:         if(user.IsMatch(item) == false)  27:             continue;  28:         AddToTimeLine(follower, item);  29:     }  30: }&#xA;As you can see, we are batching the operation, loading the followers and batched on their settings, decide whatever to let that item to be added to their timeline or not.&#xA;Note that this has a lot of implications. Different people will see this show up in their timeline in different times (but usually very close to one another). Your memory usage is kept low, because you are only processing some of it at any given point in time. For users with a LOT of followers, and there will be some like those, you might want to build special code paths, but this should be fine even at its current stage.&#xA;What about post factum operations? Let us say that I want to start following a new user? This require special treatment, you would have to read the latest timeline items from the new user to follow and start merging that with the existing timeline. Likewise when you need to delete someone. Or adding a new filter. &#xA;It is a lot more work than just changing the query, sure. But you can get things done this way. And you cannot get anywhere with the query only approach.</p>
+        </article>
+        <article id="article-4152">
             <a href="https://www.meziantou.net/enable-framework-dotnet-3-5-offline.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4151">Enable Framework .Net 3.5 Offline</h2>
+                <h2 class="title mb-6" id="article-4152">Enable Framework .Net 3.5 Offline</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When you enable the .net 3.5 framework on Windows 8 or Windows 2012, Windows downloads the installation files before starting the installation. However, when you do not have an internet connection this procedure does not work, and you must specified the location of the Framework installation files.</p>
         </article>
-        <article id="article-4152">
+        <article id="article-4153">
             <a href="https://ayende.com/blog/161473/ravendb-indexing-an-off-the-cuff-stat" target="_blank">
-                <h2 class="title mb-6" id="article-4152">RavenDB Indexing</h2>
+                <h2 class="title mb-6" id="article-4153">RavenDB Indexing</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am currently teaching a RavenDB Course, and we were just talking about indexing. In particular, Search Indexes, like the one below:  After we defined this guy, we took a look at the stats. As you can see, indexing 1 million documents took just over 2 minutes (full text support enabled). More interesting, you can see how we rapidly increased the number of items that we indexed to finish indexing everything faster.  Quite nice.</p>
         </article>
-        <article id="article-4153">
+        <article id="article-4154">
             <a href="https://ayende.com/blog/161666/ravendb-signs-of-maturity" target="_blank">
-                <h2 class="title mb-6" id="article-4153">RavenDB signs of maturity?</h2>
+                <h2 class="title mb-6" id="article-4154">RavenDB signs of maturity?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are working on Excel Integration with RavenDB.  I just told a customer, that is a bug, but you can set this config value and it will fix this issue.</p>
         </article>
-        <article id="article-4154">
+        <article id="article-4155">
             <a href="https://ayende.com/blog/161665/what-is-making-us-slow-for-the-first-time-after-an-idle-period" target="_blank">
-                <h2 class="title mb-6" id="article-4154">What is making us slow (for the first time, after an idle period)?</h2>
+                <h2 class="title mb-6" id="article-4155">What is making us slow (for the first time, after an idle period)?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We recently covered this question in several iterations in the ravendb mailing list. The actual content of the discussion wasn&#x2019;t so interesting as the number of ways idle time can make you life&#x2026; interesting. In order to avoid having issues with idle time, you need to:  Disable IIS unloading for inactive websites. Disable RavenDB&#xA0; unloading for inactive databases. Make sure that the HD doesn&#x2019;t spin down during inactivity. You need to make sure that the system doesn&#x2019;t got to idle / hibenration. Check that the server hasn&#x2019;t been paged. Check that the CPU hasn&#x2019;t moved to low power mode. Check authentication timeouts. In the end, it was actually the last one that caused the problem. By default, Windows Auth token expire after 15 minutes, so you have to re-authenticate again, and that may make the first query after a while a little slower. Just for fun, by default, all of the above happen. And that is just when running on a physical machine. When running on VMs (or in the cloud), you need to do all of those checks for the VM and the host machines.</p>
         </article>
-        <article id="article-4155">
+        <article id="article-4156">
             <a href="https://ayende.com/blog/161634/ravendb-books-update" target="_blank">
-                <h2 class="title mb-6" id="article-4155">RavenDB Books Update</h2>
+                <h2 class="title mb-6" id="article-4156">RavenDB Books Update</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yes, you read the title correctly. Books as in plural. Currently I am aware of at least 4 different&#xA0; books about RavenDB that are in various working stages. Here is what happens when I reviewed one of them .   And no, I don&#x2019;t think that I am going to tell you more at this time.</p>
         </article>
-        <article id="article-4156">
+        <article id="article-4157">
             <a href="https://ayende.com/blog/161709/reviewing-leveldb-part-xvii-filters-what-filters-oh-those-filters" target="_blank">
-                <h2 class="title mb-6" id="article-4156">Reviewing LevelDB</h2>
+                <h2 class="title mb-6" id="article-4157">Reviewing LevelDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was all set to finish this series, when I realized that I missed something important, I didn&#x2019;t covered, and indeed, I don&#x2019;t currently understand, what filters are, and how are they used. As usual, once I actually got to the part of the code where this is actually handled (instead of ignoring it), it made a lot more sense:  And that, following with the rest of the code that I read makes a lot more sense. A SST is a sorted table, essentially. We have the keys and the blocks, etc. And we can find a value very quickly. But what if you could do this even more cheaply? Using a bloom filter is a good way to never get false negative, and it will reduce the amount of work we have to do if we can&#x2019;t find the key in the SST drastically (only need to read the filter value, don&#x2019;t even need to do any additional checks). Quite elegant, even if I say so myself. There is one thing to pay attention to and that is that you can define your own comparator, in which case you must also define you own filter policy. If you use a comparator that ignore casing, you also need to provider a filter that ignore casing.</p>
         </article>
-        <article id="article-4157">
+        <article id="article-4158">
             <a href="https://ayende.com/blog/161707/reviewing-leveldb-part-xv-memtables-gets-compacted-too" target="_blank">
-                <h2 class="title mb-6" id="article-4157">Reviewing LevelDB</h2>
+                <h2 class="title mb-6" id="article-4158">Reviewing LevelDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As mentioned before, every 4 MB or so, we will move the current memtable and switch to a new one, turning the current one into an immutable memtable, which will then be compacted to disk. This post is about that process. The work there is done by the surprisingly name: DBImpl::CompactMemTable, which then calls to WriteLevel0Table. That method build the actual table, using the same approach I already covered. Honestly, the code is pretty obvious now that I spent enough time reading this. The only thing of interest is DeleteObsoleteFiles() method, which looks interesting if only because it is one of the few places leveldb actually does real work with files. Mostly, however, ParseFileName is interesting:   It give me a good way to look at the actual files being used. This will be important when we will investigate how leveldb handles recovery. Leveldb will consider files obsolete if:  They are log files and aren&#x27;t of the current/previous log number.  If it is a manifest file, keep the current one (or later if there are any).  If it is a table file, keep it if it is in use. A table file may have been compacted away.  If it is a lock file, info log or the current db file.  All of this is interesting, but on a minor level. I think that we are nearing the end of the codebase now. The only thing that I really want to go into is the recovery parts, and that would pretty much be it.</p>
         </article>
-        <article id="article-4158">
+        <article id="article-4159">
             <a href="https://ayende.com/blog/161708/reviewing-leveldb-part-xvi-recovery-aint-so-tough" target="_blank">
-                <h2 class="title mb-6" id="article-4158">Reviewing LevelDB</h2>
+                <h2 class="title mb-6" id="article-4159">Reviewing LevelDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is how leveldb starts up a new db:   As you can imagine, this is quite useful to find out, since it means that everything we do on startup is recover. I do wonder why we have to take a lock immediately, though. I don&#x27;t imagine that anything else can try to make use of the db yet, it hasn&#x27;t been published to the outside world. Recover is interesting (and yes, I know I wrote that a lot lately).  It starts by taking a lock on the db (File System lock, by holding to LOCK file). If the db does not exists, we call NewDB(), which will create a default MANIFEST-00001 file and a CURRENT file pointing at that. If the db exists, we call VersionSet::Recover(), this starts by reading the CURRENT file, which points to the appropriate MANIFEST file.  This then gives us the latest status of the db versions, in particular, it tells us what files belong to what levels and what they ranges are. We check that the comparators we use is identical to the one used when creating the db. The code make it looks like there might be multiple version records in the MANIFEST file, but I don&#x27;t recall that. It might be just the way the API is structured, though. I just checked with the part that write it, and yes, it should have just one entry. Once we have our versions, what next? We check that all of the expected files are actually there, because otherwise we might have a corrupted install.  The final thing we do is look for log files that are later than the latest we have in the MANIFEST. I am not sure if this indicates a recover from a crash or a way to be compatible with an older version. I guess that one way this can happen is if you crashed midway while committing a transaction. When recovering, we are forcing checksum checks, to make sure that we don&#x27;t get corrupt data (which might very well be the case, since the data can just stop at any point here. The relevant code here is leveldb::log:Reader, which takes care of reading potentially corrupt log file and reporting on its finding. I already went over how the log file is structured, the log reader just does the same thing in reverse, with a lot of paranoia. While reading from the log file, we build a memtable with the committed &amp; safe changes. Here, too, we need to handle with memtable sizes, so we might generate multiple level 0 files during this process.  And... that is pretty much it. I&#x27;ll have another post summarizing this, and maybe another on what I intend to do with this information, but I&#x27;ll keep that close to the chest for now.</p>
         </article>
-        <article id="article-4159">
+        <article id="article-4160">
             <a href="https://ayende.com/blog/161706/reviewing-leveldb-part-xiv-there-is-the-mem-table-and-then-there-is-the-immutable-memtable" target="_blank">
-                <h2 class="title mb-6" id="article-4159">Reviewing LevelDB</h2>
+                <h2 class="title mb-6" id="article-4160">Reviewing LevelDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: April 10, 2013
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In leveldb we have the memtable, into which all of the current writes are going and the immutable memtable. So far, I haven&#x27;t really checked what it actually means.  It looks like this happens on the write, by default, a mem table is limited to about 4 MB of space. We write to the memtable (backed by the tx log) until we get to the point where we go beyond the 4MB limit (note that again, if you have large values, you might go much higher than 4MB and then we switch to another memtable, change the existing memtable to be the immutable one, and move on. Something that might trip you is that if you write 2 big values one after the other, in separate batches, the second one might need to wait for the compaction to complete. Here is the test code:    std::string big(1024 * 1024 * 5, &#x27;a&#x27;);&#xA;     &#xA;     for(int i=0; i &lt; 10; i&#x2B;&#x2B; ){&#xA;        &#xA;         std::clock_t start = std::clock();&#xA;       &#xA;         std::ostringstream o;&#xA;         o &lt;&lt; &quot;test&quot; &lt;&lt; i;&#xA;         std::string key =  o.str();&#xA;&#xA;&#xA;         db-&gt;Put(writeOptions, key, big);&#xA;    &#xA;         std::clock_t end = std::clock();&#xA;   &#xA;         std::cout &lt;&lt; i &lt;&lt; &quot;: &quot; &lt;&lt; 1000.0 *(end - start) / CLOCKS_PER_SEC &lt;&lt; &quot;ms &quot; &lt;&lt; std::endl;&#xA;   &#xA;     }&#xA;&#xA;&#xA;&#xA;And the output is:&#xA;&#xA;0: 20ms &#xA;1: 30ms &#xA;2: 50ms &#xA;3: 50ms &#xA;4: 50ms &#xA;5: 50ms &#xA;6: 40ms &#xA;7: 60ms &#xA;8: 50ms &#xA;9: 50ms &#xA;Not really that interesting, I&#x27;ll admit. But when I tried it with 50 mb for each value, it felt like the entire machine grind to a halt. Considering the amount of times memory is copied around, and that it needs to be saved to at least two locations (log file &amp; sst), that makes a lot of sense.&#xA;For references ,those were my timing, but I am not sure that I trust them.&#xA;&#xA;0: 170ms &#xA;1: 310ms &#xA;2: 350ms &#xA;3: 460ms &#xA;4: 340ms &#xA;5: 340ms &#xA;6: 280ms &#xA;7: 530ms &#xA;8: 400ms &#xA;9: 1200ms</p>
-        </article>
-        <article id="article-4160">
-            <a href="https://ayende.com/blog/161705/reviewing-leveldb-part-xiii-smile-and-here-is-your-snapshot" target="_blank">
-                <h2 class="title mb-6" id="article-4160">Reviewing LevelDB</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 09, 2013
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Okay, now that I know how data actually gets to the disk and from it, it is time to read how leveldb handles snapshots. Snapshots seems to be very simple on the surface. On every write, we generate a sequence number. We store the number locally and use the oldest still living snapshot as the oldest version that we have to retain when doing compaction work. I had hard time figuring out how it worked out with regards to using this in memory. Consider the following code:      leveldb::WriteOptions writeOptions;&#xA;     writeOptions.sync = true;&#xA;     &#xA;     db-&gt;Put(writeOptions, &quot;test&quot;, &quot;one&quot;);&#xA;     &#xA;     const leveldb::Snapshot* snapshot = db-&gt;GetSnapshot();&#xA;     &#xA;     db-&gt;Put(writeOptions, &quot;test&quot;, &quot;two&quot;);&#xA;  &#xA;    leveldb::ReadOptions readOptions;&#xA;    readOptions.snapshot = snapshot;&#xA;    std::string val;&#xA;    status = db-&gt;Get(readOptions, &quot;test&quot;, &amp;val);&#xA;&#xA;&#xA;This will properly give val == &#x201C;one&#x201D; when we execute it.&#xA;As it turned out, I missed something when I read the code earlier for MemTables. The value that is actually stored as the key is [key][tag]. And the tag is the sequence number &#x2B; write type. And because of the way it is sorted (little endian, always), it means that higher values are sorted first. And what that means in turn is that unless you specify a specific snapshot number (which is what this tag contains, most of the time), you are going to get the latest version. But if you specify a snapshot number, you&#x2019;ll get the value that was there as of that snapshot.&#xA;And that, in turn, means that we can write code like this:&#xA;&#xA;&#xA;Where key.memtable_key() contains the required snapshot value. So we can just skip all the ones larger than what we want.&#xA;That is really cool, but what about when we go to disk? Pretty much in the same way. The actual key value include the sequence &amp; tag value. But the comparator knows to filter it out when needed. This is quite nice, and an elegant way to handle this situation.</p>
         </article>
         <div class="button flex justify-between">
             <a href="415.html"><span class="back arrow"></span></a>

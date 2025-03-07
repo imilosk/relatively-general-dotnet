@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-8911">
+            <a href="https://ayende.com/blog/1456/mock-objects-and-mock-turtles" target="_blank">
+                <h2 class="title mb-6" id="article-8911">Mock Objects And Mock Turtles</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 12, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just dicovered this web cast&#xA0;talking about TDD, Mocking, Dependency Injections, Design Patterns, etc. I am currently watching this, and it looks very good.</p>
+        </article>
+        <article id="article-8912">
             <a href="https://ayende.com/blog/1455/without-words" target="_blank">
-                <h2 class="title mb-6" id="article-8911">Without Words</h2>
+                <h2 class="title mb-6" id="article-8912">Without Words</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20"></p>
         </article>
-        <article id="article-8912">
+        <article id="article-8913">
             <a href="https://ayende.com/blog/1454/nhibernate-caching-and-tests-oh-my" target="_blank">
-                <h2 class="title mb-6" id="article-8912">NHibernate, Caching  and tests, Oh My!</h2>
+                <h2 class="title mb-6" id="article-8913">NHibernate, Caching  and tests, Oh My!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just spent several hours trying to figure out why enabling NHibernate second level caching caused a lot of my tests to fail, seemingly randomly.&#xA;The initial problem was obvious, I was trying to be efficient, and I used a stored procedure (yes, I do use them  ) to delete all the database and restore it to a known state. With caching, this meant that the cache and the database were in an inconsistent state. I need to restore my database to a consistent state because I need my tests to be repeatable.&#xA;Yes, I am familiar with all the argument against unit tests hitting the database, and yes I do feel the pain. I&#x2019;m going to do something about it soon, but for now, I need to work with what I have got. My problem was compounded by the fact that large parts of the database are read only, so I wanted to keep them in the cache for the tests.&#xA;I quickly wrote this function, which was called before each test was run:&#xA;private&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;void ClearCache()&#xA;{&#xA;    ISessionFactory factory = Context. SessionFactory;&#xA;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;ICollection types = factory.GetAllClassMetadata().Keys;&#xA;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;foreach (Type type in types)&#xA;    {&#xA;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;if (typeof(NotChanging) == type)&#xA;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;continue;&#xA;            factory.Evict(type);&#xA; &#xA;&#xA0;   }&#xA;}&#xA;&#xA0;And I thought I was through with it, but apparently not. I still got seemingly random tests failures, I couldn&#x2019;t reproduce them most of the time, and when I did, they made me question whatever the test itself had a bug. Eventually I realized that I was being stupid.&#xA;The reason for that is that NHibernate doesn&#x2019;t really have a single second level cache. It actually has three. Well, not really three, but it is logically segmented to three caches.&#xA;The first cache, which I cleared effectively, was the object cache. This holds the values of the cached entities. &#xA;The second cache, which I forgot about, is the collections cache.  This holds the association between the entities. &#xA;The third cache, which I am not using, is the query cache. It holds the results of HQL queries.&#xA;There are also cache regions, but I won&#x2019;t get into that now. What I need to do was simply add this to my ClearCache() method, and everything turned out just fine:&#xA;foreach (string  role in factory.GetAllCollectionMetadata().Keys)&#xA;{&#xA;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;if(!role.Contains(&quot;NotChangin&quot;))&#xA;   factory.EvictCollection(role);&#xA;}&#xA;&#xA;&#xA0;I need the caching support to hold the major read only data in memory for the tests, since it considerably shorten their runtime.&#xA;I am also going to see what I can do to mock all the data access code that doesn&#x2019;t actually test that talking to the database works. It should be simple enough, but I got quite a bit of tests to refactor.</p>
         </article>
-        <article id="article-8913">
+        <article id="article-8914">
             <a href="https://ayende.com/blog/1453/riddle-me-this" target="_blank">
-                <h2 class="title mb-6" id="article-8913">Riddle me this...</h2>
+                <h2 class="title mb-6" id="article-8914">Riddle me this...</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">What is the result of the following code:            public class Foo                        {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; public static void Recursive()                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Recursive();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; public static void Main(string[]args)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; try                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Recursive();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; catch(StackOverflowException&#xA0; e)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Console.WriteLine(&quot;Bummer&quot;);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        }                        In .Net 1.0/1.1 ?    In .Net 2.0 ?</p>
         </article>
-        <article id="article-8914">
+        <article id="article-8915">
             <a href="https://ayende.com/blog/1452/jonathan-coulton" target="_blank">
-                <h2 class="title mb-6" id="article-8914">Jonathan Coulton</h2>
+                <h2 class="title mb-6" id="article-8915">Jonathan Coulton</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Jonathan Coulton is the one who performed the Code Monkey song. He has a lot of free music on his site. I downloaded all of it and liked what I heard, so I bought the entire collection. &#xA;Highly recommended.</p>
         </article>
-        <article id="article-8915">
+        <article id="article-8916">
             <a href="https://ayende.com/blog/1451/the-adventures-of-a-developer-seeking-good-performance" target="_blank">
-                <h2 class="title mb-6" id="article-8915">The adventures of a developer seeking good performance&#x2026;</h2>
+                <h2 class="title mb-6" id="article-8916">The adventures of a developer seeking good performance&#x2026;</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am beginning to really appreciate a lot of enterprise-y stuff. Mostly because my poor laptop is no longer a real development machine, but just barely adequate for the job. In local development mode, my machine needs to carry SQL Server, ASP.Net, My application (not light weight, I am afraid), VS.Net, SQL Management Studio, Outlook, etc. This is not conductive to a proper working conditions, or my continued sanity.&#xA;I understand that the problem is paging, so I did a search about paging performance, and apparently the answer to that is to use Ajax to reduce the load. I tried to convince Windows to do paging using Ajax, but it stubbornly refused to cooperate.&#xA;I mean, everyone knows that Java script is built into Windows, I don&#x2019;t see why I can&#x2019;t use it to customize the way Windows work. I mean, it is pretty straightforward, it you think of it. I saw Scott Guthrie&#x2019;s video, and it only took him a few minutes to do it.&#xA;Then I realized that it was because he used Atlas, and not plain Ajax. I was elated, and immediately set to use Atlas to reduce the paging on my machine. It didn&#x2019;t work, although I am not sure why. Okay, I understand that Atlas is in beta, and won&#x2019;t be release in a million years or so, but still. Paging seems to be pretty basic requirement from an Ajax toolkit.&#xA;I&#x2019;m beginning to fear that Ajax is not the answer to everything, no doubt because it doesn&#x2019;t have 42 in its name. I heard that Microsoft has a Project 42 somewhere, I bet that they are working on this at this moment.  It seems elementary to use Ajax experience to speed up Windows. &#xA;Never mind, after seeing that Ajax is not the solution,  I found a password to one of the useless servers and took over it. It had all sort of crappy stuff that I don&#x2019;t know like BizTalk and Back Office. I don&#x2019;t like back offices and no one serious would call their product BizTalk, so I kicked them out,  put the development database on it, and started to work against it. &#xA;Someone also put a lot of data in SQL Server there. And it was really busy serving some really stupid queries. I mean, it was all stored procedure calls, and I didn&#x2019;t like the naming convention: &#x201C;hr_PaySalaries&#x201D;, &#x201C;hr_EndOfMonthProcessing&#x201D;. It was keeping the server too busy, so I dropped the database, and everything worked just fine after that.&#xA;Even with network latencies, just turning SQL Server off brought some performance improvements. If remote debugging wasn&#x2019;t such a pain, I would have moved  the web server itself to another machine. It is really hard to work right now, because there is a lot of screaming and shouting outside the door. I do my best to ignore it, but it is pretty hard. It sound like the sys admin is pretty pissed. And he should be, if he was doing his job I would have to  work so hard to get a proper server.&#xA;I also spent some time adding caching to the application, which should help, but several tests broke.  I fixed that pretty quickly. Apparently the old &#x201C;we can do it the easy way or I can bring out the 5 Kg hammer&#x201D; work on this machine.  I&#x2019;m seriously considering adding distributed caching to the application, just so the cache wouldn&#x2019;t get lost every time that I restart the application (and, of course, so the cache wouldn&#x2019;t take memory on my machine).&#xA;I just need a few machines with a lot of RAM available. The problem is that I had only one server password, and the way the sys-admin is shouting outside, I don&#x2019;t think it is a good time to ask him for another one. I am thinking about writing a script and sending it to all my contact list, it will install the distributed cache and then I will finally have enough RAM to work.&#xA;I think I got to go now, I just got a very angry email saying I need to go to the servers room, and I&#x2019;m not sure why. I am working very hard just to be able to work.  Maybe they finally realized that I need a stronger machine and they will let me choose my next machine&#x2026;&#xA;Note: this post was written while waiting for VS.Net to start responding&#x2026;</p>
         </article>
-        <article id="article-8916">
+        <article id="article-8917">
             <a href="https://ayende.com/blog/1450/net-versions-2-years-from-now" target="_blank">
-                <h2 class="title mb-6" id="article-8916">.Net Versions, 2 Years From Now</h2>
+                <h2 class="title mb-6" id="article-8917">.Net Versions, 2 Years From Now</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After reading this post, a scenario came to mind:We are going to build this application on the CLR 3.2 in .Net 4.1 SP3 using C# 3.0 and WCF 3.8 with WPF 3.1 as smart client deployed using ClickTwicePointThree.    Yes, it is absurd, but I can sense the confustion this is going to cause.</p>
         </article>
-        <article id="article-8917">
+        <article id="article-8918">
             <a href="https://ayende.com/blog/1449/list-t-is-broken" target="_blank">
-                <h2 class="title mb-6" id="article-8917">List&lt;T&gt; is broken</h2>
+                <h2 class="title mb-6" id="article-8918">List&lt;T&gt; is broken</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It is broken because it is a basic framework class that&#xA0;doesn&#x27;t have a single virtual method. I want to have a list where a delegate is called when an item is added or removed, but I can&#x27;t do that, since this means that I need to override the Add()/Remove() methods. I need to create a completely new class, implement the entire IList&lt;T&gt; functionality, to get such a basic behavior.    Yes, I know about Collection&lt;T&gt;, but this isn&#x27;t acceptable. Why have two seperate classes? If I want a custom&#xA0;collection with ForEach() method on it, I need to do it myself. This is no way to write an extensible framework.&#xA0;They might as well have sealed the class.</p>
         </article>
-        <article id="article-8918">
+        <article id="article-8919">
             <a href="https://ayende.com/blog/1448/on-system-transaction" target="_blank">
-                <h2 class="title mb-6" id="article-8918">On System.Transaction</h2>
+                <h2 class="title mb-6" id="article-8919">On System.Transaction</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is an excellent post about System.Transactions, which include a very concise example of how to build your own resource manager for integrating with System.Transactions.    Highly recommended.</p>
         </article>
-        <article id="article-8919">
+        <article id="article-8920">
             <a href="https://ayende.com/blog/1447/on-memcached" target="_blank">
-                <h2 class="title mb-6" id="article-8919">On Memcached</h2>
+                <h2 class="title mb-6" id="article-8920">On Memcached</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: June 10, 2006
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For some reason, I have not heard much about Memcached in the .Net circles, which is a shame. Memcached is a distributed memory caching system, which makes it very interesting for ASP.Net applications in web farms scenarios (but not just), since the ASP.Net cache is local cache, and can go out of sync with the other caches on the     The basic idea is that a Memcached server is listening on a port, and you set and get data from it. So far, it is not very exciting, but the nice part is that there everything is in memory, and that you can use multiply Memcached server to increase the cache size indefinitely very cheaply. Because everything is done in memory, and the server is carefully designed to hold no locks, the performance is really impressive.    An interesting scenario is to take couple hundreds of megabytes from each computer in the organization, and use that to fuel the cache size for the servers. Memcached has automatic failover support, so you can just ignore Memcached server going offline for a period of time, and it is very low on CPU usage.    I intended to write&#xA0;a bit more about it, but I found this article, that explains how it works, and it even have some pretty pictures, so it is pretty useless for me to try. :-)    A couple of interesting points Memcached:            It runs out of process, so it is not affected by IIS Reset, restarting the application, etc. This is very important if you rely on&#xA0;a cache for good performance, and especially if you application startup loads big amounts of data. This is very important in development, since we can safely skip this initialization step when we are developing.            Memcached can cache any byte stream, which means that in .Net, it can hold any serialized object            It is one of the options for NHibernate&#x27;s caching, and the recommended one for use in web farms. This make it very attractive to me, since I can flip a switch and start using it, without touching my code.            Make sure that you set it up in a way that makes maping highly unlikely (in other words, if you put it on a 1Gb machine, don&#x27;t tell it to cache 2Gb), there is no point in paging in a caching server.            Using Memcached can significantly reduce your database load, turning it into a mostly write store.            Many people seem to be using Memcached as a fast storage engine for interesting data that shouldn&#x27;t be persisted. Caching calculation, behavioral patterns, etc.    I&#x27;ll just add that Memcached servers exists for unix&#xA0;and windows, and there are client APIs for just about anything, including .Net.</p>
-        </article>
-        <article id="article-8920">
-            <a href="https://ayende.com/blog/1446/hungry-outlook" target="_blank">
-                <h2 class="title mb-6" id="article-8920">Hungry Outlook</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 10, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I noticed that I have sudden CPU spikes for no good reason.&#xA;After tracking it a bit, I found that the culprit is Outlook 12.&#xA;&#xA;Take a look at the CPU time numbers:&#xA;&#xA;&#xA;&#xA;Just to give an idea about the implications, SQL Server used&#xA;only two minutes of CPU, and I hit it quite a bit recently.&#xA;&#xA;Here is the CPU Graph, I&#x2019;m showing just one CPU, due&#xA;to space constraints, but the second is just as busy (HT machine).</p>
         </article>
         <div class="button flex justify-between">
             <a href="891.html"><span class="back arrow"></span></a>
