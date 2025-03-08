@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5051">
+            <a href="https://ayende.com/blog/4734/we-are-hiring" target="_blank">
+                <h2 class="title mb-6" id="article-5051">We are hiring!</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 26, 2010
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In 2005, I got out of the army, and looked for a job. I felt that I had all the necessary qualifications (at the time, I had already written Rhino Mocks), but I run into an interesting problem. I didn&#x2019;t have any commercial experience. I am sure that you are familiar with the tale. All the jobs require at least 2 &#x2013; 3 years experience, and the list of qualification looked like someone just raided the TLA storage facilities.   That was pretty annoying at the time, and I wished I could do something about it. Now I can.  We aren&#x2019;t hiring additional full time employees (at least not right now), but we are hiring interns. The main idea is to enable people to gain commercial experience while working on cool software.  Some information that you probably need to know:     You have to know to program in C#. If you have OSS credentials, that is all for the better, but it is not required.    This is a paid position, you are not expected to work for free.    It is not a remote position, our offices are located in the Southern Industrial Area in&#xA0;Hadera, Israel.    I&#x2019;m not going to ask you to do all the annoying work. There is some annoying stuff to do (mostly docs), but look below to see what exactly I have in mind.   This position entails:  Working on our shipping products (the Uber Prof line of products and the Raven DB / Raven MQ line).  Among other things, I have earmarked the following features for you:     Raven DB&#x2019;s query optimizer.    Raven DB&#x2019;s auto sharding &amp; scaling.    Raven DB&#x2019;s clustering support.    Uber Prof&#x2019;s production profiling feature.   The other things that are involved include all the usual stuff, bug fixes, doc writing and standard (in other words, not that exciting) features.  Duration:  This is a three to six months position.  What is required:  Commercial experience is not required, but I would want to see code that you wrote.</p>
+        </article>
+        <article id="article-5052">
             <a href="https://ayende.com/blog/4733/answer-this-code-should-never-hit-production" target="_blank">
-                <h2 class="title mb-6" id="article-5051">Answer</h2>
+                <h2 class="title mb-6" id="article-5052">Answer</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 12/15/2010Yesterday I asked what is wrong with the following code:     public ISet&lt;string&gt; GetTerms(string index, string field)&#xA;{&#xA;    if(field == null) throw new ArgumentNullException(&quot;field&quot;);&#xA;    if(index == null) throw new ArgumentNullException(&quot;index&quot;);&#xA;    &#xA;    var result = new HashSet&lt;string&gt;();&#xA;    var currentIndexSearcher = database.IndexStorage.GetCurrentIndexSearcher(index);&#xA;    IndexSearcher searcher;&#xA;    using(currentIndexSearcher.Use(out searcher))&#xA;    {&#xA;        var termEnum = searcher.GetIndexReader().Terms(new Term(field));&#xA;        while (field.Equals(termEnum.Term().Field()))&#xA;        {&#xA;           result.Add(termEnum.Term().Text());&#xA;&#xA;            if (termEnum.Next() == false)&#xA;                break;&#xA;        }&#xA;    }&#xA;&#xA;    return result;&#xA;}&#xA;  &#xA;&#xA;The answer to that is quite simple, this code doesn&#x2019;t have any paging available. What this means is if we executes this piece of code on an field with very high number of unique items (such as, for example, email addresses), we would return all the results in one shot. That is, if we can actually fit all of them to memory. Anything that can run over potentially unbounded result set should have paging as part of its basic API. &#xA;&#xA;This is not optional.&#xA;&#xA;Here is the correct piece of code:&#xA;&#xA;&#xA;  public ISet&lt;string&gt; GetTerms(string index, string field, string fromValue, int pageSize)&#xA;{&#xA;    if(field == null) throw new ArgumentNullException(&quot;field&quot;);&#xA;    if(index == null) throw new ArgumentNullException(&quot;index&quot;);&#xA;    &#xA;    var result = new HashSet&lt;string&gt;();&#xA;    var currentIndexSearcher = database.IndexStorage.GetCurrentIndexSearcher(index);&#xA;    IndexSearcher searcher;&#xA;    using(currentIndexSearcher.Use(out searcher))&#xA;    {&#xA;        var termEnum = searcher.GetIndexReader().Terms(new Term(field, fromValue ?? string.Empty));&#xA;        if (string.IsNullOrEmpty(fromValue) == false)// need to skip this value&#xA;        {&#xA;            while(fromValue.Equals(termEnum.Term().Text()))&#xA;            {&#xA;                if (termEnum.Next() == false)&#xA;                    return result;&#xA;            }&#xA;        }&#xA;        while (field.Equals(termEnum.Term().Field()))&#xA;        {&#xA;            result.Add(termEnum.Term().Text());&#xA;&#xA;            if (result.Count &gt;= pageSize)&#xA;                break;&#xA;&#xA;            if (termEnum.Next() == false)&#xA;                break;&#xA;        }&#xA;    }&#xA;&#xA;    return result;&#xA;}&#xA;  &#xA;&#xA;And that is quite efficient, even for searching large data sets.&#xA;&#xA;For bonus points, the calling code ensures that pageSize cannot be too big :-)</p>
         </article>
-        <article id="article-5052">
+        <article id="article-5053">
             <a href="https://ayende.com/blog/4732/challenge-this-code-should-never-hit-production" target="_blank">
-                <h2 class="title mb-6" id="article-5052">Challenge</h2>
+                <h2 class="title mb-6" id="article-5053">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This code should never have the chance to go to production, it is horribly broken in a rather subtle way, do you see it?     public ISet&lt;string&gt; GetTerms(string index, string field)&#xA;{&#xA;    if(field == null) throw new ArgumentNullException(&quot;field&quot;);&#xA;    if(index == null) throw new ArgumentNullException(&quot;index&quot;);&#xA;    &#xA;    var result = new HashSet&lt;string&gt;();&#xA;    var currentIndexSearcher = database.IndexStorage.GetCurrentIndexSearcher(index);&#xA;    IndexSearcher searcher;&#xA;    using(currentIndexSearcher.Use(out searcher))&#xA;    {&#xA;        var termEnum = searcher.GetIndexReader().Terms(new Term(field));&#xA;        while (field.Equals(termEnum.Term().Field()))&#xA;        {&#xA;           result.Add(termEnum.Term().Text());&#xA;&#xA;            if (termEnum.Next() == false)&#xA;                break;&#xA;        }&#xA;    }&#xA;&#xA;    return result;&#xA;}&#xA;  &#xA;&#xA;As usual, I&#x2019;ll post the answer tomorrow.</p>
         </article>
-        <article id="article-5053">
+        <article id="article-5054">
             <a href="https://ayende.com/blog/4731/detailed-answer-your-own-threadlocal" target="_blank">
-                <h2 class="title mb-6" id="article-5053">Detailed Answer: Your own ThreadLocal</h2>
+                <h2 class="title mb-6" id="article-5054">Detailed Answer: Your own ThreadLocal</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 12/15/2010In the last post, we have shown this code:     public class CloseableThreadLocal&#xA;{&#xA;    [ThreadStatic]&#xA;    public static Dictionary&lt;object, object&gt; slots;&#xA;&#xA;    private readonly object holder = new object();&#xA;    private Dictionary&lt;object, object&gt; capturedSlots;&#xA;&#xA;    private Dictionary&lt;object, object&gt; Slots&#xA;    {&#xA;        get&#xA;        {&#xA;            if (slots == null)&#xA;                slots = new Dictionary&lt;object, object&gt;();&#xA;            capturedSlots = slots;&#xA;            return slots;&#xA;        }&#xA;    }&#xA;&#xA;&#xA;    public /*protected internal*/ virtual Object InitialValue()&#xA;    {&#xA;        return null;&#xA;    }&#xA;&#xA;    public virtual Object Get()&#xA;    {&#xA;        object val;&#xA;&#xA;        lock (Slots)&#xA;        {&#xA;            if (Slots.TryGetValue(holder, out val))&#xA;            {&#xA;                return val;&#xA;            }&#xA;        }&#xA;        val = InitialValue();&#xA;        Set(val);&#xA;        return val;&#xA;    }&#xA;&#xA;    public virtual void Set(object val)&#xA;    {&#xA;        lock (Slots)&#xA;        {&#xA;            Slots[holder] = val;&#xA;        }&#xA;    }&#xA;&#xA;    public virtual void Close()&#xA;    {&#xA;        GC.SuppressFinalize(this);&#xA;        if (capturedSlots != null)&#xA;            capturedSlots.Remove(this);&#xA;    }&#xA;&#xA;    ~CloseableThreadLocal()&#xA;    {&#xA;        if (capturedSlots == null)&#xA;            return;&#xA;        lock (capturedSlots)&#xA;            capturedSlots.Remove(holder);&#xA;    }&#xA;}&#xA;  &#xA;&#xA;And then I asked whatever there are additional things that you may want to do here.&#xA;&#xA;The obvious one is to thing about locking. For one thing, we have now introduced locking for everything. Would that be expensive?&#xA;&#xA;The answer is that probably not. We can expect to have very little contention here, most of the operations are always going to be on the same thread, after all.&#xA;&#xA;I would probably just change this to be a ConcurrentDictionary, though, and remove all explicit locking. And with that, we need to think whatever it would make sense to make this a static variable, rather than a thread static variable.</p>
         </article>
-        <article id="article-5054">
+        <article id="article-5055">
             <a href="https://ayende.com/blog/4730/answer-your-own-threadlocal" target="_blank">
-                <h2 class="title mb-6" id="article-5054">Answer</h2>
+                <h2 class="title mb-6" id="article-5055">Answer</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 12/15/2010Well, the problem on our last answer was that we didn&#x2019;t protect ourselves from multi threaded access to the slots variable. Here is the code with this fixed:     public class CloseableThreadLocal&#xA;{&#xA;    [ThreadStatic]&#xA;    public static Dictionary&lt;object, object&gt; slots;&#xA;&#xA;    private readonly object holder = new object();&#xA;    private Dictionary&lt;object, object&gt; capturedSlots;&#xA;&#xA;    private Dictionary&lt;object, object&gt; Slots&#xA;    {&#xA;        get&#xA;        {&#xA;            if (slots == null)&#xA;                slots = new Dictionary&lt;object, object&gt;();&#xA;            capturedSlots = slots;&#xA;            return slots;&#xA;        }&#xA;    }&#xA;&#xA;&#xA;    public /*protected internal*/ virtual Object InitialValue()&#xA;    {&#xA;        return null;&#xA;    }&#xA;&#xA;    public virtual Object Get()&#xA;    {&#xA;        object val;&#xA;&#xA;        lock (Slots)&#xA;        {&#xA;            if (Slots.TryGetValue(holder, out val))&#xA;            {&#xA;                return val;&#xA;            }&#xA;        }&#xA;        val = InitialValue();&#xA;        Set(val);&#xA;        return val;&#xA;    }&#xA;&#xA;    public virtual void Set(object val)&#xA;    {&#xA;        lock (Slots)&#xA;        {&#xA;            Slots[holder] = val;&#xA;        }&#xA;    }&#xA;&#xA;    public virtual void Close()&#xA;    {&#xA;        GC.SuppressFinalize(this);&#xA;        if (capturedSlots != null)&#xA;            capturedSlots.Remove(this);&#xA;    }&#xA;&#xA;    ~CloseableThreadLocal()&#xA;    {&#xA;        if (capturedSlots == null)&#xA;            return;&#xA;        lock (capturedSlots)&#xA;            capturedSlots.Remove(holder);&#xA;    }&#xA;}&#xA;  &#xA;&#xA;Is this it? Are there still issues that we need to handle?</p>
         </article>
-        <article id="article-5055">
+        <article id="article-5056">
             <a href="https://ardalis.com/presentation-zen/" target="_blank">
-                <h2 class="title mb-6" id="article-5055">Presentation Zen</h2>
+                <h2 class="title mb-6" id="article-5056">Presentation Zen</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I picked up Presentation Zen by Garr Reynolds earlier this year, and finally managed to finish it. It comes highly recommended by many&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5056">
+        <article id="article-5057">
             <a href="https://ayende.com/blog/4729/wrong-answer-3-your-own-thread-local" target="_blank">
-                <h2 class="title mb-6" id="article-5056">Wrong Answer #3: Your own Thread Local</h2>
+                <h2 class="title mb-6" id="article-5057">Wrong Answer #3: Your own Thread Local</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 12/15/2010Last time, we forgot that the slots dictionary is a thread static variable, and that the finalizer is going to run on another thread&#x2026; Let us fix this, too:     public class CloseableThreadLocal&#xA;{&#xA;    [ThreadStatic]&#xA;    public static Dictionary&lt;object, object&gt; slots;&#xA;&#xA;    private readonly object holder = new object();&#xA;    private Dictionary&lt;object, object&gt; capturedSlots;&#xA;&#xA;    private Dictionary&lt;object, object&gt; Slots&#xA;    {&#xA;        get&#xA;        {&#xA;            if (slots == null)&#xA;                slots = new Dictionary&lt;object, object&gt;();&#xA;            capturedSlots = slots;&#xA;            return slots;&#xA;        }&#xA;    }&#xA;&#xA;&#xA;    public /*protected internal*/ virtual Object InitialValue()&#xA;    {&#xA;        return null;&#xA;    }&#xA;&#xA;    public virtual Object Get()&#xA;    {&#xA;        object val;&#xA;&#xA;        if (Slots.TryGetValue(holder, out val))&#xA;        {&#xA;            return val;&#xA;        }&#xA;        val = InitialValue();&#xA;        Set(val);&#xA;        return val;&#xA;    }&#xA;&#xA;    public virtual void Set(object val)&#xA;    {&#xA;        Slots[holder] = val;&#xA;    }&#xA;&#xA;    public virtual void Close()&#xA;    {&#xA;        GC.SuppressFinalize(this);&#xA;        if (capturedSlots != null)&#xA;            capturedSlots.Remove(this);&#xA;    }&#xA;&#xA;    ~CloseableThreadLocal()&#xA;    {&#xA;        if (capturedSlots == null)&#xA;            return;&#xA;        capturedSlots.Remove(holder);&#xA;    }&#xA;}&#xA;  &#xA;&#xA;And now it works!&#xA;&#xA;Except&#x2026; Under some very rare scenarios, it will not do so.&#xA;&#xA;What are those scenarios? Why do we care? And how do we fix this?</p>
         </article>
-        <article id="article-5057">
+        <article id="article-5058">
             <a href="https://ayende.com/blog/4728/wrong-answer-2-your-own-threadlocal" target="_blank">
-                <h2 class="title mb-6" id="article-5057">Wrong Answer #2: Your own ThreadLocal</h2>
+                <h2 class="title mb-6" id="article-5058">Wrong Answer #2: Your own ThreadLocal</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 12/15/2010Well, last time we tried to introduce a finalizer, but we forgot that we were using our own instance as the key to the slots dictionary, which prevented us from being collected, hence we never run the finalizer.  All problems can be solved by adding an additional level of indirection&#x2026; instead of using our own instance, let us use a separate instance:     public class CloseableThreadLocal&#xA;{&#xA;    [ThreadStatic] public static Dictionary&lt;object, object&gt; slots;&#xA;&#xA;    object holder = new object();&#xA;    public static Dictionary&lt;object, object&gt; Slots&#xA;    {&#xA;        get { return slots ?? (slots = new Dictionary&lt;object, object&gt;()); }&#xA;    }&#xA;&#xA;    public /*protected internal*/ virtual Object InitialValue()&#xA;    {&#xA;        return null;&#xA;    }&#xA;&#xA;    public virtual Object Get()&#xA;    {&#xA;        object val;&#xA;&#xA;        if (Slots.TryGetValue(holder, out val))&#xA;        {&#xA;            return val;&#xA;        }&#xA;        val = InitialValue();&#xA;        Set(val);&#xA;        return val;&#xA;    }&#xA;&#xA;    public virtual void Set(object val)&#xA;    {&#xA;        Slots[holder] = val;&#xA;    }&#xA;&#xA;    public virtual void Close()&#xA;    {&#xA;        GC.SuppressFinalize(this);&#xA;        if (slots != null)// intentionally using the field here, to avoid creating the instance&#xA;            slots.Remove(holder);&#xA;    }&#xA;&#xA;    ~CloseableThreadLocal()&#xA;    {&#xA;        Close();&#xA;    }&#xA;}&#xA;  &#xA;&#xA;Now it should work, right?&#xA;&#xA;Expect that it doesn&#x2019;t&#x2026; We still see that the data isn&#x2019;t cleaned up properly, even though the finalizer is run.&#xA;&#xA;Why?</p>
         </article>
-        <article id="article-5058">
+        <article id="article-5059">
             <a href="https://ayende.com/blog/4727/wrong-answer-1-your-own-threadlocal" target="_blank">
-                <h2 class="title mb-6" id="article-5058">Wrong answer #1: Your own ThreadLocal</h2>
+                <h2 class="title mb-6" id="article-5059">Wrong answer #1: Your own ThreadLocal</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 12/15/2010Well, one way we can use to solve the problem is by introducing a finalizer, like so:     public class CloseableThreadLocal&#xA;{&#xA;    [ThreadStatic] private static Dictionary&lt;object, object&gt; slots;&#xA;&#xA;    public static Dictionary&lt;object, object&gt; Slots&#xA;    {&#xA;        get { return slots ?? (slots = new Dictionary&lt;object, object&gt;()); }&#xA;    }&#xA;&#xA;    public /*protected internal*/ virtual Object InitialValue()&#xA;    {&#xA;        return null;&#xA;    }&#xA;&#xA;    public virtual Object Get()&#xA;    {&#xA;        object val;&#xA;&#xA;        if (Slots.TryGetValue(this, out val))&#xA;        {&#xA;            return val;&#xA;        }&#xA;        val = InitialValue();&#xA;        Set(val);&#xA;        return val;&#xA;    }&#xA;&#xA;    public virtual void Set(object val)&#xA;    {&#xA;        Slots[this] = val;&#xA;    }&#xA;&#xA;    public virtual void Close()&#xA;    {&#xA;        GC.SuppressFinalize(this);&#xA;        if (slots != null)// intentionally using the field here, to avoid creating the instance&#xA;            slots.Remove(this);&#xA;    }&#xA;&#xA;   ~CloseableThreadLocal()&#xA;   {&#xA;         Close();&#xA;   }&#xA;}&#xA;  &#xA;&#xA;But this will not actually work, executing this code shows that we still have a memory leak:&#xA;&#xA;&#xA;  internal class Program&#xA;{&#xA;    private static void Main(string[] args)&#xA;    {&#xA;        UseThreadLocal();&#xA;        GC.Collect(int.MaxValue);&#xA;        GC.WaitForPendingFinalizers();&#xA;        Console.WriteLine(CloseableThreadLocal.slots.Count);&#xA;    }&#xA;&#xA;    private static void UseThreadLocal()&#xA;    {&#xA;        var tl = new CloseableThreadLocal();&#xA;        tl.Set(&quot;hello there&quot;);&#xA;        Console.WriteLine(tl.Get());&#xA;    }&#xA;}&#xA;  &#xA;&#xA;Why? And how can we fix this?</p>
         </article>
-        <article id="article-5059">
+        <article id="article-5060">
             <a href="https://ayende.com/blog/4726/challenge-your-own-threadlocal" target="_blank">
-                <h2 class="title mb-6" id="article-5059">Challenge</h2>
+                <h2 class="title mb-6" id="article-5060">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: December 17, 2010
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I found a bug in Lucene.NET that resulted in a memory leak in RavenDB. Take a look here (I have simplified the code to some extent, but the same spirit remains):     public class CloseableThreadLocal&#xA;{&#xA;    [ThreadStatic] private static Dictionary&lt;object, object&gt; slots;&#xA;&#xA;    public static Dictionary&lt;object, object&gt; Slots&#xA;    {&#xA;        get { return slots ?? (slots = new Dictionary&lt;object, object&gt;()); }&#xA;    }&#xA;&#xA;    public /*protected internal*/ virtual Object InitialValue()&#xA;    {&#xA;        return null;&#xA;    }&#xA;&#xA;    public virtual Object Get()&#xA;    {&#xA;        object val;&#xA;&#xA;        if (Slots.TryGetValue(this, out val))&#xA;        {&#xA;            return val;&#xA;        }&#xA;        val = InitialValue();&#xA;        Set(val);&#xA;        return val;&#xA;    }&#xA;&#xA;    public virtual void Set(object val)&#xA;    {&#xA;        Slots[this] = val;&#xA;    }&#xA;&#xA;    public virtual void Close()&#xA;    {&#xA;        if (slots != null)// intentionally using the field here, to avoid creating the instance&#xA;            slots.Remove(this);&#xA;    }&#xA;}&#xA;  &#xA;&#xA;As you can imagine, this is a fairly elegant way of doing this (please note, .NET 4.0 have the ThreadLocal class, which I strongly recommend using). But it has one very serious flaw. It you don&#x2019;t close the instance, you are going to leak some memory. As you can imagine, that is a pretty bad thing to do.&#xA;&#xA;In general, I consider such designs as pretty bad bugs when writing managed code. We have the GC for a reason, and writing code that forces the user to manually manage memory is BAD for you. Here is an example showing the problem:&#xA;&#xA;&#xA;  class Program&#xA;{&#xA;    static void Main(string[] args)&#xA;    {&#xA;        UseThreadLocal();&#xA;        GC.Collect(2);        GC.WaitForPendingFinalizers();&#xA;        Console.WriteLine(CloseableThreadLocal.slots.Count);&#xA;    }&#xA;&#xA;    private static void UseThreadLocal()&#xA;    {&#xA;        var tl = new CloseableThreadLocal();&#xA;        tl.Set(&quot;hello there&quot;);&#xA;        Console.WriteLine(tl.Get());&#xA;    }&#xA;}&#xA;  &#xA;&#xA;This will show that after the UseThreadLocal() run and we force full collection, the value is still there.&#xA;&#xA;Without using the builtin ThreadLocal, can you figure out a way to solve this? &#xA;&#xA;Points goes to whoever does this with the minimum amount of changes to the code.</p>
-        </article>
-        <article id="article-5060">
-            <a href="https://ayende.com/blog/4725/the-right-storage-model" target="_blank">
-                <h2 class="title mb-6" id="article-5060">The right storage model</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 16, 2010
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 12/15/2010What are the advantages that you get when using RavenDB? The easy answers are:     Sparse data    Dynamic data    Better scaling across nodes   But there is another one that is even more important, in my eyes. It is the simple issue that with RavenDB, a document is a transactional boundary. That makes it very easy to model interactions on root aggregates that are much harder in relational database.  The most commonly used example is Order &amp; OrderLines. In a relational database, those would be in two separate tables, and it is possible to modify order lines without touching the order. With RavenDB, on the other hand, the OrderLines are embedded in the Order document, so you literally cannot modify them without touching the order as well. This has a lot of implications. The most obvious one is that you just got rid of a big burden in terms of managing concurrency. You no longer have to be very careful about how you update parts of your model, as you have to be when using relational databases. You can just make any update you want, and if there are concurrent updates, it will completely, without you having to do anything at all.  Another benefit of this approach is that because a document is the transactional boundary, accessing all of it is a very cheap operation. Coming back again to the Order, it is a very cheap operation to access all of the Order details, which can be very costly in a relational database (having to access Orders, OrderLines, Addresses, etc&#x2026; ).</p>
         </article>
         <div class="button flex justify-between">
             <a href="505.html"><span class="back arrow"></span></a>
