@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6231">
+            <a href="https://ayende.com/blog/3733/nhprof-the-stack-is-not-as-simple-as-you-wish-it-to-be" target="_blank">
+                <h2 class="title mb-6" id="article-6231">NHProf</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 01, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the nicest features that NH Prof has to offer is this, allowing you to go from the query issued to the database directly to the line of code that caused this query to be generated. &#xA;&#xA0;&#xA;A few days ago I posted that you can either build something in one day, or in three months, but nothing much in the middle. The proof of concept that convinced me that I can build NH Prof was written during a single evening, along with two pints of Guinness. The overall concept that I have now is drastically different, but it is that evening that made sure that I would start it.&#xA;However, I wanted to use this opportunity to talk about some of the things that take a one day project and stretch it into three months. In this case, the query to line of code is a good feature, because it looks simple. After all, the only thing that I need to do, basically, is just to use the built in facility to get the stack trace, and extrapolate from there. Well, even for the normal case, that is not so easy. There are issues of user experience that play a deciding role in how we are going to deal with this.&#xA;But this isn&#x27;t what was really challenging. The challenging part came from the law of least surprises. That is, if I am providing a stack trace for queries, I should provide them for all queries. As it turned out, there was one scenario in which I am not able to give a complete stack trace. When we are mixing queries generated as a result of a lazy proxy being instantiated. On the whole, this is a minor concern, but it really bugged me. You would get a stack trace that just ended in some weird type that you never seen before.&#xA;At that point, I felt like I had to solve this. &#xA;Let us go back and outline the problem. Stack traces relies on PDBs to do their work. NHibernate&#x27;s lazy proxies are generated at runtime, have no PDBs and mask the actual call to the method / property that we are actually are interested in. The mix of the two wasn&#x27;t encouraging, I must say.&#xA;Given that, I decided to pull out the big guns, and started messing with the PDB myself. Obviously, I don&#x27;t want to do it on my own, that is why Cecil is so useful. But it was still a bit tricky to get it right. And the funny part is that I am pretty certain that this is one feature that absolutely no one will actually notice. If it wasn&#x27;t there, however, people would notice.&#xA;Anyway, it 3:30 AM here, and for some reason I managed to do more work tonight than in the previous week(!). NH Prof is now in private beta, and I hope to be able to take it to public beta in a few weeks.</p>
+        </article>
+        <article id="article-6232">
             <a href="https://ayende.com/blog/3732/solving-the-select-n-1-problem" target="_blank">
-                <h2 class="title mb-6" id="article-6231">Solving the Select N&#x2B;1 Problem</h2>
+                <h2 class="title mb-6" id="article-6232">Solving the Select N&#x2B;1 Problem</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Note, I am currently writing the NH Prof documentation, so you are probably going to get quite a bit of NHibernate tidbits over the next few days. I want to show the user all the comments from all the posts, so they can delete all the nasty comments. The na&#x5DF;ve implementation would be something like:foreach (Post post in session.CreateQuery(&quot;from Post&quot;).List()) // SELECT * FROM Posts&#xA;{&#xA;    foreach (Comment comment in post.Comments) //lazy loading of comments list causes: SELECT * FROM Comments where PostId = @p0&#xA;    {&#xA;        //print comment...&#xA;    }&#xA;}In this example, we can see that we are loading a list of posts ( the first select ) and then traversing the object graph. However, we access the lazily loaded collection, causing NHibernate to go to the database and bring the results one row at a time. This is incredibly inefficient, and the NHibernate Profiler will generate a warning whenever it encounters such a case.The solution for this example is simple, we simple force an eager load of the collection up front.Using HQL:var  posts = session.CreateQuery(&quot;from Post p left join fetch p.Comments&quot;).List();Using the criteria API:session.CreateCriteria(typeof(Post))&#xA;    .SetFetchMode(&quot;Comments&quot;, FetchMode.Eager)&#xA;    .List();In both cases, we will get a join and only a single query to the database.Note, this is the classic appearance of the problem, it can also surface in other scenarios, such as calling the database in a loop, or more complex object graph traversals. In those cases, it it generally much harder to see what is causing the issue.NHibernate Profiler will detect those scenarios as well, and give you the exact line in the source code that cause this SQL to be generated.Another option for solving this issue is: MutliQuery and MultiCriteria, which are also used to solved the issue of Too Many Queries.</p>
         </article>
-        <article id="article-6232">
+        <article id="article-6233">
             <a href="https://ayende.com/blog/3731/the-typealyzer" target="_blank">
-                <h2 class="title mb-6" id="article-6232">The typealyzer</h2>
+                <h2 class="title mb-6" id="article-6233">The typealyzer</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I run into this site, which perform an analysis on the text in the blog.&#xA;I run this on a couple of blogs of friends of mine, and it turned out... interesting results.&#xA;Here is what I got:&#xA;INTP - The Thinkers&#xA;&#xA;  &#xA;    &#xA;      &#xA;    &#xA;&#xA;    &#xA;      The logical and analytical type. They are especialy attuned to difficult creative and intellectual challenges and always look for something more complex to dig into. They are great at finding subtle connections between things and imagine far-reaching implications.&#xA;      &#xA;      They enjoy working with complex things using a lot of concepts and imaginative models of reality. Since they are not very good at seeing and understanding the needs of other people, they might come across as arrogant, impatient and insensitive to people that need some time to understand what they are talking about.</p>
         </article>
-        <article id="article-6233">
+        <article id="article-6234">
             <a href="https://ayende.com/blog/3730/another-entity-framework-opinion" target="_blank">
-                <h2 class="title mb-6" id="article-6233">Another Entity Framework opinion</h2>
+                <h2 class="title mb-6" id="article-6234">Another Entity Framework opinion</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I run across this post, which I found interesting:  If someone give me a set of classes that doesn&#x27;t bring a A to Z solution to a problem, sorry but I don&#x27;t call it a Framework ... I call it a Base Class Library. I&#x27;ve been very supportive to the Entity Framework Team (I gave design feedback through multiple channels) but now I think I&#x27;m done. This resonate very well with what Udi Dahan has said as a comment to Frans&#x27; post.  Microsoft is a platform company. They build technologies that partners can build stuff on top of.  It&#x27;s what they&#x27;ve always done. It&#x27;s what they&#x27;re continuing to do. Unfortunately, many developers in the Microsoft community don&#x27;t know/understand this, thinking that these technologies are supposed to be used to build applications directly. This often causes overly complex codebases. The EF&#x27;s team&#x27;s decision is consistent with providing a platform for partners to build their own ORMs on. That being said, I don&#x27;t care very much for a platform - just as I wouldn&#x27;t drive the chassis of a car.</p>
         </article>
-        <article id="article-6234">
+        <article id="article-6235">
             <a href="https://ayende.com/blog/3729/how-to-get-good-people" target="_blank">
-                <h2 class="title mb-6" id="article-6234">How to get good people?</h2>
+                <h2 class="title mb-6" id="article-6235">How to get good people?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If I knew the answer, I would bottle it and would be rich. (insert mad laugher)&#xA;Lacking a bullet proof answer, the following are my observations regarding this issue. A while ago I was the chief interviewer in my company, and I have had the chance to interview literally hundreds of people. My own conclusions match Joel from 2005. The good people are already employed elsewhere, and are likely to be happy there. If they aren&#x27;t happy, they tend to have the connections to find a job based on their known skills and experience.&#xA;In other words, unless something like the bubble burst has happened, you aren&#x27;t going to find the good people in your interviews. This means that you have to look elsewhere for that.&#xA;I know that this isn&#x27;t widely applicable, but I am using this blog as a good way of finding good people. The audience who reads this blog is already highly self selecting, and likely to share the same conceptions as I do about many things. I had several client engagements that resulted from this blog, and the environment I was working with was significantly higher than the industry average.&#xA;From the other side, the one thing that I am absolutely against is the &quot;get a new job, close the blog&quot; mentality. I wanted to point out couple of friends who did that, but I just checked, and both of them are blogging, which I somehow missed :-(&#xA;Anyway, what I am trying to say is that online presence matters. I have several friends who never had a blog, and wouldn&#x27;t consider opening one. The direct implication is that some of the smartest people I have worked with are only known through word of mouth. Real story, I was at a client site one, and was half way listening to a hallway conversation, waiting for a conference call, and I heard the following: &quot;Did you hear how Muhammad* saved [big cellular provider]&#x27;s when their [not important now]&quot;.&#xA;Some people has taken my suggestion to heart, and opened a blog. It doesn&#x27;t really matter what they are talking about, what is important is that they do. Creating interactions in the community, creating a name for themselves. Getting recognized. Reputation matter, and having access to someone&#x27;s thought stream over time is incredibly valuable in trying to estimate their abilities.&#xA;In the end, however, there is really no substitute for working with someone to actually evaluate their skills (which is a transient thing) and their abilities (which tend to change far more slowly, and what I really care about). Any attempt to short circuit the process is going to end in tears.&#xA;* That is his real name, and I had the pleasure of having him as my boss for over two years. Sadly, he doesn&#x27;t have a blog. And yes, this is my own gentle way of trying to get him one.</p>
         </article>
-        <article id="article-6235">
+        <article id="article-6236">
             <a href="https://ayende.com/blog/3728/can-you-succeed-without-good-people" target="_blank">
-                <h2 class="title mb-6" id="article-6235">Can you succeed without good people?</h2>
+                <h2 class="title mb-6" id="article-6236">Can you succeed without good people?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The answer is a sound yes, but for a given value of success.&#xA;A bad team can still get a product out, and that product may even be successful. But the cost that this requires is far greater than it would have been otherwise, often to the point where you have no choice but to scrap the project. The really sad part is that some people accept this cost as the true cost of building software.&#xA;Oh, and good people doesn&#x27;t necessarily equate to experts.&#xA;You need a few good people, but the rest of the team can follow fairly simple check list approach to development. There are a lot of stories about teams like that, and most of them end with a big project failure. Usually, this is because there was a hard separation between the people the business consider as the high end and the regular developers. This usually cause the people who actually dictate the architecture and shape of the system to become totally oblivious of any design issues that they may inflict on the rest of the team.&#xA;Having a mixed team, with the architecture and the implementation done by the same group, is a much better proposition in the long term. Note, however, that I am explicitly not saying that the whole team should take part in the design. This is an ideal circumstance, and I haven&#x27;t found it to be either common or even desirable in many cases. Design by committee is rarely a good idea, and I much prefer either design by addition or design by feature / feature batch. Again, those depends on the type of team that I am working on.&#xA;Another thing to note is the difference between technological experts and business experts. In both cases, we are talking about developers, but in technological experts are good for one thing, clearing the way so the developers who actually understand the business can get things done, fast.&#xA;I will reference again my posts about JFHCI, as a good example of how I think those things should be done.</p>
         </article>
-        <article id="article-6236">
+        <article id="article-6237">
             <a href="https://ayende.com/blog/3727/why-remoting-is-so-painful" target="_blank">
-                <h2 class="title mb-6" id="article-6236">Why Remoting is so painful?</h2>
+                <h2 class="title mb-6" id="article-6237">Why Remoting is so painful?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yes, I know, 2003 called and asked to get its distribution technology back. Nevertheless, remoting is an extremely useful tool, if you can make several assumptions about the way that you are going to use it. In my case, I am assuming inter process, local machine configuration, with high expectation of reliability from both ends. Considering that I also need low latency, it seems like an appropriate solution indeed. I was pretty happy about this, until all my integration tests start to break. After a while, I managed to figure out that the root cause for that is this error: Because of security restrictions, the type XYZ cannot be accessed. Now, it worked, and it worked for a long time. What the hell is going on? After thinking about this for a while, I realized that the major thing that changed was that I am now signing my assemblies. And that caused all hell to break lose. I managed to find this post with the solution, but I am still not happy. I really dislike things that can just go and break on me.</p>
         </article>
-        <article id="article-6237">
+        <article id="article-6238">
             <a href="https://ayende.com/blog/3726/the-worst-checkout-experience-ever" target="_blank">
-                <h2 class="title mb-6" id="article-6237">The worst checkout experience EVER</h2>
+                <h2 class="title mb-6" id="article-6238">The worst checkout experience EVER</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I swear, I was just about to back away from the entire thing. It started with me trying to create a new account. I had to go through about seven screen to do so. Then there was the big warning about gmail accounts not being acceptable, then there were the mandatory formatting of address &amp; phone numbers, to match what their system wanted from me. I kinda of like their licensing agreement.    Argh, that is so stupid. I am trying to give you money, why are you trying so hard to make this hard on me?</p>
         </article>
-        <article id="article-6238">
+        <article id="article-6239">
             <a href="https://ayende.com/blog/3725/nh-prof-configuration-story" target="_blank">
-                <h2 class="title mb-6" id="article-6238">NH Prof</h2>
+                <h2 class="title mb-6" id="article-6239">NH Prof</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I think that I mentioned that NHibernate Profiler is working mostly by doing some smarts on top of the log output from NHibernate. That is not exactly the case, but that is close enough. The problem with working through the logs is that there are roughly 30 lines of XML that you need to deal with in order to manage this properly.&#xA;The first time I sent this to anyone else, he run into problems with the configuration because of very subtle issues. For a while now, I had a ticket saying that I need to document what the failure scenarios are, and how to deal with them.&#xA;Today, as I sat down to deal with this ticket, I decided that it is wrong to even try. This is shoving my own problems to my users. I shouldn&#x27;t do that, if the configuration is hard to do, that is my own issue, and not theirs. I should bear the burden of complexity.&#xA;As such, I spent some additional time getting this to work in the smoothest way possible. The end result is that in order to use NHibernate Profiler in your application, all you need to do is add the following line at the application startup (Main, Application_Start, etc).&#xA;&#xA;NHibernateProfiler.Initialize();&#xA;&#xA;That is it :-)</p>
         </article>
-        <article id="article-6239">
+        <article id="article-6240">
             <a href="https://ayende.com/blog/3724/setting-expectations-straight" target="_blank">
-                <h2 class="title mb-6" id="article-6239">Setting expectations straight</h2>
+                <h2 class="title mb-6" id="article-6240">Setting expectations straight</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: November 26, 2008
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am currently working on getting a beta  version of NH Prof out, but I run into a problem. There are several features that I intend to put into the release version that I didn&#x27;t have the time to actually put it. Those are usually features that are good to have, but not necessarily important for the actual function of the tool. One of them is saving &amp; loading the captured data. Currently, I am working on more important things than dealing with this, so I didn&#x27;t implement this. However, I do want to make it clear that it will be supported, and more than that, I want to make it clear that it it is not there yet.  Using my amazing WPF skills, I manage to whip up the following:   Which is located on a style set on MenuItem. This means that the only thing that I need to do to mark a menu item visually as unusable is to set its Tag attribute to NotImpl. I love this ability.  This is how it looks like:</p>
-        </article>
-        <article id="article-6240">
-            <a href="https://ayende.com/blog/3723/nh-prof-a-testing-story" target="_blank">
-                <h2 class="title mb-6" id="article-6240">NH Prof</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 25, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Remember that I mentioned the difference about working and production quality? &#xA;One of the things that separate the two that in production quality software, you don&#x27;t need to know which buttons not to push. Here is a simple example. For a while now, if you tried to bring up two instances of NH Prof, the second one would crash. That wasn&#x27;t something that you really want to show the users. Today I got back to doing NH Prof stuff, getting it ready for public beta, and I decided that the first thing to do was to tackle this easy feature.&#xA;Doing this is actually not an issue, testing this, however, was a problem. I have two application instances and four layers to go through. Here is the first test:&#xA;&#xA;[Test]public void When_creating_two_instances_of_application_will_tell_the_other_to_pop_up(){&#x9;var bus = MockRepository.GenerateStub&lt;IBus&gt;();&#x9;var listener = new NHibernateAppenderRemotingLoggingEventListener(bus);&#x9;listener.Start();&#x9;try &#x9;{ &#x9;&#x9;var anotherBus = MockRepository.GenerateStub&lt;IBus&gt;(); &#x9;&#x9;var anotherListener &#x9;&#x9;&#x9;= new NHibernateAppenderRemotingLoggingEventListener(anotherBus);&#x9;&#x9;anotherListener.Start();&#x9;&#x9;Assert.Fail(&quot;Exception was expected&quot;);&#x9;}&#x9;catch (AnotherApplicationIsAlreadyRunningAndControlWasMovedToItException)&#x9;{&#x9;}&#x9;bus.AssertWasCalled(x =&gt; x.Publish(null),        options =&gt; options.Constraints(Is.TypeOf&lt;BringApplicationToFront&gt;())&#x9;&#x9;);}&#xA;&#xA;The logging event listener is the reason that we can&#x27;t bring up two instances of this. We use this to listen to running applications, and having several of the profilers running at one time isn&#x27;t going to be helpful. And just to deal with the nitpickers, the four layers I mentioned are: Communication layer, backend, front end, actual user interface.&#xA;Here is an example that tests communication between the back end and the front end:&#xA;&#xA;[Test]public void When_bring_up_to_front_message_is_publish_observer_should_raise_event_for_UI(){&#x9;var facility = new BusFacility();&#x9;var observer = new ModelBuilderObserver(action =&gt; action());&#x9;bool wasBroughtToFront = false;&#x9;observer.ShouldBringApplicationToFront &#x2B;= () =&gt; wasBroughtToFront = true;&#x9;facility.Initialize(observer);&#x9;using(facility.Start())&#x9;{&#x9;&#x9;facility.Bus.Publish(new BringApplicationToFront());&#x9;&#x9;facility.Bus.WaitForAllMessages();&#x9;}&#x9;Assert.IsTrue(wasBroughtToFront);}&#xA;&#xA;As for the actual UI code, I am not sure how to test that. I did a manual test, but I am not sure that I am happy about this. Then again, we are talking about testing this line of code:&#xA;&#xA;observer.ShouldBringApplicationToFront &#x2B;= () =&gt; Activate();&#xA;&#xA;I can just test that the event was subscribed to, but I don&#x27;t really see this as valuable.</p>
         </article>
         <div class="button flex justify-between">
             <a href="623.html"><span class="back arrow"></span></a>
