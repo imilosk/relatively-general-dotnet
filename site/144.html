@@ -112,8 +112,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1431">
+            <a href="https://ayende.com/blog/190753-C/avoid-rolling-your-own-leader-election-algorithm" target="_blank">
+                <h2 class="title mb-6" id="article-1431">Avoid rolling your own leader election algorithm</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 07, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Jeremy Miller has an interesting blog post about using advisory locks in Postgres to handle leader elections. This is a topic I spend a lot of time on, so I went over the post in detail. I don&#x2019;t like this approach, because it has several subtle issues that are going to bite you down the road. All of them are relatively obscure, and all of them are going to happen in production in short order.Go read the blog post, it explains the reasoning well. The core of the leader election is this:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          protected override async Task ExecuteAsync(CancellationToken stoppingToken)&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              // Don&#x27;t try to start right off the bat&#xA;        &#xA;        &#xA;          &#xA;              await Task.Delay(_settings.FirstPollingTime, stoppingToken);&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              _connection = new NpgsqlConnection(_settings.ConnectionString);&#xA;        &#xA;        &#xA;          &#xA;              await _connection.OpenAsync(stoppingToken);&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              while (!stoppingToken.IsCancellationRequested)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  var state = await _process.State();&#xA;        &#xA;        &#xA;          &#xA;                  if (state != ProcessState.Active)&#xA;        &#xA;        &#xA;          &#xA;                  {&#xA;        &#xA;        &#xA;          &#xA;                      // If you can take the global lock, start&#xA;        &#xA;        &#xA;          &#xA;                      // the process&#xA;        &#xA;        &#xA;          &#xA;                      if (await _connection.TryGetGlobalLock(_settings.LockId, cancellation: stoppingToken))&#xA;        &#xA;        &#xA;          &#xA;                      {&#xA;        &#xA;        &#xA;          &#xA;                          await _process.Start(_connection);&#xA;        &#xA;        &#xA;          &#xA;                      }&#xA;        &#xA;        &#xA;          &#xA;                  }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;                  await Task.Delay(_settings.OwnershipPollingTime, stoppingToken);&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              if (_connection.State != ConnectionState.Closed)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  await _connection.DisposeAsync();&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          leader.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;The idea is that you have a process instance, that has a State() and a Start() methods. On multiple nodes, you are running this method, and it will coordinate using Postgres to ensure that there is only a single process that owns the lock at any given point in time. At least, that is the idea. In practice, there are issues.Let&#x2019;s assume that we are protecting a shared resource, such as a printer. We want to serialize access to the printer so two print jobs won&#x2019;t get their pages mixed together. For simplicity, we&#x2019;ll assume just two such nodes that compete on the lock.On startup, one of the nodes will successfully get the lock, and the other will not, resulting in retries. So far, this is as expected. I&#x2019;m ignoring for now the lack of error handling, if we cannot start the connection, the whole thing is going to fail. This is sample code, so I&#x2019;m pointing this out because the code must be resilient to such issues. We may bring up a node before the database is ready, and in this case, you&#x2019;ll need to retry access the data. A much more serious problem here is that we have a way for the process to signal that it is broken, but there is no way for the service to tell the process that it is no longer the leader. Let&#x2019;s assume that a network issue has caused the connection to drop. The code, as written now, has no way of identifying this issue. It is actually worse than expected, because the connection isn&#x2019;t actually being used. So even if the connection has dropped, the service is not aware of this. Even this, though, is something that can be fixed in a straightforward manner. You can add a cancellation token that the process will listen to. You also need to keep verifying against the database server that you are still the owner of the lock and that the connection didn&#x2019;t drop / fail and released it behind your back. And of course, there may be a delay between losing the lock and finding out about that.That leads us to the most serious problem: Race conditions. In this case, even if the code handled all such scenarios nicely, we have to take into account the fact that we are dealing with separate resources here. In our example, we have Postgres for the leader election and the printer as the protected resource. The two nodes are competing on the lock, and then one of them starts printing. The lock is lost because of a network reset. At this point, Postgres frees the lock and the other node is able to lock it. It starts to run its own printing jobs. Let&#x2019;s say that the first node has a way to detect that it lost the lock. There is still the issue of how fast that can happen. It is very likely that at a certain point, you&#x2019;ll have two nodes that believe that they are the leader. That is a Bad Thing.A couple of years ago, GitHub was down for more than a day because of exactly this kind of a scenario. I analyzed the issue at the time in detail.In this case, using the system above, you are pretty much guaranteed to have a messed up printing job, with pages from multiple jobs mixed together. If you really care about consistency in the leader operations, you can&#x2019;t just run things using a leader election. You have to run everything through the same mechanism. In GitHub&#x2019;s example, they used Raft (a distributed consensus algorithm), but they used that to make decisions on a separate system, so there was a guarantee for inconsistency in that system. In other words, you are either all in to distributed consensus or you should be out. Note that being out is fine, if you don&#x2019;t care about short periods of multiple leaders. But if you need to ensure that this is the case, you cannot make it work without building it properly from the ground up.</p>
+        </article>
+        <article id="article-1432">
+            <a href="https://ayende.com/blog/190723-A/ravendb-time-series-webinar-recording-and-benchmark-results" target="_blank">
+                <h2 class="title mb-6" id="article-1432">RavenDB Time Series Webinar recording (and benchmark results)</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 06, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The RavenDB Time Series webinar is now available, and as usual, I would love your feedback. This webinar had the most questions yet, including a few curve balls that I had to field midway through. It was fun.I also gave some bad information during the webinar, and I want to apologize for that. I mentioned some benchmark results and it appear that I didn&#x2019;t wait for the complete work to be done.Using the time series benchmark set, RavenDB can get some really nice numbers. All the numbers were run on i3.xlarge machine:The first benchmark was for a single value, across 100 different time series. RavenDB is actually faster here than the other two contenders combined. This is the most common scenario that we envisioned, and it was heavily optimized.For the other scenarios (100 time series, with 10 measurements on each tick and 4,000 time series with 10 measurements with each tick) RavenDB does very nicely. It is significantly faster than InfluxDB, but not as fast as TimescaleDB in this scenario. That said, when it comes to queries, we have a whole different ballgame. Here we have the following scenarios:single-groupby-1-1-1Simple aggregate (MAX) on one metric for 1 host, every 5 mins for 1 hoursingle-groupby-1-1-12Simple aggregate (MAX) on one metric for 1 host, every 5 mins for 12 hourssingle-groupby-1-8-1Simple aggregate (MAX) on one metric for 8 hosts, every 5 mins for 1 hourHere we are running this on a small data set, with 100 time series with a single measurement. You see it properly, RavenDB is able to run this fast enough that we cannot measure the speed of the query.When we have 10 measurements per time series, we put a little more effort of RavenDB, but it is still either the fastest or very nearly so.When we increase the size of the data to 4,000 time series each with 10 measurements per tick, we see that RavenDB&#x2019;s performance is effectively constant. This is because RavenDB is being smart about how it runs queries and is able to do a lot of work upfront, significantly improving query time.And this is before we gotten to the fact that you can run your indexes on time series data as well. Take a look at the webinar recording, I think you&#x2019;ll be impressed.</p>
+        </article>
+        <article id="article-1433">
+            <a href="https://ayende.com/blog/190721-A/what-goes-around-comes-around" target="_blank">
+                <h2 class="title mb-6" id="article-1433">What goes around comes around</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 05, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In RavenDB, I have just added support for document compression using zstd. That was a non trivial feature, if only because we need to also take into account document changes over time and other important aspects. You can read all about those in the post that describe the feature. This post isn&#x2019;t actually about this feature, it is about how zstd got the ability to train on external data. One of the things that I do on a project that I am interested in is read, not just the code, but also things like issue tracking, discussions etc that surround it. I find that it gives me a lot more context about the proper use of the code.During my tour of the zstd project, I run into this issue. This is the original issue that got zstd the ability to use an external dictionary to compress known data. I wrote a blog post on the topic, because the difference in efficiency is huge. A 52 MB of JSON docs compress to 1MB if you compress all the documents together. If you compress each document independently, you&#x2019;ll get 6.8 MB. With a dictionary, however, you can reduce that by 20% &#x2013; 30%, and with an adaptive dictionary, you can do even better.So I was interested in reading how this feature came about. And I was very surprised to find my own name there. To be rather more exact, in 2014, I wanted to understand compression better, so I wrote a small compression library. It isn&#x2019;t a very good one, and it is mostly based around femtozip anyway, but it was useful for me to understand what was going on there. It seems that this was also useful to Christophe, over a year later, to get interested enough to add this capacity to zstd. And the circle came around full circle this year, six years after my original research into compression, when RavenDB has a really nice documents compression feature that can be traced back to me being curious a long time ago.</p>
+        </article>
+        <article id="article-1434">
             <a href="https://andrewlock.net/using-jquery-and-bootstrap-from-a-cdn-with-fallback-scripts-in-asp-net-core-3/" target="_blank">
-                <h2 class="title mb-6" id="article-1431">Using jQuery and Bootstrap from a CDN with fallback scripts in ASP.NET Core 3.0</h2>
+                <h2 class="title mb-6" id="article-1434">Using jQuery and Bootstrap from a CDN with fallback scripts in ASP.NET Core 3.0</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I show how to update the default Razor layouts to load CSS and JS files from a CDN, and how to configure local fallbacks with SRI protection.&#x2026;</p>
         </article>
-        <article id="article-1432">
+        <article id="article-1435">
             <a href="https://www.meziantou.net/referencing-an-analyzer-from-a-project.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1432">Referencing an analyzer from a project</h2>
+                <h2 class="title mb-6" id="article-1435">Referencing an analyzer from a project</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is part of the series &#x27;Roslyn Analyzers&#x27;. Be sure to check out the rest of the blog posts of the series!Writing a Roslyn analyzerWriting language-agnostic Roslyn Analyzers using IOperationWorking with types in a Roslyn analyzerReferencing an analyzer from a project (this post)Packaging a</p>
         </article>
-        <article id="article-1433">
+        <article id="article-1436">
             <a href="https://ayende.com/blog/190722-A/cosmos-db-profiler" target="_blank">
-                <h2 class="title mb-6" id="article-1433">Cosmos DB Profiler</h2>
+                <h2 class="title mb-6" id="article-1436">Cosmos DB Profiler</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The very first product of Hibernating Rhinos was a profiler for NHibernate, to allow you to figure out exactly what is going between your database and application. Now I&#x2019;m proud to present our latest product: the Cosmos DB Profiler.If you are using Azure, you are likely familiar with Cosmos DB. Cosmos DB is not a traditional relational database. It is marketed by Microsoft as a multi model database and it is widely known in the world of distributed databases. The first part is important enough to bear repeating. Cosmos DB is not a relational database, even if there is a tendency to treat it as such. We have gathered everything we know about optimal database usage, mixed in all the experience we run into seeing users bump into issue working with distributed systems and then looked into all the best practices published about successful Cosmos DB applications. After we had all of that, we looked into patterns, things that we can do for you, automatically, that would prevent you from messing up. Thus, the Cosmos DB profiler was born.Here is how it looks like, profiling an application locally: As you can see, it give you context to the interaction between your application and the database. It allows you to see exactly what is going on behind the scenes. This is important, since most Cosmos DB applications aren&#x2019;t trivial, we are usually talking about big applications with a lot of data and moving pieces. It can be hard to understand what is actually going on when you run a particular action.Furthermore, the profiler is able to give you concrete suggestions that will improve your performance and reduce you cloud bills. The pricing model for Cosmos DB is based on provisioned capacity, and it is very easy to get into a state where you need to provision a lot more than what you expected to need. The profiler is able to detect such issues, provide you with concrete recommendations on how to fix them and show you the savings, immediately. I&#x2019;m doing a webinar on the Cosmos DB profiler on Tuesday and I would love to see you there.</p>
         </article>
-        <article id="article-1434">
+        <article id="article-1437">
             <a href="https://ardalis.com/configuring-a-local-test-email-server/" target="_blank">
-                <h2 class="title mb-6" id="article-1434">Configuring a Local Test Email Server</h2>
+                <h2 class="title mb-6" id="article-1437">Configuring a Local Test Email Server</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It&#x2019;s been a few years since I wrote about using a tool like Smtp4Dev for local test emails (and that article has issues), so here&#x2019;s an&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-1435">
+        <article id="article-1438">
             <a href="https://www.meziantou.net/quick-introduction-to-xunitdotnet.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1435">Quick introduction to xUnit.net</h2>
+                <h2 class="title mb-6" id="article-1438">Quick introduction to xUnit.net</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">xUnit.net is a free, open-source, community-focused unit testing tool for the .NET Framework. Written by the original inventor of NUnit v2, xUnit.net is the latest technology for unit testing C#, F#, VB.NET and other .NET languages. xUnit.net gains lots of popularity when Microsoft starts using it</p>
         </article>
-        <article id="article-1436">
+        <article id="article-1439">
             <a href="https://ardalis.com/integrate-github-and-discord-with-webhooks/" target="_blank">
-                <h2 class="title mb-6" id="article-1436">Integrate GitHub and Discord with Webhooks</h2>
+                <h2 class="title mb-6" id="article-1439">Integrate GitHub and Discord with Webhooks</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve started using Discord more and more for things like my private group coaching program focused on software developers. It&#x27;s worked quite&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-1437">
+        <article id="article-1440">
             <a href="https://enterprisecraftsmanship.com/posts/strengthening-requirements-pre-existing-data/" target="_blank">
-                <h2 class="title mb-6" id="article-1437">How to Strengthen Requirements for Pre-existing Data</h2>
+                <h2 class="title mb-6" id="article-1440">How to Strengthen Requirements for Pre-existing Data</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -222,54 +270,6 @@
                 posted on: April 29, 2020
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Need to change validation rules but have pre-existing data that doesn&#x2019;t follow the new rules? In this post, we&#x2019;ll talk about how to do that properly.</p>
-        </article>
-        <article id="article-1438">
-            <a href="https://www.stevejgordon.co.uk/do-we-have-an-obsession-with-ducks-in-software-development" target="_blank">
-                <h2 class="title mb-6" id="article-1438">Do We Have an Obsession with Ducks in Software Development?</h2>
-            </a>
-            <p class="mb-2">by Steve Gordon</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 28, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Excuse the slightly unusual blog post, but we are living in quite unusual times as I write this. I thought this post might be a mood lightener for a few of my regular readers! With that, let&#x2019;s explore whether we have an obsession with ducks in software development. There are two phrases which came to [&#x2026;]</p>
-        </article>
-        <article id="article-1439">
-            <a href="https://andrewlock.net/preventing-mass-assignment-or-over-posting-with-razor-pages-in-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-1439">Preventing mass assignment or over posting with Razor Pages in ASP.NET Core</h2>
-            </a>
-            <p class="mb-2">by Andrew Lock</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 28, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Mass assignment or over-posting is something to bear in mind when building ASP.NET Core apps. In this post I discuss how to stay safe when using Razor Pages.&#x2026;</p>
-        </article>
-        <article id="article-1440">
-            <a href="https://ayende.com/blog/190689-B/using-dottrace-and-dotmemory-for-production-analysis-on-linux" target="_blank">
-                <h2 class="title mb-6" id="article-1440">Using dotTrace and dotMemory for production analysis on Linux</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 27, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently JetBrains announce that dotTrace and dotMemory supports profiling applications on Linux. We have been testing these out for production usage, analyzing production scenarios and have been finding (and fixing) issues with about an order of magnitude less work and hassle. I have been a fan of JetBrains for over 15 years and they have been providing excellent software for a long time. So why this post (and no, this isn&#x2019;t an ad and we are paying for a subscription to JetBrains for all our devs). I&#x2019;m super excited about being able to profile on Linux, because this is where most of our customers are now running. Before, we had to use arcane tooling and try to figure things out. With better tools, we are able to pinpoint issues almost immediately. Here is the result of a single profiling session:Here, we create a new List and then called ToArray() on it. All we had to do here was just create the array upfront, without going through resize and additional allocations. Here we had to do a much move involved operation, remembering values across transactions to reduce load. Note how much time we saved! And of course, just as important:We tried to optimize an operation. It looks like it didn&#x2019;t work out exactly as expected, so we need to take additional look at that. These are about performance,&#xA0; but even more important here is the ability to track memory and its sources. We were able to identify multiple places where we are using too much memory. In some cases, this is about configuration options. In one such case, limiting the amount of memory that we speculatively hold back resulted in a reduction of memory utilization over time from 3.5 GB to 800 MB. And these are much harder to figure out, because it is very hard to see the full picture.Another factor that became obvious is that RavenDB&#x2019;s current infrastructure was written in 2015 / 2016. The lowest pieces of the code were written on what was then called DNX. It was written to be high performance and stable. We didn&#x2019;t have to touch it much ever since. Profiling memory utilization showed us that we hold a large number of values in the large object heap. This is because we need to have a byte[] that we can also send to native code, so we need to pin it. That was because we needed to call some methods, such as Stream.Read(byte[], int,int()&#xA0; and then process it using raw pointers. When the code was written, that was the only choice. Allocate it on the large object heap ( to reduce fragmentation) and run with it. Now, however, we have Memory&lt;byte&gt; and Span&lt;byte&gt;, which are much easier to work with for this scenario, so we can discard this specific feature and optimize our memory utilization further. I don&#x2019;t think we would have gotten to this without the profiler point a big red blinking arrow at the issue. And here is another good example, here is the memory state of RavenDB from dotTrace after running a benchmark consisting of a hundred thousands queries with javascript projections, this one:And here is the state:That is&#x2026; interesting. Why do we have so many? The JavaScript engine is single threaded, but we have concurrent queries, so we use multiple such engines. We cache them, so we have:And the mechanism there to clean them up will not be triggered normally. So we have this needlessly around. After fixing the cache eviction logic, we get:Looking at the byte arrays here, we can track this down further, to see that the root cause is the pinning buffer I spoke about earlier. We&#x2019;re handling that fix in a different branch, so this is pretty good sign that we are done with this kind of benchmark.The down sides dotTrace and dotMemory, exist. On Linux, dotTrace only supports sampling, not tracing. That sounds like a minor issue, but it means that when I&#x2019;m running the same benchmark, I&#x2019;m missing something that I find critical. The number of times a method was run. If a method is taking 50% of the runtime, but it is invoked hundred millions times, I need a very different approach from something that happens three times. The lack on tracing option with number of times the methods were called is a real issue for my usual workflow.For dotMemory, if you have a highly connected graph (for example, a doubly linked list) and a lot of objects, the amount of resources that it takes to analyze the process is huge. I deployed a cloud machine with 128 GB of RAM and 32 cores to try to analyze an 18 GB process dump. That wasn&#x2019;t sufficient to give all the details, sadly. It was still able to provide me with enough so I could figure out what the issue was, though.Another issue is that the visuals are amazing, but when I have a 120 millions links in a node, trying to represent that in the UI is a hopeless cause. I wish that there was a way to dump to text the same information that dotMemory provides. That would allow to analyze ridiculous amount of information in a structured manner.</p>
         </article>
         <div class="button flex justify-between">
             <a href="143.html"><span class="back arrow"></span></a>

@@ -112,8 +112,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5771">
+            <a href="https://ayende.com/blog/4125/benchmark-cheating-a-how-to" target="_blank">
+                <h2 class="title mb-6" id="article-5771">Benchmark cheating, a how to</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 17, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I already talked about the benchmark in general, but I want to focus for a bit on showing how you can carefully craft a benchmark to say exactly what you want.  Case in point, Alex Yakunin has claimed that NHibernate is:     NH runs a simple query fetching 1 instance 100&#x2B; times slower when ~ 10K instances are already fetched into the Session   I am assuming that he is basing his numbers of this test:    And you know what, he is right. NHibernate will get progressively slower as more items are loaded. This is by design.  Huh? NHibernate is slower by design? WTF?!  Well, it is all related to the way you build the test. And this test appears specifically designed NHibernate looks bad. Let me go back a bit and explain. NHibernate underlying premise is that you live in OO world, and we take care of everything we can in the RDBMS world.&#xA0; One of the ways we are doing that is by automatically flushing the session if a query is performed that may be affected changes in memory.  Huh? That still doesn&#x2019;t make sense. It is much simpler to understand in code.     using(tx = s.BeginTransaction())&#xA;{&#xA;&#x9;foo = s.Get&lt;Foo&gt;(1);&#xA;&#x9;foo.Name = &quot;ayende&quot;;&#xA;&#x9;var list = s.CreateQuery(&quot;from Foo f where f.Name = &#x27;ayende&#x27;&quot;).List&lt;Foo&gt;();&#xA;&#x9;Assert.Contains(list, foo);&#xA;&#x9;tx.Commit();&#xA;}&#xA;&#xA;&#xA;The following test will pass. When the times come to execute this query, NHibernate will check all the loaded instance that may be affected by this query, and flush any changes to the database. &#xA;&#xA;NHibernate is smart enough to check only the loaded instances that may be affected, so in general, this is a very quick operation, and it means that you don&#x2019;t have to worry about the current state of operations. NHibernate manages everything for you.&#xA;&#xA;However, in the case of the QueryTest above, this is using this feature of NHibernate to show that it is slow. All queries are made against the same class, which forces NHibernate to perform a dirty check on every single loaded object. With more objects loaded into memory, that dirty check is going to take longer. &#xA;&#xA;Now, there is no real world scenario where code like that would ever be written (except maybe as a bug), but the result of the &#x201C;test&#x201D; are being used to say that NHibernate is slow. &#xA;&#xA;Of course you can show that NHibernate is slow if you build a test specifically for that.&#xA;&#xA;Oh, and a hint, session.FlushMode = FlushMode.Commit; will make NHibernate skip the automatic flush on query, meaning that we will not perform any dirty checks on queries.&#xA;&#xA;But that is not really relevant. Tight loop benchmarks for frameworks as complex as OR/Ms are always going to lie. The only way to really create a benchmark is to create a full blown application with several backend implementations. That is still a bad idea, as there are still plenty of ways to cheat. All you have to do is to look at the PetShop issues from 2002/3 to figure that one out.</p>
+        </article>
+        <article id="article-5772">
+            <a href="https://ayende.com/blog/4124/taking-advantage-on-the-data-transfer-tier" target="_blank">
+                <h2 class="title mb-6" id="article-5772">Taking advantage on the Data Transfer Tier</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 17, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When talking about RIA applications, we usually have the following physical architecture:     That is, we have the application actually running on the client&#x2019;s machine, we access the host server in order to perform operations that cannot be made locally and we save to some persistent storage, usually an RDBMS.  The great advantage that in a RIA application, we have a real platform at the client side, and not the hack that is HTML &#x2B; JavaScript. That make it a much more pleasant experience to actually work with them. However, we then encounter a very interesting choice. Where are we going to put the weight?     We have two choices, server side and client side. On the server side, we would need to develop a real service layer. This is usually called if the RIA app is making use of services that will also be consumed elsewhere. It is an old, traditional, approach. It is also more costly than the alternative, assuming that we need the server side only to support the application itself, which is quite common.  In many cases, the application itself is the only reason for development, and in that case, spending time in the server side is probably a waste of our time for a lot of tasks. It is easier and cheaper to perform tasks completely on the client. And at that point, the server side functionality is limited to &#x201C;let us just expose the data the application needed&#x201D; . It is no longer a real independent piece, it has became merely a data transfer tier, with no additional responsibilities.     Note: you still may want to keep some minor validation logic on the server side, but that is about the extent of server side functionality in this case.&#xA0; Well, that and authorization :-)   RIA Services are supposed to make building that part in RIA applications as simple as possible, making the data transfer side (which we are usually almost totally unconcerned with) as simple and idiot proof as possible.   This is why this post it titled taking advantage of. If you are aware that your server side functionality isn&#x2019;t important, you can deal with it in as brutal a manner as possible, because that is not where you want to spend your time. You want to spend you time actually doing something useful, and that is probably going to happen all on the client side.</p>
+        </article>
+        <article id="article-5773">
+            <a href="https://ayende.com/blog/4123/what-is-the-cost-of-opening-a-session" target="_blank">
+                <h2 class="title mb-6" id="article-5773">What is the cost of opening a session?</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 16, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Damien Guard asked me an interesting question:     Is SessionFactory.OpenSession() very lightweight because you call it on every request even if you have pages that don&#x27;t need it.      I would have thought the lazy construction in CurrentSession get would have been a little safer.   The answer is that it is literally not worth your time to write the lazy construction. Here is what is happening when you opening a session:     public ISession OpenSession(IDbConnection connection, bool flushBeforeCompletionEnabled, bool autoCloseSessionEnabled,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;ConnectionReleaseMode connectionReleaseMode)&#xA;{&#xA;&#x9;return&#xA;&#x9;&#x9;new SessionImpl(connection, this, true, settings.CacheProvider.NextTimestamp(), interceptor,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;settings.DefaultEntityMode, flushBeforeCompletionEnabled, autoCloseSessionEnabled,&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;connectionReleaseMode);&#xA;}&#xA;&#xA;&#xA;We new up a SessionImpl, which in turn:&#xA;&#xA;&#xA;  internal SessionImpl(&#xA;&#x9;IDbConnection connection,&#xA;&#x9;SessionFactoryImpl factory,&#xA;&#x9;bool autoclose,&#xA;&#x9;long timestamp,&#xA;&#x9;IInterceptor interceptor,&#xA;&#x9;EntityMode entityMode,&#xA;&#x9;bool flushBeforeCompletionEnabled,&#xA;&#x9;bool autoCloseSessionEnabled,&#xA;&#x9;ConnectionReleaseMode connectionReleaseMode)&#xA;&#x9;: base(factory)&#xA;{&#xA;&#x9;using (new SessionIdLoggingContext(SessionId))&#xA;&#x9;{&#xA;&#x9;&#x9;if (interceptor == null)&#xA;&#x9;&#x9;&#x9;throw new AssertionFailure(&quot;The interceptor can not be null.&quot;);&#xA;&#xA;&#x9;&#x9;rootSession = null;&#xA;&#x9;&#x9;this.timestamp = timestamp;&#xA;&#x9;&#x9;this.entityMode = entityMode;&#xA;&#x9;&#x9;this.interceptor = interceptor;&#xA;&#x9;&#x9;listeners = factory.EventListeners;&#xA;&#x9;&#x9;actionQueue = new ActionQueue(this);&#xA;&#x9;&#x9;persistenceContext = new StatefulPersistenceContext(this);&#xA;&#x9;&#x9;this.flushBeforeCompletionEnabled = flushBeforeCompletionEnabled;&#xA;&#x9;&#x9;this.autoCloseSessionEnabled = autoCloseSessionEnabled;&#xA;&#x9;&#x9;this.connectionReleaseMode = connectionReleaseMode;&#xA;&#x9;&#x9;connectionManager = new ConnectionManager(this, connection, connectionReleaseMode, interceptor);&#xA;&#xA;&#x9;&#x9;if (factory.Statistics.IsStatisticsEnabled)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;factory.StatisticsImplementor.OpenSession();&#xA;&#x9;&#x9;}&#xA;&#xA;&#x9;&#x9;if (log.IsDebugEnabled)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;log.Debug(string.Format(&quot;[session-id={0}] opened session at timestamp:{1}&quot;, SessionId, timestamp));&#xA;&#x9;&#x9;}&#xA;&#xA;&#x9;&#x9;CheckAndUpdateSessionStatus();&#xA;&#x9;}&#xA;}&#xA;&#xA;&#xA;Is going to setup its fields and new up some additional stuff as well. All the work that is being done is merely newing up a few objects, and that is lightning fast. There is no database involved, NHibernate will manage the database connection to ensure minimal time spent with an open database connection automatically.</p>
+        </article>
+        <article id="article-5774">
             <a href="https://ayende.com/blog/4122/benchmarks-are-useless-yes-again" target="_blank">
-                <h2 class="title mb-6" id="article-5771">Benchmarks are useless, yes, again</h2>
+                <h2 class="title mb-6" id="article-5774">Benchmarks are useless, yes, again</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was informed about ORMBattle.NET existence a few minutes ago. This is a site that:     ORMBattle.NET is devoted to direct ORM comparison. We compare quality of essential features of well-known ORM products for .NET framework, so this site might help you to:             Compare the performance of your own solution (based on a particular ORM listed here) with peak its performance that can be reached on this ORM, and thus, likely, to improve it.       Choose the ORM for your next project taking its performance and LINQ implementation quality into account.      NHibernate is faring rather poorly in the tests there, and I thought that I might respond to that.  First, I want to point out that the company behind the website is Xtensive, which makes another ORM Product. This is not to discredit them, they make it very clear who is behind the site and that they have an ORM product in the benchmark. And they were the one who contacted me about it.  The problem with benchmarks, especially when you are trying to compare a wide variety of products that have different feature sets and different capabilities, is that they are essentially useless. The problem is that in order to be able to measure anything useful, you have to resort to the common denominators, and they are pretty bad.  In the case of the benchmark scenarios used for NHibernate, it shows the problem rather clearly.     I don&#x2019;t even need to think about anything to know that this is going to perform badly. There are several reasons for that. First, NHibernate was never intended to be a batch processing tool. It is an OLTP tool. The benchmark (all the tests in the benchmark) are aimed specifically at measuring batch processing. That is problem number one.  Second, NHibernate actually contains a lot of features that are aimed to give us great performance in many scenarios, including batch processing. For example, in this case, using a stateless session alone would generate a significant performance boost, not to mention that there is no use of batching whatsoever.      This two tests are also showing examples of &#x201C;this isn&#x2019;t how we do things&#x201D;. For one thing, calling the database in a loop is a bug. For another, I would generate the same result, which greatly improved performance using Executable DML:     session.CreateQuery(&quot;update Simplest s set s.Value = s.Value &#x2B; 1&quot;).ExecuteUpdate();&#xA;&#xA;session.CreateQuery(&quot;delete Simplest&quot;).ExecuteUpdate();&#xA;&#xA;&#xA;And so on, and so forth.&#xA;&#xA;To summarize, because I have talked about this before. Trying to compare different products without taking into account their differences is a flawed approach. Moreover, this benchmark is intentionally trying to measure something that NHibernate was never meant to perform. We don&#x2019;t need to try to optimize those things, because they are meaningless, we have much better ways to resolve things.&#xA;&#xA;And you know what? The problem is that even if you did put those in, they would still be invalid. Benchmarks tend to ignore such things as the impact of the builtin caching features, or the optimization options that are available in the mapping.&#xA;&#xA;In short, if you want me to &#x201C;admit&#x201D; that NHibernate isn&#x2019;t a batch processing tool, I will do so gladly, it was never meant to be. And benchmarks that try to show how it is in batch processing are going to show it being slow. For real world application development, however, NHibernate is a great fit, and show excellent performance.&#xA;&#xA;Oh, and because management told me that I must, if you find perf problems with NHibernate, that is why we have the NHibernate Profiler for you :-)</p>
         </article>
-        <article id="article-5772">
+        <article id="article-5775">
             <a href="https://ayende.com/blog/4121/instantiating-interfaces" target="_blank">
-                <h2 class="title mb-6" id="article-5772">Instantiating interfaces</h2>
+                <h2 class="title mb-6" id="article-5775">Instantiating interfaces</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How do you make this code legal?     var foo = new IFoo(1);&#xA;&#xA;&#xA;And yes, IFoo is an interfacae.&#xA;&#xA;The answer is quite simple, actually. It was there since C# 1.0, I am told, and I just stumbled upon it. Take a look at this code:&#xA;&#xA;&#xA;  class Program&#xA;{&#xA;&#x9;static void Main(string[] args)&#xA;&#x9;{&#xA;&#x9;&#x9;var foo = new IFoo(1);&#xA;&#x9;&#x9;foo.Do();&#xA;&#x9;}&#xA;}&#xA;&#xA;[&#xA;&#x9;ComImport, &#xA;&#x9;Guid(&quot;C906C002-B214-40d7-8941-F223868B39A5&quot;), &#xA;&#x9;CoClass(typeof(FooImpl))&#xA;]&#xA;public interface IFoo&#xA;{&#xA;&#x9;void Do();&#xA;}&#xA;&#xA;public class FooImpl : IFoo&#xA;{&#xA;&#x9;private readonly int i;&#xA;&#xA;&#x9;public FooImpl(int i)&#xA;&#x9;{&#xA;&#x9;&#x9;this.i = i;&#xA;&#x9;}&#xA;&#xA;&#x9;public void Do()&#xA;&#x9;{&#xA;&#x9;&#x9;Console.WriteLine(i);&#x9;&#xA;&#x9;}&#xA;}&#xA;&#xA;&#xA;We have an interface, and we specify the co class that implements it and is the default implementation. The rest is just required to make the compiler happy about it.&#xA;&#xA;What it means, in turn, is that you can instantiate an interface and have a default implementation selected. You can even use constructor parameters. It has quite a lot of implications, if you think about it right. &#xA;&#xA;Not sure it is a wise feature to use, but it is certainly an interesting tidbit.</p>
         </article>
-        <article id="article-5773">
+        <article id="article-5776">
             <a href="https://ayende.com/blog/4120/i-dont-get-social-networks" target="_blank">
-                <h2 class="title mb-6" id="article-5773">I don&#x2019;t get social networks</h2>
+                <h2 class="title mb-6" id="article-5776">I don&#x2019;t get social networks</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is only half tongue in cheek.</p>
         </article>
-        <article id="article-5774">
+        <article id="article-5777">
             <a href="https://ayende.com/blog/4119/the-least-common-denominator-approach" target="_blank">
-                <h2 class="title mb-6" id="article-5774">The Least Common Denominator approach</h2>
+                <h2 class="title mb-6" id="article-5777">The Least Common Denominator approach</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was talking with a team about their project, and doing a very minor code review. Naturally, one of the things that I checked first is the data access portion of the application.   I looked at the data access code in a sense of shock. I was on a phone call with the team, with one of them speaking and I interrupted him to say something along the lines of: &#x201C;Guys, the nineties called and they want their handed rolled data access back!&#x201D;  Just to give you an idea, when I am saying that the code has hand rolled data layer, I mean that it include such things as string concatenation to build queries (although I couldn&#x2019;t find SQL injection, which surprised me), manual hydration of the entities, manual support for &#x201C;eager loading&#x201D; using SELECT N&#x2B;1 queries, manual support for transactions, etc.  The reason for that, it seems, is that they wanted to find the lowest common denominator approach, so &#x201C;everyone&#x201D; can use it.  Sorry, ain&#x2019;t going to happen. The moment that you give me something like that, I am going to drop the entire thing. I cannot work like that. The sheer amount of grunt work involved in getting anything done in such a system is a complete and total blocker. It is not the lowest common denominator, it is the least common denominator.  It is ugly, it is nasty and people should really stop writing data access layers, get on with the program and use a real OR/M. Stop stealing from your clients!</p>
         </article>
-        <article id="article-5775">
+        <article id="article-5778">
             <a href="https://ayende.com/blog/4118/assert-true-is-the-tool-of-last-resort" target="_blank">
-                <h2 class="title mb-6" id="article-5775">Assert.True is the tool of last resort</h2>
+                <h2 class="title mb-6" id="article-5778">Assert.True is the tool of last resort</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was just reviewing someone&#x2019;s code, and as I was browsing through the tests, I run into the following anti pattern, just about all the asserts were specified as:     Assert.True(pet.Owner == &quot;Baz&quot;);&#xA;&#xA;&#xA;The problem with that is that this is a perfect case of &#x201C;let&#x2019;s create a test that will tell us nothing when it is failing&#x201D;.&#xA;&#xA;It seems like a minor thing, to use the more explicit version:&#xA;&#xA;&#xA;  Assert.Equal(&quot;Baz&quot;, pet.Owner);&#xA;&#xA;&#xA;But it isn&#x2019;t, when this assert fails, we are going to get a lovely error message telling us exactly what went wrong. From maintainability standpoint, being able to see why a test failed without debugging it is not a plus, it is essential.&#xA;&#xA;Assert.True is a tool of last resort, don&#x2019;t use it if you have any choice at all.</p>
         </article>
-        <article id="article-5776">
+        <article id="article-5779">
             <a href="https://ayende.com/blog/4117/nhibernate-unit-of-work-multiple-reuqests" target="_blank">
-                <h2 class="title mb-6" id="article-5776">Nhibernate Unit of Work &amp; multiple reuqests</h2>
+                <h2 class="title mb-6" id="article-5779">Nhibernate Unit of Work &amp; multiple reuqests</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Another post request from the forum:     Oren,     I&#x27;d love to get some detail on how to make the most of NHibernate&#x27;s unit of work capability in a web app scenario.     It seems like in a web app, because your unit of work may be split across multiple web requests (and therefore sessions), it&#x27;s hard to use NHibernate&#x27;s change tracking etc effectively and I find myself doing unit of work tracking myself.     This seems to lead inevitably to an anaemic domain model and feels like fighting the tool.   Well, I am going to take that in two parts. First, having a unit of work that span requests is something that is possible (and I&#x2019;ll discuss how to implement shortly), but I don&#x2019;t recommend it. It is much easier to build your application so each request is a single unit of work.  Now, about actually implement a request that spans multiple requests, it is not really hard. It is called long conversation, or session per business transaction. Here is a detailed explanation on how NHibernate Burrow is achieving this.  But basically, it is quite simple. You set the session&#x2019;s flush mode to Never, and you store NHibernate&#x2019;s session in the ASP.Net session. Now, for each request, you can get the NHibernate session for the ASP.Net session and continue working with the same session and entities, taking advantage of change tracking, transparent persistence and all the other features that make NHibernate easy.  There are several frameworks out there that would handle this for you, Burrow, as I mentioned and Rhino Commons as well.</p>
         </article>
-        <article id="article-5777">
+        <article id="article-5780">
             <a href="https://ardalis.com/msdn-subscription-installer/" target="_blank">
-                <h2 class="title mb-6" id="article-5777">MSDN Subscription Installer</h2>
+                <h2 class="title mb-6" id="article-5780">MSDN Subscription Installer</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -222,54 +270,6 @@
                 posted on: August 12, 2009
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As I write this, I&#x2019;ve just installed Windows 7 on my development/presentation laptop, and it&#x2019;s currently installing a bunch of apps using&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-5778">
-            <a href="https://ayende.com/blog/4116/emancipating-nhibernate-from-hibernate" target="_blank">
-                <h2 class="title mb-6" id="article-5778">Emancipating NHibernate from Hibernate?</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: August 12, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is an answer to a post request in the forum:     Why keep NHibernate tied to Hibernate or is it not tied to it anymore? (NHibernate would be easier to pick up if the nomenclature wasn&#x27;t ripped from Hibernate, ie AliasToBeanResultTransformer, etc...)   There are two separate questions here that needs answering. The first is easier, we keep NHibernate close to Hibernate because it makes our lives so much easier. By keeping the code bases close to one another, we can more easily port new features, documentation and bug fixes. There are no plans, and I don&#x2019;t believe there would be plans, for making a clean break. Simply because it is not beneficial for the project.  The second question is about Javaism in the project. I fully agree that AliasToBeanResultTransformer is a head scratching name, this is simply a case where we didn&#x2019;t match the name to the .Net standard. Those sort of cases are things that can and probably should be fixed, and a patch for that (including backward compatibility!) would be appreciated.  While we want to keep NHibernate close to Hibernate in order to reap the benefits, we also intend it to be a full class citizen in the .Net ecosystem. The two aren&#x2019;t contradictory to one another.</p>
-        </article>
-        <article id="article-5779">
-            <a href="https://ayende.com/blog/4105/nhibernate-and-silverlight-server-side-integration" target="_blank">
-                <h2 class="title mb-6" id="article-5779">NHibernate and Silverlight Server Side Integration</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: August 07, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After tell you that NHibernate and Silverlight will never play ball on the client side, I got a lot of requests for showing how we can integrate NHibernate on the server side with a Silverlight application. Mostly, such things are done using RIA services.  Brad Adams has just posted how to do just that.  Go check it out.</p>
-        </article>
-        <article id="article-5780">
-            <a href="https://ayende.com/blog/4104/nh-prof-new-feature-diffing-sessions" target="_blank">
-                <h2 class="title mb-6" id="article-5780">NH Prof New Feature</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: August 07, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It is very common to use NH Prof as.. well, a profiler :-) That is, we execute a piece of code, look at the profiler output, and try to improve it.   The problem is that when you are working on big applications, a single request may perform quite a bit of work. That can make it harder to figure out the changes between the first session and the optimized session.  In order to make this easier, I added a feature that allows you to compare two sessions, see what statements were added, what were removed and what matches.     The UI to show it is only temporary, as you can probably guess, I am still considering some variation of that vs. a flat list with color codes or icons to mark matching, added and removed.</p>
         </article>
         <div class="button flex justify-between">
             <a href="577.html"><span class="back arrow"></span></a>
