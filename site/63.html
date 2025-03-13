@@ -112,8 +112,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-621">
+            <a href="https://ayende.com/blog/198561-C/managing-delays-in-distributed-systems-with-ravendb" target="_blank">
+                <h2 class="title mb-6" id="article-621">Managing delays in distributed systems with RavenDB</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: November 28, 2022
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A user came to us with an interesting scenario. They have a RavenDB cluster, which is running in a distributed manner. At some point, we have a user that creates a document inside of RavenDB as well as posts a message using SQS (Amazon queuing system) to be picked up by a separate process.&#xA;The flow of the system is shown below:&#xA;&#xA;The problem they run into is that there is an inherent race condition in the way they work. The backend worker that picks up the messages may use a different node to read the data than the one that it was written to.&#xA;RavenDB uses asynchronous replication model, which means that if the queue and the backend workers are fast enough, they may try to load the relevant document from the server before it was replicated to it. Amusingly enough, that typically happens on light load (not a mistake, mind). On high load, the message processing time usually is sufficient to delay things for replication to happen. In light load, the message is picked up immediately, exposing the race condition.&#xA;The question is, how do you deal with this scenario? If this was just a missing document, that was one thing, but we also need to handle another scenario. While the message is waiting to be processed in the queue, it may be updated by the user.&#xA;So the question now is, how do we handle distributed concurrency in a good manner using RavenDB.&#xA;The answer to this question is the usage of change vectors.&#xA0; A change vector is a string that represents the version of a document in a distributed environment. The change vector is used by RavenDB to manage optimistic concurrency.&#xA;This is typically used to detect changes in a document behind our backs, but we can use that in this scenario as well. The idea is that when we put the message on the queue, we&#x2019;ll include the change vector that we got from persisting the document. That way, when the backend worker picks up the message and starts using it, the worker can compare the change vectors.&#xA;If the document doesn&#x2019;t exist, we can assume that there is a replication delay and try later. If the document exists and the change vector is different, we know the document was modified, and we may need to use different logic to handle the message in question.</p>
+        </article>
+        <article id="article-622">
             <a href="https://www.meziantou.net/starting-a-process-as-normal-user-from-a-process-running-as-administrator.htm" target="_blank">
-                <h2 class="title mb-6" id="article-621">Starting a process as normal user from a process running as Administrator</h2>
+                <h2 class="title mb-6" id="article-622">Starting a process as normal user from a process running as Administrator</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -127,9 +143,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you start a process from a process running as Administrator, the child process also runs as Administrator. Running a process as Administrator could be a security risk. So, a good practice is to use the minimum privileges required to run a process.If you want to start a process as a normal user f</p>
         </article>
-        <article id="article-622">
+        <article id="article-623">
             <a href="https://ayende.com/blog/198529-C/ravendb-index-cleanup-feature" target="_blank">
-                <h2 class="title mb-6" id="article-622">RavenDB Index Cleanup feature</h2>
+                <h2 class="title mb-6" id="article-623">RavenDB Index Cleanup feature</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -143,9 +159,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A database indexing strategy is a core part of achieving&#xA0;good performance. About 99.9% of all developers have a story where adding an index to a particular query cut the runtime from seconds or minutes to milliseconds. That percentage is 100% for DBAs, but the query was cut from hours or days to milliseconds.&#xA;The appropriate indexing strategy is often a fairly complex balancing act between multiple competing needs. More indexing means more I/O and cost on writes, but faster reads. RavenDB has a query optimizer engine that will analyze your queries and generate the appropriate set of indexes on the fly, without you needing to think much about it. That means that RavenDB will continuously respond to your operational environment and changes in it. The end result is an optimal indexing strategy at all times.&#xA;This automatic behavior applies only to automatic indexes, however. RavenDB also allows you to define your own indexes and many customers run critical business logic in those indexes. RavenDB now has&#xA0;a feature that aims to help you manage/organize your indexes by detecting redundant definitions &amp; unqueried indexes which can be removed or merged.&#xA;The index cleanup feature is now exposed in the Studio (since build 5.4.5):&#xA;&#xA;When you select it, the Studio will show you the following options:&#xA;&#xA;You can see that RavenDB detected that two indexes can be merged into a single one, and additionally there are some indexes that haven&#x2019;t been used in a while or have been completely superseded by other indexes.&#xA;RavenDB will even go ahead and suggest the merged index for you:&#xA;&#xA;The idea is to leverage RavenDB&#x2019;s smarts so you won&#x2019;t have to spend too much time thinking about index optimization and can focus on the real value-added portions of your system.</p>
         </article>
-        <article id="article-623">
+        <article id="article-624">
             <a href="https://andrewlock.net/the-dangers-and-gotchas-of-using-scoped-services-when-configuring-options-with-options-builder/" target="_blank">
-                <h2 class="title mb-6" id="article-623">The dangers and gotchas of using scoped services in OptionsBuilder</h2>
+                <h2 class="title mb-6" id="article-624">The dangers and gotchas of using scoped services in OptionsBuilder</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -159,9 +175,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I look at the problems you can hit with strongly-typed settings when you inject Scoped services into OptionsBuilder, and how to avoid them&#x2026;</p>
         </article>
-        <article id="article-624">
+        <article id="article-625">
             <a href="https://www.meziantou.net/killing-all-child-processes-when-the-parent-exits-job-object.htm" target="_blank">
-                <h2 class="title mb-6" id="article-624">Killing all child processes when the parent exits (Job Object)</h2>
+                <h2 class="title mb-6" id="article-625">Killing all child processes when the parent exits (Job Object)</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -175,9 +191,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A Job Object allows groups of processes to be managed as a unit. This is useful for managing the lifetime of a group of processes, for example, when you want to terminate a group of processes when one of them terminates. It is also useful for managing the resources consumed by a group of processes,</p>
         </article>
-        <article id="article-625">
+        <article id="article-626">
             <a href="https://ayende.com/blog/198498-C/ravendb-php-client-has-been-released" target="_blank">
-                <h2 class="title mb-6" id="article-625">RavenDB PHP Client has been released</h2>
+                <h2 class="title mb-6" id="article-626">RavenDB PHP Client has been released</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -191,9 +207,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently talked about the beta release of the RavenDB PHP client a few months ago. I&#x2019;m now really pleased to announce that&#xA0;we have just released the official RavenDB PHP client.&#xA;Here is what this looks like:&#xA;&#xA0;&#xA;&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          use RavenDB\Documents\DocumentStore;&#xA;        &#xA;        &#xA;          &#xA;          use YourClass\Company;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          $store = new DocumentStore([&quot;http://localhost:8080&quot; ], &quot;Northwind&quot;)&#xA;        &#xA;        &#xA;          &#xA;          $store-&gt;initialize();&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          { // save a new document&#xA;        &#xA;        &#xA;          &#xA;            $session = $store-&gt;openSession();&#xA;        &#xA;        &#xA;          &#xA;            $entity = new Company(&quot;My Company Name&quot;);&#xA;        &#xA;        &#xA;          &#xA;            $session-&gt;store($entity);&#xA;        &#xA;        &#xA;          &#xA;            $session-&gt;saveChanges();&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          { // query on the data&#xA;        &#xA;        &#xA;          &#xA;            $session = $store-&gt;openSession();&#xA;        &#xA;        &#xA;          &#xA;            $companies  = $session-&gt;query(Company::class)&#xA;        &#xA;        &#xA;          &#xA;                -&gt;whereGreaterThan(&quot;numberOfEmployees&quot;, 12)&#xA;        &#xA;        &#xA;          &#xA;                -&gt;toList();&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          sample.php&#xA;        &#xA;        hosted with &#x2764; by GitHub</p>
         </article>
-        <article id="article-626">
+        <article id="article-627">
             <a href="https://ayende.com/blog/198497-C/recording-ravendb-in-a-distributed-cloud-environment" target="_blank">
-                <h2 class="title mb-6" id="article-626">Recording</h2>
+                <h2 class="title mb-6" id="article-627">Recording</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -207,9 +223,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I had a lot of fun in this webinar, showing off some of RavenDB&#x2019;s capabilities in really complex distributed systems:</p>
         </article>
-        <article id="article-627">
+        <article id="article-628">
             <a href="https://ardalis.com/scaling-redis/" target="_blank">
-                <h2 class="title mb-6" id="article-627">Scaling Redis</h2>
+                <h2 class="title mb-6" id="article-628">Scaling Redis</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -223,9 +239,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Redis is a popular open source cache server. When you have a web application that reaches the point of needing more than one front end&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-628">
+        <article id="article-629">
             <a href="https://benfoster.io/blog/minimal-api-validation-endpoint-filters/" target="_blank">
-                <h2 class="title mb-6" id="article-628">Minimal API validation with ASP.NET 7.0 Endpoint Filters</h2>
+                <h2 class="title mb-6" id="article-629">Minimal API validation with ASP.NET 7.0 Endpoint Filters</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -239,9 +255,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">ASP.NET 7.0 included support for Minimal API endpoint filters. This post looks at how you can use this feature to validate requests using Fluent Validation.</p>
         </article>
-        <article id="article-629">
+        <article id="article-630">
             <a href="https://www.meziantou.net/misconceptions-about-date-and-time.htm" target="_blank">
-                <h2 class="title mb-6" id="article-629">39 Misconceptions about date and time</h2>
+                <h2 class="title mb-6" id="article-630">39 Misconceptions about date and time</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -254,22 +270,6 @@
                 posted on: November 14, 2022
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post contains a list of misconceptions about date and time. The explanations are not exhaustive, sometimes it&#x27;s just counter-examples.#Everybody uses the same calendarNot all countries have adopted the Gregorian calendar at the same time. France, Spain, Italy and a few other countries adopted</p>
-        </article>
-        <article id="article-630">
-            <a href="https://andrewlock.net/working-with-stacked-branches-in-git-is-easier-with-update-refs/" target="_blank">
-                <h2 class="title mb-6" id="article-630">Working with stacked branches in Git is easier with --update-refs</h2>
-            </a>
-            <p class="mb-2">by Andrew Lock</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 08, 2022
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I discuss how to use the new Git rebasing feature, --update-refs, and how it makes working with stacked branches/PRs easier.&#x2026;</p>
         </article>
         <div class="button flex justify-between">
             <a href="62.html"><span class="back arrow"></span></a>
