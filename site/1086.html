@@ -14,12 +14,28 @@
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="pagefind/pagefind-ui.css">
     <!-- Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-MDFXJY3FCY"></script>
     <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-MDFXJY3FCY');
+        // Only load GA if consent is given
+        function loadGA() {
+            const script = document.createElement('script');
+            script.src = 'https://www.googletagmanager.com/gtag/js?id=G-MDFXJY3FCY';
+            script.async = true;
+            document.head.appendChild(script);
+
+            window.dataLayer = window.dataLayer || [];
+
+            function gtag() {
+                dataLayer.push(arguments);
+            }
+
+            gtag('js', new Date());
+            gtag('config', 'G-MDFXJY3FCY');
+        }
+
+        // Check if consent was previously given
+        if (localStorage.getItem('cookieConsent') === 'accepted') {
+            loadGA();
+        }
     </script>
     <!-- End Google Analytics -->
 </head>
@@ -257,5 +273,58 @@
 </footer>
 <script src="js/script.js?id=af8f4559935e7bf5bf6015373793411d"></script>
 <script src="pagefind/pagefind-ui.js"></script>
+
+<!-- Cookie Consent Banner -->
+<div class="cookie-consent" id="cookieConsent">
+    <div>
+        <p class="text-sm">We use cookies to analyze our website traffic and provide a better browsing experience. By
+            continuing to use our site, you agree to our use of cookies.</p>
+    </div>
+    <div class="cookie-consent-buttons">
+        <button class="cookie-consent-decline" onclick="declineCookies()">Decline</button>
+        <button class="cookie-consent-accept" onclick="acceptCookies()">Accept</button>
+    </div>
+</div>
+
+<script>
+    // Cookie consent management
+    function showCookieConsent() {
+        const consent = localStorage.getItem('cookieConsent');
+        if (!consent) {
+            document.getElementById('cookieConsent').classList.add('show');
+        }
+    }
+
+    function acceptCookies() {
+        localStorage.setItem('cookieConsent', 'accepted');
+        document.getElementById('cookieConsent').classList.remove('show');
+        loadGA(); // Load Google Analytics after consent
+    }
+
+    function declineCookies() {
+        localStorage.setItem('cookieConsent', 'declined');
+        document.getElementById('cookieConsent').classList.remove('show');
+    }
+
+    // Show the consent banner only for EU visitors (you can add more country codes as needed)
+    fetch('https://ipapi.co/json/')
+            .then(response => response.json())
+            .then(data => {
+                const euCountries = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE'];
+                if (euCountries.includes(data.country_code)) {
+                    showCookieConsent();
+                } else {
+                    // For non-EU visitors, automatically load GA
+                    if (!localStorage.getItem('cookieConsent')) {
+                        localStorage.setItem('cookieConsent', 'accepted');
+                        loadGA();
+                    }
+                }
+            })
+            .catch(() => {
+                // If we can't determine location, show the consent banner to be safe
+                showCookieConsent();
+            });
+</script>
 </body>
 </html>
