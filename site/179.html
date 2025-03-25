@@ -137,8 +137,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1781">
+            <a href="https://ayende.com/blog/187617-A/computing-spatial-distances-in-ravendb-queries" target="_blank">
+                <h2 class="title mb-6" id="article-1781">Computing spatial distances in RavenDB queries</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 12, 2019
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB has had support for spatial queries for a long time. In RavenDB 4.0 we did a whole bunch of work to make spatial queries better. In particular, we have separate the concepts of searching and ordering for spatial queries. In most cases, if you are doing a spatial query, you&#x2019;ll want to sort the results by their distance. The classic example is: &#x201C;Give me the Pizza stores within 5 km from me&#x201D;. I&#x2019;ll usually also want to see them listed by their distance. But there are other ways to go about it. For example, if I want to see a concert by Queen, I want to sort them by distance, but I don&#x2019;t want to do any spatial filtering. It gets interesting when you combine different spatial operations at the same time. For example, consider the following query. Here is how you can search for a house in a particular school district, but want to find the one that is nearest to the office. The two spatial queries aren&#x2019;t related at all to one another. One thing that we did not do, however, was report the distance back to the user. In other words, during the query, we compute the distance to the provided location, but we aren&#x2019;t actually returning it, just use it for sorting. This is mostly an oversight, and we&#x2019;ll be fixing that. The thought at the time was that since you already get the document from the server, you already have the location data, and can compute it on the client side. However, that isn&#x2019;t ergonomic to users, who want to just get the data and be done with it. As I said, we&#x2019;ll be fixing this, but in the meantime, you can use another of RavenDB&#x2019;s capabilities to handle this, by define a JS function and projecting that directly from the server. Let&#x2019;s take a look at the following query:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          declare function distance(lat1, lon1, lat2, lon2, unit) {&#xA;        &#xA;        &#xA;          &#xA;          &#x9;// from : https://www.geodatasource.com/developers/javascript&#xA;        &#xA;        &#xA;          &#xA;          &#x9;if ((lat1 == lat2) &amp;&amp; (lon1 == lon2)) {&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;return 0;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;}&#xA;        &#xA;        &#xA;          &#xA;          &#x9;else {&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;var radlat1 = Math.PI * lat1/180;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;var radlat2 = Math.PI * lat2/180;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;var theta = lon1-lon2;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;var radtheta = Math.PI * theta/180;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;var dist = Math.sin(radlat1) * Math.sin(radlat2) &#x2B; Math.cos(radlat1) * &#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;&#x9;&#x9;   Math.cos(radlat2) * Math.cos(radtheta);&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;if (dist &gt; 1) {&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;&#x9;dist = 1;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;}&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;dist = Math.acos(dist);&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;dist = dist * 180/Math.PI;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;dist = dist * 60 * 1.1515;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;if (unit==&quot;K&quot;) { dist = dist * 1.609344 }&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;if (unit==&quot;N&quot;) { dist = dist * 0.8684 }&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;return dist;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;}&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;        &#xA;          &#xA;          from index &#x27;Houses/ByLocation&#x27; as h&#xA;        &#xA;        &#xA;          &#xA;          where spatial.within(h.Location, spatial.wkt($schoolDistrict))&#xA;        &#xA;        &#xA;          &#xA;          order by spatial.distance(h.Location, spatial.point($office.lat, $office.lng))&#xA;        &#xA;        &#xA;          &#xA;          select {&#xA;        &#xA;        &#xA;          &#xA;          &#x9;Distance: distance(h.Location.Lat, h.Location.Lng, $office.lat, $office.lng),&#xA;        &#xA;        &#xA;          &#xA;          &#x9;Address: h.Address.Street &#x2B; &quot; &quot; &#x2B; h.Address.Neighbourhood &#x2B; &quot;, &quot; &#x2B; h.Address.City,&#xA;        &#xA;        &#xA;          &#xA;          &#x9;Price: h.RequestedPrice&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          query.sql&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;This query allows us to project the details we need to render the results table to the user directly, without needing to do anything on the client side. It is a good enough solution for right now, and I&#x2019;m really happy that RavenDB is flexible enough to provide this to users without us needing to do anything. That said, I don&#x2019;t like the ergonomics, and we intend to basically make this kind of function into an intrinsic operation inside of RavenDB.</p>
+        </article>
+        <article id="article-1782">
+            <a href="https://andrewlock.net/introducing-the-microsoft-featuremanagement-library-adding-feature-flags-to-an-asp-net-core-app-part-1/" target="_blank">
+                <h2 class="title mb-6" id="article-1782">Introducing Microsoft.FeatureManagement</h2>
+            </a>
+            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 11, 2019
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Adding feature flags to an ASP.NET Core app - Part 1</p>
+        </article>
+        <article id="article-1783">
+            <a href="https://ayende.com/blog/187585-A/running-a-ravendb-cluster-with-two-nodes" target="_blank">
+                <h2 class="title mb-6" id="article-1783">Running a RavenDB cluster with two nodes</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 10, 2019
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently we got a couple of questions in the mailing list about running a RavenDB 4.x cluster with just two nodes in it. This was a fairly common topology in RavenDB 3.x days, because each of the nodes was mostly independent, but that added a lot of operational complexity to the system. In RavenDB 3.x you had to do a lot of stuff on each of the nodes in the system. RavenDB 4.x has brought us a unified cluster management and greatly simplified a lot of operational tasks. But one of the results of this change is that we now have a cluster rather than just a bunch of nodes.In particular, in order to be able to operate correctly, a RavenDB cluster needs a majority of the voting nodes to operate successfully. In a typical cluster setup, you are going to have three to five nodes and you&#x2019;ll need two or three of them to be accessible for the cluster to be healthy.However, in a cluster of only two nodes, a curious problem arises. The get a majority of the nodes, you need&#x2026; all the nodes. In other words, if you are running a cluster of just two nodes, and one of them is inaccessible, your cluster is not available. RavenDB&#x2019;s distributed nature is built on multiple layers. Even while the cluster itself is not available, you can still load and save documents to the database, perform queries, etc. Most of the normal operations that you would do on a day to day basis will work just fine without the cluster available.However, management functions require that the cluster be up. These include operations such adding or removing nodes to the cluster, creating or deleting a database, creating an index (including creating an auto index) or using advanced features such as ETL or Subscriptions. In both of the cases that were raised in the mailing list, we had a two node cluster and one of the nodes was down (VM was shutdown). That led to the inability to remove the down node from the cluster (we have emergency operations that allow that, but they are not meant for normal use) or errors during queries that required us to introduce a new index to the system.It is important to understand that this isn&#x2019;t actually an error. This is the system operating as designed and is a predictable (and desirable) part of how it is supposed to work in such failure modes.However, that is true only if you are running your cluster with all the nodes as full voting member nodes. There are other alternatives. If you have a two nodes cluster, a single node being down will take the whole cluster down. At this point, you can usually designate one node as the primary and chose a different topology. Look at the cluster image on the right. As you can see, we have the leader A as well as node B. You might notice that node B is marked with a W. Usually a member node in the cluster will be marked with M (for Member). But the W marking stands for Watcher.In this case, a watcher node is a silent participant in the cluster. It can listen, but doesn&#x2019;t interfere in the cluster itself. Node A is the sole node in the cluster that can make decisions. So if node B is down, the cluster is still functional. However, if node A is down, node B is going to operate without the cluster. Given that this would be the same situation anyway if you are running with both A and B as full members, that is a net benefit. And from experience, users who want to run a dual node cluster typically already have pretty firm ideas about which of the nodes is the primary.You can demote a node from a full member to a watcher (and vice versa) dynamically, in the cluster management page in the Studio. However, remember that this is an operation that requires a majority of the cluster to be available.You can also add a node to the cluster as a watcher immediately, which is probably a better idea. Aside from not being counted for cluster votes, watcher nodes in RavenDB behave in the exact same manner as other nodes. You can assign them tasks, the cluster manage them as usual, they host databases and in general behave just like any other RavenDB node. The other use case for watcher nodes are in very large clusters. If your cluster grows being seven nodes, you&#x2019;ll typically start adding watcher nodes to the cluster, instead of full member nodes. This is to avoid having to get majority vote from a large number of nodes.</p>
+        </article>
+        <article id="article-1784">
             <a href="https://www.meziantou.net/cryptography-in-dotnet.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1781">Cryptography in .NET</h2>
+                <h2 class="title mb-6" id="article-1784">Cryptography in .NET</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Cryptography is a very important thing for information security. Information security is composed of 4 parts:Integrity: ensure a document is not alteredConfidentiality: ensure only authorized people can read a documentAuthentication: ensure the document was written by an identified personNon-Repudi</p>
         </article>
-        <article id="article-1782">
+        <article id="article-1785">
             <a href="https://ayende.com/blog/187554-C/production-postmortem-printer-out-of-paper-and-the-ravendb-hang" target="_blank">
-                <h2 class="title mb-6" id="article-1782">Production postmortem</h2>
+                <h2 class="title mb-6" id="article-1785">Production postmortem</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I spoke about this in the video, and it seems to have caught a lot of people yes, so I thought that I would talk here a bit how we trace the root cause of a RavenDB critical issue to a printer being out of paper.What is the relationship, I can hear you ask, between RavenDB, a document database, and a printer being out of paper? That is a good question. The answer is pretty much none. There is no DocPrint module inside of RavenDB and the last time yours truly wrote printer code was over fifteen years ago. But the story started, like all good tech stories, with a phone call. An inconveniently timed phone call, I might add.Imagine, the year is 2013, and I&#x2019;m enjoying the best part of the year, December. I love December for a few reasons. I was born in it, and it is a time where pretty much all our customers are busy doing other stuff and we can focus on pure development. So imagine my surprise when, on the other side of the line, I got a pretty upset admin that had to troubleshoot a RavenDB instance that would refuse to start. To make things interesting, this admin had drawn the short straw, I assume, and had to man the IT department while everyone else was on vacation. He had no relation to RavenDB during normal operations and only had the bare minimum information about it.The symptoms were clear, luckily. RavenDB would simply refuse to start, hanging almost immediately, it seemed. No network access, nothing in the logs to indicate a problem. Just&#x2026; hanging&#x2026;Here is the stack trace that we captured:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          mscorlib.dll!Microsoft.Win32.RegistryKey.InternalGetValue(string name, object defaultValue, bool doNotExpand, bool checkSecurity)&#x9;Unknown&#xA;        &#xA;        &#xA;          &#xA;          mscorlib.dll!Microsoft.Win32.RegistryKey.GetValue(string name)&#x9;Unknown&#xA;        &#xA;        &#xA;          &#xA;          System.dll!System.Diagnostics.PerformanceMonitor.GetData(string item)&#x9;Unknown&#xA;        &#xA;        &#xA;          &#xA;          System.dll!System.Diagnostics.PerformanceCounterLib.GetPerformanceData(string item)&#x9;Unknown&#xA;        &#xA;        &#xA;          &#xA;          System.dll!System.Diagnostics.PerformanceCounterLib.CategoryTable.get()&#x9;Unknown&#xA;        &#xA;        &#xA;          &#xA;          System.dll!System.Diagnostics.PerformanceCounterLib.CounterExists(string category, string counter, ref bool categoryExists)&#x9;Unknown&#xA;        &#xA;        &#xA;          &#xA;          System.dll!System.Diagnostics.PerformanceCounterLib.CounterExists(string machine, string category, string counter)&#x9;Unknown&#xA;        &#xA;        &#xA;          &#xA;          System.dll!System.Diagnostics.PerformanceCounter.InitializeImpl()&#x9;Unknown&#xA;        &#xA;        &#xA;          &#xA;          System.dll!System.Diagnostics.PerformanceCounter.PerformanceCounter(string categoryName, string counterName, string instanceName, bool readOnly)&#x9;Unknown&#xA;        &#xA;        &#xA;          &#xA;          Raven.Database.dll!Raven.Database.Indexing.WorkContext.IsValidCategory(string categoryName, System.Collections.Generic.Dictionary&lt;string,System.Diagnostics.PerformanceCounterType&gt; instances, string instanceName)&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          stack.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;And that was&#x2026; it. We started to look into it, and we run into this StackOverflow question, which was awesome. Indeed, restarting the print spooler would fix the problem and RavenDB would immediately start running. But I couldn&#x2019;t leave it like this, and I guess the admin on the other side was kinda bored, because he went along with my investigation.We now have access to the code (we didn&#x2019;t in 2013) and can look at exactly what is going on. This comment had me&#x2026; upset:The service manager in Windows will consider any service that didn&#x2019;t finish initialization in 30 seconds to be failed and kill it.&#xA0; You might be putting the things together at this point?After restarting the print spooler, we were able to start RavenDB, but restarting it cause another failure. Eventually we tracked it down to a network printer that was out of paper (presumably no one in the office to notice / fill it up). My assumption is that the print spooler was holding a register key hostage while making a network call to the printer that would time out because it didn&#x2019;t have any paper. If at that time you would attempt to use a performance counter, you would hang, and if you are running as service, would be killed. I&#x2019;m left with nothing to do but quote Leslie Lamport:A distributed system is one in which the failure of a computer you didn&#x2019;t even know existed can render your own computer unusable.Oh so true.We ended up ditching performance counters entirely after running into so many issues around them. As of 2017, people were still running into this issue, so I think that was a great decision.</p>
         </article>
-        <article id="article-1783">
+        <article id="article-1786">
             <a href="https://ardalis.com/syncing-a-fork-of-a-github-repository-with-upstream/" target="_blank">
-                <h2 class="title mb-6" id="article-1783">Syncing a Fork of a GitHub Repository with Upstream</h2>
+                <h2 class="title mb-6" id="article-1786">Syncing a Fork of a GitHub Repository with Upstream</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Update 13 October 2023 GitHub made this easier. You can still use the approach below, but also check out how you can Fetch Upstream directly&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-1784">
+        <article id="article-1787">
             <a href="https://enterprisecraftsmanship.com/posts/merging-domain-events-dispatching/" target="_blank">
-                <h2 class="title mb-6" id="article-1784">Merging domain events before dispatching</h2>
+                <h2 class="title mb-6" id="article-1787">Merging domain events before dispatching</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post describes a common problem: how to deal with multiple domain events if raising of one of them must negate the others.</p>
         </article>
-        <article id="article-1785">
+        <article id="article-1788">
             <a href="https://ayende.com/blog/187553-C/when-select-is-broken-video-is-up" target="_blank">
-                <h2 class="title mb-6" id="article-1785">When select() is broken video is up</h2>
+                <h2 class="title mb-6" id="article-1788">When select() is broken video is up</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I had a great time giving this talk, and I think it went really well.You can watch the recording of the talk using the following link. I&#x2019;ll also follow up tomorrow with more details about the printer that broke RavenDB, it seems to have hit a spot.</p>
         </article>
-        <article id="article-1786">
+        <article id="article-1789">
             <a href="https://ardalis.com/fixed-problem-connecting-to-docker-for-windows-aspnet-app/" target="_blank">
-                <h2 class="title mb-6" id="article-1786">Fixed Problem Connecting to Docker for Windows ASPNET  App</h2>
+                <h2 class="title mb-6" id="article-1789">Fixed Problem Connecting to Docker for Windows ASPNET  App</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently I was working on some WinForms and classic MVC (not Core) apps built with ASP.NET and migrating them to Azure using containers&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-1787">
+        <article id="article-1790">
             <a href="https://andrewlock.net/serializing-a-pascalcase-newtonsoft-json-jobject-to-camelcase/" target="_blank">
-                <h2 class="title mb-6" id="article-1787">Serializing a PascalCase Newtonsoft.Json JObject to camelCase</h2>
+                <h2 class="title mb-6" id="article-1790">Serializing a PascalCase Newtonsoft.Json JObject to camelCase</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -247,54 +295,6 @@
                 posted on: June 04, 2019
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe one of the quirks of serializing a JSON.NET JObject, and show how to get camelCase names from a PascalCase JObject.&#x2026;</p>
-        </article>
-        <article id="article-1788">
-            <a href="https://ayende.com/blog/187521-C/ravendb-workshops-for-this-summer" target="_blank">
-                <h2 class="title mb-6" id="article-1788">RavenDB workshops for this summer</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 30, 2019
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are running another set of RavenDB workshops in London, Dallas and New York.&#xA;These are two days of deep dive into RavenDB. The workshop cover everything from how to talk to a RavenDB database to how to model your data, from how to setup a single node to building a geo-distributed cluster. It is also, at least in my opinion, a lot of fun.&#xA;Here are the details:&#xA;&#xA;&#xA;London - Jun 25-26th&#xA;&#xA;&#xA;Dallas - Jul 11-12nd&#xA;&#xA;&#xA;New York - Sep 16-17th&#xA;&#xA;&#xA;We&#x2019;ll also be talking about some of the new features in 4.2 (and later) in the workshop.&#xA0;&#xA;The early bird pricing ends tomorrow.</p>
-        </article>
-        <article id="article-1789">
-            <a href="https://ardalis.com/create-alias-to-set-window-title-in-powershell/" target="_blank">
-                <h2 class="title mb-6" id="article-1789">Create Alias to Set Window Title in PowerShell</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 30, 2019
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ve written previously about how to set the window title in PowerShell. Unfortunately, it&#x2019;s a little complicated. Recently on twitter&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-1790">
-            <a href="https://ayende.com/blog/187489-C/using-c-to-build-ravendb-or-my-raspberry-pi-with-700pb-of-disk-space" target="_blank">
-                <h2 class="title mb-6" id="article-1790">Using C to build RavenDB (or my Raspberry Pi with 700PB of disk space)</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 29, 2019
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the changes that we made in RavenDB 4.2 is a pretty radical one, even if we didn&#x2019;t really talk about it. It is the fact that RavenDB now contains C code. Previously, we were completely managed (with a bunch of P/Invoke) calls. But we now we have some C code in the project. The question is why?The answer isn&#x2019;t actually about performance or the power of native C code. We are usually pretty happy with the kind of assembly instructions that we can get from C#. The actual problem was that we needed a proper abstraction. At this moment, RavenDB is running on the following platforms:Windows x86-32 bitsWindows x86-64 bitsLinux x86-32 bitsLinux x86-64 bitsLinux ARM 32 bitsLinux ARM 64 bitsmacOS 64 bitsAnd each of this platform requires some changes in how we do things. The other problem is that .NET is a well specified system, all the types sizes are well known, for example. The same isn&#x2019;t true for the underlying API. Windows does a really good job of maintaining proper APIs across versions and 32/64 editions. Linux basically doesn&#x2019;t seem to care. Types sizes change quite often, sometimes in unpredictable ways. Probably the most fun part was figuring out that on x86, Linux syscall #224 is gettid(), but on ARM, you&#x2019;ll call to gettime(). The problem is that if you are using C, all of that is masked for you. And it got quite unwieldly. So we decided to create a PAL (platform abstraction layer) in C to handle these details.The rules for the PAL are simple, we don&#x2019;t make assumptions about types, sizes or underlying platform. For example, let&#x2019;s take a look at some declarations.All the types are explicit about their size, and where we need to pass a complex type (SYSTEM_INFORMATION) we define it ourselves, rather than rely on any system type. And here are the P/Invoke definitions for these calls. Again, we are being explicit with the types event though in C# the size of types are fixed.You might have noticed that I care about error handling. And error handling in C is&#x2026; poor. We use the following convention in these kind of operations:Each method does a single logical thing.Each method return either success or flag indication the internal step in which it fail.On failure, the method will return the system error code for the failure.The idea is that on the calling side, we can construct exactly where and why we failed and still get good errors.Yesterday I run into an issue where we didn&#x2019;t move some code to the PAL, and we actually had a bug there. The problem was that when running on ARM32 machine, we would pass a C# struct to a syscall. The problem was that we defined that struct based on the values in 64 bits Linux. When called on 32 bits system, the values went to the wrong location. Luckily, this was a call that was never used. It is used by our dashboard to let the admin know how much disk space is available. There is no code that actually take action based on this information.Which was great, because when we actually run the code, we got this value in the Studio:When I dug deeper into the code, it gave really bad results. My Raspberry PI thought it had 700 PB of disk space free. The actual reason we got this funny error? We send the number of bytes to the client, and under these conditions, we can only support up to about 8 PB of free space in the browser.I moved the code from C# P/Invoke to a simple method to calculate this:Implementing this for all platforms means that we have a much nicer interface and our C# code is abstracted from the gory details on how we actually compute this.</p>
         </article>
         <div class="button flex justify-between">
             <a href="178.html"><span class="back arrow"></span></a>
