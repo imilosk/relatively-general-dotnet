@@ -137,8 +137,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-2681">
+            <a href="https://www.meziantou.net/post-redirect-get-and-tempdata-with-asp-net-core.htm" target="_blank">
+                <h2 class="title mb-6" id="article-2681">Post-Redirect-Get and TempData with ASP.NET Core</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 05, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The Post-Redirect-Get (PRG) pattern prevents duplicate form submissions when the user refreshes the page. Here&#x27;s the sequence diagram:Sequence diagram without TempDataAs you can see, the server query the database twice to display the page to the user. This is inefficient, but how can you improve th</p>
+        </article>
+        <article id="article-2682">
+            <a href="https://ayende.com/blog/178433/distributed-work-in-ravendb-4-0" target="_blank">
+                <h2 class="title mb-6" id="article-2682">Distributed work in RavenDB 4.0</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 02, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I talked about the new clustering mode in RavenDB 4.0 a few days ago. I realized shortly afterward that I didn&#x2019;t explain a crucial factor. RavenDB has several layers of distributed work.At the node level, all nodes are (always) part of a cluster. In some cases, it may be a cluster that is a single node, but in all cases, a node is part of a cluster. Cluster form a consensus between all the nodes (using Raft) and all cluster wide operations go through Raft.Cluster wide operations are things like creating a new database, or assigning a new node to the database and other things that are obviously cluster wide related. But a lot of other operations are also handled in this manner. Creating an index goes through Raft, for example. And so does high availability subscriptions and backup information. The idea is that the cluster holds the state of its databases, and all such state flow through Raft.A database can reside in multiple nodes, and we typically call that a database group (to distinguish from the cluster as a whole). Data written to the database does not go out over Raft. Instead, we use multi master distributed mesh to replication all data (documents, attachments, revisions, etc) between the different nodes in the database. Why is that? The logic that guides us is simple. Cluster wide operations happen a lot less often and require a lot more resiliency to operate properly. In particular, not doing consensus resulted in having to deal with potential conflicting changes, which was a PITA. On the other hand, common operations such as document writes tend to have a lot more stringent latency requirements, and what is more, we want to be able to accept writes even in the presence of failure. Consider a network split in a 3 nodes cluster, even though we cannot make modifications to the cluster state on the side with the single node, we are still able to accept and process write and read requests. When the split heals, we can merge all the changes between the nodes, potentially generating (and resolving) conflicts as needed. The basic idea is that for data that is stored in the database, we will always accept the write, because it it too important to let it just go poof. But for data about the database, we will ensure that we have a consensus for it, since almost all such operations are admin based and repeatable. Those two modes end up creating an interesting environment. At the admin level, they can work with the cluster and be sure that their changes are properly applied cluster wide. At the database level, each node will always accept writes to the database and distribute them across the cluster in a multi master fashion. A client can choose to accept a write to a single node or a to a particular number of nodes before considering a write successful, but even with network splits, we can still remain up and functioning. A database group has multiple nodes, and all of them are setup to replicate to one another in master/master setup as well as distribute whatever work is required of the database group (backups, ETL, etc). What about master/slave setups?We have the notion of adding an outgoing only connection to a database group, one of the nodes in the cluster will take ownership on that connection and replicate all data to it. That allow you to get master/slave, but we&#x2019;ll not failover to the other node, only to a node inside our own database group. Typical reasons for such a scenario is if you want to have a remote offsite node, or if you have the need to run complex / expensive operations on the system and you want to split that work away from the database group entirely.</p>
+        </article>
+        <article id="article-2683">
             <a href="https://enterprisecraftsmanship.com/posts/code-review-fabric-class/" target="_blank">
-                <h2 class="title mb-6" id="article-2681">Code review: Fabric class</h2>
+                <h2 class="title mb-6" id="article-2683">Code review: Fabric class</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is the second code review session where I showcase a real-world code example. If you want to learn more about this new format, check out this post. You can also request a review yourself. To do that, use the form on this page.&#xA; Code review: Fabric class The full source code of this one is rather large for a single blog post, so I decided to pick the most interesting portions of it - those I think could be improved.</p>
         </article>
-        <article id="article-2682">
+        <article id="article-2684">
             <a href="https://ayende.com/blog/178402/artificial-documents-in-ravendb-4-0" target="_blank">
-                <h2 class="title mb-6" id="article-2682">Artificial documents in RavenDB 4.0</h2>
+                <h2 class="title mb-6" id="article-2684">Artificial documents in RavenDB 4.0</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Artificial documents are a really interesting feature. They allow you to define an index, and specify that the result of the index will be&#x2026; documents as well. Let us consider the following index, running on the Norhtwind dataset.We can ask RavenDB to output the result of this index to a collection, in addition to the normal indexing. This is done in the following manner:And you can see the result here:The question here is, what is the point? Don&#x2019;t we already have the exact same data indexed and available as the result of the map/reduce index? Why store it twice?The answer is quite simple, with the output of the index going into documents, we can now define additional indexes on top of them, which give us the option to very easily create recursive map/reduce operations. So you can do daily/monthly/yearly summaries very cheaply. We can also apply all the usual operations on documents (subscriptions and ETL processes come to mind immediately). That give you a lot of power, and without incurring a high complexity overhead.</p>
         </article>
-        <article id="article-2683">
+        <article id="article-2685">
             <a href="https://andrewlock.net/using-imagesharp-to-resize-images-in-asp-net-core-part-4-saving-to-disk/" target="_blank">
-                <h2 class="title mb-6" id="article-2683">Using ImageSharp to resize images in ASP.NET Core - Part 4: saving to disk</h2>
+                <h2 class="title mb-6" id="article-2685">Using ImageSharp to resize images in ASP.NET Core - Part 4: saving to disk</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I show a different approach to caching images. We write the file to disk in the wwwroot folder and serve the file with the StaticFileMiddleware&#x2026;</p>
         </article>
-        <article id="article-2684">
+        <article id="article-2686">
             <a href="https://www.stevejgordon.co.uk/docker-for-dotnet-developers-part-2" target="_blank">
-                <h2 class="title mb-6" id="article-2684">Docker for .NET Developers (Part 2)</h2>
+                <h2 class="title mb-6" id="article-2686">Docker for .NET Developers (Part 2)</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the first post in the series I introduced a few concepts and key terms you&#x2019;ll need to know if you want to work with Docker. In this post I will cover the steps needed to begin working with Docker in your development environment. We&#x2019;ll look at creating a very basic sample API service and [&#x2026;]</p>
         </article>
-        <article id="article-2685">
+        <article id="article-2687">
             <a href="https://ayende.com/blog/178401/clustering-in-ravendb-4-0" target="_blank">
-                <h2 class="title mb-6" id="article-2685">Clustering in RavenDB 4.0</h2>
+                <h2 class="title mb-6" id="article-2687">Clustering in RavenDB 4.0</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This week or early next week, we&#x2019;ll have the RavenDB 4.0 beta out. I&#x2019;m really excited about this release, because it finalize a lot of our work for the past two years. In the alpha version, we were able to show off some major performance improvements and a few hints of the things that we had planned, but it was still at the infrastructure stage. Now we are talking about unveiling almost all of our new functionality and design.&#xA;The most obvious change you&#x2019;ll see is that we made a fundamental&#xA0; change in how we are handle clustering. In prior versions of RavenDB, clusters were created by connecting together database instances running on independent nodes. In RavenDB 4.0, each node is always a member of a cluster, and databases are distributed among those nodes. That sounds like a small distinction, but it completely reversed how we approach distributed work.&#xA;Let us consider three nodes that form a RavenDB cluster in RavenDB 3.x. Each database in RavenDB 3.x is an independent entity. You can setup replication between different databases and out of the cooperation of the different nodes and some client side help, we get robust high availability and failover. However, there is a lot of work that you need to do on all the nodes (setup master/master between all the nodes on each can grow very tedious). And while you get high availability for reads and writes, you don&#x2019;t get that for other tasks in the database.&#xA;Let us see how this works in RavenDB 4.0, shall we? The first thing we need to do is to spin up 3 nodes.&#xA;&#xA;As you can see, we have three nodes, and Node A has been selected as the leader.&#xA0; To simplify things to ourselves, we just assign arbitrary letters to the nodes. That allow us to refer to them as Node A, Node B, etc. Instead of something like WIN-MC2B0FG64GR. We also expose this information directly in the browser.&#xA;&#xA;Once the cluster has been created, we can create a database, and when we do that, we can either specify what the replication factor should be, or manually control what nodes this database will be on.&#xA;&#xA0;&#xA;&#xA;Creating this database will create it on both A and C, but it will do a bit more than that. Those aren&#x2019;t independent databases that hooked together. This is actually the same database, running on two different nodes. I created the sample data on Node C, and this is what I see when I look on Node A.&#xA;&#xA;We can see that the data (indexes and documents) has been replicated. Now, let us see how we can work with this database:&#xA;&#xA;&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          using (var store = new DocumentStore&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              Urls = new[]&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  &quot;http://localhost:8081&quot;&#xA;        &#xA;        &#xA;          &#xA;              },&#xA;        &#xA;        &#xA;          &#xA;              Database = &quot;Northwind&quot;&#xA;        &#xA;        &#xA;          &#xA;          }.Initialize())&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              &#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          doc-store.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;&#xA;&#xA;You might notice that this looks almost exactly like you would use RavenDB 3.x. And you are correct, but there are some important differences. Instead of specifying a single server url, you can now specify several. And the actual url we provided doesn&#x2019;t make any sense at all. We are pointing it to Node B, running on port 8081. However, that node doesn&#x2019;t have the Northwind database. That is another important change. We can now go to any node in the cluster and ask for the topology of any database, and we&#x2019;ll get the current database topology to use.&#xA;That make it much simpler to work in a clustered environment. You can bring in additional nodes without having to update any configuration, and mix and match the topology of databases in the cluster freely.&#xA;Another aspect of this behavior is the notion of database tasks. Here are a few of them.&#xA;&#xA;Those are tasks (looks like we need to update the icon for backup) that are defined at the database level, and they are spread over all the nodes in the database automatically. So if we defined an ETL task and a scheduled backup, we&#x2019;ll typically see one node handling the backups and another handling the ETL. If there is a failure, the cluster will notice that and redistribute the work transparently.&#xA;We can also extend the database to additional nodes, and the cluster will setup the database on the new node, transfer all the data to it (by assigning a node to replicate all the data to the new node), wait until all the data and indexing is done and only then bring it up as a full fledged member of the database, available for failover and for handling all the routine tasks.&#xA;The idea is that you don&#x2019;t work with each node independently, but the cluster as a whole. You can then define a database on the cluster, and the rest is managed for you. The topology, the tasks, failover and client integration, the works.</p>
         </article>
-        <article id="article-2686">
+        <article id="article-2688">
             <a href="https://ardalis.com/how-to-remove-untracked-local-files-from-git-working-tree/" target="_blank">
-                <h2 class="title mb-6" id="article-2686">How to remove untracked local files from git working tree?</h2>
+                <h2 class="title mb-6" id="article-2688">How to remove untracked local files from git working tree?</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There are two ways to get rid of untracked files from your git working tree. The first one, which many of us have done, is to simply go to a&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-2687">
+        <article id="article-2689">
             <a href="https://www.stevejgordon.co.uk/docker-dotnet-developers-part-1" target="_blank">
-                <h2 class="title mb-6" id="article-2687">Docker for .NET Developers (Part 1)</h2>
+                <h2 class="title mb-6" id="article-2689">Docker for .NET Developers (Part 1)</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Two words you will very likely be used to hearing quite often within our community at the moment are &#x201C;microservices&#x201D; and &#x201C;Docker&#x201D;. Both are topics of great interest and are generating excitement for developers and architects. In this new series of blog posts I want to cover Docker, what it is, why it might be [&#x2026;]</p>
         </article>
-        <article id="article-2688">
+        <article id="article-2690">
             <a href="https://ayende.com/blog/178370/the-pain-of-https" target="_blank">
-                <h2 class="title mb-6" id="article-2688">The pain of HTTPS</h2>
+                <h2 class="title mb-6" id="article-2690">The pain of HTTPS</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -263,38 +295,6 @@
                 posted on: May 30, 2017
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A few weeks ago we started looking into what it would take to run RavenDB 4.0 over HTTPS. Oh, not the actual mechanics of that, we had that covered a long time ago, and pretty much everything worked as expected. No, the problem that we set out to solve was whatever we could get RavenDB to Just Work over HTTPS without requiring the admin to jump through hops. Basically, what I really wanted was a way to just spin up the server and have it running on HTTPS by default.That turned out to be a lot harder then I wished it would be. HTTPS has two very distinct goals:To encrypt communication between two parties.To ensure that the site you visited is actually the site you thought you visited.The first portion can be handled by generating the certificate yourself, and the communication between client &amp; server would be encrypted. So far so good, but the second portion is probably more important. If my communication with ThisIsNotPayPal.com is encrypted, that doesn&#x2019;t really help me all that much, I&#x2019;m afraid. Verifying who you are is a very important component of HTTPS, and that is something that we can&#x2019;t just ignore. Well, technically speaking I guess that RavenDB could have installed a root CA into the system during installation, but the mere thought of doing that is giving me a pause, so I really don&#x2019;t want to try and do that.And without doing that, we can&#x2019;t really support HTTPS. Remember that things like Let&#x2019;s Encrypt won&#x2019;t work here. RavenDB is often deployed on closed networks, and without having a publicly visible domain to run. My RavenDB is running on oren-pc.hrhinos.local, for example, and I think you&#x2019;ll find that it is a bit hard to get a Let&#x2019;s Encrypt certificate for this.So we can&#x2019;t just magically get a certificate and have it work. While I wish there was a way to just have encryption over the wire, without validation of identity, that would be pretty pointless with such things as man in the middle attacks.So what do we do in RavenDB 4.0 with regards to HTTPS? We rely on the admin (shocking, I know). They can either generate a self signed certificate and trust it ( a matter of a few shell commands on any platform ) or use their organization&#x2019;s certificate (either trusted internally or externally obtained). RavenDB doesn&#x2019;t care about that, but if you provide a certificate, it will ensure that all communication are SSL encrypted.The client API exposes a method that let you control certificate validation, which make it easier if you need to customize the authentication policy. On the server side, however, we take things differently. Instead of letting the user configure trust policies in certificates, we decided to ignore the issue completely. Or, to be rather more exact, to specify that RavenDB is going to lean on the operating system for such decisions. A simple scenario is an administrator that define a cluster of servers and generate a self signed certificate(s) for them to use. The administrator need to make sure that the certificate(s) in question are trusted by all nodes in the cluster. RavenDB will refuse to connect over HTTPS to an untrusted source. Yes, I&#x2019;m aware of all the horrible things that this can do (certificate expiration kills the system, for example), but we couldn&#x2019;t think of any way were not doing this wouldn&#x2019;t result in even worse situations. RavenDB has support for encrypted databases, but we don&#x2019;t allow them to be accessed from non secured connection, or to connect to non secure destinations. So the data is encrypted at rest and over the wire, and the admin is responsible to making sure that the certs are up to date and valid (or at least trusted by the machines in question).</p>
-        </article>
-        <article id="article-2689">
-            <a href="https://andrewlock.net/the-microsoft-aspnetcore-all-metapackage-is-huge-and-thats-awesome-thanks-to-the-net-core-runtime-store-2/" target="_blank">
-                <h2 class="title mb-6" id="article-2689">The Microsoft.AspNetCore.All metapackage is huge, and that&#x27;s awesome, thanks to the .NET Core runtime store</h2>
-            </a>
-            <p class="mb-2">by Andrew Lock</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 30, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The ASP.NET Core 2.0 preview 1 metapackage, Microsoft.AspNetCore.All, includes every package released as part of ASP.NET Core. This post looks at why.&#x2026;</p>
-        </article>
-        <article id="article-2690">
-            <a href="https://ayende.com/blog/178369/a-thread-per-task-keep-the-headache-away" target="_blank">
-                <h2 class="title mb-6" id="article-2690">A thread per task keep the headache away</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 29, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of very conscious choices we made in RavenDB 4.0 is to use threads. Not just run code that is multi threaded, but actively use the notion of a dedicated thread per task.In fact, most of the work in RavenDB (beyond servicing requests) is done by a dedicated thread. Each index, for example, has its own thread, transactions are merged and pushed using (mostly) a single thread. Replication is using dedicated threads, and so does the cluster communication mechanism. That runs contrary to advice that I have been told many times, that threads are expensive resource and that we should not hold up a thread if we can use async operations to give it up as soon as possible. And to a certain extent, I still very much believe it. Certainly all our request processing is using this manner. But as we got faster and faster we observed some really hard issues with using thread pools, since you can&#x2019;t rely on them executing a particular request in a given time frame, and having a mix bag of operations in a thread pool is a mix for slowing the whole thing down.Dedicated threads give us a lot of control and simplicity, from the ability to control the priority of certain tasks to the ability to debug and blame them properly.For example, here is how a portion of the threads on a running RavenDB server look like in the debugger:And done of our standard endpoints can give you thread timing for all the various tasks we do, so if there is an expensive thing going on, you can tell, and you can act accordingly. All of this has also led to an architecture that is mostly about independent thread doing their job in isolation, which means that a lot of the backend code in RavenDB doesn&#x2019;t have to worry about threading concerns. And debugging it is as simple as stepping through it. That isn&#x2019;t true for request processing threads, which are heavily async, so they are all doing mostly reads. Even when you are actually sending a write to RavenDB, what is actually happening is that we have the request thread parse the request, then queue it up for the transaction merging thread to actually process it. That means that there is usually little (if any) contention on locks throughout the system.It is a far simpler model, and it has proven itself capable of making a very complex system understandable and maintainable for us.</p>
         </article>
         <div class="button flex justify-between">
             <a href="268.html"><span class="back arrow"></span></a>
