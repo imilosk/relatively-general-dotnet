@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6091">
+            <a href="https://ayende.com/blog/3869/tracking-nh-prof-performance-problem-on-aggressively-active-application" target="_blank">
+                <h2 class="title mb-6" id="article-6091">Tracking NH Prof performance problem on aggressively active application</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 13, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned before that NH Prof has a problem with dealing with a lot of activity from the profiled application. In essence, until it catch up with what the application is doing, there isn&#x27;t much that you can do with the profiler. I consider this a bug, and I decided to track that issue with some verifiable results, and not just rely on hunches. The results were... interesting. The actual problem was in the place that I expected it to be, but it was more complex than expected. Let me try to explain. The general architecture of NH Prof is shown here:   And the actual trouble from the UI perspective is in the last stage, actually updating the UI. UI updates are done directly on a (very) rich view model, which supports a lot of the functionality that NH Prof provides. Because, as usual, we have to synchronize all access to the UI, we actually update the UI through a dispatcher class. The relevant code is this:  private void SendBatchOfUpdates()&#xA;{&#xA;&#x9;while (true)&#xA;&#x9;{&#xA;&#x9;&#x9;int remainingCount;&#xA;&#x9;&#x9;Action[] actions;&#xA;&#x9;&#x9;lock (locker)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;actions = queuedActions&#xA;&#x9;&#x9;&#x9;&#x9;.Take(100)&#xA;&#x9;&#x9;&#x9;&#x9;.ToArray();&#xA;&#xA;&#x9;&#x9;&#x9;for (int i = 0; i &lt; actions.Length; i&#x2B;&#x2B;)&#xA;&#x9;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;&#x9;queuedActions.RemoveAt(0);&#xA;&#x9;&#x9;&#x9;}&#xA;&#x9;&#x9;&#x9;remainingCount = queuedActions.Count;&#xA;&#x9;&#x9;}&#xA;&#xA;&#x9;&#x9;if (actions.Length == 0)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;Thread.Sleep(500);&#xA;&#x9;&#x9;&#x9;continue;&#xA;&#x9;&#x9;}&#xA;&#xA;&#x9;&#x9;dispatcher.Invoke((Action)delegate&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;using(dispatcher.DisableProcessing())&#xA;&#x9;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;&#x9;var sp = Stopwatch.StartNew();&#xA;&#x9;&#x9;&#x9;&#x9;foreach (var action in actions)&#xA;&#x9;&#x9;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;action();&#xA;&#x9;&#x9;&#x9;&#x9;}&#xA;&#x9;&#x9;&#x9;&#x9;Debug.WriteLine(remainingCount &#x2B; &quot;\t&quot; &#x2B; sp.ElapsedMilliseconds);&#xA;&#x9;&#x9;&#x9;}&#xA;&#x9;&#x9;});&#xA;&#x9;}&#xA;}&#xA;We queue all the operations on the view model, batch them and execute them to the UI. This is the behavior as it stands right now (that is, with the problem). Looking at the code, is should be obvious to you that there is one glaring issue. (Well, it should be oblivious, it wasn&#x27;t to me until I dug deeper into it.)&#xA;If the number of queued actions is greater than the batch size, we are going to try to drain the queue, but as long as we add more actions to the queue faster than we can process them, we are going to keep hammering the UI, we basically keep the UI busy with updates all the time, and never let it time to process user input.&#xA;Note the debug line in the end, from that, I can generate the following graph:&#xA; &#xA;For the duration line, the number is the number of milliseconds it took to process a batch of 100 items, for the red line, this is the number of items remaining in the queue that we need to drain. You can clearly see the spikes in which more work was added to the queue before we could deal with that.&#xA;You can also see that doing the actual UI work is slow. In many cases, it takes hundreds of milliseconds to process, and at times, it takes seconds to run. That is because, again, we have a very rich view model, and a lot of stuff is bound to that.&#xA;Before I can go forward, I need to describe a bit how NH Prof actually talks to the UI. Talking to the UI is done by raising events when interesting things happen. The problem that I initially tried to solve was that my input model is a stream of events, and it mapped nicely to updating the UI when I got the information.&#xA;Let us say that we want opened a session, executed a single SQL statement, and then closed the session. What are the implication from UI marshalling?&#xA;&#xA;Create new session&#xA;Add new statement&#xA;Add alert, not running in transaction&#xA;Update statement with parsed SQL&#xA;Update statement with row count&#xA;Add alert, unbounded row set&#xA;Update statement duration&#xA;Close session&#xA;Update session duration&#xA;So for the simplest scenario, we have to go to the UI thread 9 times. Even when we batch those calls, we are still end up going to the UI thread too often, and updating the UI frequently. That, as I mentioned, can take time.&#xA;Now, a very easy fix for the problem is to move the thread sleep above the if statement. That would introduce a delay in talking to the UI, letting the UI time to catch up with user input. This would make the application responsive during periods where the actions to perform in the UI.&#xA;The downside is that while this works, it means slow stream of updates into the application. That is actually acceptable solution, except that this is the same situation that we find ourselves with when we are dealing with processing an offline profiling session. When those are big, it can take really long time to process those.&#xA;Therefor, this is not a good solution.&#xA;A much better solution would be to reduce the number of times that we go to the UI. We can reduce the number of going to the UI significantly by changing the process to:&#xA;&#xA;Create new session&#xA;Add new statement (with alerts, parsed SQL, row count and duration)&#xA;Close session (with duration)&#xA;That requires some changes to the way that we work, but those are actually good changes.&#xA;This is not quite enough, though. We can do better than that when we realize that we actually only show a single session at a time. So most often, we can reduce the work to:&#xA;&#xA;Create new session&#xA;Close Session (with duration, number of statements, alerts aggregation, etc)&#xA;If we also add batching to the mix, we can reduce it further to:&#xA;&#xA;Create new session &amp; close it (with duration, number of statements, alerts aggregation, etc)&#xA;We have to support both of them, because we need to support both streaming &amp; debugging scenarios. &#xA;We don&#x27;t need to let the UI know about the statements, we can give it to the UI when it asks us about them, when you select a session in the sessions list.&#xA;And now, when we are looking at a session, we can raise an event only for that session, when a statement is added to that session. As an added bonus, we are going to batch that as well, so we will update the UI about this every .5 seconds or so. At that point, we might as well do an aggregation of the changes, and instead of sending just the new statement, we can send a snapshot of the currently viewed session. The idea here is that if we added several statements, we can reduce the amount of UI work we have to do by making a single set of modifications to the UI.&#xA;Thoughts? &#xA;Oh, and do you care that I am doing detailed design for NH Prof problems on the blog?</p>
+        </article>
+        <article id="article-6092">
             <a href="https://ayende.com/blog/3868/challenges-when-building-nh-prof" target="_blank">
-                <h2 class="title mb-6" id="article-6091">Challenges when building NH Prof</h2>
+                <h2 class="title mb-6" id="article-6092">Challenges when building NH Prof</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Right now, we have one challenge with building NH Prof: making the UI scale to what people are actually using. The problem that we face is:  A profiled application is generating a lot of events. Many of those events are relevant to the profiler and so result in UI Model changes. UI Model changes require UI refresh. There is a limit on how often you can refresh the UI. It is not just a matter of the UI being incredibly slow. (Try it, UI is about as slow as remote system calls!) That problem we already solved with batching and aggregation. The problem is deeper than that, how do you keep a good UI experience when you have so many changes streaming into the UI. If my recent statements list is updated 5000 in the space of one minute, there is no value in actually showing anything there, because you don&#x27;t get to see that. We are thinking about various ways of handling that, but I would appreciate additional input. How do you think we should deal with this issue?</p>
         </article>
-        <article id="article-6092">
+        <article id="article-6093">
             <a href="https://ayende.com/blog/3867/ayendes-open-source-project-maturity-model" target="_blank">
-                <h2 class="title mb-6" id="article-6092">Ayende&#x27;s Open Source Project Maturity Model</h2>
+                <h2 class="title mb-6" id="article-6093">Ayende&#x27;s Open Source Project Maturity Model</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">From my point of view, there is a very easy model for the maturity of an Open Source project. Look at the answers in the project&#x27;s mailing list. The questions do no matter. The model is simple, the higher the percentage of answers given by non project members, the more mature the project is.</p>
         </article>
-        <article id="article-6093">
+        <article id="article-6094">
             <a href="https://ardalis.com/azure-table-storage-gotcha/" target="_blank">
-                <h2 class="title mb-6" id="article-6093">Azure Table Storage Gotcha</h2>
+                <h2 class="title mb-6" id="article-6094">Azure Table Storage Gotcha</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Steve Marx gave a great talk on getting started with Azure at PDC. You can watch the whole thing here and download his samples. Once you&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6094">
+        <article id="article-6095">
             <a href="https://ardalis.com/asp-net-mvc-request-validation/" target="_blank">
-                <h2 class="title mb-6" id="article-6094">ASP.NET MVC Request Validation</h2>
+                <h2 class="title mb-6" id="article-6095">ASP.NET MVC Request Validation</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When using ASP.NET MVC to post data that might contain HTML or other potentially &#x201C;dangerous&#x201D; data, the default behavior as of the Release&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6095">
+        <article id="article-6096">
             <a href="https://ayende.com/blog/3866/raising-the-level-of-abstraction" target="_blank">
-                <h2 class="title mb-6" id="article-6095">Raising the level of abstraction</h2>
+                <h2 class="title mb-6" id="article-6096">Raising the level of abstraction</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Right now I am working with a co-worker, and I realized that I am:     Using Mac OS    Running Windows in VMWare Fusion     To connect via SharedView to a remote machine    To connect via remote desktop to another machine    Which is also a virtual instance   And I wonder about the latency&#x2026;</p>
         </article>
-        <article id="article-6096">
+        <article id="article-6097">
             <a href="https://ayende.com/blog/3865/find-the-bug" target="_blank">
-                <h2 class="title mb-6" id="article-6096">Find the bug</h2>
+                <h2 class="title mb-6" id="article-6097">Find the bug</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Can you tell me what is the bug in this piece of code?   Note, this is not a configuration or deployment error. This is a bug.</p>
         </article>
-        <article id="article-6097">
+        <article id="article-6098">
             <a href="https://ayende.com/blog/3864/rhino-dht-when-replication-test-pass" target="_blank">
-                <h2 class="title mb-6" id="article-6097">Rhino DHT - When replication test pass</h2>
+                <h2 class="title mb-6" id="article-6098">Rhino DHT - When replication test pass</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">And now this works:</p>
         </article>
-        <article id="article-6098">
+        <article id="article-6099">
             <a href="https://ayende.com/blog/3863/laughing-in-code" target="_blank">
-                <h2 class="title mb-6" id="article-6098">Laughing in code</h2>
+                <h2 class="title mb-6" id="article-6099">Laughing in code</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am not sure that this will make any sort of sense world wide, but Israeli coders should have a chuckle or two over this:</p>
         </article>
-        <article id="article-6099">
+        <article id="article-6100">
             <a href="https://ardalis.com/interview-on-performance/" target="_blank">
-                <h2 class="title mb-6" id="article-6099">Interview on Performance</h2>
+                <h2 class="title mb-6" id="article-6100">Interview on Performance</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: February 09, 2009
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last month at CodeMash I met with David Giard who decided to do an impromptu interview on the topic of web site performance. He just let me&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-6100">
-            <a href="https://ardalis.com/idisposable-and-wcf/" target="_blank">
-                <h2 class="title mb-6" id="article-6100">IDisposable and WCF</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 09, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently we&#x2019;ve been separating our monolithic application into smaller systems which communicate via services. We&#x2019;re using WCF for this&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="609.html"><span class="back arrow"></span></a>
