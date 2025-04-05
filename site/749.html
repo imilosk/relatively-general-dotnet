@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-7481">
+            <a href="https://ayende.com/blog/2732/dependency-injection-in-a-dynamic-environment" target="_blank">
+                <h2 class="title mb-6" id="article-7481">Dependency Injection in a Dynamic Environment</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 23, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Scott Bellware&#xA0;joins the DI discussion from a completely different angel, the dynamic language point of view:  The level of abstraction that we work at in .NET is appropriate to explicit inversion of control and thus dependency injection.&#xA0; To make type mocking your main method of achieving testability in .NET development will drive your designs increasingly sap the maintainability of your code.&#xA0; Maintainability and agility in a static environment are mostly the effect of applying appropriate static design patterns for static development.&#xA0; [...snip...] The difference in my comfort level in doing this has a lot to do with the fact that I&#x27;m usually coding (and thus mocking) at the abstraction level of the Rails framework&#x2019;s DSLs rather than lower down at the level of an API or a static Domain Model. I think that the key here is the level in which you are working at a given moment. It is fairly easy to add cross cutting support for DI in my domain entities, but that is something that I wouldn&#x27;t want to do. I am using DI mainly in controllers, services and commands, because injecting services to entities is something that looks... strange to me. I like my entities to be able to stand up on their own.  Minor note: I have something that I don&#x27;t know how to call, which bridge the entities business logic and the required services. It is usually expressed in the terms of the domain, and is directly exposed to the entities, but usually as a parameter for methods, and the like. I have written a few DSL and my share of fluent interfaces, and I think that while there is a lot of value in having a DSL (and a dynamic environment), a good API can cover a lot of ground.  As a side note, he also mentions this:  Beneath the DSL is an API and a framework that has all kinds of OO design goodness, but unlike working with a Rails clone in .NET, I don&#x27;t often have to have to see the vestiges of the framework&#x27;s uses of dependency injection in my application code. I usually divide my applications to several layers: infrastructure, entities, services, controllers, etc. Of those, the layer that is most likely to be exposed to the messy details of real world coding is the infrastructure layer. The rest of those are expressed in terms of the current context, and that works fairly well. The main use of DI in those layers is for constructor injection (I am not fond of setters injection in general) and not much more. In fact, as someone who is part of a Rails-inspired project, I disagree with this statement. I find that I often can write the code in a way that make sense for the layer and context that I find myself in. Here is a small example for your critique: public virtual bool AddNewPolicy()&#xA;{&#xA;&#x9;using (RhinoTransaction transaction = UnitOfWork.Current.BeginTransaction())&#xA;&#x9;{&#xA;&#x9;&#x9;Policy policy = BuildPolicy();&#xA;&#xA;&#x9;&#x9;if (ValidatorRunner.IsValid(Policy))&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;if (!ValidateThatUserIsAuthorizedToSavePolicy(policy))&#xA;&#x9;&#x9;&#x9;&#x9;return false;&#xA;&#x9;&#x9;&#x9;if (AddValidPolicy(policy))&#xA;&#x9;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;&#x9;transaction.Commit();&#xA;&#x9;&#x9;&#x9;&#x9;SetupRedirect(Policy);&#xA;&#x9;&#x9;&#x9;&#x9;return true;&#xA;&#x9;&#x9;&#x9;}&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;else&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;Scope.ErrorSummary = ValidatorRunner.GetErrorSummary(policy);&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;return false;&#xA;&#x9;}&#xA;}&#xA;&#xA;private bool AddValidPolicy(Policy policy)&#xA;{&#xA;&#x9;Repository&lt;Policy&gt;.Save(policy);&#xA;&#x9;UnitOfWork.Current.Flush(); //ensure that it will have an id&#xA;&#x9;try&#xA;&#x9;{&#xA;&#x9;&#x9;CallWebServiceInsert(policy);&#xA;&#x9;}&#xA;&#x9;catch (Exception e)&#xA;&#x9;{&#xA;&#x9;&#x9;Log.Error(&quot;Failed to insert policy using web service&quot;, e);&#xA;&#x9;&#x9;Scope.ErrorMessage = string.Format(&#xA;&#x9;&#x9;&#x9;Resources.CouldNotInsertPolicyToBackEndService,&#xA;&#x9;&#x9;&#x9;e.Message&#xA;&#x9;&#x9;&#x9;);&#xA;&#x9;&#x9;return false;&#xA;&#x9;}&#xA;&#x9;Usage.NewPolicyCreated(policy);&#xA;&#x9;return true;&#xA;}&#xA;I don&#x27;t like the explicit transaction management here, but I had a special case of needing to coordinate an explicit (and expected) failure case, and that was the simplest solution to that. This is a controller&#x27;s method, and the reason that it is returning a bool is for a check in the UI layer that would show the error message if necessary. Exception semantics usually stops at the controller, as far as I am concerned. &#xA;&#xA;By the way, there is a line here that I didn&#x27;t written, can you spot it?&#xA;I know that CRUD based example is not the best I could give, but I don&#x27;t think that even this is encumbered by infrastructure concerns. Then again, I never did more than a sample app in rails, so it is entirely possible that I missing things (and I would like to hear about that).&#xA;He then goes on to say:&#xA;&#xA;As for dependency injection, I&#x27;m simply bloody sick of it.&#xA0; The vestiges of dependency wiring have no business in application code.&#xA;I would agree, except that my term for application code are the entities and controllers (maybe services). Like threading, DI is something that I would like to keep to infrastructure code only.&#xA;I would like to offer some educated guesses that may turn to be completely wrong, but I am guessing that while the need for DI is lessened in dynamic environments (I want method missing too, damn it!), you still need some sort of dependencies management, if only to provide a way to handle this as applications grow.&#xA;The main problem is that when you have several ways to tackle the same problem in different ways (handling logins for dev, staging, production is a good sample), or need to handle life cycle.</p>
+        </article>
+        <article id="article-7482">
             <a href="https://ayende.com/blog/2731/dependency-injection-separating-the-container" target="_blank">
-                <h2 class="title mb-6" id="article-7481">Dependency Injection</h2>
+                <h2 class="title mb-6" id="article-7482">Dependency Injection</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In a previous post, I made the statement that I believe that using an IoC container should be transparent to the application code, and that a good IoC can and should be invisible to anything but the Main() method. I would like to expand a bit on this topic, cover the sample problem that Tobias had brought up:  I never could achieve this and I&#x27;m wondering, what you mean by this statement. There a are always a lot of references to the DI/IoC container throughout the application. E.g. each IView that needs to be created to show a WinForm requires to ask the Container to give me the instances:  &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ObjectFactory.GetInstance&lt;IMyView&gt;()  It might be an IController as well and IView is automatically resolved by the container, but as long as I need to instantiate new objects dynamically, I need to reference the IoC container at serveral places outside Main(). Maybe in very simple cases, the whole object tree required during the lifecycle of the application can be set up in Main().  Tobias has indeed hit the nail on the head, lifecycle issues are the one thing that can cause a lot of issues there. I would preface this by saying that I do not always follow this advice fully, and I have no compunctions about using the IoC as a service locator where appropriate, but I would try to limit it to the infrastructure part of the application only. In this scenario, what I would generally do is define something like this: // infrastructure service&#xA;public interface IRedirectionService&#xA;{&#xA;&#x9;IRedirectionOperation To&lt;TController&gt;();&#xA;}&#xA;And then use it like this:&#xA;Redirection&#xA;  .To&lt;OrderController&gt;()&#xA;  .ActivateAndWait();&#xA;It depends on the given scenario, but in this case, I am handing control from one controller to the other, and waiting until the second controller is done doing its job (think about it like modal dialog).&#xA;The Redirection Service is responsible for creating the controller / view (or find them if they are already active), and activate them.&#xA;IoC &amp; DI are under the cover, but I don&#x27;t have it in my face, and I have nice API against which I can work.</p>
         </article>
-        <article id="article-7482">
+        <article id="article-7483">
             <a href="https://ayende.com/blog/2730/shattered-aspects" target="_blank">
-                <h2 class="title mb-6" id="article-7482">Shattered Aspects</h2>
+                <h2 class="title mb-6" id="article-7483">Shattered Aspects</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Aspect Orientation is a way to structure your application so that some concerns (usually cross cutting, mostly infrastructure) are handled transparently by the framework you are running on. The classic examples are logging &amp; auditing, but I am using it for transactions, thread safety, mocking, resource cleanup, validation and more. It is a good tool to have, and it can make some things very easy to handle.* I am writing this post because I have dealt with AoP and derivatives quite often in the recent past, and I&#xA0;had some minor part in building some tools which are key for &#xA0;Aspect Orientation in .Net (Dynamic Proxy). The problem with AOP on the CLR is that it requires extra steps on the part of the developer to get to it.  The CLR doesn&#x27;t support AOP, and considering the need ** for that, it is fairly surprising that it isn&#x27;t there. Furthermore, it seems like there is no intention to add that to the CLR. This is especially problematic in light of the non-virtual by default that we have in most CLR languages. Since the platform doesn&#x27;t give us AOP out of the box, we are left with hacks &amp; half measures. Dynamic Proxy, the Policy Injection Block, partial methods and the like are all things that have been built because AOP is the correct answer to a certain class of problems. Considering that two of those are coming from Microsoft, I would like to see this being turned into giving us true AOP capabilities baked into the platforms. There are 7 overall approaches to AOP in .Net, all of them has some serious limitations, and the ones that do give me what I would consider true AOP require that I would use the profiling / debugging API (special launcher, COM API, complex) or do IL re-weaving, which is simply hard &amp; unproductive.&#xA0; I am doing some work on Dynamic Proxy, and I can tell you up front that trying to workaround some of the issues there is very hard. That should be a service offered by the platform, not something that I would need to supply. Nitpicker corner: * Nevertheless, Aspect Orientation is not a Silver Bullet. ** You might not feel the need in your application, but I do. Rhino Mocks is entirely built on the idea of method interception, which is a core part of what AOP needs.</p>
         </article>
-        <article id="article-7483">
+        <article id="article-7484">
             <a href="https://ayende.com/blog/2729/useful-lies-about-javascript-prototype-model" target="_blank">
-                <h2 class="title mb-6" id="article-7483">Useful lies about JavaScript Prototype Model</h2>
+                <h2 class="title mb-6" id="article-7484">Useful lies about JavaScript Prototype Model</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Note: This is not how it works, but it is close enough that it is a valid mental model for most scenarios. When I think about JavaScript and its type system, I usually envision objects as hash tables that can carry values or functions. The prototype idea is just an associated hash table, and so on. The moment that I settled on this mental model, it was much easier to grok javascript. Now, that is a vague explanation if I ever heard one, so let us speak in code: public class Object&#xA;{&#xA;&#x9;private readonly Dictionary&lt;string, Procedure&gt; functions &#xA;&#x9;&#x9;= new Dictionary&lt;string, Procedure&gt;();&#xA;&#x9;private Object prototype;&#xA;&#xA;&#x9;public Object Prototype&#xA;&#x9;{&#xA;&#x9;&#x9;get&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;if(prototype==null)&#xA;&#x9;&#x9;&#x9;&#x9;prototype = new Object();&#xA;&#x9;&#x9;&#x9;return prototype;&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;set { prototype = value; }&#xA;&#x9;}&#xA;&#xA;&#x9;public Procedure this[string name]&#xA;&#x9;{&#xA;&#x9;&#x9;get&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;if (functions.ContainsKey(name))&#xA;&#x9;&#x9;&#x9;&#x9;return functions[name];&#xA;&#x9;&#x9;&#x9;if (prototype != null &amp;&amp; prototype.functions.ContainsKey(name))&#xA;&#x9;&#x9;&#x9;&#x9;return prototype[name];&#xA;&#x9;&#x9;&#x9;throw new InvalidOperationException(&quot;No function called &quot; &#x2B; name);&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;set { functions[name] = value; }&#xA;&#x9;}&#xA;}&#xA;&#xA;This is a simple example of the matter, and here is how you can use it, if you ignore the fact that C# doesn&#x27;t have any useful duck typing, then this code looks very much like the one that you would write in JavaScript:&#xA;Object obj = new Object();&#xA;obj[&quot;on_change&quot;] = delegate { Console.WriteLine(&quot;changed&quot;); };&#xA;&#xA;obj.Prototype[&quot;on_load&quot;] = delegate { Console.WriteLine(&quot;loaded from prototype&quot;); };&#xA;&#xA;&#xA;obj[&quot;on_change&quot;]();&#xA;obj[&quot;on_load&quot;]();&#xA;&#xA;//&quot;overriding&quot; the prototype method&#xA;obj[&quot;on_load&quot;] = delegate{ Console.WriteLine(&quot;loaded from object&quot;); };&#xA;&#xA;obj[&quot;on_load&quot;]();&#xA;&#xA;obj[&quot;missing_method&quot;]();//will throw</p>
         </article>
-        <article id="article-7484">
+        <article id="article-7485">
             <a href="https://ayende.com/blog/2728/ayende-vs-microsoft-crm-round-3-goes-to-ayende" target="_blank">
-                <h2 class="title mb-6" id="article-7484">Ayende vs. Microsoft CRM: Round 3 goes to Ayende!</h2>
+                <h2 class="title mb-6" id="article-7485">Ayende vs. Microsoft CRM: Round 3 goes to Ayende!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After a heoric struggle, I managed to get the local development story against MS CRM working. This means that I can use the normal semantics of develop locally and then deploy, instead of centralized development. That said, there is something very wrong in a solution that requires me to take action in the TCP stack level to get a normal development story going.</p>
         </article>
-        <article id="article-7485">
+        <article id="article-7486">
             <a href="https://ayende.com/blog/2727/searching-for-ddd-code-for-reading" target="_blank">
-                <h2 class="title mb-6" id="article-7485">Searching for DDD code for reading</h2>
+                <h2 class="title mb-6" id="article-7486">Searching for DDD code for reading</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This may sound strange, but I want to read some DDD code, and I am sure where I can find some. There frameworks code is available all over the place, but DDD is often practiced inside a business app, which rarely has the source available. Preferably, it is something more than an example application.Any suggestions?</p>
         </article>
-        <article id="article-7486">
+        <article id="article-7487">
             <a href="https://ayende.com/blog/2726/interviewing-developers" target="_blank">
-                <h2 class="title mb-6" id="article-7486">Interviewing developers</h2>
+                <h2 class="title mb-6" id="article-7487">Interviewing developers</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My post about two (PHP) code samples that I got from people that I interviewed got a lot of comments, so instead of answering them one by one, I am going to answer them here. The post had a two code samples, one from a coder with 8 years experience, the second from a sysadmin that wants to move to development. Suffice to say that the sample from the coder with 8 years under his belt is atrocious.  Mostly, the comments tended to be:  Why am I interviewing PHP programmers?My company is also doing head hunting / recruitment, interviewing people is part of the job.  The sysadmin code looks good on the surface, but it is has problems. (and then listing the problems, in many detailed and interesting ways).The sysadmin code is not perfect by any means, but it is structured, it shows basic understanding of how things work, and the rest can be handled. That guy can learn to write good code. That isn&#x27;t code that I would write, or would accept in my projects, but that is a very good start for the first steps.  But a lot of people said that the first code sample is a quick &amp; dirty solution to the problem at hand, some actually took offence at the idea. If I interview someone for a position that include working with code (in fact, if the CV include any programming language whatsoever), you write code, period. The reasoning is that there are plenty that can talk the talk, but literally can&#x27;t code.&#xA0;And looking at your code means that you get a lot of insight on how that person write code and how they think. Now, here is an observation, you tend to write code in the same way no matter in what scenarios you are. Writing sloppy code in an interview is something that is a strong indication for a sloppy coder. That is not the only indication that I use, but it is certainly a significant one. Given a choice between an experienced&#xA0;sloppy coder and an inexperienced&#xA0;one, I know who I would rather hire. Now, to those who claimed that such questions are insulting, I am usually trying to fit the question to the person that I am interviewing (so a team lead would get something more interesting), but the key thing to remember is that I am not looking at the solution itself, I am looking at everything that they have around that.  I want to say that code style isn&#x27;t something that I considering, but that would be a lie. I expect that the candidate would have some sort of a code style, and that it would be internally consistent. Beyond that, I don&#x27;t really care if it spaces vs. tabs and where the curly go. But if there isn&#x27;t a coding style that the candidate adheres to, that is something quite alarming.  Oh, and here is a secret that would make the argument more interesting, I don&#x27;t program in PHP. The last time that I had to use that was when I tried to modify a bug tracker in PHP, and that was about two and a half years ago (the dot operator for string concat drives me crazy).  Just to remind people, my purpose in posting that was to talk a bit the difference between &quot;experience&quot; and quality.</p>
         </article>
-        <article id="article-7487">
+        <article id="article-7488">
             <a href="https://ayende.com/blog/2725/how-to-test-for-sql-injections" target="_blank">
-                <h2 class="title mb-6" id="article-7487">How to test for SQL Injections</h2>
+                <h2 class="title mb-6" id="article-7488">How to test for SQL Injections</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Not only does this snippet effective in finding simple SQL Injection attacks:   &#xA0;The side effects are highly reduced ratio of second offences, and a sudden improvement in backup practices. Now if I could fix the weeping issue...</p>
         </article>
-        <article id="article-7488">
+        <article id="article-7489">
             <a href="https://ardalis.com/reset-visual-studio-settings/" target="_blank">
-                <h2 class="title mb-6" id="article-7488">Reset Visual Studio Settings</h2>
+                <h2 class="title mb-6" id="article-7489">Reset Visual Studio Settings</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x27;re working with Visual Studio 2008 (Orcas) Beta builds, of which there are now two, you may have run into problems if you tried to&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-7489">
+        <article id="article-7490">
             <a href="https://ayende.com/blog/2724/a-session-that-i-would-like-to-see" target="_blank">
-                <h2 class="title mb-6" id="article-7489">A session that I would like to see</h2>
+                <h2 class="title mb-6" id="article-7490">A session that I would like to see</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: August 21, 2007
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I get to see a lot of session listing about new technology, and I am getting tired of getting of seeing the entire list filled with new technology, as if that is the most important thing. I stole the idea from Udi, but something that I would like to see in those conferences is a talk like this:  Designing For Forward Comparability -&#xA0;or, what to do the next time MS changes the data access paradigm</p>
-        </article>
-        <article id="article-7490">
-            <a href="https://ayende.com/blog/2723/complex-problems-in-a-dynamic-environment" target="_blank">
-                <h2 class="title mb-6" id="article-7490">Complex problems in a dynamic environment</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: August 21, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My last post made me think about how it is best to approach a problem in a dynamic environment. The problem that I have in mind is the one I solved with IoC and static typing here. The problem is as follows:  You have several customers, each of them has its own database, with its own schema, data and behaviors, There is a common ground between the customers, but each does (different things!) differently. You need to handle each incoming user according to its associated customer. For the purpose of discussion, let us say that we want to list all employees that are direct subordinates for the current user, where the employee&#x27;s names and their associations to their manager can change based on the customer. How would you approach such an issue using Ruby? This is not an idle question, I had to face such a task, and it is complex in the infrastructure layer, but still let me use clear, intention revealing code in most cases.</p>
         </article>
         <div class="button flex justify-between">
             <a href="748.html"><span class="back arrow"></span></a>

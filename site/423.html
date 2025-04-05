@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4221">
+            <a href="https://ayende.com/blog/161251/ravendb-feature-request-analysis-filtered-replication-aint-what-you-looking-for" target="_blank">
+                <h2 class="title mb-6" id="article-4221">RavenDB Feature Request Analysis: Filtered Replication ain&#x2019;t what you looking for</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 11, 2013
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Every so often we get a request for filtered replication. &#x201C;I want to replicate to this node, but only those documents.&#x201D; We explain that replication is a whole database kind of thing, you can&#x2019;t just pick &amp; choose what you want. That isn&#x2019;t actually true, we have facilities to do filtering, and it would be fairly easy to expose them. We don&#x2019;t intend to do so. And the reason why is that the customer asking the question is usually starting asking us question from midway. He read about replication, thought that it would be a good fit for a particular scenario, if only it had that feature. Except that this is completely the wrong feature to use for the scenario at hand. And usually it takes a little back &amp; forth to figure out what the scenario actually is. For the most part, the scenarios for this feature are all about synchronizing data between two nodes*. In particular, that is often a use case for: &#x201C;I have a mobile client and I want to replicate some of the data to that laptop&#x201D;, or some such. And this is where things gets complex. To start with, you say, let us just filtered the data where CustomerId = &#x201C;customers/5&#x201D;. Except that you need to apply this logic for each entity type in the database, and they usually have different rules about them. For example, you may have common reference data that you would want to replication, even though they don&#x2019;t belong to customers/5. And invoices may have CustomerId property, but customers does not, so you need to define that for customers, it is the Id that you want to filter by, etc. To make things even more interesting, you need to consider the case where the sync filter have changed, (this user now have access to &#x201C;customers/5&#x201D; and &#x201C;customers/6&#x201D;). At which point, you pretty much have to go and go through the entire data set again. Then we move to the question of updates, how are those handled? What about conflicts? How do you handle disconnected clients that may move between addresses and ips all the time? Who maintains this operation? The client? The server? How about disconnected updates? In short, it is a very different discussion that you need to have, and just exposing the replication filters won&#x2019;t be that. * Nitpicker corner: yes, I know about MS Sync.</p>
+        </article>
+        <article id="article-4222">
             <a href="https://ayende.com/blog/161281/robs-sprint-the-cost-of-getting-data-from-leveldb" target="_blank">
-                <h2 class="title mb-6" id="article-4221">Rob&#x2019;s Sprint: The cost of getting data from LevelDB</h2>
+                <h2 class="title mb-6" id="article-4222">Rob&#x2019;s Sprint: The cost of getting data from LevelDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are currently investigating the usage of LevelDB as a storage engine in RavenDB. Some of the things that we feel very strongly about is transactions (LevelDB doesn&#x2019;t have it) and performance (for a different definition of the one usually bandied about). LevelDB does have atomicity, and the rest of CID can be built atop of that without too much complexity (already done, in fact). But we run into an issue when looking at the performance of reading. I am not sure if that is unique or not, but in our scenario, we typically deal with relatively large values. Documents of several MB are quite common. That means that we are pretty sensitive to memory allocations. It doesn&#x2019;t help that we have very little control on the Large Object Heap, so it was with great interest that we looked at how LevelDB did things. Reading the actual code make a lot of sense (more on that later, I will probably go through a big review of that). But there was one story that really didn&#x2019;t make any sense to us, reading a value by key. We started out using LevelDB Sharp:  Database.Get(&quot;users/1&quot;); This in turn result in the following getting called:  A few things to note here. All from the point of view of someone who deals with very large values.  valuePtr is not released, even though it was allocated by us. We copy the value from valuePtr into a string, resulting in two copies of the data and twice the memory usage. There is no way to get just partial data. There is no way to get binary data (for example, encrypted) This is going to be putting a lot of pressure on the Large Object Heap. But wait, it actually gets better. Let us look at the LevelDB method that get called:  So we are actually copying the data multiple times now. For fun, the db-&gt;rep-&gt;Get() call also copy the data. And that is pretty much where we stopped looking. We are actually going to need to write a new C API and export that to be able to make use of that in our C# code. Fun, or not.</p>
         </article>
-        <article id="article-4222">
+        <article id="article-4223">
             <a href="https://ayende.com/blog/161346/robs-sprint-result-transformers" target="_blank">
-                <h2 class="title mb-6" id="article-4222">Rob&#x2019;s Sprint: Result Transformers</h2>
+                <h2 class="title mb-6" id="article-4223">Rob&#x2019;s Sprint: Result Transformers</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">By far the most confusing feature in RavenDB has been the index&#x2019;s Transform Result. We introduced this feature to give the user the ability to do server side projections, including getting data from other documents.  Unfortunately, when we introduced this feature, we naturally added it to the index, and that cause a whole lot of confusion. In particular, people seemed to have a very hard time distinguishing between what get indexed and is searchable and the output of the index. To make matters worse, we also had major issues with how to determine the input of the TransformResults function. In short, the entire thing works, but from the point of view of an external user, that is really something that is very finicky and hard to get. Instead, during Rob&#x2019;s sprint, we have introduced a totally new concept. Stand-alone Result Transformers. Here is what they look like: public class OrdersStatsTransfromer : AbstractTransformerCreationTask&lt;Order&gt;&#xA;{&#xA;    public OrdersStatsTransfromer()&#xA;    {&#xA;        TransformResults = orders =&gt;&#xA;                           from order in orders&#xA;                           select new&#xA;                           {&#xA;                               order.OrderedAt,&#xA;                               order.Status,&#xA;                               order.CustomerId,&#xA;                               CustomerName = LoadDocument&lt;Customer&gt;(order.CustomerId).Name,&#xA;                               LinesCount = order.Lines.Count&#xA;                           };&#xA;    }&#xA;}&#xA;&#xA;&#xA;And yes, they are quite intentionally modeled to be very similar to the way you would define them up to now, but outside of the index.&#xA;Now, why is that important? Because now you can apply a Transform Results on the server side without being tied to a customer.&#xA;For example, let us see how we can make use of this new feature:&#xA;var customerOrders = session.Query&lt;Order&gt;()&#xA;    .Where(x =&gt; x.CustomerId == &quot;customers/123&quot;)&#xA;    .TransformWith&lt;OrdersStatsTransfromer, OrderViewModel&gt;()&#xA;    .ToList();&#xA;&#xA;&#xA;&#xA;This separation between the result transformer and the index means that we can apply it to things like automatic indexes as well. &#xA;In fact, we can apply it during load:&#xA;var ovm = session.Load&lt;OrdersStatsTransfromer, OrderViewModel&gt;(&quot;orders/1&quot;);&#xA;&#xA;&#xA;There are a whole bunch of other goodies in there, as well. We made sure that now you don&#x2019;t have to worry about the inputs to the transform. We will automatically use the right values when you access them, based on whatever you stored the field in the index or if it is accessible on the document.&#xA;All in all, this is a very major step forward, and it makes it drastically easier to use Result Transformers in various ways.</p>
         </article>
-        <article id="article-4223">
+        <article id="article-4224">
             <a href="https://ayende.com/blog/161283/robs-sprint-query-optimizer-jumped-a-grade" target="_blank">
-                <h2 class="title mb-6" id="article-4223">Rob&#x2019;s Sprint: Query optimizer jumped a grade</h2>
+                <h2 class="title mb-6" id="article-4224">Rob&#x2019;s Sprint: Query optimizer jumped a grade</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB&#x2019;s query optimizer is pretty smart, it knows how to find the appropriate index for your queries, and even create a new index to match your query if it didn&#x2019;t exist. But that was the limits of its abilities. A human could still go into the database and say, look at those:  Those all operate on Posts, and you should be able to merge them all into a single index. Reducing the number of indexes is a good thing, as it reduces the amount of IO on the system, which is typically our limiting factor. Now, there was no real reason why we couldn&#x2019;t actually tell the query optimizer that it should be smart enough that when it creates a new index, it will use all of the properties that have been previously indexed. However, doing so would actually make no difference to us. Because until now, we didn&#x2019;t have a way to stop an index. With the new index idling feature, we can now have the query optimizer create a new merged index, and then the database will just mark the extra index as idle after a while. Almost, there is still another issue that we have to resolve. What happens when we have a big database, and we introduce a new (and wider) index? By default, all matching queries would actually hit that index, and not the previously existing index. That is great, except&#x2026; the new index is stale, and might remain stale for a few minutes. During that time, we have a perfectly servicable index that is just sitting there. The query optimizer can now take into account the staleness level of an index as well when selecting it, meaning that there should be no interruption from the point of view of other queries. The new index will be introduced, go through all the documents, and then take over as the serving index for all queries. The existing index will wither away and die.</p>
         </article>
-        <article id="article-4224">
+        <article id="article-4225">
             <a href="https://ayende.com/blog/161282/robs-sprint-faster-index-creation" target="_blank">
-                <h2 class="title mb-6" id="article-4224">Rob&#x2019;s Sprint: Faster index creation</h2>
+                <h2 class="title mb-6" id="article-4225">Rob&#x2019;s Sprint: Faster index creation</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB previously had a really nice feature for temporary indexes. Since we expected most of them to be temporary, we indexed them directly into memory, greatly saving in IO costs. With the removal of temporary indexes, that left us the option of just removing the entire code path and moving on to other things. But we sat down and thought about this for a while. Typically, the busiest part in the index&#x2019;s life is its creation, because the database needs to go through all the documents in the db and index them. We have changed things so during this creation period, we will actually index to memory, without hitting the disk. Only if we reached a configurable size or finished indexing everything will we spill everything to disk. This, in turn, gives us the best of both worlds. We get a really nice optimization for new indexes, and we don&#x2019;t have to hit the disk for indexes that would soon go away. And, of course, we get the perf boost for all indexes now.</p>
         </article>
-        <article id="article-4225">
+        <article id="article-4226">
             <a href="https://ayende.com/blog/161219/robs-sprint-indexes-and-the-death-of-temporary-indexes" target="_blank">
-                <h2 class="title mb-6" id="article-4225">Rob&#x2019;s Sprint: Indexes and the death of temporary indexes</h2>
+                <h2 class="title mb-6" id="article-4226">Rob&#x2019;s Sprint: Indexes and the death of temporary indexes</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB&#x2019;s ability to analyze your queries and generate the required indexes on the fly has always been a great boon. Rob Ashton was involved in the original implementation and during his visits to Hibernating Rhinos&#x2019; secret lair, he got to whack that thing on the head a few more times. We need to separate two important things:  Automatically generating the indexes based on your queries. The temporary indexes model itself. The first part is a really important feature. The second is just an implementation detail. In particular, temporary indexes had a few problems. Most importantly, they were temporary, and there was an explicit step for promoting those indexes from one stage to the other. That caused some confusion, and there was a period of time, exactly when we decided that the index was important enough to keep, that caused the index to effectively reset itself. The other problem was that the moment that an index was upgraded to an auto index, it was there forever. What Rob has done was to remove the concept of temporary indexes all together, which got rid of a whole bunch of code. Instead, we have just standard auto indexes. And now we had a drastically simplified story. We didn&#x2019;t have the drastic jump from temp to auto, with irrecoverable implications. Of course, this leads to a lot of interesting questions. Temporary indexes had the benefit of being indexed directly to memory, and they would go away after a database restart, as well as a whole lot of stuff. Not having special code for that made things a lot simpler for us, actually. Automatic indexes have their age, and that is tracked internally by RavenDB. If an automatic indexed isn&#x2019;t being used, it will become idle an eventually abandoned. If it is a very young index, we will decide it was a temporary index after all, and remove it from the system completely. This feature, along with idling indexes, opened up the door for the next important feature, index merging. But before that, we need to upgrade the smarts for the query optimizer&#x2026; which happens to be our next topic.</p>
         </article>
-        <article id="article-4226">
+        <article id="article-4227">
             <a href="https://ayende.com/blog/161409/leveldb-windows-it-aint-a-love-story" target="_blank">
-                <h2 class="title mb-6" id="article-4226">LevelDB &amp; Windows: It ain&#x2019;t a love story</h2>
+                <h2 class="title mb-6" id="article-4227">LevelDB &amp; Windows: It ain&#x2019;t a love story</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have been investigating the LevelDB project for the purpose of adding another storage engine to RavenDB. The good news is that there is a very strong likelihood that we can actually use that as a basis for what we want. The bad news is that it is insanely easy to get LevelDB to compile and work on Linux, and appears to be an insurmountable barrier to do the same on Windows. Yes, I know that I can get it working by just using a precompiled binary, but that won&#x2019;t work. I actually want to make some changes there (mostly in the C API, right now). This instructions appears to be no longer current. And this thread was promising, but didn&#x2019;t lead anywhere. I am going to go over the codebase with a fine tooth comb, but I am no longer a C&#x2B;&#x2B; programmer, and the intricacies of the build system is putting a very high roadblock of frustration.</p>
         </article>
-        <article id="article-4227">
+        <article id="article-4228">
             <a href="https://ayende.com/blog/161218/robs-sprint-idly-indexing" target="_blank">
-                <h2 class="title mb-6" id="article-4227">Rob&#x2019;s Sprint: Idly indexing</h2>
+                <h2 class="title mb-6" id="article-4228">Rob&#x2019;s Sprint: Idly indexing</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">During Rob Ashton&#x2019;s visit to our secret lair, we did some work on hard problems. One of those problems was the issue of index prioritization. As I have discussed before, this is something that isn&#x2019;t really easy to do, because of the associated IO costs with not indexing properly. With Rob&#x2019;s help, we have the defined the following:  An auto index can be set to idle if it hasn&#x2019;t been queried for a time. An index can be forced to be idle by the user. An index that was automatically set to idle will be set to normal on its first query. What are the implications for that? And idle index will not be indexed by RavenDB during the normal course of things. Only when the database is idle for a period of time (by default, about 10 minutes with no writes) will we actually get it indexing. Idle indexing will continue indexing as long as there is no other activity that require their resources. When that happens, they will complete their current run and continue to wait for the database to become idle again. But wait, there is more. In addition to introducing the notion of idle indexes, we have also created another two types of indexes. The first is pretty obvious, the disabled index will use no system resources and will never take part in indexing. This is mostly there so you can manually shut down a single index. For example, maybe it is a very expensive one and you want to stop it while you are doing an import. More interesting, however, is the concept on an abandoned index. Even idle indexes can take some system resources, so we have added another level beyond that, an abandoned index is one that hasn&#x2019;t been queried in 72 hours. At that point, RavenDB is going to avoid indexing it even during idle periods. It will still get indexed, but only if there has been a long enough time passed since the last time it was indexed. Next, we will discuss why this feature was a crucial step in the way to killing temporary indexes.</p>
         </article>
-        <article id="article-4228">
+        <article id="article-4229">
             <a href="https://ayende.com/blog/161185/robs-ravendb-sprint" target="_blank">
-                <h2 class="title mb-6" id="article-4228">Rob&#x2019;s RavenDB Sprint</h2>
+                <h2 class="title mb-6" id="article-4229">Rob&#x2019;s RavenDB Sprint</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Rob Ashton is a great developer.&#xA0;&#xA0; We invited him to Hibernating Rhinos as part of his Big World Tour.&#xA0; I had the chance to work with him in the past on RavenDB, and I really liked working with him, and I liked the output even better. So we prepared some stuff for him to do.  This is the status of those issues midway through the second day.   And yes, I am giddy.</p>
         </article>
-        <article id="article-4229">
+        <article id="article-4230">
             <a href="https://ayende.com/blog/161345/ravendb-course-on-dvd" target="_blank">
-                <h2 class="title mb-6" id="article-4229">RavenDB Course on DVD</h2>
+                <h2 class="title mb-6" id="article-4230">RavenDB Course on DVD</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: February 26, 2013
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Want to learn RavenDB? In addition to the docs and the videos you can now order the RavenDB DVD course!&#xA;&#xA;&#x9;The course contains over 12 hours of recorded RavenDB course, which allows you to learn RavenDB at your own pace.&#xA;&#x9;This 2 days course spans 7 DVD Discs and include deep discussion on domain model, RavenDB design and optimization, deep dive into the best practices for designing and building good RavenDB application, the scale out story, and much more.&#xA;&#xA;&#x9;You can find the full details: http://ravendb.net/buy/dvd&#xA;&#xA;&#x9;You can also get our awesome new tshirt.</p>
-        </article>
-        <article id="article-4230">
-            <a href="https://ayende.com/blog/161153/ravendb-and-not-having-foreign-keys" target="_blank">
-                <h2 class="title mb-6" id="article-4230">RavenDB And Not Having Foreign Keys</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 26, 2013
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is something that we hear quite often in the mailing list, and I thought that I would spend the time to answer it in full. There tend to be two kinds of FK references in RDMBS, the essential ones and the one the DBA added just to make my life a living hell.  The first one include things that are essential for internal consistency within a single aggregate. For example, the OrderLines.OrderID FK reference to Orders.ID is quite important, since an order line without an order is meaningless. But what about the association between OrderLine.ProductID and Products.ID ?&#xA0;  An OrderLine can most certainly exists without the product, in fact, an OrderLine already copied into it all of the properties of the product that are important for the order. But because of the FK happy nature of most DBAs (and developers, for that matter), we have a FK reference between the two. The problem is that it actually is perfectly fine to remove a product that we are no longer selling from the store.  Yes, there are order lines for that product, but they have been completed ages ago. With a RDBMS and a FK, you cannot do that. So you resort to hacks like IsDeleted = false, which in practice gives you the exact same behavior as a deleted product, except that the FK is happy. Your application has a 50/50 change to work or not work with that. With RavenDB, we make distinctions between internal consistency, which is maintained inside the same document, and external references, which can come and go as they please. You cannot have an order line in RavenDB without an order, because the order is where the order line exists. But you can most certainly remove the product that an order line refers to, because that is outside the scope of the order, it is a separate aggregate.</p>
         </article>
         <div class="button flex justify-between">
             <a href="422.html"><span class="back arrow"></span></a>
