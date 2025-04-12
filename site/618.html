@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6171">
+            <a href="https://ayende.com/blog/3809/rhino-service-bus-field-level-security" target="_blank">
+                <h2 class="title mb-6" id="article-6171">Rhino Service Bus</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 15, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the requirements that came up on my current project was the need to secure specific fields in a message during transit. I thought about it a while before I decided that this is something that should be made explicit in the message contract.   Here is an example from the tests:                    1: public class ClassWithSecretField&#xA;&#xA;         2: {&#xA;&#xA;         3:     public WireEcryptedString ShouldBeEncrypted&#xA;&#xA;         4:     {&#xA;&#xA;         5:         get; set;&#xA;&#xA;         6:     }&#xA;&#xA;         7: }&#xA;    &#xA;  &#xA;&#xA;&#xA;WireEncryptedString is a type that would be encrypted on the wire, as the name suggest.&#xA;&#xA;And defining the keys in the configuration is done in this way:&#xA;&#xA;&#xA;  &#xA;    &#xA;         1: &lt;facility id=&quot;rhino.esb&quot; &gt;&#xA;&#xA;         2:   &lt;bus threadCount=&quot;1&quot;&#xA;&#xA;         3:        numberOfRetries=&quot;5&quot;&#xA;&#xA;         4:        endpoint=&quot;msmq://localhost/test_queue2&quot;&#xA;&#xA;         5:          /&gt;&#xA;&#xA;         6:   &lt;messages&gt;&#xA;&#xA;         7:     &lt;add name=&quot;Rhino.ServiceBus.Tests&quot;&#xA;&#xA;         8:          endpoint=&quot;msmq://localhost/test_queue&quot;/&gt;&#xA;&#xA;         9:     &lt;add name=&quot;Rhino.ServiceBus.Tests&quot;&#xA;&#xA;        10:          endpoint=&quot;msmq://localhost/test_queue2&quot;/&gt;&#xA;&#xA;        11:   &lt;/messages&gt;&#xA;&#xA;        12:   &lt;security&gt;&#xA;&#xA;        13:     &lt;key&gt;f/gdDWbDqHRvpqdRbTs3mxhGdZh9qCaDrasxJGXl&#x2B;5s=&lt;/key&gt;&#xA;&#xA;        14:   &lt;/security&gt;&#xA;&#xA;        15: &lt;/facility&gt;&#xA;    &#xA;  &#xA;&#xA;&#xA;On the wire, it has the following format:&#xA;&#xA;&#xA;  &#xA;    &#xA;         1: &lt;?xml version=&#x27;1.0&#x27; encoding=&#x27;utf-8&#x27;?&gt;&#xA;&#xA;         2: &lt;esb:messages &#xA;&#xA;         3:   xmlns:esb=&#x27;http://servicebus.hibernatingrhinos.com/2008/12/20/esb&#x27; &#xA;&#xA;         4:   xmlns:tests.classwithsecretfield=&#x27;Rhino.ServiceBus.Tests.When_Security_Is_Specified_In_Config&#x2B;ClassWithSecretField, Rhino.ServiceBus.Tests&#x27;&#xA;&#xA;         5:   xmlns:datastructures.wireecryptedstring=&#x27;Rhino.ServiceBus.DataStructures.WireEcryptedString, Rhino.ServiceBus&#x27; xmlns:string=&#x27;string&#x27;&gt;&#xA;&#xA;         6:   &lt;tests.classwithsecretfield:ClassWithSecretField&gt;&#xA;&#xA;         7:     &lt;datastructures.wireecryptedstring:ShouldBeEncrypted&gt;&#xA;&#xA;         8:       &lt;string:Value iv=&#x27;0yL9&#x2B;t0uyDy9NeP7CU1Wow==&#x27;&gt;q9a10IFuRxrzFoZewfdOyg==&lt;/string:Value&gt;&#xA;&#xA;         9:     &lt;/datastructures.wireecryptedstring:ShouldBeEncrypted&gt;&#xA;&#xA;        10:   &lt;/tests.classwithsecretfield:ClassWithSecretField&gt;&#xA;&#xA;        11: &lt;/esb:messages&gt;&#xA;    &#xA;  &#xA;&#xA;&#xA;Following the Rhino Service Bus philosophy, it is quite a neat solution.&#xA;&#xA;The actual encryption is doing using 256 bits key with Rijndael (AES). I considered other approaches, but all of them had quite a big overhead from manageability perspective.&#xA;&#xA;There are some interesting implications for the implementation, that deserve some discussion. Let us assume that you send such a message to another end point.&#xA;&#xA;If the endpoint&#x2026;&#xA;&#xA;&#xA;  has the same key as us, the message will be decrypted and everything works. &#xA;&#xA;  doesn&#x2019;t have any security defined. At that point, the message will successfully deserialize. Any WireEncryptedString field will contain the encrypted value. &#xA;&#xA;  has a different key defined. Message serialization will fail. &#xA;&#xA;&#xA;Trying to send a message that contains WireEncryptedString will throw, we do not allow such an action.&#xA;&#xA;And now you can tell me how many holes there are in my system :-)</p>
+        </article>
+        <article id="article-6172">
             <a href="https://ayende.com/blog/3808/there-is-no-database" target="_blank">
-                <h2 class="title mb-6" id="article-6171">There is no database</h2>
+                <h2 class="title mb-6" id="article-6172">There is no database</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just noticed that for the last few months I have been consistently denying the existence of a database. I use the term persistent storage when asked, and when asked I usually say: &#x201C;There is no database&#x201D;.  It has gotten to the point that this is how I draw the DB on most whiteboard sessions:</p>
         </article>
-        <article id="article-6172">
+        <article id="article-6173">
             <a href="https://ayende.com/blog/3807/system-security-securestring-annoyances" target="_blank">
-                <h2 class="title mb-6" id="article-6172">System.Security.SecureString annoyances</h2>
+                <h2 class="title mb-6" id="article-6173">System.Security.SecureString annoyances</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">SecureString has exactly one purpose. Take information from the user and pass it to unmanaged function. anything else that you would try to do with it seems to be incredibly hard to do.  I wanted to extend Rhino Service Bus so a message that contained SecureString members would be automatically encrypted on the wire. It seemed like a nice &amp; easy option to provide field level security for messages. However, it doesn&#x2019;t seem to be a viable option, because working with SecureString is such an awkward task. I have created a WireEncryptedString class and I&#x2019;ll just use that instead. Grr&#x2026;.</p>
         </article>
-        <article id="article-6173">
+        <article id="article-6174">
             <a href="https://ayende.com/blog/3806/i-need-some-advice-about-the-book" target="_blank">
-                <h2 class="title mb-6" id="article-6173">I need some advice about the book</h2>
+                <h2 class="title mb-6" id="article-6174">I need some advice about the book</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have got the final reviews about the book (Building Domain Specific Languages with Boo), and a few of them talk about a problem in the book that I am not sure how to solve.  The problem is, quite simply, the book talks about Boo a lot. I see the book not as a academic topic, but as something that would give the reader actionable knowledge. At the same time, I try to cover the entire life cycle of a DSL. So the book covers things like how to design a good syntax, documenting DSLs, how to structure them, versioning issues and other aspects that are mostly agnostic to the actual tool that we use to build the DSL.  On the other hand, things like integrating with a unit testing framework, or building UI, or the exact particulars about how to build certain aspects of the DSL and common recipes for frequent problems are strongly tied to the actual technology that we are using. Oh, we can probably discuss some of them in abstract, but I don&#x2019;t think it would be nearly as valuable.  One of the goals that I have when writing this book is to create an actionable document, one that you can use to start working on a DSL right away. There are several DSLs out there that I can directly trace to the book (Simple State Machine and Horn), so I think that I did a good job there.  The problem, as reflected in the reviews, that people expected to see much more about DSLs and maybe get some brief discussion about the actual implementation in Boo.  I think that the main issue is different expectations that they had, and I am wondering what we can do about it. One of the options that we consider is to rename the book to reflect what it actually contain better. However, I don&#x2019;t know what name would suit it better, and I don&#x2019;t even know if that is the best solutions.  Can you offer some suggestions?</p>
         </article>
-        <article id="article-6174">
+        <article id="article-6175">
             <a href="https://ayende.com/blog/3805/rhino-service-bus-understanding-a-distributed-system" target="_blank">
-                <h2 class="title mb-6" id="article-6174">Rhino Service Bus</h2>
+                <h2 class="title mb-6" id="article-6175">Rhino Service Bus</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the major hurdles in distributes systems is trying to understand how they work. Different parts are running at different places and sometimes at different times. Standard debugging usually breaks down at this point, because no one has even invented a non sequential debugger that would make sense to humans.  We are left with trying to understand what is going on in the system based on a pretty old notion, the system logs. With Rhino Service Bus, this was one of the things that I really cared about, so I made this into a first class concept. And no, you don&#x2019;t get to hunt through a 3GB text file. The idea is that each message (and message interaction) in the system can be captured.  The configuration for this is quite simple:                    1: &lt;bus threadCount=&quot;1&quot;&#xA;&#xA;         2:          numberOfRetries=&quot;5&quot;&#xA;&#xA;         3:          logEndpoint=&quot;msmq://localhost/starbucks.log&quot;&#xA;&#xA;         4:          endpoint=&quot;msmq://localhost/starbucks.backend&quot;&#xA;&#xA;         5:          /&gt;&#xA;    &#xA;  &#xA;&#xA;&#xA;And once we have done that, we copy each message to the log queue. But it is not just the arrived messages. It is also when a message arrived, how long it took to process it, why it failed, etc.&#xA;&#xA;Using this approach, you can build tools that listen to the log queue and display the information in ways that makes sense to humans. For example, we can create a flow of a saga or conversation, or start getting input about the time it takes to process certain messages or detect SLA violations.</p>
         </article>
-        <article id="article-6175">
+        <article id="article-6176">
             <a href="https://ayende.com/blog/3804/rhino-service-bus-the-starbucks-example" target="_blank">
-                <h2 class="title mb-6" id="article-6175">Rhino Service Bus</h2>
+                <h2 class="title mb-6" id="article-6176">Rhino Service Bus</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday I finally completed the Starbucks sample for Rhino Service Bus. It is surprising to see how many aspects that little sample required.  There are several of highlights in the sample.      There are three actors in the application:         Barista      Cashier      Customer       There is zero setup necessary, Rhino Service Bus will create the queues if they don&#x2019;t already exists. Again, the idea of reducing moving parts.    All three actors are running in the same process &#x2013; but each is running in a different AppDomain.      Note that this is a common deployment choice for development, but not one that I would use for production.       The idea is that this make it significantly easier to debug &amp; develop a distributed application.    There is very little configuration whatsoever. And a lot of conventions about how to figure out what consumers to use and how to build it.    The use of sagas &amp; conversations is demoed. The entire buying process is a single conversation composed of several sagas.    The customer actor is showing how we can create instance &amp; temporary subscriptions.</p>
         </article>
-        <article id="article-6176">
+        <article id="article-6177">
             <a href="https://ayende.com/blog/3803/rhino-service-bus-locality-and-independence" target="_blank">
-                <h2 class="title mb-6" id="article-6176">Rhino Service Bus</h2>
+                <h2 class="title mb-6" id="article-6177">Rhino Service Bus</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the main design goals for Rhino Service Bus was locality and independence of the end point. What do I mean by that?  Well, a Rhino ESB endpoint should have no dependency on any external service in order to operate. Examples of common external services are things like subscription services, timeout managers and error reporting. I already discussed how I handle errors, timeouts and subscriptions with Rhino Service Bus. So the question is why independence is such an important concept.  The answer is quite simple: reduce the number of moving parts. If I need to have a timeout service running to have my timeouts running, this is a problem. If subscriptions don&#x2019;t work because I didn&#x2019;t started the subscription service, that is a problem. Thos are problems because those things will happen, and figuring out what exactly is going on is hard, painful and not really recommended. Well, the first time you run into this, at least. As such, I sought to make sure that there would be only a single place that you would have to look in order to get things working.  There are other aspects of this as well, frankly. Less moving parts usually equal to less complexity, but the most important issue is that we have much better options for debugging.  The only place that you need to check for anything is the endpoint.   We currently don&#x2019;t have tooling (because we rely of the default MSMQ ones to do a fairly adequate job for now), but a few spikes that I run has turned out some really nice tooling is quite simple, and the approach is the same for everything.</p>
         </article>
-        <article id="article-6177">
+        <article id="article-6178">
             <a href="https://ayende.com/blog/3802/rhino-service-bus-managing-timeouts" target="_blank">
-                <h2 class="title mb-6" id="article-6177">Rhino Service Bus</h2>
+                <h2 class="title mb-6" id="article-6178">Rhino Service Bus</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was first introduced to the notion of time as an explicit concept in Udi&#x2019;s writing. The notion of being able to send a message in the future was, like most of the things that Udi talks about, simple in terms of implementation, but profound in conceptual terms.  Rhino Service Bus supports this explicitly by specifying a time in which a message will be received. The implementation for that is quite interesting, I think.  Again, we are making use of a subqueue to minimize the additional requirements that RSB has. So when we send a message to the RSB with a delay in it, we move it to the timeout subquque are record that fact internally. We have a timer going off every second that check for expiry of the messages and dispatch them when their time arrives. If the system crash at any point, all the timeouts are stored in the subqueue, and on startup, we are going to read the timeout messages and reconstruct our internal representation of them.  The API is quite simple:             1: bus.DelaySend(bus.Endpoint, &#xA;&#xA;       2:     DateTime.Now.AddMilliseconds(250), &#xA;&#xA;       3:     msg);&#xA;  &#xA;&#xA;&#xA;We might need to make some changes to support extremely large queues and extremely long duration for delayed messages, but for now, it is doing quite well.</p>
         </article>
-        <article id="article-6178">
+        <article id="article-6179">
             <a href="https://ardalis.com/codemash-2009-aftermash/" target="_blank">
-                <h2 class="title mb-6" id="article-6178">CodeMash 2009 Aftermash</h2>
+                <h2 class="title mb-6" id="article-6179">CodeMash 2009 Aftermash</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">CodeMash 2009, the third annual Ohio conference (and as far as I know, the largest Ohio developers&#x2019; conference), was by all accounts a great&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6179">
+        <article id="article-6180">
             <a href="https://ayende.com/blog/3801/fixing-the-heisenbug" target="_blank">
-                <h2 class="title mb-6" id="article-6179">Fixing the heisenbug</h2>
+                <h2 class="title mb-6" id="article-6180">Fixing the heisenbug</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: January 12, 2009
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just run the Rhino Service Bus test suite which resulted in the test suite hanging. This is where it most often hang.             1: [Fact]&#xA;&#xA;       2: public void A_message_that_fails_processing_should_go_back_to_queue_on_transactional_queue()&#xA;&#xA;       3: {&#xA;&#xA;       4:     TransactionalTransport.MessageArrived &#x2B;= ThrowOnFirstAction();&#xA;&#xA;       5:&#xA0; &#xA;&#xA;       6:     TransactionalTransport.Send(TransactionalTestQueueUri, DateTime.Today);&#xA;&#xA;       7:&#xA0; &#xA;&#xA;       8:     gotFirstMessage.WaitOne();&#xA;&#xA;       9:&#xA0; &#xA;&#xA;      10:     Assert.NotNull(transactionalQueue.Peek());&#xA;&#xA;      11:&#xA0; &#xA;&#xA;      12:     gotSecondMessage.Set();&#xA;&#xA;      13: }&#xA;  &#xA;&#xA;&#xA;And it kept getting hang on line 8. Now, it worked on other machines, and when I run this on its own, it worked just fine. I knew that the issue was probably a matter of test interaction, but how could I debug this?&#xA;&#xA;When running under the debugger, it didn&#x2019;t reproduce itself. &#xA;&#xA;It was pretty consistent in where it failed, however, and that gave me an opening. Many people are not familiar with the ability to interact with the debugger from your code. But the .NET framework contains System.Diagnostics.Debugger class. And that showed me the path.&#xA;&#xA;I put Debugger.Launch() as the first line of the test, and run the tests without the debugger. When this particular test was executed, I broke into the debugger, and I was able to check what the current state of the system was. As it turned out, I had another bus instance reading from the queue. That was because another few tests weren&#x2019;t disposing of their buses properly. I fixed that and the test suite run normally.</p>
-        </article>
-        <article id="article-6180">
-            <a href="https://ayende.com/blog/3800/social-engineering-in-software-development-imitating-actions" target="_blank">
-                <h2 class="title mb-6" id="article-6180">Social Engineering in Software Development</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 10, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The absolutely hardest thing in most projects is to (and I am going to be blunt), to get the customer to shut up and let the team start working. I have been in several projects where the actual move from blah blah talking to actual doing was a painful and drawn out process. In one particular example, I was brought on as a team lead for a team that had 4 months to produce a system. I was stunned to discover that the last two years were spent in meetings on top of meetings on top of meetings. At some point I flat out abandoned the spec, forced got management approval to talk directly with the users and started supplying them what they wanted. I still consider this to be a horrible project, but at least we shipped. I found several approach that can facilitate the move from talking to doing. The first one, and the one that I prefer, is to actually start building the software. Now, I don&#x27;t refer to building the actual production software, but to building a spike of how things are supposed to work. Show it in the next meeting, and I can almost guarantee that the discussion is going to shift radically. When you put something in front of people, especially since in spike mode you can get things done really fact (no code quality, no error handling, pure nasty coding). In several past projects, I have used this approach to leap over the &quot;let us just get started&quot; hurdle. The main issue is that the business would like to really understand what they want to do, before asking the developers to do so. But since many things are fixed already, that is, the general concepts are already known, and the devil is in the details, we can start painting the outline of the system in broad strokes and fine tune it later. The idea is to push the business into that mode. And spikes get us there quickly. Another method that I have started to use lately (which is even easier than spikes) is the use of UI mock up. Using a tool like Balsamiq Mockups, this is ridiculously easy. It also serve as a great spur to actually starting to do things. Instead of getting mired in details, I can get a pretty good picture of a vertical slice of the application, and go away and actually implement that. Here is a mock up for the landing page for the NHibernate Profiler web site:   You can see the real thing here. As you can see, it isn&#x27;t the same at all, but I think that we can all agree that there are marked similarities between them. This mock up took about 3 minutes to build, and we did that while on the phone and with screen sharing. But it meant that we talked about something concrete.  When you are starting to talk in concrete terms, you have already much closer to getting starting doing something real. Those are just a few example of initiating actions, actions that can get you to move from the talk talk talk phase into the get things done phase. It is important to make this move as soon as possible, for several reasons. Not least of them is that we value working software over comprehensive documentation and lengthy discourse.</p>
         </article>
         <div class="button flex justify-between">
             <a href="617.html"><span class="back arrow"></span></a>
