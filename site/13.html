@@ -137,8 +137,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-121">
+            <a href="https://ayende.com/blog/201795-A/ravendb-performance-15-improvement-in-one-line" target="_blank">
+                <h2 class="title mb-6" id="article-121">RavenDB Performance: 15% improvement in one line</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 02, 2024
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB is a database, a transactional one. This means that we have to reach the disk and wait for it to complete persisting the data to stable storage before we can confirm a transaction commit. That represents a major challenge for ensuring high performance because disks are slow. I&#x2019;m talking about disks, which can be rate-limited cloud disks, HDD, SSDs, or even NVMe. From the perspective of the database, all of them&#xA0;are slow. RavenDB spends a lot&#xA0;of time and effort making the system run fast, even though the disk is slow.An interesting problem we routinely encounter is that our test suite would literally cause disks to fail&#xA0;because we stress them beyond warranty limits. We actually keep a couple of those around, drives that have been stressed to the breaking point, because it lets us test unusual I/O patterns.We recently ran into strange benchmark results, and during the investigation, we realized we are actually running on one of those burnt-out drives. Here is what the performance looks like when writing 100K documents as fast as we can (10 active threads):As you can see, there is a huge&#xA0;variance in the results. To understand exactly why, we need to dig a bit deeper into how RavenDB handles I/O. You can observe this in the I/O Stats tab in the RavenDB Studio:There are actually three separate (and concurrent) sets of I/O operations that RavenDB uses:Blue - journal writes - unbuffered direct I/O - in the critical path for transaction performance because this is how RavenDB ensures that the D(urability) in ACID is maintained.Green - flushes - where RavenDB writes the modified data to the data file (until the flush, the modifications are kept in scratch buffers).Red - sync - forcing the data to reside in a persistent medium using fsync().The writes to the journal (blue) are the most important ones for performance, since we must wait for them to complete successfully before we can acknowledge that the transaction was committed. The other two ensure that the data actually reached the file and that we have safely stored it.It turns out that there is an interesting interaction between those three types. Both flushes (green) and syncs (red) can run concurrently with journal writes. But on bad disks, we may end up saturating the entire I/O bandwidth for the journal writes while we are flushing or syncing. In other words, the background work will impact the system performance. That only happens when you reach the physical limits of the hardware, but it is actually quite common when running in the cloud.To handle this scenario, RavenDB does a number&#xA0;of what I can only describe as shenanigans. Conceptually, here is how RavenDB works:def txn_merger(self):&#xD;&#xA;  while self._running:&#xD;&#xA;    with self.open_tx() as tx:&#xD;&#xA;      while tx.total_size &lt; MAX_TX_SIZE and tx.time &lt; MAX_TX_TIME:&#xD;&#xA;        curOp = self._operations.take()&#xD;&#xA;        if curOp is None:&#xD;&#xA;          break # no more operations&#xD;&#xA;        curOp.exec(tx)&#xD;&#xA;      tx.commit()&#xD;&#xA;      # here we notify the operations that we are done&#xD;&#xA;      tx.notify_ops_completed()The idea is that you submit the operation for the transaction merger, which can significantly&#xA0;improve the performance by merging multiple operations into a single disk write. The actual operations wait to be notified (which happens after the transaction successfully commits). If you want to know more about this, I have a full blog post on the topic. There is a lot&#xA0;of code to handle all sorts of edge cases, but that is basically the story. Notice that processing a transaction is actually composed of two&#xA0;steps. First, there is the execution of the transaction operations (which reside in the _operations&#xA0;queue), and then there is the actual commit(), where we write to the disk. It is the commit portion that takes a lot of time.Here is what the timeline will look like in this model:We execute the transaction, then wait for the disk. This means that we are unable to saturate either the disk or the CPU. That is a waste. To address that, RavenDB supports async commits (sometimes called early lock release). The idea is that while we are committing the previous transaction, we execute the next&#xA0;one. The code for that is something like this:def txn_merger(self):&#xD;&#xA;  prev_txn = completed_txn()&#xD;&#xA;  while self._running:&#xD;&#xA;    executedOps = []&#xD;&#xA;    with self.open_tx() as tx:&#xD;&#xA;      while tx.total_size &lt; MAX_TX_SIZE and tx.time &lt; MAX_TX_TIME:&#xD;&#xA;        curOp = self._operations.take()&#xD;&#xA;        if curOp is None:&#xD;&#xA;          break # no more operations&#xD;&#xA;        executedOps.append(curOp)&#xD;&#xA;        curOp.exec(tx)&#xD;&#xA;        if prev_txn.completed:&#xD;&#xA;           break&#xD;&#xA;      # verify success of previous commit&#xD;&#xA;      prev_txn.end_commit() &#xD;&#xA;      # only here we notify the operations that we are done&#xD;&#xA;      prev_txn.notify_ops_completed()&#xD;&#xA;      # start the commit in async manner&#xD;&#xA;      prev_txn = tx.begin_commit()The idea is that we start writing to the disk, and while that is happening, we are already processing the operations in the next&#xA0;transaction. In other words, this allows both writing to the disk and executing the transaction operations to happen concurrently. Here is what this looks like:This change has a huge impact on overall performance. Especially because it can smooth out a slow disk by allowing us to process the operations in the transactions while waiting for the disk. I wrote about this as well in the past. So far, so good, this is how RavenDB has behaved for about a decade or so. So what is the performance optimization?This deserves an explanation. What this piece of code does is determine whether the transaction would complete in a synchronous or asynchronous manner. It used&#xA0;to do that based on whether there were more operations to process in the queue. If we completed a transaction and needed to decide if to complete it asynchronously, we would check if there are additional operations in the queue (currentOperationsCount).The change modifies the logic so that we complete in an async manner if we executed&#xA0;any operation. The change is minor but has a really important effect on the system. The idea is that if we are going to write to the disk (since we have operations to commit), we&#x2019;ll always complete in an async manner, even if there are no more operations in the queue.The change is that the next&#xA0;operation will start processing immediately, instead of waiting for the commit to complete and only then starting to process. It is such a small change, but it had a huge impact on the system performance. Here you can see the effect of this change when writing 100K docs with 10 threads. We tested it on both a good disk and a bad one, and the results are really interesting. The bad disk chokes when we push a lot of data through it (gray line), and you can see it struggling to pick up. On the same disk, using the async version (yellow line), you can see it still struggles (because eventually, you need&#xA0;to hit the disk), but it is able to sustain much higher numbers and complete far&#xA0;more quickly (the yellow line ends before the gray one).On the good disk, which is able to sustain the entire load, we are still&#xA0;seeing an improvement (Blue is the new version, Orange is the old one). We aren&#x2019;t sure yet why the initial stage is slower (maybe just because this is the first test we ran), but even with the slower start, it was able to complete more quickly because its throughput is higher.</p>
+        </article>
+        <article id="article-122">
+            <a href="https://www.meziantou.net/nuget-packages-security-risks-and-best-practices.htm" target="_blank">
+                <h2 class="title mb-6" id="article-122">NuGet Packages: security risks and best practices</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 02, 2024
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">NuGet packages offer a convenient way to share code, but many developers download them without reviewing the contents or verifying updates when new versions are released. When you install a NuGet package, you are:Downloading code from unknown authors that has likely not been thoroughly reviewed by</p>
+        </article>
+        <article id="article-123">
             <a href="https://devblogs.microsoft.com/dotnet/dotnet-9-nuget-resolver/" target="_blank">
-                <h2 class="title mb-6" id="article-121">Dramatically faster package restores with .NET 9&#x2019;s new NuGet resolver</h2>
+                <h2 class="title mb-6" id="article-123">Dramatically faster package restores with .NET 9&#x2019;s new NuGet resolver</h2>
             </a>
             <p class="mb-2">by Jeff Kluge</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">.NET 9 introduces a new NuGet dependency graph resolver that dramatically improves package restore performance for large repositories. Learn how this reimagined approach reduces restore times from 30 minutes to just 2 minutes by creating a more efficient dependency graph with fewer nodes.</p>
         </article>
-        <article id="article-122">
+        <article id="article-124">
             <a href="https://ayende.com/blog/201763-A/ravendb-cloud-auto-scaling" target="_blank">
-                <h2 class="title mb-6" id="article-122">RavenDB Cloud</h2>
+                <h2 class="title mb-6" id="article-124">RavenDB Cloud</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB Cloud has a whole bunch&#xA0;of new features that were quietly launched over the past few months. I discuss them in this post. It turns out that the team keeps on delivering new stuff, faster than I can write about it.The following new auto-scaling feature is a really interesting one because it is pretty simple to understand and has some interesting implications for production.You need to explicitly enable auto-scaling on your cluster. Here is what that looks like:Once you enabled auto-scaling - which usually takes under a minute - you can click the Configure button to set your own policies:Here is what this looks like:The idea is very simple, we routinely measure the load on the system, and if we detect a high CPU threshold for a long time, we&#x2019;ll trigger scaling to the next tier (or maybe higher, see the Upscaling / Downscaling step options) to provide additional resources to the system. If there isn&#x2019;t enough load (as measured in CPU usage), we will downscale back to the lowest instance type. Conceptually, this is a simple setup. You use a lot of CPU, and you get a bigger machine that has more resources to use, until it all balances out. Now, let&#x2019;s talk about the implications of this feature. To start with, it means you only pay based on your actual load, and you don&#x2019;t need to over-provision for peak load. The design of this feature and RavenDB in general means that we can make scale-up and scale-down changes without&#xA0;any interruption in service. This allows you to let auto-scaling manage the size of your instances.In the image above, you may have noticed that I&#x2019;m using the PB line of products (PB10 &#x2026; PB50). That stands for burstable instances, which consume CPU credits when in use. How this interacts with auto-scaling is really interesting.As you use more CPU, you consume all the CPU credits, and your CPU usage becomes high. At this point, auto-scaling kicks in and moves you to a higher tier. That gives you both more baseline CPU credits and a higher CPU credits accrual rate. Together with zero downtime upscaling and downscaling, this means you can benefit from the burstable instances&#x27; lower cost without having to worry about running out of resources.Note that auto-scaling only applies to instances within the same family. So if you are running on burstable instances, you&#x2019;ll get scaling from burstable instances, and if you are running on the P series (non-burstable), your auto-scaling will use P instances.Note that we offer auto-scaling for development instances as well. However, a development instance contains only a single RavenDB instance, so auto-scaling will trigger, but&#xA0;the instance will be inaccessible for up to two minutes while it scales.&#xA0;That isn&#x2019;t an issue for the production tier.</p>
         </article>
-        <article id="article-123">
+        <article id="article-125">
             <a href="https://devblogs.microsoft.com/dotnet/evaluate-the-quality-of-your-ai-applications-with-ease/" target="_blank">
-                <h2 class="title mb-6" id="article-123">Evaluate the quality of your AI applications with ease</h2>
+                <h2 class="title mb-6" id="article-125">Evaluate the quality of your AI applications with ease</h2>
             </a>
             <p class="mb-2">by Wendy Breiding (SHE/HER)</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Get started with the new Microsoft.Extensions.AI.Evaluation library to kickstart your Intelligent Application eveluation journey.</p>
         </article>
-        <article id="article-124">
+        <article id="article-126">
             <a href="https://andrewlock.net/understanding-security-headers-part-2-cross-origin-resource-policy-preventing-hotlinking/" target="_blank">
-                <h2 class="title mb-6" id="article-124">Cross-Origin-Resource-Policy: preventing hotlinking and XSSI attacks</h2>
+                <h2 class="title mb-6" id="article-126">Cross-Origin-Resource-Policy: preventing hotlinking and XSSI attacks</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Understanding cross-origin security headers - Part 2</p>
         </article>
-        <article id="article-125">
+        <article id="article-127">
             <a href="https://devblogs.microsoft.com/dotnet/dotnet9-openapi/" target="_blank">
-                <h2 class="title mb-6" id="article-125">OpenAPI document generation in .NET 9</h2>
+                <h2 class="title mb-6" id="article-127">OpenAPI document generation in .NET 9</h2>
             </a>
             <p class="mb-2">by Mike Kistler</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Introducing the New OpenAPI Document Generation Feature in .NET 9. Let&#x27;s take a look at what it is, how to use it, and how it streamlines API development in .NET.</p>
         </article>
-        <article id="article-126">
+        <article id="article-128">
             <a href="https://www.meziantou.net/update-dependencies-in-nuspec-file-using-renovate.htm" target="_blank">
-                <h2 class="title mb-6" id="article-126">Update dependencies in nuspec file using Renovate</h2>
+                <h2 class="title mb-6" id="article-128">Update dependencies in nuspec file using Renovate</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">While nuspec files are not as common as they used to be, they are still used in some projects when you have special needs. For instance, Meziantou.DotNet.CodingStandard uses a nuspec file to create a package that supports all TFMs. Renovate is a tool to keep your dependencies up-to-date. It support</p>
         </article>
-        <article id="article-127">
+        <article id="article-129">
             <a href="https://devblogs.microsoft.com/dotnet/introducing-dotnet-scaffold/" target="_blank">
-                <h2 class="title mb-6" id="article-127">dotnet scaffold &#x2013; Next Generation Content Creation for .NET</h2>
+                <h2 class="title mb-6" id="article-129">dotnet scaffold &#x2013; Next Generation Content Creation for .NET</h2>
             </a>
             <p class="mb-2">by Sayed Ibrahim Hashimi</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Introducing a new command line tool dotnet scaffold, a new interactive way to create projects in .NET.</p>
         </article>
-        <article id="article-128">
+        <article id="article-130">
             <a href="https://andrewlock.net/understanding-security-headers-part-1-cross-origin-opener-policy-preventing-attacks-from-popups/" target="_blank">
-                <h2 class="title mb-6" id="article-128">Cross-Origin-Opener-Policy: preventing attacks from popups</h2>
+                <h2 class="title mb-6" id="article-130">Cross-Origin-Opener-Policy: preventing attacks from popups</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -263,38 +295,6 @@
                 posted on: November 19, 2024
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Understanding cross-origin security headers - Part 1</p>
-        </article>
-        <article id="article-129">
-            <a href="https://devblogs.microsoft.com/dotnet/enhance-your-dotnet-developer-productivity-with-github-copilot/" target="_blank">
-                <h2 class="title mb-6" id="article-129">Enhance Your .NET Developer Productivity with GitHub Copilot</h2>
-            </a>
-            <p class="mb-2">by Mika Dumont</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 18, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Learn how to get started with GitHub Copilot for .NET development for AI assisted development in Visual Studio and Visual Studio Code</p>
-        </article>
-        <article id="article-130">
-            <a href="https://www.meziantou.net/embeded-languages-in-string-values-supported-by-roslyn.htm" target="_blank">
-                <h2 class="title mb-6" id="article-130">Embedded Languages Supported by Roslyn</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 18, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In a recent post, I shared how to highlight C# code in string values. Roslyn provides more built-in highlighters / code-completions in string values. Most of the supported languages are available as constants of the StringSyntaxAttribute class. To indicate the language, you can use the lang or lang</p>
         </article>
         <div class="button flex justify-between">
             <a href="12.html"><span class="back arrow"></span></a>

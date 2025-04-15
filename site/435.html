@@ -137,8 +137,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4341">
+            <a href="https://ayende.com/blog/159297/optimization-story-getnextidentityvaluewithoutoverwritingonexistingdocuments" target="_blank">
+                <h2 class="title mb-6" id="article-4341">Optimization story: GetNextIdentityValueWithoutOverwritingOnExistingDocuments</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 30, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A customer had a problem. They were mostly using the RavenDB HiLo algorithm for saving documents to the database, which is very fast &amp; cheap. That client, however, chose to use the identity method. Which means that RavenDB will assign the value.  This is usually used if you need to have sequential values. The identity is actually being managed internally by RavenDB, and that works perfectly fine.  Except&#x2026; What happens when you enter replication to the mix. The documents with the identity values are replicated to the secondary server, and there we don&#x2019;t have the identity value, we just have the docs being written with their full id. (users/1, users/2, users/3, etc). So far, so good. But what happens when you have a failover and you need to write to the secondary, and you use the identity? Well, RavenDB ain&#x2019;t stupid, and it won&#x2019;t overwrite the users/1 document. Instead, it will search for the next available opening from the smallest identity value generated and use that. The code looks like this:      1: private long GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key,    2:     IStorageActionsAccessor actions,    3:     TransactionInformation transactionInformation)   4: {   5:     long nextIdentityValue;   6:     do   7:     {   8:         nextIdentityValue = actions.General.GetNextIdentityValue(key);   9:     } while (actions.Documents.DocumentMetadataByKey(key &#x2B; nextIdentityValue, transactionInformation) != null);  10:     return nextIdentityValue;  11: }&#xA;This works, great. Except when you have large number of documents that have already been written. Instead of the brute force search, we now use the following approach:&#xA;&#xA;&#xA;   1: public long GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string key,   2:     IStorageActionsAccessor actions,   3:     TransactionInformation transactionInformation,   4:     out int tries)   5: {   6:     long nextIdentityValue = actions.General.GetNextIdentityValue(key);   7:&#xA0;    8:     if (actions.Documents.DocumentMetadataByKey(key &#x2B; nextIdentityValue, transactionInformation) == null)   9:     {  10:         tries = 1;  11:         return nextIdentityValue;  12:     }  13:     tries = 1;  14:     // there is already a document with this id, this means that we probably need to search  15:     // for an opening in potentially large data set.   16:     var lastKnownBusy = nextIdentityValue;  17:     var maybeFree = nextIdentityValue*2;  18:     var lastKnownFree = long.MaxValue;  19:     while (true)  20:     {  21:         tries&#x2B;&#x2B;;  22:         if(actions.Documents.DocumentMetadataByKey(key &#x2B; maybeFree, transactionInformation) == null)  23:         {  24:             if (lastKnownBusy &#x2B; 1 == maybeFree)  25:             {  26:                 actions.General.SetIdentityValue(key, maybeFree);  27:                 return maybeFree;  28:             }  29:             lastKnownFree = maybeFree;  30:             maybeFree = Math.Max(maybeFree - (maybeFree - lastKnownBusy) / 2, lastKnownBusy &#x2B; 1);  31:&#xA0;   32:         }  33:         else  34:         {  35:             lastKnownBusy = maybeFree;  36:             maybeFree = Math.Min(lastKnownFree, maybeFree*2);  37:         }  38:     }  39: }&#xA;This can figure out the first free item in a range of billion documents in under 100 tries, which I am pretty sure if good enough.</p>
+        </article>
+        <article id="article-4342">
+            <a href="https://ayende.com/blog/159393/design-patterns-in-the-test-of-time-prototype" target="_blank">
+                <h2 class="title mb-6" id="article-4342">Design patterns in the test of time</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 29, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Create objects based on a template of an existing object through cloning.   More about this pattern. This is how it looks like:  Surprisingly enough, there are very few useful concrete examples of this, even in the literature. A lot of the time you see reference to ConcreteImplA and ConcreteImplB. The original impetus for the Prototype pattern was actually:  avoid subclasses of an object creator in the client application, like the abstract factory pattern does.  avoid the inherent cost of creating a new object in the standard way (e.g., using the &#x27;new&#x27; keyword) when it is prohibitively expensive for a given application. That is actually quite interesting. As I mentioned in the Factory Method analysis post, I like the notion of using Factory Delegate (and thus avoiding subclassing) quite a lot. This is usually useful for behavioral objects, that contains little state (it would be more accurate to say that their state is behavior, such as a class that mostly contains delegate members for different things). But for those sort of things, you usually don&#x2019;t really need to modify them after the fact, so there isn&#x2019;t much of a prototype here. The second reasoning is not relevant for most things today. The cost of new is so near zero to be effectively meaningless. But something that isn&#x2019;t mentioned about this pattern is that it is very useful for multi threading. The notion of being able to handle a cloned object that can be modified independently of its original is key in things like caches, as you can see in the code above. We make heavy use of that internally inside RavenDB, for example, although we choose a slight more complex (and performant) route.  A key observation about this is that Prototype assumes long lives objects. Because otherwise, there wouldn&#x2019;t be the prototype instance to clone from. In wide variety of applications today, that is simply not the case. Most of our objects live only for a single request. And anything whose lifetime is longer than a single request is usually persisted to a stable storage, rendering the basis for the Prototype pattern existence moot. Recommendation: This is still a useful pattern for a limited number of scenarios. In particular, the ability to hand out a copy of the instance from a cache means that we don&#x2019;t have to worry about multi threading. That said, beyond this scenario, I haven&#x2019;t found many other uses for this.</p>
+        </article>
+        <article id="article-4343">
             <a href="https://ayende.com/blog/159521/ravendb-studio-feature-patching" target="_blank">
-                <h2 class="title mb-6" id="article-4341">RavenDB Studio Feature</h2>
+                <h2 class="title mb-6" id="article-4343">RavenDB Studio Feature</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The full details are here.</p>
         </article>
-        <article id="article-4342">
+        <article id="article-4344">
             <a href="https://ayende.com/blog/159522/ravendb-studio-feature-address-to-geo-location" target="_blank">
-                <h2 class="title mb-6" id="article-4342">RavenDB Studio Feature</h2>
+                <h2 class="title mb-6" id="article-4344">RavenDB Studio Feature</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Full details in out company blog.</p>
         </article>
-        <article id="article-4343">
+        <article id="article-4345">
             <a href="https://ardalis.com/justcode-justrocks/" target="_blank">
-                <h2 class="title mb-6" id="article-4343">JustCode JustRocks</h2>
+                <h2 class="title mb-6" id="article-4345">JustCode JustRocks</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have been a ReSharper fanboy for a long, long time. I have recommended it in user group and conference talks and on my blog. It was one of&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4344">
+        <article id="article-4346">
             <a href="https://ayende.com/blog/159363/design-patterns-in-the-test-of-time-factory-method" target="_blank">
-                <h2 class="title mb-6" id="article-4344">Design patterns in the test of time</h2>
+                <h2 class="title mb-6" id="article-4346">Design patterns in the test of time</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Define an interface for creating an object, but let the classes that implement the interface decide which class to instantiate. The Factory method lets a class defer instantiation to subclasses.  More on this pattern. Here is some sample code:      1: public class MazeGame {   2:   public MazeGame() {   3:      Room room1 = MakeRoom();   4:      Room room2 = MakeRoom();   5:      room1.Connect(room2);   6:      AddRoom(room1);   7:      AddRoom(room2);   8:   }   9:    10:   protected virtual Room MakeRoom() {  11:      return new OrdinaryRoom();  12:   }  13: }&#xA;This pattern is quite useful, and is in fairly moderate use. For example, you can take a look at WebClient.GetWebRequest, which is an exact implementation of this pattern. I like this pattern because this allows me to keep the Open Closed Principle, I don&#x2019;t need to modify the class, I can just inherit and override it to change things.&#xA;Still, this is the class method. I like to mix things up a bit and not use a virtual method, instead, I do things like this:&#xA;&#xA;   1: public class MazeGame {   2:    public Func&lt;Room&gt; MakeRoom = () =&gt; new OrdinaryRoom();   3: }&#xA;This allows me change how we are creating the room without even having to create a new subclass. In fact, it allows me to change this per instance. &#xA;I make quite a heavy use of this in RavenDB, for example. The DocumentConventions class is basically built of nothing else.&#xA;Recommendation: Go for the lightweight Factory Delegate approach. As with all patterns, use with caution and watch for overuse &amp; abuse. In particular, if you need to manage state between multiple delegate, fall back to the overriding approach, because you can keep the state in the subclass.</p>
         </article>
-        <article id="article-4345">
+        <article id="article-4347">
             <a href="https://ayende.com/blog/159362/design-patterns-in-the-test-of-time-builder" target="_blank">
-                <h2 class="title mb-6" id="article-4345">Design patterns in the test of time</h2>
+                <h2 class="title mb-6" id="article-4347">Design patterns in the test of time</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The intent of the Builder design pattern is to separate the construction of a complex object from its representation. By doing so, the same construction process can create different representations.  More about this pattern. The sample code that usually comes with this pattern is something like this:      1: PizzaBuilder hawaiianPizzaBuilder = new HawaiianPizzaBuilder();   2: Cook cook = new Cook();   3: cook.SetPizzaBuilder(hawaiianPizzaBuilder);   4: cook.ConstructPizza();   5: // create the product   6: Pizza hawaiian = cook.GetPizza();&#xA;I find this sort of code to be extremely verbose and hard to read. Especially when we have a lot of options and things to do. Fluent Interfaces, however, are just an instance of the Builder pattern, and they are basically adding a modern API look &amp; feel to the way we are actually constructing objects. Another thing to remember is that we are dealing with C#, and we have things like object initializers to do a lot of the heavy lifting for building objects. You should use that, for most cases.&#xA;NHibernate, for example, has the notion of a Builder, using the NHibernate.Cfg.Configuration object. It allows us to put all of the construction / validation code in one spot, and then the actual runtime code in a different place (and can assume a lot about its invariants). It also allows to do a lot of interesting things, like serializing the builder object (to save building time), which is something that you usually can&#x2019;t / hard to do with real objects.&#xA;That said, you should be careful of code like the one listed above .What you have there is an overly abstract system. Requiring multiple steps to just get somewhere. If you find yourself feeding builders into builders, please stop and think about what you are doing. If you got there, you have not simplified the construction process.&#xA;Recommendation: This is still a very useful pattern. It should absolutely not be used if all you need to do is just setting some values. Reserve the Builder patterns where you actually have logic and behavior associated with the building process.</p>
         </article>
-        <article id="article-4346">
+        <article id="article-4348">
             <a href="https://ayende.com/blog/159586/a-week-in-london-ravendb-nhibernate-training" target="_blank">
-                <h2 class="title mb-6" id="article-4346">A week in London: RavenDB &amp; NHibernate training</h2>
+                <h2 class="title mb-6" id="article-4348">A week in London: RavenDB &amp; NHibernate training</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ll be spending the last week on November in London, at the Skills Matter offices.&#xA;&#xA;&#x9;On the 26 Nov, I&#x2019;ll be giving a 3 days NHibernate course.&#xA;&#xA;&#x9;And on the 29 Nov, I&#x2019;ll be giving 2 full days of RavenDB awesomeness. This course is scheduled to run along the same time as the RavenDB 1.2 release, which leads me to the In The Brains session I&#x2019;ll be giving along the way.&#xA;&#xA;&#x9;What is new in RavenDB 1.2&#xA;&#xA;&#x9;RavenDB 1.0 was exciting and fun. RavenDB 1.2 builds on top of that and adds a whole host of really nice features.&#xA;&#x9;Come to hear about the new Changes API, or how you can use evil patching to make the database bow to your wished. Learn how you can add encryption and compression to your database in a few minutes, and watch how operational tasks became even simpler. In short, come and see all of the new stuff for RavenDB!</p>
         </article>
-        <article id="article-4347">
+        <article id="article-4349">
             <a href="https://ayende.com/blog/159585/design-patterns-in-the-test-of-time-a-modern-alternative-to-abstract-factory-filtered-dependencies" target="_blank">
-                <h2 class="title mb-6" id="article-4347">Design patterns in the test of time</h2>
+                <h2 class="title mb-6" id="article-4349">Design patterns in the test of time</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my Abstract Factory post, I mentioned that I really don&#x2019;t like the pattern, and in particular, code like this:      1: static IGUIFactory CreateOsSpecificFactory()   2: {   3:    string sysType = ConfigurationSettings.AppSettings[&quot;OS_TYPE&quot;];   4:    if (sysType == &quot;Win&quot;)    5:    {   6:        return new WindowsFactory();   7:    }    8:    else    9:    {  10:        return new MacFactory();  11:    }  12: }&#xA;One of the comments mentioned that this might no be ideal, but it is still better than:&#xA;&#xA;&#xA;   1: if(RunningOnWindows)   2: {   3:     // code   4: }   5: else if(RunningOnMac)   6: {   7:    // code   8: }   9: else if(RunningOnLinux)  10: {  11:    // code  12: }&#xA;And I agree. But I think that, as the comment mentioned, a far better alternative would be using the container. You can do this using:&#xA;&#xA;&#xA;   1: [OperationSystem(&quot;Windows&quot;)]   2: public class WindowsFactory : IGUIFactory   3: {   4: }   5:&#xA0;    6: [OperationSystem(&quot;Linux&quot;)]   7: public class LinuxFactory : IGUIFactory   8: {   9: }  10:&#xA0;   11: [OperationSystem(&quot;Mac&quot;)]  12: public class MacFactory : IGUIFactory  13: {  14: }  15:&#xA0; &#xA;Then you just need to wire things through the container. Among other things, this means that we respect the open / closed principle. If we need to support a new system, we can just add a new class, we don&#x2019;t need to modify code.&#xA;Remember, the Go4 book was written in the age of C&#x2B;&#x2B;. Reflection didn&#x2019;t exists, and that means that a lot of patterns do by hands things that can happen automatically.</p>
         </article>
-        <article id="article-4348">
+        <article id="article-4350">
             <a href="https://ayende.com/blog/159361/design-patterns-in-the-test-of-time-abstract-factory" target="_blank">
-                <h2 class="title mb-6" id="article-4348">Design patterns in the test of time</h2>
+                <h2 class="title mb-6" id="article-4350">Design patterns in the test of time</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -263,38 +295,6 @@
                 posted on: October 23, 2012
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The essence of the Abstract Factory method Pattern is to &quot;Provide an interface for creating families of related or dependent objects without specifying their concrete classes&quot;.&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;More about this pattern.&#xA;&#xA;&#xA;&#x9;Here is some sample code:&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;&#xA;&#x9;&#x9;&#x9;   1: static IGUIFactory CreateOsSpecificFactory()&#xA;&#x9;&#x9;&#x9;&#xA;&#x9;&#x9;&#x9;   2: {&#xA;&#x9;&#x9;&#x9;&#xA;&#x9;&#x9;&#x9;   3:     string sysType = ConfigurationSettings.AppSettings[&quot;OS_TYPE&quot;];&#xA;&#x9;&#x9;&#x9;&#xA;&#x9;&#x9;&#x9;   4:     if (sysType == &quot;Win&quot;) &#xA;&#x9;&#x9;&#x9;&#xA;&#x9;&#x9;&#x9;   5:     {&#xA;&#x9;&#x9;&#x9;&#xA;&#x9;&#x9;&#x9;   6:         return new WindowsFactory();&#xA;&#x9;&#x9;&#x9;&#xA;&#x9;&#x9;&#x9;   7:     } &#xA;&#x9;&#x9;&#x9;&#xA;&#x9;&#x9;&#x9;   8:     else &#xA;&#x9;&#x9;&#x9;&#xA;&#x9;&#x9;&#x9;   9:     {&#xA;&#x9;&#x9;&#x9;&#xA;&#x9;&#x9;&#x9;  10:         return new MacFactory();&#xA;&#x9;&#x9;&#x9;&#xA;&#x9;&#x9;&#x9;  11:     }&#xA;&#x9;&#x9;&#x9;&#xA0; 12: }&#xA;&#x9;&#xA;&#xA;&#xA;&#x9;I am in two minds about this pattern. On the one hand, we have pretty damning evidence that this has been really bad for the industry at large. For details, you can see Why I Hate Frameworks post. When I first saw that, just shortly after reading the Go4 for the first time, I was in tears from laughing. But the situation he describe is true, accurate and still painful today.&#xA;&#xA;&#x9;Case in point, WCF suffers from a serious overuse of abstract factories. For example, IInstanceProvider (and I just love that in order to wire that in you usually have to implement IServiceBehavior).&#xA;&#xA;&#x9;As the I Hate Frameworks post mentioned:&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;Each hammer factory factory is built for you by the top experts in the hammer factory factory business, so you don&#x27;t need to worry about all the details that go into building a factory.&#xA;&#xA;&#xA;&#x9;Awesome, or not, as the case may be.&#xA;&#xA;&#x9;Then again, it is a useful pattern. The problem is that in the general case, creating objects that create objects (that create even more objects) is a pretty good indication that your architecture is already pretty hosed.&#xA0; You should strive to an architecture that has minimal amount of levels, and an abstract factory is a whole new level even on its own.&#xA;&#xA;&#x9;Recommendation: Avoid if you can. If you run into a place where you think that needs this, consider if you can simplify your architecture to the point where this is not required.</p>
-        </article>
-        <article id="article-4349">
-            <a href="https://ayende.com/blog/159329/design-patterns-in-the-test-of-time" target="_blank">
-                <h2 class="title mb-6" id="article-4349">Design patterns in the test of time</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 23, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Amazon tells me that I purchased this book in Sep 2004, and have since then misplaced it, for some reason. I remember how important this book was to shaping how I thought about software. For the first time, I actually have the words discuss what I was doing, and proven pathways to success. Of course, we all know that&#x2026; it didn&#x2019;t end up being quite so good. In particular, it led to Cargo Cult Programming. From my perspective, it looks like a lot of people made the assumption that their application is good because it has design patterns, not because design patterns will result in simpler code. Now, this book came out in 1994. And quite a bit have changed in the world of software since that time. In this series, I am going to take a look at all those design patterns and see how they hold up in the test of time. Remember, the design patterns were written at a time where most software was single user client applications (think Win Forms, then reduce by nine orders of magnitude), no web or internet, no multi threading, very little networking, very slow upgrade cycles and far slower machines. None of those assumptions are relevant to how we build software today, but they form the core of the environment that was relevant when the book was written. I think that it is going to be interesting to see how those things hold up. And because I know the nitpickers, let me setup the context. We are talking about building design patterns within the context of .NET application, aimed at either system software (like RavenDB) or enterprise applications. This is the context in which I am talking about. Bringing arguments / options from additional contexts is no relevant to the discussion. I am also not going to discuss the patterns themselves at any depth, if you want that, go and read the book, it is still a very good one, even though it came out almost 20 years ago.</p>
-        </article>
-        <article id="article-4350">
-            <a href="https://ayende.com/blog/159425/uber-prof-v2-0-is-now-in-public-beta" target="_blank">
-                <h2 class="title mb-6" id="article-4350">Uber Prof V2.0 is now in Public Beta</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 22, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, we worked quite a bit on that, but the Uber Prof (NHibernate Profiler, Entity Framework Profiler, Linq to SQL Profiler, etc) version 2.0 are now out for public beta. We made a lot of improvements. Including performance, stability and responsiveness, but probably the most important thing from the user perspective is that we now support running the profiler in production, and even on the cloud. We will have the full listing of all the new goodies up on the company site soon, including detailed instructions on how to enable production profiling and on cloud profiling, but I just couldn&#x2019;t wait to break the news to you. In fact, along with V2.0 of the profilers, we have a brand new site for our company, which you can check here: http://hibernatingrhinos.com/.  To celebrate the fact that we are going on beta, we also offer a 20% discount for the duration of the beta.  Nitpicker corner, please remember that this is a beta, there are bound to be problems, and we will fix them as soon as we can.</p>
         </article>
         <div class="button flex justify-between">
             <a href="434.html"><span class="back arrow"></span></a>
