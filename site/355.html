@@ -137,8 +137,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3541">
+            <a href="https://ayende.com/blog/170625/work-stealing-in-the-presence-of-startup-shutdown-costs" target="_blank">
+                <h2 class="title mb-6" id="article-3541">Work stealing in the presence of startup / shutdown costs</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: April 24, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned that we have created our own thread pool implementation in RavenDB to handle our specific needs. A common scenario that ended up quite costly for us was the notion of parallelizing similar work. For example, I have 15,000 documents to index .That means that we need to go over each of the documents and apply the indexing function. That is an embarrassingly parallel task. So that is quite easy. One easy way to do that would be to do something like this:  foreach(var doc in docsToIndex)&#xA;&#x9;ThreadPool.QueueUserWorkItem(()=&gt; IndexFunc(new[]{doc}));&#xA;&#xA;Of course, that generates 15,000 entries for the thread pool, but that is fine. &#xA;Except that there is an issue here, we need to do stuff to the result of the indexing. Namely, write them to the index. That means that even though we can parallelize the work, we still have non trivial amount of startup &amp; shutdown costs. Just running the code like this would actually be much slower than running it in single threaded mode.&#xA;So, let us try a slightly better method:&#xA;&#xA;foreach(var partition in docsToIndex.Partition(docsToIndex.Length / Environment.ProcessorCount))&#xA;&#x9;ThreadPool.QueueUserWorkItem(()=&gt; IndexFunc(partition));&#xA;&#xA;If my machine has 8 cores, then this will queue 8 tasks to the thread pool, each indexing just under 2,000 documents. Which is pretty much what we have been doing until now.&#xA;Except that this means that we have to incur the startup/shutdown costs a minimum of 8 times.&#xA;A better way is here:&#xA;&#xA;ConcurrentQueue&lt;ArraySegment&lt;JsonDocument&gt;&gt; partitions = docsToIndex.Partition(docsToIndex.Length / Environment.ProcessorCount);&#xA;for(var i = 0; i &lt; Environment.ProcessorCount; i&#x2B;&#x2B;) &#xA;{&#xA;&#x9;ThreadPool.QueueUserWorkItem(()=&gt; {&#xA;&#x9;&#x9;ArraySegment&lt;JsonDocument&gt; first;&#xA;&#x9;&#x9;if(partitions.TryTake(out first) == false)&#xA;&#x9;&#x9;&#x9;return;&#xA;&#xA;&#x9;&#x9;IndexFunc(Pull(first, partitions));&#xA;&#x9;});&#xA;}&#xA;&#xA;IEnumerable&lt;JsonDocument&gt; Pull(ArraySegment&lt;JsonDocument&gt; first, ConcurrentQueue&lt;ArraySegment&lt;JsonDocument&gt;&gt; partitions )&#xA;{&#xA;&#x9;while(true)&#xA;&#x9;{&#xA;&#x9;&#x9;for(var i = 0; i &lt; first.Count; i&#x2B;&#x2B;)&#xA;&#x9;&#x9;&#x9;yield return first.Array[i&#x2B;first.Start];&#xA;&#xA;&#x9;&#x9;if(partitions.TryTake(out first) == false)&#xA;&#x9;&#x9;&#x9;break;&#xA;&#x9;}&#xA;}&#xA;&#xA;Now something interesting is going to happen, we are scheduling 8 tasks, as before, but instead of allocating 8 static partitions, we are saying that when you start running, you&#x2019;ll get a partition of the data, which you&#x2019;ll go ahead and process. When you are done with that, you&#x2019;ll try to get a new partition, in the same context. So you don&#x2019;t have to worry about new startup/shutdown costs.&#xA;Even more interesting, it is quite possible (and common) for those tasks to be done with by the time we end up executing some of them. (All the index is already done but we still have a task for it that didn&#x2019;t get a chance to run.) In that case we exit early, and incur no costs.&#xA;The fun thing about this method is what happens under the load when you have multiple indexes running. In that case, we&#x2019;ll be running this for each of the indexes. It is quite likely that each core will be running a single index. Some indexes are going to be faster than the others, and complete first, consuming all the documents that they were told to do. That means that the tasks belonging to those indexes will exit early, freeing those cores to run the code relevant for the slower indexes, which hasn&#x2019;t completed yet. &#xA;This gives us dynamic resource allocation. The more costly indexes get to run on more cores, while we don&#x2019;t have to pay the startup / shutdown costs for the fast indexes.</p>
+        </article>
+        <article id="article-3542">
+            <a href="https://ayende.com/blog/170593/fine-grained-work-control" target="_blank">
+                <h2 class="title mb-6" id="article-3542">Fine grained work control</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: April 21, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">With RavenDB 3.5, we are focusing on performance as one of the key features. I&#x2019;ve already spoken at length about the kind of changes that we had made to improve performance. A few percentage points here and there end up being quite significant when you add them all together. But just sanding over the rough edges isn&#x2019;t quite enough for us. We want to have a major impact, not just an avalanche of small improvements. In order to handle that, we needed to be much more aware of how we are making use of resources in the system. The result of several months of work is now ready to enter into performance testing, and I&#x2019;m quite excited about it. But before I show you the results, what is it? Well, RavenDB does quite a lot in the background, to avoid holding up a request thread when you are calling RavenDB. This mean that we have a lot of background work, indexing, map/reduce, etc. We have been using the default .NET thread pool for a long time to do that, and it has served us very well. But it is a generic construct, without awareness of the unique needs that RavenDB has. Therefor, we worked for quite some time to create our own Thread Pool that match what we do. The major changes with the RavenThreadPool (RTP from now) are:  There is a fixed (and dedicated) number of threads that will do the work, sharing (and stealing) work among themselves. Indexes tasks are continuous and shared, so a big indexing work will spread across all threads, but with a preference for locality of work if we have a lot of stuff to parallel.  A slow index doesn&#x2019;t stop us from working on other indexes, we&#x2019;ll let it process on its own, and let the other indexes run forward without it. Dynamic adjusting of the amount of work that is allowed for the indexes means that under load, we can dynamically and rapidly reduce the amount of work we are doing to allow more resources for processing requests. There are other stuff, but they are mostly of interest for the people who work on RavenDB, not on those who use it. And the results, they are pretty good. Here is the before and after sample.  Note that we have a mix here of various types of indexes. The X axis is time, and the Y axis is the number of documents indexed. As you can see, in the before (without RTP), we are processing all indexes roughly on the same course, with a pretty flat growth over time.&#xA0; However, with RTP, the situation is different. You can see that very quickly the fast indexes are starting to outpace both their version without RTP and the slower indexes. That, in turn, means that they complete much faster. In the case of the Simple Map index, it complete indexing roughly 50% faster than without RTP. But even more interesting is what happens globally, because we are able to complete indexing of the fast indexing fast, it means that we can process the slow index (HeavyMapReduce) with more resources. So even this slowpoke completes about 15% faster with RTP than without it. We are still running tests, but even so, this is quite exciting.</p>
+        </article>
+        <article id="article-3543">
             <a href="https://enterprisecraftsmanship.com/posts/types-of-cqrs/" target="_blank">
-                <h2 class="title mb-6" id="article-3541">Types of CQRS</h2>
+                <h2 class="title mb-6" id="article-3543">Types of CQRS</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">CQRS&#xA0;is a pretty defined concept. Often, people say that you either follow CQRS or not, meaning that it is some kind of a binary choice. In this article, I&#x2019;d like to show that there is some wriggle room in this notion and how different types of CQRS can look like.&#xA; Type 0: no CQRS With this type, you don&#x2019;t have any CQRS whatsoever. That means you have a domain model and you use your domain classes for both serving commands and executing queries.</p>
         </article>
-        <article id="article-3542">
+        <article id="article-3544">
             <a href="https://www.meziantou.net/sql-export-the-contents-of-a-table.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3542">SQL - Export the contents of a table</h2>
+                <h2 class="title mb-6" id="article-3544">SQL - Export the contents of a table</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When developing an application using a database one may need to initialize tables with a few rows. For example, it is useful for a &quot;Category&quot; table to contain a few rows as soon as the application starts. So we create these lines in the database with the tool that we want (rarely a SQL INSERT comma</p>
         </article>
-        <article id="article-3543">
+        <article id="article-3545">
             <a href="https://ardalis.com/developer-user-group-tips/" target="_blank">
-                <h2 class="title mb-6" id="article-3543">Developer User Group Tips</h2>
+                <h2 class="title mb-6" id="article-3545">Developer User Group Tips</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve been a participant in a number of software developer user groups for many years, and an organizer of the Hudson Software Craftsmanship&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3544">
+        <article id="article-3546">
             <a href="https://ardalis.com/github-spinoff-sites/" target="_blank">
-                <h2 class="title mb-6" id="article-3544">GitHub Spinoff Sites</h2>
+                <h2 class="title mb-6" id="article-3546">GitHub Spinoff Sites</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently I&#x2019;ve started using a couple of GitHub-related sites for collaboration. These are made possible by GitHub&#x2019;s open API, and&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3545">
+        <article id="article-3547">
             <a href="https://enterprisecraftsmanship.com/posts/dto-vs-value-object-vs-poco/" target="_blank">
-                <h2 class="title mb-6" id="article-3545">DTO vs Value Object vs POCO</h2>
+                <h2 class="title mb-6" id="article-3547">DTO vs Value Object vs POCO</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this article, I&#x2019;d like to clarify the differences in DTO vs Value Object vs POCO where DTO stands for Data Transfer Object, and POCO is Plain Old CLR Object, also known as POJO in Java environment.</p>
         </article>
-        <article id="article-3546">
+        <article id="article-3548">
             <a href="https://ayende.com/blog/170561/project-tamar" target="_blank">
-                <h2 class="title mb-6" id="article-3546">Project Tamar</h2>
+                <h2 class="title mb-6" id="article-3548">Project Tamar</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m happy to announce that despite the extreme inefficiencies involved in the process, the performance issues and what are sure to be multiple stop ship bugs in the way the release process is handled. We have successfully completed Project Tamar. The result showed up as 2.852 Kg bundle, and is currently sleeping peacefully. I understand that this is a temporary condition, and lack of sleep shall enthuse shortly. I&#x2019;ll probably regret saying that, but I can&#x2019;t wait. &#xA0; This little girl is named Tamar and to celebrate, I&#x2019;m offering a 28.52% discount for all our products. This include:  NHibernate Profiler  Entity Framework Profiler RavenDB &amp; RavenFS Just use coupon code: Tamar This will be valid for the next few days.</p>
         </article>
-        <article id="article-3547">
+        <article id="article-3549">
             <a href="https://www.meziantou.net/scan-a-document-with-windows-image-acquisition.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3547">Scan a document with Windows Image Acquisition</h2>
+                <h2 class="title mb-6" id="article-3549">Scan a document with Windows Image Acquisition</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Windows Image Acquisition (WIA) was introduced with Windows 2000. This platform is intended to allow access to scanner and webcam devices without having to worry about the details of interfacing with them. In addition WIA included GUIs to help us use these devices from our code (script, COM, .NET v</p>
         </article>
-        <article id="article-3548">
+        <article id="article-3550">
             <a href="https://ayende.com/blog/170529/ravendb-3-0-new-stable-release" target="_blank">
-                <h2 class="title mb-6" id="article-3548">RavenDB 3.0&#x2013;New stable release</h2>
+                <h2 class="title mb-6" id="article-3550">RavenDB 3.0&#x2013;New stable release</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -263,38 +295,6 @@
                 posted on: April 08, 2015
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We have a new build out, build 3660, which contain a lot of fixes and some really nice stuff for RavenDB users. You can get it here. The new stuff is quite cool. Global  Changed default data location (Now will go to C:\Raven). Various performance optimizations across both server and client. RavenFS  Versioning support for RavenFS Better metadata queries for RavenFS Smuggler support for RavenFS RavenDB  Client side indexes will automatically specify sort orders Prevented high CPU and excessive GC runs under low memory conditions Avoid leaking resources when failing to create a database. Faster JSON serialization and deserialization Allow to lock and set index priorities via the client API Added backoff strategy for failing periodic exports Recognize Windows users with admin rights to system database as server admins Facets can now have very large number of facets Replication will now replicate indexes between nodes (and gossip about usage) We are now aiming at RavenDB 3.5, which should result in some really great stuff showing up.</p>
-        </article>
-        <article id="article-3549">
-            <a href="https://ardalis.com/configure-grunt-in-visual-studio-2015/" target="_blank">
-                <h2 class="title mb-6" id="article-3549">Configure Grunt in Visual Studio 2015</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 06, 2015
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Configure Grunt in Visual Studio 2015 You can easily configure Grunt to perform client-side build tasks in Visual Studio 2015. Grunt is very&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-3550">
-            <a href="https://enterprisecraftsmanship.com/posts/how-we-think/" target="_blank">
-                <h2 class="title mb-6" id="article-3550">How we think</h2>
-            </a>
-            <p class="mb-2">by Vladimir Khorikov</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 03, 2015
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Did you think about how we think? How do we come up with a solution and how we decide whether it&#x2019;s good or bad? It seems like a very interesting topic, so let&#x2019;s dive in!</p>
         </article>
         <div class="button flex justify-between">
             <a href="354.html"><span class="back arrow"></span></a>
