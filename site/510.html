@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5091">
+            <a href="https://ayende.com/blog/4742/solving-an-outofmemoryexception" target="_blank">
+                <h2 class="title mb-6" id="article-5091">Solving an OutOfMemoryException</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 05, 2011
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The following code generates an OutOfMemoryException in certain circumstances (see my previous post about it):     private string ReplaceParametersWithValues(string statement, bool useComment)&#xA;{&#xA;  if (sqlStatement.Parameters == null)&#xA;    return statement;&#xA;&#xA;  foreach (var parameter in sqlStatement.Parameters&#xA;            .Where(x =&gt; x != null &amp;&amp; x.Name.Empty() == false)&#xA;            .OrderByDescending(x =&gt; x.Name.Length))&#xA;  {&#xA;    var patternNameSafeForRegex = Regex.Escape(parameter.Name);&#xA;    var pattern = patternNameSafeForRegex &#x2B; @&quot;(?![\d|_])&quot;;&#xA;    //static Regex methods will cache the regex, so we don&#x27;t need to worry about that&#xA;      var replacement = useComment ? &#xA;                parameter.Value &#x2B; &quot; /* &quot; &#x2B; parameter.Name &#x2B; &quot; */&quot; : &#xA;                parameter.Value;&#xA;      statement = Regex.Replace(statement,&#xA;                  pattern,&#xA;                  replacement);&#xA;  }&#xA;  return statement;&#xA;}&#xA;  &#xA;&#xA;When trying to resolve this, I had to adjust my assumptions. The code above was written to handle statements of 1 &#x2013; 5 kilobytes with up to a dozen or two parameters.&#xA;&#xA;But it started crashing badly with a statement of 190 Kilobyte and 4 thousands parameters. It is fairly obvious that this method generates a lot of temporary strings. Probably leading to GC pressure and a lot of other nasty stuff beside. Unfortunately, there isn&#x2019;t a set of Regex API for StringBuilder, so I had to make do with my own approach.&#xA;&#xA;I chose a fairly brute force approach for that, and I am sure it can be made better, but basically, it is just using a StringBuilder and doing the work manually.&#xA;&#xA;&#xA;  private string ReplaceParametersWithValues(string statement, bool useComment)&#xA;{&#xA;  if (sqlStatement.Parameters == null)&#xA;    return statement;&#xA;  var sb = new StringBuilder(statement);&#xA;  foreach (var parameter in sqlStatement.Parameters&#xA;            .Where(x =&gt; x != null &amp;&amp; x.Name.Empty() == false)&#xA;            .OrderByDescending(x =&gt; x.Name.Length))&#xA;  {&#xA;    var replacement = useComment ?&#xA;      parameter.Value &#x2B; &quot; /* &quot; &#x2B; parameter.Name &#x2B; &quot; */&quot; :&#xA;      parameter.Value;&#xA;&#xA;    int i;&#xA;    for ( i = 0; i &lt; sb.Length; i&#x2B;&#x2B;)&#xA;    {&#xA;      if(sb[i] != parameter.Name[0])&#xA;        continue;&#xA;      int j;&#xA;      for (j = 1; j &lt; parameter.Name.Length &amp;&amp; (j&#x2B;i) &lt; sb.Length; j&#x2B;&#x2B;)&#xA;      {&#xA;        if (sb[i &#x2B; j] != parameter.Name[j])&#xA;          break;&#xA;      }&#xA;      if (j != parameter.Name.Length)&#xA;        continue;&#xA;&#xA;      if ((i &#x2B; j) &gt;= sb.Length || char.IsDigit(sb[i &#x2B; j]) == false)&#xA;      {&#xA;        sb.Remove(i, parameter.Name.Length);&#xA;        sb.Insert(i, replacement);&#xA;        i &#x2B;= replacement.Length - 1;&#xA;      }&#xA;    }&#xA;  }&#xA;  return sb.ToString();&#xA;}&#xA;  &#xA;&#xA;The code is somewhat complicated due to the check that I need to make, I can&#x2019;t just use sb.Replace(), because I need to replace the value if it isn&#x2019;t followed by a digit. &#xA;&#xA;At any rate, this code is much more complicated, but it is also much more conservative in terms of memory usage.</p>
+        </article>
+        <article id="article-5092">
             <a href="https://ayende.com/blog/4741/investigating-an-outofmemoryexception" target="_blank">
-                <h2 class="title mb-6" id="article-5091">Investigating an OutOfMemoryException</h2>
+                <h2 class="title mb-6" id="article-5092">Investigating an OutOfMemoryException</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 1/5/2011I finally got a reliable reproduction for a repeated error, but I have to say, just based on the initial impression, something very strange is going on.    The stack trace was a bit more interesting:     System.OutOfMemoryException: Exception of type &#x27;System.OutOfMemoryException&#x27; was thrown.&#xA;  at System.String.GetStringForStringBuilder(String value, Int32 startIndex, Int32 length, Int32 capacity)&#xA;  at System.Text.StringBuilder.GetNewString(String currentString, Int32 requiredLength)&#xA;  at System.Text.StringBuilder.Append(String value)&#xA;  at System.Text.RegularExpressions.RegexReplacement.ReplacementImpl(StringBuilder sb, Match match)&#xA;  at System.Text.RegularExpressions.RegexReplacement.Replace(Regex regex, String input, Int32 count, Int32 startat)&#xA;  at System.Text.RegularExpressions.Regex.Replace(String input, String replacement, Int32 count, Int32 startat)&#xA;  at System.Text.RegularExpressions.Regex.Replace(String input, String replacement)&#xA;  at System.Text.RegularExpressions.Regex.Replace(String input, String pattern, String replacement)&#xA;  at HibernatingRhinos.Profiler.BackEnd.SqlStatementProcessor.ReplaceParametersWithValues(String statement, Boolean useComment) &#xA;  &#xA;&#xA;I put a breakpoint in the appropriate place, and discovered that the error occurred in:&#xA;&#xA;&#xA;  A SQL Statement that was 190 kilobytes in size&#xA;&#xA;  It had 4,060 parameters&#xA;&#xA;&#xA;Now, let us look at the actual code:&#xA;&#xA;&#xA;  private string ReplaceParametersWithValues(string statement, bool useComment)&#xA;{&#xA;  if (sqlStatement.Parameters == null)&#xA;    return statement;&#xA;&#xA;  foreach (var parameter in sqlStatement.Parameters&#xA;            .Where(x =&gt; x != null &amp;&amp; x.Name.Empty() == false)&#xA;            .OrderByDescending(x =&gt; x.Name.Length))&#xA;  {&#xA;    var patternNameSafeForRegex = Regex.Escape(parameter.Name);&#xA;    var pattern = patternNameSafeForRegex &#x2B; @&quot;(?![\d|_])&quot;;&#xA;    //static Regex methods will cache the regex, so we don&#x27;t need to worry about that&#xA;      var replacement = useComment ? &#xA;                parameter.Value &#x2B; &quot; /* &quot; &#x2B; parameter.Name &#x2B; &quot; */&quot; : &#xA;                parameter.Value;&#xA;      statement = Regex.Replace(statement,&#xA;                  pattern,&#xA;                  replacement);&#xA;  }&#xA;  return statement;&#xA;}&#xA;  &#xA;&#xA;The problem is that:&#xA;&#xA;&#xA;  There is no heavy memory pressure.&#xA;&#xA;  While the string is big, it is not that big. &#xA;&#xA;  In practice, there is a single replacement for each parameter.&#xA;&#xA;&#xA;Just for fun, I wasn&#x2019;t able to reproduce the issue without running the full NH Prof application.&#xA;&#xA;I solved the issue, but I am not entirely pleased with the way I solved it. (That is tomorrow&#x2019;s post)&#xA;&#xA;Any ideas how to reproduce this? &#xA;&#xA;Any elegant ideas on how to solve this?</p>
         </article>
-        <article id="article-5092">
+        <article id="article-5093">
             <a href="https://www.meziantou.net/le-retour-du-projet-hoshimi.htm" target="_blank">
-                <h2 class="title mb-6" id="article-5092">Le retour du projet Hoshimi</h2>
+                <h2 class="title mb-6" id="article-5093">Le retour du projet Hoshimi</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Deux &#xE9;tudiants de l&#x27;INSA de Lyon relancent Project Hoshimi, une ancienne cat&#xE9;gorie de l&#x27;Imagine Cup (Microsoft), qui rassemblait 1200 &#xE9;tudiants et lyc&#xE9;ens fran&#xE7;ais en 2008 (ann&#xE9;e de la derni&#xE8;re session).Gr&#xE2;ce au soutien de Microsoft France, Intel et de l&#x27;association &#xE9;tudiante 7D&#xB2;, David APARICIO (M</p>
         </article>
-        <article id="article-5093">
+        <article id="article-5094">
             <a href="https://ayende.com/blog/4740/the-bcl-bug-of-the-day" target="_blank">
-                <h2 class="title mb-6" id="article-5093">The BCL bug of the day</h2>
+                <h2 class="title mb-6" id="article-5094">The BCL bug of the day</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Now this one if quite an interesting one. Let us take a look and see what happen when we have the following calling code:     public class Program&#xA;{&#xA;    static void Main()&#xA;    {&#xA;        dynamic d = new MyDynamicObject();&#xA;        Console.WriteLine(d.Item.Key);&#xA;    }&#xA;}&#xA;  &#xA;&#xA;And the following MyDynamicObject:&#xA;&#xA;&#xA;  public class MyDynamicObject : DynamicObject&#xA;{&#xA;    public override bool TryGetMember(GetMemberBinder binder, out object result)&#xA;    {&#xA;        result = new {Key = 1};&#xA;        return true;&#xA;    }&#xA;}&#xA;  &#xA;&#xA;What do you expect the result of executing this code would be?&#xA;&#xA;If you think that this will print 1 on the console, you are absolutely correct.&#xA;&#xA;Except&#x2026;&#xA;&#xA;If Program and MyDynamicObject are on separate assemblies.&#xA;&#xA;In that case, we end up with a terribly confusing message:&#xA;&#xA;Microsoft.CSharp.RuntimeBinder.RuntimeBinderException was unhandled&#xA;  Message=&#x27;object&#x27; does not contain a definition for &#x27;Key&#x27;&#xA;  Source=Anonymously Hosted DynamicMethods Assembly&#xA;  StackTrace:&#xA;       at CallSite.Target(Closure , CallSite , Object )&#xA;       at System.Dynamic.UpdateDelegates.UpdateAndExecute1[T0,TRet](CallSite site, T0 arg0)&#xA;       at ConsoleApplication1.Program.Main() &#xA;       at System.AppDomain._nExecuteAssembly(RuntimeAssembly assembly, String[] args)&#xA;&#xA;&#xA;I have been able to narrow this down to &#x201C;anonymous objects from a different assembly&#x201D;.&#xA;&#xA;Now that you have the bug, figure out:&#xA;&#xA;&#xA;  Why this is happening?&#xA;&#xA;  How would you work around this bug?&#xA;&#xA;  How would you reproduce this bug without using anonymous types?&#xA;&#xA;  How would you fix this bug?&#xA;&#xA;  &#xA;    What should you be careful when fixing this bug?&#xA;  &#xA;&#xA;  What would be Microsoft&#x2019;s response to that?</p>
         </article>
-        <article id="article-5094">
+        <article id="article-5095">
             <a href="https://ayende.com/blog/4739/new-year-decisions" target="_blank">
-                <h2 class="title mb-6" id="article-5094">New year decisions</h2>
+                <h2 class="title mb-6" id="article-5095">New year decisions</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 1/2/2011It is a new year, and I understand it is a tradition to make some rules that you&#x2019;ll violate during the year.  Mine are:     Work less, a lot less.    Enjoy life.   They are more or less associated with one another, as you can imagine.  A few weeks ago, I got myself a nice birthday gift, a shiny office. The idea is that if I am no longer working from home, I have that much greater a chance to actually be able to put some separation between the periods in which I am working and the periods in which I am not.  Associate with the office is the decision to hire employees and leave the office at a reasonable time.  For example, this post is my last official act of &#x201C;work&#x201D; for the day, and I am leaving the office at 18:10. Quite a good number, I think</p>
         </article>
-        <article id="article-5095">
+        <article id="article-5096">
             <a href="https://ayende.com/blog/4738/european-van-on-ravendb-on-11-january-2011" target="_blank">
-                <h2 class="title mb-6" id="article-5095">European VAN on RavenDB on 11 January 2011</h2>
+                <h2 class="title mb-6" id="article-5096">European VAN on RavenDB on 11 January 2011</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ll be speaking about RavenDB in the EVAN on the 11th of January. Here are the details:  Start Time: Tuesday, January 11, 2011 08:00 PM GMT*  End Time: Tuesday, January 11, 2011 09:30 PM GMT  Attendee URL: http://snipr.com/virtualaltnet (Live Meeting)  VAN Calendar: http://www.virtualaltnet.com/Home/Calendar  (*) 08:00 PM UK, 09:00 PM Brussels, 03:00 PM EST, 01:00 PM MST and 12:00 Noon PST. For time zone arithmetic, you can consult the world clock site, use this time zone converter or every time zone.  Make sure that you don&#x2019;t miss this excellent learning opportunity and we hope to see you there.</p>
         </article>
-        <article id="article-5096">
+        <article id="article-5097">
             <a href="https://ayende.com/blog/4737/happy-new-year-and-across-the-board-profiler-discount" target="_blank">
-                <h2 class="title mb-6" id="article-5096">Happy New Year, and across the board profiler discount</h2>
+                <h2 class="title mb-6" id="article-5097">Happy New Year, and across the board profiler discount</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">To celebrate the new year, I decided to offer a single day coupon that will get you 35% discount for all my profiler products.  The coupon code is valid until the 1st of January 2011, but I won&#x2019;t mention in which timezone, so you might want to hurry up.  The coupon code is:  HNY-45K2D465DD  You can use it to buy:     NHibernate Profiler    Entity Framework Profiler    Linq to SQL Profiler    LLBLGen Profiler    Hibernate Profiler   Happy new year!</p>
         </article>
-        <article id="article-5097">
+        <article id="article-5098">
             <a href="https://ayende.com/blog/4736/psychic-debugging" target="_blank">
-                <h2 class="title mb-6" id="article-5097">Psychic Debugging</h2>
+                <h2 class="title mb-6" id="article-5098">Psychic Debugging</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I think that I am getting too much of those recently:</p>
         </article>
-        <article id="article-5098">
+        <article id="article-5099">
             <a href="https://ayende.com/blog/4735/public-service-announcement-git-master-repositories-for-the-rhino-tools-projects" target="_blank">
-                <h2 class="title mb-6" id="article-5098">Public Service Announcement</h2>
+                <h2 class="title mb-6" id="article-5099">Public Service Announcement</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There have been some changes, and it seems that it is hard to track them. Here are where you can find the master repositories for the rhino tools projects:     Rhino Commons - https://github.com/lorenzomelato/rhino-commons    Rhino Service Bus- https://github.com/hibernating-rhinos/rhino-esb    Rhino Licensing - https://github.com/hibernating-rhinos/rhino-licensing    Rhino ETL - https://github.com/hibernating-rhinos/rhino-etl    Rhino Security - https://github.com/hibernating-rhinos/rhino-security    Rhino Persistent Hash Table - https://github.com/hibernating-rhinos/rhino-pht    Rhino Distributed Hash Table - https://github.com/hibernating-rhinos/rhino-dht    Rhino DSL - https://github.com/hibernating-rhinos/rhino-dsl    Rhino Mocks - https://github.com/hibernating-rhinos/rhino-mocks    Rhino Queues - https://github.com/hibernating-rhinos/rhino-queues</p>
         </article>
-        <article id="article-5099">
+        <article id="article-5100">
             <a href="https://ayende.com/blog/4734/we-are-hiring" target="_blank">
-                <h2 class="title mb-6" id="article-5099">We are hiring!</h2>
+                <h2 class="title mb-6" id="article-5100">We are hiring!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: December 26, 2010
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In 2005, I got out of the army, and looked for a job. I felt that I had all the necessary qualifications (at the time, I had already written Rhino Mocks), but I run into an interesting problem. I didn&#x2019;t have any commercial experience. I am sure that you are familiar with the tale. All the jobs require at least 2 &#x2013; 3 years experience, and the list of qualification looked like someone just raided the TLA storage facilities.   That was pretty annoying at the time, and I wished I could do something about it. Now I can.  We aren&#x2019;t hiring additional full time employees (at least not right now), but we are hiring interns. The main idea is to enable people to gain commercial experience while working on cool software.  Some information that you probably need to know:     You have to know to program in C#. If you have OSS credentials, that is all for the better, but it is not required.    This is a paid position, you are not expected to work for free.    It is not a remote position, our offices are located in the Southern Industrial Area in&#xA0;Hadera, Israel.    I&#x2019;m not going to ask you to do all the annoying work. There is some annoying stuff to do (mostly docs), but look below to see what exactly I have in mind.   This position entails:  Working on our shipping products (the Uber Prof line of products and the Raven DB / Raven MQ line).  Among other things, I have earmarked the following features for you:     Raven DB&#x2019;s query optimizer.    Raven DB&#x2019;s auto sharding &amp; scaling.    Raven DB&#x2019;s clustering support.    Uber Prof&#x2019;s production profiling feature.   The other things that are involved include all the usual stuff, bug fixes, doc writing and standard (in other words, not that exciting) features.  Duration:  This is a three to six months position.  What is required:  Commercial experience is not required, but I would want to see code that you wrote.</p>
-        </article>
-        <article id="article-5100">
-            <a href="https://ayende.com/blog/4733/answer-this-code-should-never-hit-production" target="_blank">
-                <h2 class="title mb-6" id="article-5100">Answer</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 24, 2010
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 12/15/2010Yesterday I asked what is wrong with the following code:     public ISet&lt;string&gt; GetTerms(string index, string field)&#xA;{&#xA;    if(field == null) throw new ArgumentNullException(&quot;field&quot;);&#xA;    if(index == null) throw new ArgumentNullException(&quot;index&quot;);&#xA;    &#xA;    var result = new HashSet&lt;string&gt;();&#xA;    var currentIndexSearcher = database.IndexStorage.GetCurrentIndexSearcher(index);&#xA;    IndexSearcher searcher;&#xA;    using(currentIndexSearcher.Use(out searcher))&#xA;    {&#xA;        var termEnum = searcher.GetIndexReader().Terms(new Term(field));&#xA;        while (field.Equals(termEnum.Term().Field()))&#xA;        {&#xA;           result.Add(termEnum.Term().Text());&#xA;&#xA;            if (termEnum.Next() == false)&#xA;                break;&#xA;        }&#xA;    }&#xA;&#xA;    return result;&#xA;}&#xA;  &#xA;&#xA;The answer to that is quite simple, this code doesn&#x2019;t have any paging available. What this means is if we executes this piece of code on an field with very high number of unique items (such as, for example, email addresses), we would return all the results in one shot. That is, if we can actually fit all of them to memory. Anything that can run over potentially unbounded result set should have paging as part of its basic API. &#xA;&#xA;This is not optional.&#xA;&#xA;Here is the correct piece of code:&#xA;&#xA;&#xA;  public ISet&lt;string&gt; GetTerms(string index, string field, string fromValue, int pageSize)&#xA;{&#xA;    if(field == null) throw new ArgumentNullException(&quot;field&quot;);&#xA;    if(index == null) throw new ArgumentNullException(&quot;index&quot;);&#xA;    &#xA;    var result = new HashSet&lt;string&gt;();&#xA;    var currentIndexSearcher = database.IndexStorage.GetCurrentIndexSearcher(index);&#xA;    IndexSearcher searcher;&#xA;    using(currentIndexSearcher.Use(out searcher))&#xA;    {&#xA;        var termEnum = searcher.GetIndexReader().Terms(new Term(field, fromValue ?? string.Empty));&#xA;        if (string.IsNullOrEmpty(fromValue) == false)// need to skip this value&#xA;        {&#xA;            while(fromValue.Equals(termEnum.Term().Text()))&#xA;            {&#xA;                if (termEnum.Next() == false)&#xA;                    return result;&#xA;            }&#xA;        }&#xA;        while (field.Equals(termEnum.Term().Field()))&#xA;        {&#xA;            result.Add(termEnum.Term().Text());&#xA;&#xA;            if (result.Count &gt;= pageSize)&#xA;                break;&#xA;&#xA;            if (termEnum.Next() == false)&#xA;                break;&#xA;        }&#xA;    }&#xA;&#xA;    return result;&#xA;}&#xA;  &#xA;&#xA;And that is quite efficient, even for searching large data sets.&#xA;&#xA;For bonus points, the calling code ensures that pageSize cannot be too big :-)</p>
         </article>
         <div class="button flex justify-between">
             <a href="509.html"><span class="back arrow"></span></a>
