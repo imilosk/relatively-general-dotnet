@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3981">
+            <a href="https://ayende.com/blog/164868/voron-performance-the-end-is-nigh-sequentially" target="_blank">
+                <h2 class="title mb-6" id="article-3981">Voron Performance, the end is nigh (sequentially)</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 20, 2013
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For the past few months, we have been doing a lot of work on performance for Voron. Performance for a storage engine is a very complex problem, composed of many competing issues. For example, sequential writes vs. random writes. Or the cost of writes vs. the cost of reads. In this post, I am going to focus specifically on the single scenario we have focused most of our efforts on, sequential writes. Sequential writes are important because they present the absolute sweet spot for a storage engine. In other words, this is the very first thing that needs to be fast, because if that ain&#x2019;t fast ,nothing else would be. And because this represent the absolute sweat spot, it is perfectly fine and very common to explicitly design your system to ensure that this is what you&#x2019;ll use. We have been doing a lot there. In particular, some of our changes included:  Moving from fsync model (very slow) to unbuffered writer through writes. Moving to vectored writes, reducing sys calls and the need for sequential memory space. Writing our own immutable collection classes, meant specifically for what we&#x2019;re doing. Reduce # of tree searches. Optimizing the cost of copying data from the user&#x2019;s stream to our own store. There have probably been others ,but those have been the major ones. Let us look at the numbers, shall we? I am going to compare us to Esent, since this is our current storage engine. The test is writing out 10 million items, in 100,000 transactions, with 100 items per transaction. This is done in purely sequential manner. Item size is 128 bytes value and 16 bytes key. Here are the original code numbers.   Note that this was run on a W520 Lenovo with an SSD drive. The actual details don&#x2019;t really matter, what matters is that we are comparing two runs happening on the same machine. And now, let us compare Esent and Voron as they currently stand:  Yes, you see clearly. The big jump in Esent numbers have happened because we also worked on the test suite, and optimized things there, but the important thing is that we are now significantly faster than Esent. In fact, we are fast enough that it took me a while to accept that we are actually doing it. But yes, you are seeing an order of magnitude improvement over what we used to have. Feel free to take a moment to do a victory dance, that is what I&#x2019;m doing right now. However, note the title of this post. This is for a single threaded sequential inserts. The numbers are a lot worse for random writes, but we&#x2019;ll deal with that in another post.</p>
+        </article>
+        <article id="article-3982">
             <a href="https://ayende.com/blog/165089/im-twenty-tomorrow-let-us-celebrate" target="_blank">
-                <h2 class="title mb-6" id="article-3981">I&#x2019;m twenty tomorrow, let us celebrate</h2>
+                <h2 class="title mb-6" id="article-3982">I&#x2019;m twenty tomorrow, let us celebrate</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, tomorrow I&#x2019;ll be 0x20. Leaving aside the fact that I am just entering my twenties (finally, it feels like I was a 0xTeenager for over a decade), there is the tradition to uphold. Therefor, we have a 32% discount until the end of the year*. You can use coupon code: 0x20-twentysomething This applies to:  RavenDB NHibernate Profiler  Entity Framework Profiler * Limited to the first 0x32, and not applicable if you have to ask why you get a 32% discount.</p>
         </article>
-        <article id="article-3982">
+        <article id="article-3983">
             <a href="https://ayende.com/blog/164867/voron-performance-the-single-biggest-booster" target="_blank">
-                <h2 class="title mb-6" id="article-3982">Voron Performance, the single biggest booster</h2>
+                <h2 class="title mb-6" id="article-3983">Voron Performance, the single biggest booster</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the surprising points for improvement in our performance run was the following logic, responsible for copying the data from the user to our own memory:      1: using (var ums = new UnmanagedMemoryStream(pos, value.Length, value.Length, FileAccess.ReadWrite))   2: {   3:     value.CopyTo(ums);   4: }&#xA;Those three lines of code were responsible for no less than 25% of our performance. It was obvious that something needed to be done. My belief is that the unmanaged memory stream is just not optimized for this scenario, resulting in a lot of copying, allocations and costs. &#xA;Here is what we did instead. We create a temporary space that is allocated once, like this:&#xA;&#xA;&#xA;You can see that we are doing some interesting stuff there. In particular, we are allocated a managed buffer, but also force the GC to pin it. We keep this around for the entire lifetime of the database, too. The idea here is that we want to avoid the cost of pinning &amp; unpinning it all the time, even if it means that we have an unmovable memory.&#xA;At any rate that important thing about this is that it gives us access to the same memory from managed and unmanaged perspectives. And that, in turn, leads to the following code:&#xA;&#xA;&#xA;We first read the values from the stream into the managed buffer, then copy them from the unmanaged pointer to the buffer to our own memory.&#xA;The idea here is that we accept a Stream abstraction, and that can only work with managed buffers, so we have to go through this route, instead of having to copy the memory directly. The reason we do that is that we don&#x2019;t want to force the user of our API to materialize the data fully. We want to be able to stream it into the database.&#xA;At any rate, this has made some serious improvement to our performance, but I&#x2019;ll be showing the details on a future post.</p>
         </article>
-        <article id="article-3983">
+        <article id="article-3984">
             <a href="https://ayende.com/blog/164866/voron-performance-let-go-off-that-tree-dude" target="_blank">
-                <h2 class="title mb-6" id="article-3983">Voron Performance, let go off that tree, dude!</h2>
+                <h2 class="title mb-6" id="article-3984">Voron Performance, let go off that tree, dude!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">B-Trees has a few really awesome properties, chief among them is that they are playing very well with the hierarchical nature of data access that we have in our systems (L1 &#x2013; L3 caches, main memory, disk, etc). Another really nice property is that searches in a B-Trees have very low costs.  However, it became apparent to us during performance tests that actually searching the tree was very costly. Assuming that we have the following pseudo code:      1: for i in range(1, 1000 * 1000):   2:    add(i, &quot;val&quot;)&#xA;What is the cost of actually doing this? Well, an interesting tidbit about this is that every time we add an item to the tree, we need to search it, so we can find where in the tree that new value goes.&#xA;Cost of search the tree, based on size:&#xA;&#xA;&#xA;&#xA;&#xA;Number of entries&#xA;&#xA;Cost&#xA;&#xA;&#xA;1&#xA;&#xA;0.19&#xA;&#xA;&#xA;1,000&#xA;&#xA;1.93&#xA;&#xA;&#xA;10,000&#xA;&#xA;2.57&#xA;&#xA;&#xA;25,000&#xA;&#xA;2.83&#xA;&#xA;&#xA;50,000&#xA;&#xA;3.02&#xA;&#xA;&#xA;100,000&#xA;&#xA;3.21&#xA;&#xA;&#xA;250,000&#xA;&#xA;3.47&#xA;&#xA;&#xA;500,000&#xA;&#xA;3.66&#xA;&#xA;&#xA;1,000,000&#xA;&#xA;3.86&#xA;&#xA;&#xA;2,000,000&#xA;&#xA;4.05&#xA;The cost, by the way, is O(log36 (N&#x2B;1)). The log36 comes from the number of entries that we can fit in a single page. This cost ignores the actual search inside a page. But it is a good enough approximation for our needs.&#xA;Now, the cost of actually inserting 1 million items is the sum of all of those costs. Which means that the cost for 1 million is 3,576,242.35. This is another example of Schlemiel the Painter algorithm.&#xA;What we did was introduce a small cache, which remember the last few pages that we inserted to. That turned the cost down from searching the tree to checking the cache, where we can usually find the value, and gave a nice performance boost.</p>
         </article>
-        <article id="article-3984">
+        <article id="article-3985">
             <a href="https://ayende.com/blog/164865/what-about-f-collections" target="_blank">
-                <h2 class="title mb-6" id="article-3984">What about F# collections?</h2>
+                <h2 class="title mb-6" id="article-3985">What about F# collections?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After disqualifying the BCL immutable collections for performance, I decided that I probably also need to look at the F# collection package, to see if they do any better. I referenced the FSharp.Core dll and wrote the following:      1: private static FSharpMap&lt;long, object&gt; FSharpAdd(int iterations)   2: {   3:     var dic = MapModule.Empty&lt;long, object&gt;();   4:&#xA0;    5:     var sp = Stopwatch.StartNew();   6:     var rnd = new Random(32);   7:     for (int i = 0; i &lt; iterations; i&#x2B;&#x2B;)   8:     {   9:         foreach (var item in Enumerable.Range(rnd.Next(0, i), Math.Max(i * 2, 16)))  10:         {  11:             dic = dic.Add(item, null);  12:         }  13:     }  14:&#xA0;   15:     Console.WriteLine(sp.Elapsed &#x2B; &quot; Adding items, fsharp map&quot;);  16:&#xA0;   17:     return dic;  18: }&#xA;As I was writing this post, the code is running, and I have had time to do some emails, writing the entire post, check the CPU status, and it is still running. It is likely going to be worse than the immutable collections scenario.&#xA;That make sense, since in the immutable collection scenario we had the ability to do many mutations all at once (using SetItems, which isn&#x2019;t available on the FSharpMap).&#xA;However, it clocks in at just over 1 hour and 16 minutes, making it the slowest contender overall.</p>
         </article>
-        <article id="article-3985">
+        <article id="article-3986">
             <a href="https://ayende.com/blog/164833/voron-perf-testing-part-ii" target="_blank">
-                <h2 class="title mb-6" id="article-3985">Voron perf testing, part II</h2>
+                <h2 class="title mb-6" id="article-3986">Voron perf testing, part II</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After the previous round of perf testing, I decided to compare just Voron and Esent. The machine is the same as before, and I am testing this on a 300GB HDD. One of the reasons that I choose to use an HDD here is that it is drastically slower, so it shows problematic I/O patterns more easily. I also decided that it would be interested to see exactly how it scale with regards to concurrency.  And here you can see the latencies involved in each 100 items transaction.  Now, to be fair to the poor thing, it is running on an old HDD. Here are the stats from running this. Notice the actual latencies that are involved:  But interestingly, we can see that the more concurrent writes we use, the slower we become. At a guess, I would assume that this is related to concurrent threads issuing different writes and causing a lot of seeks.  But after investigating a bit deeper, I think that the problem is actually different. Concurrent writes are inherently random. This happens because as we read from the sequential stream in multiple threads, and each thread writing them to Esent, what the db actually gets is a stream of non sequential ranges. Those can be roughly in the same place, but they aren&#x2019;t sequential, negating a lot of potential optimizations.</p>
         </article>
-        <article id="article-3986">
+        <article id="article-3987">
             <a href="https://ayende.com/blog/165025/a-interview-posted" target="_blank">
-                <h2 class="title mb-6" id="article-3986">A* Interview posted</h2>
+                <h2 class="title mb-6" id="article-3987">A* Interview posted</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was interviewed George London for his A* series. This is now online.</p>
         </article>
-        <article id="article-3987">
+        <article id="article-3988">
             <a href="https://ayende.com/blog/164801/more-on-collection-performance-immutability-and-designing-for-a-specific-scenario" target="_blank">
-                <h2 class="title mb-6" id="article-3987">More on collection performance, immutability and designing for a specific scenario</h2>
+                <h2 class="title mb-6" id="article-3988">More on collection performance, immutability and designing for a specific scenario</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Note: I started writing a few minutes after starting the performance test, it took that long to run. As you are probably already aware, we used the Immutable Collections package in Voron. That turned out to be a cause for pretty major performance issues, so I started investigating other approaches for dealing with the problem of both immutability and high performing code. Before I go on, I would like to explain what we are using the immutable collections for. Basically, we have a page translation table, which tells us which pages belong where. This table changes on every write transaction. However, locking isn&#x2019;t a good option for us, because once started, the transaction view of the world can never be changed. That means that while we are modifying it in a write transaction, the read transaction should not ever see the modifications. This is exactly the case where immutable collections make sense. Read only views aren&#x2019;t going to work, since once the write tx modify the page table, that change is going to be visible to read transactions, which isn&#x2019;t what we want. Our test scenario is that after each write tx commit, we will update the page table with all the new pages locations. That means that we wrote the following test case:      1: var tmp = new Dictionary&lt;long, object&gt;();   2:&#xA0;    3: var sp = Stopwatch.StartNew();   4: var rnd = new Random(32);   5: for (int i = 0; i &lt; iterations; i&#x2B;&#x2B;)   6: {   7:     foreach (var item in Enumerable.Range(rnd.Next(0, i), Math.Max(i * 2, 16)))   8:     {   9:         tmp[item] = null;  10:     }  11: }  12:&#xA0;   13: Console.WriteLine(sp.Elapsed &#x2B; &quot; Adding items, mutable dictionary&quot;);&#xA;Every iteration is a &#x201C;transaction&#x201D;, and the work inside the for loop simulate us updating the page locations. Note, however, that the code above uses a mutable dictionary, and the changes are neither thread safe, nor are we isolating other readers from seeing our changes.&#xA;We can do this using immutable dictionary using the following code:&#xA;&#xA;&#xA;   1: var dic = ImmutableDictionary&lt;long, object&gt;.Empty;   2:&#xA0;    3: var sp = Stopwatch.StartNew();   4:&#xA0;    5: var rnd = new Random(32);   6: for (int i = 0; i &lt; iterations; i&#x2B;&#x2B;)   7: {   8:     var tmp = new Dictionary&lt;long, object&gt;();   9:     foreach (var item in Enumerable.Range(rnd.Next(0, i), Math.Max(i * 2, 16)))  10:     {  11:         tmp[item] = null;  12:     }  13:&#xA0;   14:     dic = dic.SetItems(tmp);  15: }  16:&#xA0;   17: Console.WriteLine(sp.Elapsed &#x2B; &quot; Adding items, immutable dictionary&quot;);&#xA;Note that we are using the optimal &#x201C;SetItems&#x201D; method, so we only modify the immutable dictionary once per transaction. That means that we create roughly 1 instance per transaction.&#xA;I then decided to see what would be the cost of running this with 50,000 transactions. Note that this means that in the end we have 149,697 items in the dictionary.&#xA;&#xA;Cost for running this in mutable dictionary: 1 minute and 12 seconds.&#xA;Cost for running this in immutable dictionary: About 30 minutes.&#xA;Cost for reading 10,000 items from the dictionary:&#xA;&#xA;0.0002 seconds for mutable dictionary&#xA;0.0061 seconds for immutable dictionary&#xA;Remember, the reason we go to this place is because we actually got performance issues specifically because of the SetItems calls. But note that we also have a performance problem for reads as well.&#xA;Initially, I tried to do the simple thing of just creating a new instance for every transaction. That worked quite nicely to remove the read costs, but it had a non trivial cost for adds, quite aside from the GC cost. The test is:&#xA;&#xA;&#xA;   1: var dic = new Dictionary&lt;long, object&gt;();   2:&#xA0;    3: var sp = Stopwatch.StartNew();   4: var rnd = new Random(32);   5: for (int i = 0; i &lt; iterations; i&#x2B;&#x2B;)   6: {   7:     var tmp = new Dictionary&lt;long, object&gt;();   8:     foreach (var item in Enumerable.Range(rnd.Next(0, i), Math.Max(i * 2, 16)))   9:     {  10:         tmp[item] = null;  11:     }  12:     dic = new Dictionary&lt;long, object&gt;(dic);  13:     foreach (var o in tmp)  14:     {  15:         dic[o.Key] = o.Value;  16:     }  17: }  18:&#xA0;   19: Console.WriteLine(sp.Elapsed &#x2B; &quot; Adding items, safe dictionary&quot;);&#xA;Cost for adding using new instance every time:&#xA;&#xA;7 minutes and 37 seconds. &#xA;So right off the bat, we are over 4 times faster than immutable dictionary. But this is still expensive. But at least is has the same read speed as a standard dictionary, because it is.&#xA;In order to deal with that, I created something that I call LinkedDictionary. A linked dictionary is based on the following idea: Since dictionaries can only contain a single value per item, it is perfectly safe to layer them on one another. This means that we can just have a linked list of dictionaries, and when we want to read from it, we just need to walk through the list in reverse addition order. That means that it is pretty much perfect for append only linked list model.&#xA;The downside of that is that we now have to traverse the linked list in order to find our value. The good thing about this is that we are able to limit that, by introducing a merge step along the way. The merge step would merge all the pending parts into a single dictionary. Currently we are doing a merge every 32 writes or so. This strikes a nice balance between read and write speed.&#xA;The end result is that for 50,000 iterations, we have the following values:&#xA;&#xA;&#xA;&#xA;&#xA0;&#xA;Mutable Dictionary&#xA;Immutable Dictionary&#xA;Cloned Dictionary&#xA;Linked Dictionary&#xA;&#xA;50,000 adds&#xA;&#xA;1 minutes and 12 seconds&#xA;&#xA;29 minutes and 28 seconds&#xA;&#xA;7 minutes and 37 seconds&#xA;&#xA;4 minutes and 37 seconds&#xA;&#xA;10,000 reads&#xA;&#xA;0.0002 seconds&#xA;&#xA;0.0064&#xA;&#xA;0.0002 seconds&#xA;&#xA;0.0032&#xA;In other words, we are able to get write speeds that are just about 4 times the standard mutable behavior, and we are able to get read speeds that are half the immutable dictionary model.&#xA;For reference, the entire code is in the following gist.</p>
         </article>
-        <article id="article-3988">
+        <article id="article-3989">
             <a href="https://ayende.com/blog/164772/the-cost-of-select-count-from-tbl" target="_blank">
-                <h2 class="title mb-6" id="article-3988">The cost of select count(*) from tbl</h2>
+                <h2 class="title mb-6" id="article-3989">The cost of select count(*) from tbl</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was always somewhat baffled that something that was so obviously required so often can be so expensive with RDBMSes. When diving deep into B-Tree implementation I suddenly found it obvious why that is the case. Let us look at the following B-Tree:  Now, if I asked you how many entries you had in this tree, you would have to visit each and every page. And that can be very expensive when you have large number of items. But why can&#x2019;t we just keep track of the total number ourselves? There is counting B-Trees that we can use that will give us the answer in O(1) time. The answer to that is that it is too expensive to maintain this. Imagine a big tree, with 10 million records, and a fan out of 16 keys per page. That means that it has a depth of 6. Let us say that we want to add a new record. We can do that by modifying and saving the page. That would cost us 4KB of writes. However, if we use a counting B-Tree, we have to update all of the parent pages. With a depth of 6, that means that instead of writing 4KB to disk we will have to write 24KB to disk. And probably have to do multiple seeks to actually do the write properly. That is an unacceptable performance cost, and the reason why you have to manually check all the pages when you want the full count.</p>
         </article>
-        <article id="article-3989">
+        <article id="article-3990">
             <a href="https://ayende.com/blog/164770/hotspot-shell-game" target="_blank">
-                <h2 class="title mb-6" id="article-3989">HotSpot Shell Game</h2>
+                <h2 class="title mb-6" id="article-3990">HotSpot Shell Game</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: December 10, 2013
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the annoying things about doing performance work is that you sometimes feel like you found the problem. You fix it, and another pops out. After the previous run of work, we have tackled two important perf issues:  Immutable collections &#x2013; which were replaced with more memory intensive but hopefully faster safe collections. Transaction contention from background work &#x2013; which we reduced and close to eliminated. Once we have done that, it is time to actually look at the code in the profiler again. Note that I am writing this while I am traveling on the train (on battery power), so you can pretty much ignore any actual numbers, we want to look at the percentages.  Let us look at the contention issue first. Here is the old code:   And the new one:   We still have some cost, but that appears to have been drastically cut down. I&#x2019;ll call it good for now. What about transaction commit? Here is the old code:    And here is the new one:   What we can see is that our change didn&#x2019;t actually improve anything much. In fact, we are worse off. We&#x2019;ll probably go with a more complex system of chained dictionaries, rather than the just plain copying that appears to be causing so much trouble. However, there is something else to now. Both Commit and NewTransaction together are less than 60% of the cost of the operation. The major cost is actually in adding item to the in memory tree:   In particular, it looks like finding the right page to place the item is what is costing us so much. We added 2 million items (once sequential, once random), which means that we need to do an O(logN) operation 2 million times. I don&#x2019;t know if we can improve on the way it works for random writes, but we should be able to do something about how it behaves for sequential writes.  a</p>
-        </article>
-        <article id="article-3990">
-            <a href="https://www.meziantou.net/code-contracts.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3990">Code Contracts</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 10, 2013
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">J&#x27;ai &#xE9;crit un article sur un autre blog:Envie de savoir si votre code fonctionne avant m&#xEA;me de l&#x27;ex&#xE9;cuter, vous en r&#xEA;vez, Microsoft l&#x27;aL&#x27;article complet est diponible &#xE0; l&#x27;URL&#xA0;: https://www.softfluent.fr/blog/expertise/Code-ContractsDo you have a question or a suggestion about this post? Contact me!</p>
         </article>
         <div class="button flex justify-between">
             <a href="398.html"><span class="back arrow"></span></a>

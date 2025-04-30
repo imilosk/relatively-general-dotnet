@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6601">
+            <a href="https://ayende.com/blog/3478/3-levels-of-failures" target="_blank">
+                <h2 class="title mb-6" id="article-6601">3 Levels Of Failures</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 01, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You have the no-failure, everything completed successfully and everyone is happy.    You have complete-failure, someone just pull the power cord off the machine.    And in the middle, you have partial-failure, something bad happened, (network is down, someone pulled the USB key out) but the system can (and should) keep running.    Most people give up on the complete failure scenario, leaving that up to transactional storage to handle this. That is usually the smartest solution.   The problem occur with partial failure, where you need to recover in meaningful ways. It is actually very easy to write a system where a complete failure is better than a partial failure.</p>
+        </article>
+        <article id="article-6602">
             <a href="https://ayende.com/blog/3477/how-many-rewrites" target="_blank">
-                <h2 class="title mb-6" id="article-6601">How many rewrites?</h2>
+                <h2 class="title mb-6" id="article-6602">How many rewrites?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am working on a pet project for a while now, it is fun, and it is nice, but... takes a look how many times I had to rewrite it:     https://rhino-tools.svn.sourceforge.net/svnroot/rhino-tools/branches/rhino-queues-1.0 &lt;-- final version branch    https://rhino-tools.svn.sourceforge.net/svnroot/rhino-tools/branches/rhino-queues-bdb/ &lt;-- with Beckley DB    https://rhino-tools.svn.sourceforge.net/svnroot/rhino-tools/branches/rhino-queues-firebird/ &lt;-- FireBird    https://rhino-tools.svn.sourceforge.net/svnroot/rhino-tools/branches/rhino-queues-sqlite/ &lt;-- Sqlite    https://rhino-tools.svn.sourceforge.net/svnroot/rhino-tools/branches/rhino-queues-with-disk/ &lt;-- custom persistence     https://rhino-tools.svn.sourceforge.net/svnroot/rhino-tools/experiments/rhino-queues/ &lt;-- initial playground   That was... interesting.  And I do think that there is value in restarting so many ways, because now I have a much better internal structure (and external one as well :-) ) .</p>
         </article>
-        <article id="article-6602">
+        <article id="article-6603">
             <a href="https://ayende.com/blog/3476/reversibility" target="_blank">
-                <h2 class="title mb-6" id="article-6602">Reversibility</h2>
+                <h2 class="title mb-6" id="article-6603">Reversibility</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">No, I am not talking about Jeremey Miller&#x27;s reversibility. I am talking about another matter all together. I have an API that perform an operation. The problem is that based on the result of this operation, I may need to cancel that operation.   The main issue here is that in order to reverse this operation, I need to expose too much information to the client, which I rather not do. Let us take the following interface as an example:     public interface IActionStack&#xA;{&#xA;&#x9;ActionSpec Pop();&#xA;&#x9;void Push(ActionSpec action);&#xA;}&#xA;&#xA;&#xA;The code I would like to write is something like this:&#xA;&#xA;&#xA;  while(true)&#xA;{&#xA;&#x9;var action = actionStack.Pop();&#xA;&#x9;if (action.ExecuteAt &gt;= DateTime.Now )&#xA;&#x9;&#x9;action.Execute();&#xA;&#x9;else&#xA;&#x9;&#x9;actionStack.Push(action);&#xA;&#x9;Thread.Sleep(1000);&#xA;}&#xA;&#xA;&#xA;But there is meaning to the order of items in the stack, so I can just reorder it. Peek or PushFirst are not applicable here. What I came up with was:&#xA;&#xA;&#xA;  public interface IActionStack &#xA;{ &#xA;&#x9;ActionSpec Pop(); &#xA;&#x9;ActionSpec ReversiblePop(out System.Action reversePop); &#xA;&#x9;void Push(ActionSpec action); &#xA;}&#xA;&#xA;&#xA;And the client code is:&#xA;&#xA;&#xA;  while(true)&#xA;{&#xA;&#x9;System.Action reverse;&#xA;&#x9;var action = actionStack.ReversiblePop(out reverse);&#xA;&#x9;if (action.ExecuteAt &gt;= DateTime.Now )&#xA;&#x9;&#x9;action.Execute();&#xA;&#x9;else&#xA;&#x9;&#x9;reverse();&#xA;&#x9;Thread.Sleep(1000);&#xA;}&#xA;&#xA;&#xA;Thoughts?</p>
         </article>
-        <article id="article-6603">
+        <article id="article-6604">
             <a href="https://ardalis.com/devexpress-earthquake-video/" target="_blank">
-                <h2 class="title mb-6" id="article-6603">DevExpress Earthquake Video</h2>
+                <h2 class="title mb-6" id="article-6604">DevExpress Earthquake Video</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">DevExpress is one of several companies I work with via Lake Quincy Media, and it seems like a very fun place to work. Recently they launched&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6604">
+        <article id="article-6605">
             <a href="https://ayende.com/blog/3475/code-reviews-are-not-just-about-the-code" target="_blank">
-                <h2 class="title mb-6" id="article-6604">Code Reviews are not just about the code</h2>
+                <h2 class="title mb-6" id="article-6605">Code Reviews are not just about the code</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Usually when I am doing a code review, I ask not just access to the code, but to the source control repository as well. There are quite a lot that you can learn from the source control of a project.  Here is something that is both good and bad. It is bad because we have no checkin comments. It is good because we can see that we have very frequent checkins.  &#xA0;  Another thing that you want to check is the bug tracking system. Is there such a thing (including email thread or a post it notes or a story wall)? Is it relevant?  Is there a defined build process? How do you deploy to production? How do you manage DB changes? What is you back off strategy from an ambitious feature? How do you rollback a failed deployment? Do you have a physical deployment plan?  I don&#x27;t expect all projects to have detailed answers to the all the questions I put above, but I do expect to have a response. The worst possible thing that could happen is that there is no thought given to those.  My standard answer to &quot;How do you manage DB changes?&quot; is: I create a diff using SQL Compare and apply that when needing to update DB versions.   The most important thing in my opinion is the actual interaction in code reviews. I tend to have two stages of code review. The first is going over the code with only general idea about what is going on. This is to find if there are things that require special attention, if there are obvious issues there.  In general, you want to be able to view this from a clean mind. Then, you want to have a conversation with the developers. Based on that initial review. This allows you to capture more than just the code, it let you capture the actual dynamic of the team and how they work. During this phase I also get a lot more   The second phase of the code is much more in depth, I tend to try to go over every line in the code at least once. After that, I can sit with the developers again and discuss the overall impression.  Probably the most value in the process comes at this second state, I think.</p>
         </article>
-        <article id="article-6605">
+        <article id="article-6606">
             <a href="https://ayende.com/blog/3474/logging-the-aop-way" target="_blank">
-                <h2 class="title mb-6" id="article-6605">Logging - the AOP way</h2>
+                <h2 class="title mb-6" id="article-6606">Logging - the AOP way</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Logging is probably the most mentioned sweet spot of AOP. Probably because it is the simplest and most straightforward example most people can think of. I remember going over a piece of code that handles billions of transactions a day(that is for you, Jdn), and seeing something like this:     public void DoSomethingInteresting(string arg1, int arg2)&#xA;{&#xA;&#x9;LogGateway.Enter(&quot;DoSomethingInteresting&quot;, arg1, arg2);&#xA;&#x9;try&#xA;&#x9;{&#xA;&#x9;&#x9;// actual method code &#xA;&#x9;&#x9;LogGateway.Success(&quot;DoSomethingInteresting&quot;, arg1, arg2);&#xA;&#x9;}&#xA;&#x9;catch(Exception e)&#xA;&#x9;{&#xA;&#x9;&#x9;LogGateway.Error(e, &quot;DoSomethingInteresting&quot;, arg1, arg2);&#xA;&#x9;&#x9;throw e;&#xA;&#x9;}&#xA;&#x9;finally&#xA;&#x9;{&#xA;&#x9;&#x9;LogGateway.Exit(&quot;DoSomethingInteresting&quot;, arg1, arg2);&#xA;&#x9;}&#xA;}&#xA;&#xA;&#xA;That was repeated for each and every method in the system. It was horrible. &#xA;&#xA;I don&#x27;t care how you do it, but there are at least 7 AOP approaches in the CLR, at least three of them are applicable in your environment.&#xA;&#xA;I am going to show how to handle that with Windsor&#x27;s AOP, but the same thing is applicable using other approaches. First, our service:&#xA;&#xA;&#xA;  public interface ISmsSender&#xA;{&#xA;&#x9;int Send(string to, string msg);&#xA;}&#xA;&#xA;public class SmsSender : ISmsSender&#xA;{&#xA;&#x9;public int Send(string to, string msg)&#xA;&#x9;{&#xA;&#x9;&#x9;if(msg.Length&gt;160)&#xA;&#x9;&#x9;&#x9;throw new ArgumentException(&quot;too long&quot;,&quot;msg&quot;);&#xA;&#x9;&#x9;return to.Length;&#xA;&#x9;}&#xA;}&#xA;&#xA;&#xA;And now we need to define the interceptor:&#xA;&#xA;&#xA;  public class LoggingInterceptor : IInterceptor&#xA;{&#xA;&#x9;public void Intercept(IInvocation invocation)&#xA;&#x9;{&#xA;&#x9;&#x9;var logger = LogManager.GetLogger(invocation.TargetType);&#xA;&#x9;&#x9;try&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;StringBuilder sb = null;&#xA;&#x9;&#x9;&#x9;if (logger.IsDebugEnabled)&#xA;&#x9;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;&#x9;sb = new StringBuilder(invocation.TargetType.FullName)&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;.Append(&quot;.&quot;)&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;.Append(invocation.Method)&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;.Append(&quot;(&quot;);&#xA;&#x9;&#x9;&#x9;&#x9;for (int i = 0; i &lt; invocation.Arguments.Length; i&#x2B;&#x2B;)&#xA;&#x9;&#x9;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;if (i &gt; 0)&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;sb.Append(&quot;, &quot;);&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;sb.Append(invocation.Arguments[i]);&#xA;&#x9;&#x9;&#x9;&#x9;}&#xA;&#x9;&#x9;&#x9;&#x9;sb.Append(&quot;)&quot;);&#xA;&#x9;&#x9;&#x9;&#x9;logger.Debug(sb);&#xA;&#x9;&#x9;&#x9;}&#xA;&#xA;&#x9;&#x9;&#x9;invocation.Proceed();&#xA;&#x9;&#x9;&#x9;if(logger.IsDebugEnabled)&#xA;&#x9;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;&#x9;&#xA;&#x9;&#x9;&#x9;&#x9;logger.Debug(&quot;Result of &quot; &#x2B; sb &#x2B; &quot; is: &quot; &#x2B; invocation.ReturnValue);&#xA;&#x9;&#x9;&#x9;}&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;catch (Exception e)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;logger.Error(e);&#xA;&#x9;&#x9;&#x9;throw;&#xA;&#x9;&#x9;}&#xA;&#x9;}&#xA;}&#xA;&#xA;&#xA;The code is really simple, we get the logger instance ( in this case, from log4net ), check if logging is enabled and if so, write the method and parameters to the log. We then execute the code and log the return value as well.&#xA;&#xA;If there was an error, we log that as well.&#xA;&#xA;Here is my test code:&#xA;&#xA;&#xA;  var container = new WindsorContainer()&#xA;&#x9;.Register(&#xA;&#x9;&#x9;Component.For&lt;LoggingInterceptor&gt;(),&#xA;&#x9;&#x9;Component.For&lt;ISmsSender&gt;().ImplementedBy&lt;SmsSender&gt;()&#xA;&#x9;&#x9;&#x9;.Interceptors(new InterceptorReference(typeof(LoggingInterceptor))).First&#xA;&#x9;);&#xA;BasicConfigurator.Configure(); // configure log4net&#xA;var sender = container.Resolve&lt;ISmsSender&gt;();&#xA;try&#xA;{&#xA;&#x9;sender.Send(&quot;ayende&quot;, &quot;short&quot;);&#xA;&#x9;sender.Send(&quot;rahien&quot;, new string(&#x27;q&#x27;, 161));&#xA;}&#xA;catch (Exception)&#xA;{&#xA;&#x9;&#xA;}&#xA;&#xA;&#xA;And the output for that is:&#xA;&#xA;&#xA;  241 [1] DEBUG ConsoleApplication9.SmsSender (null) - ConsoleApplication9.SmsSender.Int32 Send(System.String, System.String)(ayende, short)&#xA;    272 [1] DEBUG ConsoleApplication9.SmsSender (null) - Result of ConsoleApplication9.SmsSender.Int32 Send(System.String, System.String)(ayende, short) is: 6&#xA;&#xA;    272 [1] DEBUG ConsoleApplication9.SmsSender (null) - ConsoleApplication9.SmsSender.Int32 Send(System.String, System.String)(rahien, &#xA;&#xA;    &#xA0;&#xA0;&#xA0; qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq&#xA;&#xA;    &#xA0;&#xA0;&#xA0; qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq&#xA;&#xA;    &#xA0;&#xA0;&#xA0; qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq)&#xA;&#xA;    273 [1] ERROR ConsoleApplication9.SmsSender (null) - System.ArgumentException: too long&#xA;&#xA;    Parameter name: msg&#xA;&#xA;    &#xA0;&#xA0; at ConsoleApplication9.SmsSender.Send(String to, String msg) in C:\Users\ayende\Documents\Visual Studio 2008\Projects\ConsoleApplication9\ConsoleApplication9\ISmsSender.cs:line 15&#xA;&#xA;    &#xA0;&#xA0; at ISmsSenderProxyb24fc36182fb434fa7f466d148259c48.InvocationSend_1.InvokeMethodOnTarget()&#xA;&#xA;    &#xA0;&#xA0; at Castle.DynamicProxy.AbstractInvocation.Proceed() in e:\OSS\Castle\Tools\Castle.DynamicProxy2\Castle.DynamicProxy\AbstractInvocation.cs:line 140&#xA;&#xA;    &#xA0;&#xA0; at ConsoleApplication9.LoggingInterceptor.Intercept(IInvocation invocation) in C:\Users\ayende\Documents\Visual Studio 2008\Projects\ConsoleApplication9\ConsoleApplication9\Program.cs:line 65&#xA;&#xA;&#xA;Simple, elegant, and doesn&#x27;t clutter my code.</p>
         </article>
-        <article id="article-6606">
+        <article id="article-6607">
             <a href="https://ayende.com/blog/3473/why-are-you-showing-such-a-contempt-for-my-time" target="_blank">
-                <h2 class="title mb-6" id="article-6606">Why are you showing such a contempt for my time?</h2>
+                <h2 class="title mb-6" id="article-6607">Why are you showing such a contempt for my time?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post just went over the line...     I mean, how do you expect me to respond to such a message?  In the old tradition of, don&#x27;t give the man a fish, here is how you find out.  There is this tool called Google. You can s-e-a-r-c-h things there. I used the advance technique of putting the search terms in the text box and clicked on Search.  Here is the result:    The third result, surprisingly enough, is from my site. You can see it right there in the link. Clicking on the link will lead you to this page:  &#xA0;     Do you see the big red arrow? It point to a new fangled concept called a link. If you click on it, it takes you somewhere.  Here is where it takes you in this situation:     Have fun sharing this with your team, but I suggest taking a Google 101 course at the same time.</p>
         </article>
-        <article id="article-6607">
+        <article id="article-6608">
             <a href="https://ayende.com/blog/3472/entities-dependencies-best-practices" target="_blank">
-                <h2 class="title mb-6" id="article-6607">Entities dependencies best practices</h2>
+                <h2 class="title mb-6" id="article-6608">Entities dependencies best practices</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The question came up in the ALT.Net list, and it is fairly common in the DDD circles as well.     I have an User with Email address, which I want to keep encrypted in the database, but visible to the application. How do I handle this scenario in the entity?   We can do it in our service layer, and encrypt / decrypt that outside the entity, but that has two issues. It couple the entity to the service and it means that we can forget to encrypt the email at some point.It also smells.  Another option, which I call the brute force option, is to pass the dependency to the entity and let it handle its own concerns. Here is implementation:     Yes, it is ugly, and even using this approach you can improve upon it, but let us focus on the interesting tidbits. First, not only does our entity know about an infrastructure service, it is also aware of how to create it. It has to do so, because we have to provide an empty ctor for NHibernate to use.  We can generalize this a bit, leading us to this scenario:     This piece of code is akin to nails on board to me. It isn&#x27;t how I want to see code written.  A better way exists. We will start by making a slight modification to the User class, we remove the empty ctor. Well, we can&#x27;t remove it at the moment, there is check in NHibernate for this, which I need to find and remove, so for now, we have this:     Note that this also requires that you&#x27;ll specify the unsaved value of the identifier in the configuration.  Now that we have established that we have no way of creating the User using the empty ctor, we let NHibernate know how it can create it:     public class EntityDependenciesInterceptor : EmptyInterceptor&#xA;{&#xA;    public override object Instantiate(string clazz, EntityMode entityMode, object id)&#xA;    {&#xA;        if(entityMode!=EntityMode.Poco)&#xA;            return base.Instantiate(clazz, entityMode, id);&#xA;        if(clazz != typeof(User).FullName)&#xA;            return base.Instantiate(clazz, entityMode, id);&#xA;        return new User(CryptoProvider.Instance);&#xA;    }&#xA;}&#xA;&#xA;&#xA;Just for User, we override the way NHibernate create entities. Now we can register it in the session, and we are done:&#xA;&#xA;&#xA;  using (ISession session = sessionFactory.OpenSession(new EntityDependenciesInterceptor()))&#xA;{&#xA;    IList list = session.CreateCriteria(typeof(User)).List();&#xA;}&#xA;&#xA;&#xA;This is still not something that I particularly like. I don&#x27;t see encryption as part of the responsibilities of the entity. It is just something we need in order to save encrypted values to the DB. So let make it explicit.&#xA;&#xA;NHibernate has the notion of IUserType, which let you take actions on save / load of values from the DB.&#xA;&#xA;First, we make User POCO again, remove all traces of the previous ugliness. Now, we change the mapping for User so the email property is defined so:&#xA;&#xA;&#xA;  &lt;property name=&quot;Email&quot; type=&quot;Samples.EncryptedStringUserType, Samples&quot; /&gt;&#x9;&#x9;&#xA;&#xA;&#xA;And now we need to create the user type:&#xA;&#xA;&#xA;  public class EncryptedStringUserType : IUserType&#xA;{&#xA;    public bool Equals(object x, object y)&#xA;    {&#xA;        return object.Equals(x, y);&#xA;    }&#xA;&#xA;    public int GetHashCode(object x)&#xA;    {&#xA;        return x.GetHashCode();&#xA;    }&#xA;&#xA;    public object NullSafeGet(IDataReader rs, string[] names, object owner)&#xA;    {&#xA;        object r = rs[names[0]];&#xA;        if (r == DBNull.Value)&#xA;            return null;&#xA;        return CryptoProvider.Instance.Decrypt((string) r);&#xA;    }&#xA;&#xA;    public void NullSafeSet(IDbCommand cmd, object value, int index)&#xA;    {&#xA;        object paramVal = DBNull.Value;&#xA;        if (value != null)&#xA;            paramVal = CryptoProvider.Instance.Encrypt((string) value);&#xA;        IDataParameter parameter = (IDataParameter)cmd.Parameters[index];&#xA;        parameter.Value = paramVal;&#xA;    }&#xA;&#xA;    public object DeepCopy(object value)&#xA;    {&#xA;        return value;&#xA;    }&#xA;&#xA;    public object Replace(object original, object target, object owner)&#xA;    {&#xA;        return original;&#xA;    }&#xA;&#xA;    public object Assemble(object cached, object owner)&#xA;    {&#xA;        return cached;&#xA;    }&#xA;&#xA;    public object Disassemble(object value)&#xA;    {&#xA;        return value;&#xA;    }&#xA;&#xA;    public SqlType[] SqlTypes&#xA;    {&#xA;        get { return new SqlType[]{new StringSqlType()}; }&#xA;    }&#xA;&#xA;    public Type ReturnedType&#xA;    {&#xA;        get { return typeof(string); }&#xA;    }&#xA;&#xA;    public bool IsMutable&#xA;    {&#xA;        get { return false; }&#xA;    }&#xA;}&#xA;&#xA;&#xA;And that is it, you can now get transparent encryption / decryption when you are going to the DB, at no cost to the application design.</p>
         </article>
-        <article id="article-6608">
+        <article id="article-6609">
             <a href="https://ayende.com/blog/3471/the-secret-of-pretty-diagrams" target="_blank">
-                <h2 class="title mb-6" id="article-6608">The secret of pretty diagrams</h2>
+                <h2 class="title mb-6" id="article-6609">The secret of pretty diagrams</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Is not really such a big secret...</p>
         </article>
-        <article id="article-6609">
+        <article id="article-6610">
             <a href="https://ayende.com/blog/3470/there-are-some-things-a-good-developer-should-know" target="_blank">
-                <h2 class="title mb-6" id="article-6609">There are some things a good developer SHOULD know</h2>
+                <h2 class="title mb-6" id="article-6610">There are some things a good developer SHOULD know</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: July 31, 2008
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Adi has posted a post that I am not in agreement with: there are some things a good developer is NOT required to know.          [Quoting Jeff Atwood and Peter Norvig] Know how long it takes your computer to execute an instruction, fetch a word from memory (with and without a cache miss), read consecutive words from disk, and seek to a new location on disk       I did learn these things, but after reading Jeff&#x27;s post I have been trying to remember a project I worked on during the past 10 years which required this type of knowledge - and I got nothing.   Well, I used knowledge about reading &amp; seeking to / from disks the last two weeks. They are extremely important when you are thinking about high perf large I/O. Fetching words from memory, and the implications of ensuring good locality have huge affects on the type of performance that you are getting to get. As a simple example, a large part of the reason that thread switching is slow is that the CPU cache is mostly misses when you switch a thread.  You should know those things, and you should know how to apply them. No, they don&#x27;t come often, and I can think of a lot more things that I would like a developer to know (OO, to start with) more than those low level details, but those are important to know.</p>
-        </article>
-        <article id="article-6610">
-            <a href="https://ayende.com/blog/3469/from-annoyance-to-laugher-in-two-seconds" target="_blank">
-                <h2 class="title mb-6" id="article-6610">From annoyance to laugher in two seconds</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 30, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a screen shot from NDepend (I have a review forthcoming), I run it on a code base, and I went through the issues it found.   These rules are things that I disagree with.     So I clicked to modify it, and I got this, which had me laughing.     I like the spirit.</p>
         </article>
         <div class="button flex justify-between">
             <a href="660.html"><span class="back arrow"></span></a>

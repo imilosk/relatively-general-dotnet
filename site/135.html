@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1341">
+            <a href="https://ayende.com/blog/191873-C/analyzing-chicagos-taxis-data-with-ravendb" target="_blank">
+                <h2 class="title mb-6" id="article-1341">Analyzing Chicago&#x2019;s Taxis data with RavenDB</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: September 14, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Chicago publishes its taxi&#x2019;s trips in an easy to consume format, so I decided to see what kind of information I can dig out of the data using RavenDB. Here is what the data looks like: There are actually a lot more fields in the data, but I wanted to generate a more focused dataset to show off certain features. For that reason, I&#x2019;m going to record the trips for each taxi, where for each trip, I&#x2019;m going to look at the start time, duration and pick up and drop off locations. The data&#x2019;s size is significant, with about 194 million trips recorded. I converted the data into RavenDB&#x2019;s time series, with a Location time series for each taxi&#x2019;s location at a given point in time. You can see that the location is tagged with the type of event associated with it. The raw data has both pickup and drop off for each row, but I split it into two separate events.The reason I did it this way is that we get a lot of queries on how to use RavenDB for doing&#x2026; stuff with vehicles and locations data. The Chicago&#x2019;s taxi data is a good source for non trivial amount of real world data, which is very nice to use. Once we have all the data loaded in, we can see that there are 9,179 distinct taxis in the data set and there are varying number of events for each taxi. Here is one such scenario:The taxi in question has six years of data and 6,545 pickup and dropoff events.The question now is, what can we do with this data? What sort of questions can we answer? Asking where a taxi is at a given point in time is easy enough:And gives us the results:But asking a question about a single taxi isn&#x2019;t that interesting, can we do things across all taxis? Let&#x2019;s think about what kind of questions can we ask:Generate heat map of pickup and drop off locations over time?Find out what taxis where at a given location within at a given time?Find out taxis that were nearby a particular taxi on a given day?To answer all of these questions, we have to aggregate data from multiple time series. We can do that using a Map/Reduce index on the time series data. Here is what this looks like:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          // map&#xA;        &#xA;        &#xA;          &#xA;          from ts in timeseries.Taxis.Location&#xA;        &#xA;        &#xA;          &#xA;          from e in ts.Entries &#xA;        &#xA;        &#xA;          &#xA;          select new {&#xA;        &#xA;        &#xA;          &#xA;          &#x9;Taxis = new[]{ts.DocumentId},&#xA;        &#xA;        &#xA;          &#xA;          &#x9;Time = new DateTime( e.Timestamp.Year, e.Timestamp.Month, e.Timestamp.Day, e.Timestamp.Hour, 0,0),&#xA;        &#xA;        &#xA;          &#xA;          &#x9;Location = GeoHash.Encode(e.Values[0], e.Values[1], 9),&#xA;        &#xA;        &#xA;          &#xA;          &#x9;Count = 1,&#xA;        &#xA;        &#xA;          &#xA;          &#x9;Coordinates = default(object)&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          // reduce&#xA;        &#xA;        &#xA;          &#xA;          from r in results&#xA;        &#xA;        &#xA;          &#xA;          group r by new { r.Time, r.Location} into g&#xA;        &#xA;        &#xA;          &#xA;          let point = GeoHash.Decode(g.Key.Location)&#xA;        &#xA;        &#xA;          &#xA;          select new {&#xA;        &#xA;        &#xA;          &#xA;          &#x9;g.Key.Time,&#xA;        &#xA;        &#xA;          &#xA;          &#x9;g.Key.Location,&#xA;        &#xA;        &#xA;          &#xA;          &#x9;Coordinates = CreateSpatialField(point.Latitude,point.Longitude),&#xA;        &#xA;        &#xA;          &#xA;          &#x9;Taxis = g.SelectMany(x=&gt;x.Taxis).Distinct().ToArray(),&#xA;        &#xA;        &#xA;          &#xA;          &#x9;Count = g.SelectMany(x=&gt;x.Taxis).Distinct().Count()&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          index.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;We are scanning through all the location events for the taxis and group them on an hourly basis. We are also generate a GeoHash code for the location of the taxi in that time. This is using a GeoHash with a length of 9, so it represent an accuracy of about 2.5 square meters. We then aggregate all the taxis that were in the same GeoHash at the same hour into a single entry. To make it easier for ourselves, we&#x2019;ll also use a spatial field (computed from the geo hash) to allow for spatial queries. The idea is that we want to aggregate the taxi&#x2019;s location information on both space and time. It is easy to go from a more accurate time stamp to a lower granularity one (zeroing the minutes and seconds of a time). For spatial location, we can a GeoHash of a particular precision to do pretty much the same thing. Instead of having to deal with the various points, we&#x2019;ll aggregate the taxis by decreasing the resolution we use to track the location.The GeoHash code isn&#x2019;t part of RavenDB. This is provided as an additional source to the index, and can be seen fully in the following link. With this index in place, we are ready to start answering all sort of interesting questions. Since the data is from Chicago, I decided to look in the map and see if I can find anything interesting there.I created the following shape on a map:This is the textual representation of the shape using Well Known Text: POLYGON((-87.74606191713963 41.91097449402647,-87.66915762026463 41.910463501644806,-87.65748464663181 41.89359845829678,-87.64924490053806 41.89002045220879,-87.645811672999 41.878262735374236,-87.74194204409275 41.874683870355824,-87.74606191713963 41.91097449402647)).And now I can query over the data to find the taxis that were in that particular area on Dec 1st, 2019:And here are the results of this query:You can see that we have a very nice way to see which taxis were at each location at a time. We can also use the same results to paint a heat map over time, counting the number of taxis in a particular location.To put this into (sadly) modern terms, we can use this to track people that were near a particular person, to figure out if they might be at risk for being sick due to being near a sick person. In order to answer this question, we need to take two steps. First, we ask to get the location of a particular taxi for a time period. We already saw how we can query on that. Then we ask to find all the taxis that were in the specified locations in the right times. That gives us the intersection of taxis that were in the same place as the initial taxi, and from there we can send the plague police.</p>
+        </article>
+        <article id="article-1342">
             <a href="https://www.meziantou.net/lazy-load-assemblies-in-a-blazor-webassembly-application.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1341">Lazy load assemblies in a Blazor WebAssembly application</h2>
+                <h2 class="title mb-6" id="article-1342">Lazy load assemblies in a Blazor WebAssembly application</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When a Blazor WebAssembly application starts, it first gets all DLLs of the application. So, even if a DLL is used only in a specific page, it is loaded when the app loads. If you want to improve the startup performance, you can defer the loading of some application assemblies until they are requir</p>
         </article>
-        <article id="article-1342">
+        <article id="article-1343">
             <a href="https://www.meziantou.net/using-foreach-with-ienumerator-t-iasyncenumerator-t-in-csharp-9.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1342">Using foreach with IEnumerator&lt;T&gt; / IAsyncEnumerator&lt;T&gt; in C# 9</h2>
+                <h2 class="title mb-6" id="article-1343">Using foreach with IEnumerator&lt;T&gt; / IAsyncEnumerator&lt;T&gt; in C# 9</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The foreach statement allows iterating on a collection. The foreach statement isn&#x27;t limited to collection or types that implement IEnumerable&lt;T&gt;. As explained in a previous post, you can use it with an instance of any type that has the public parameterless GetEnumerator method whose return a</p>
         </article>
-        <article id="article-1343">
+        <article id="article-1344">
             <a href="https://www.meziantou.net/copying-text-to-clipboard-in-a-blazor-application.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1343">Copying text to the clipboard in a Blazor application</h2>
+                <h2 class="title mb-6" id="article-1344">Copying text to the clipboard in a Blazor application</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Many websites provide a button to copy a value to the clipboard. For instance, after generating a token on Azure, you can copy the token to the clipboard:A browser provides an API to write to the clipboard or read from it. Modern browsers implements navigator.clipboard to access the clipboard.sourc</p>
         </article>
-        <article id="article-1344">
+        <article id="article-1345">
             <a href="https://andrewlock.net/deploying-asp-net-core-applications-to-kubernetes-part-2-configuring-resources-with-yaml-manifests/" target="_blank">
-                <h2 class="title mb-6" id="article-1344">Configuring resources with YAML manifests</h2>
+                <h2 class="title mb-6" id="article-1345">Configuring resources with YAML manifests</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Deploying ASP.NET Core applications to Kubernetes - Part 2</p>
         </article>
-        <article id="article-1345">
+        <article id="article-1346">
             <a href="https://www.meziantou.net/anchor-navigation-in-a-blazor-application.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1345">Anchor navigation in a Blazor application</h2>
+                <h2 class="title mb-6" id="article-1346">Anchor navigation in a Blazor application</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After loading a page, a browser automatically scrolls to the element identified by its id in the fragment part of the URL. It does the same when you click on an anchor with an href of the kind #element-id.When you load a page using the URL https://example.com/#header it should automatically scroll</p>
         </article>
-        <article id="article-1346">
+        <article id="article-1347">
             <a href="https://ayende.com/blog/191841-B/understanding-query-processing-and-wildcards-in-ravendb" target="_blank">
-                <h2 class="title mb-6" id="article-1346">Understanding query processing and wildcards in RavenDB</h2>
+                <h2 class="title mb-6" id="article-1347">Understanding query processing and wildcards in RavenDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently got an interesting question about how RavenDB is processing certain types of queries. The customer in question had a document with a custom analyzer and couldn&#x2019;t figure out why certain queries didn&#x2019;t work.For the purpose of the discussion, let&#x2019;s consider the following analyzer:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          public IEnumerable&lt;string&gt; Analyzer(string text)&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;            foreach(var term in text.Split())&#xA;        &#xA;        &#xA;          &#xA;            {&#xA;        &#xA;        &#xA;          &#xA;              yield return term.ToLower().TrimEnd(&quot;ing&quot;);&#xA;        &#xA;        &#xA;          &#xA;            }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          analyzer.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;In other words, when using this analyzer, we&#x2019;ll have the following transformations:&#x201C;Singing avocadoes&#x201D; &#x2013; will be: &#x201C;sing&#x201D;, &#x201C;avocadoes&#x201D;&#x201C;Sterling silver&#x201D; &#x2013; will be: &#x201C;ster&#x201D;, &#x201C;silver&#x201D;&#x201C;Singularity Trailer&#x201D; &#x2013; will be &#x201C;singularity&#x201D;, &#x201C;trailer&#x201D;As a reminder, this is used in a reverse index, which gives us the ability to lookup a term and find all the documents containing that term.An analyzer is applied on the text that is being indexed, but also on the queries. In other words, because during indexing I changed &#x201C;singing&#x201D; to &#x201C;sing&#x201D;, I also need to do the same for the query. Otherwise a query for &#x201C;singing voice&#x201D; will have no results, even if the &#x201C;singing&#x201D; term was in the original data.The rules change when we do a prefix search, though. Consider the following query:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          from Movies&#xA;        &#xA;        &#xA;          &#xA;          where search(Name, &quot;sing*&quot;)&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          query.sql&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;What should we be searching on here? Remember, this is using an analyzer, but we are also doing a prefix search. Lets consider our options. If we pass this through an analyzer, the query will change its meaning. Instead of searching for terms starting with &#x201C;sing&#x201D;, we&#x2019;ll search for terms starting with &#x201C;s&#x201D;. That will give us results for &#x201C;Sterling Silver&#x201D;, which is probably not expected. In this case, by the way, I&#x2019;m actually looking for the term &#x201C;singularity&#x201D;, and processing the term further would prevent that. For that reason, RavenDB assumes that queries using wildcard searches are not subject to an analyzer and will not process them using one. The reasoning is simple, by using a wildcard you are quite explicitly stating that this is not a real term.</p>
         </article>
-        <article id="article-1347">
+        <article id="article-1348">
             <a href="https://www.meziantou.net/how-to-use-event-preventdefault-in-blazor.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1347">How to use event.PreventDefault in Blazor</h2>
+                <h2 class="title mb-6" id="article-1348">How to use event.PreventDefault in Blazor</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Sometimes, you&#x27;ll come across a situation where you want to prevent an event from doing what it does by default. For instance, you may want to prevent the click on an anchor to navigate to the url set in the href attribute. Instead, you want to handle the event in a custom manner and suppress the d</p>
         </article>
-        <article id="article-1348">
+        <article id="article-1349">
             <a href="https://ayende.com/blog/191809-B/ravendb-now-supports-running-on-arm64-machines" target="_blank">
-                <h2 class="title mb-6" id="article-1348">RavenDB now supports running on ARM64 machines</h2>
+                <h2 class="title mb-6" id="article-1349">RavenDB now supports running on ARM64 machines</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We recently added support for RavenDB on Linux ARM 64. You can get the new build here:The nice thing about ARM64 is that when you run on AWS, you can use A1 instances that cost 48% less. Oh, and what about the performance? This is RavenDB running on a1.large instance (2 cores, 4 GB RAM) with a standard gb2 hard disk with 100 IOPS.</p>
         </article>
-        <article id="article-1349">
+        <article id="article-1350">
             <a href="https://www.meziantou.net/splitting-code-and-markup-into-different-files-when-creating-a-blazor-component.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1349">Splitting code and markup into different files when creating a Blazor component</h2>
+                <h2 class="title mb-6" id="article-1350">Splitting code and markup into different files when creating a Blazor component</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: September 02, 2020
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Their are multiple ways to create a Blazor component, but the most common one is to create a .razor file. A razor file can contains a mix of Razor markup, C#, and HTML.Razorcopy&lt;p&gt;@username&lt;/p&gt;&#xA;&#xA;@code {&#xA;    string username;&#xA;&#xA;    protected override void OnInitialized() =&gt; username = &quot;</p>
-        </article>
-        <article id="article-1350">
-            <a href="https://ardalis.com/postels-law-robustness-principle/" target="_blank">
-                <h2 class="title mb-6" id="article-1350">Postel&#x27;s Law - The Robustness Principle</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 01, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Postel&#x27;s Law, also known as the robustness principle, states: Be conservative in what you do, be liberal in what you accept from others. Jon&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="134.html"><span class="back arrow"></span></a>
