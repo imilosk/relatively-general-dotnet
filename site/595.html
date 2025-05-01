@@ -137,8 +137,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5941">
+            <a href="https://ayende.com/blog/4019/mutable-linq-expressions" target="_blank">
+                <h2 class="title mb-6" id="article-5941">Mutable Linq Expressions</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 17, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As you probably know, System.Linq.Expression is considered to be immutable. This is a major pain when it comes to working with them, and many Linq providers end up creating a parallel hierarchy of expressions that are mutable.  What I am going to show you now is probably going to get some people in Microsoft pretty angry with me, but hey, if they used ReSharper, they wouldn&#x2019;t have this problem. In a true TDD fashion, let us start with a failing test:          var constant = Expression.Constant(5);&#xA;var captureReference = constant;&#xA;&#xA;// put something here that may not change the captureReference variable&#xA;&#xA;Debug.Assert(ReferenceEquals(constant, captureReference));&#xA;Debug.Assert(constant.Value.Equals(2));&#xA;  &#xA;&#xA;&#xA;We then move on to look at the actual ConstantExpression code:&#xA;&#xA; &#xA;&#xA;Do you see the hook that I am going to plug into?&#xA;&#xA;Coming back to my ReSharper plug, it is pretty easy to see that value is a read only value, but it is not mark as such. This is one of ReSharper&#x2019;s suggestions that came in 4.0, and made me aware of the reasons to do so. Because it is not mark as such, I have a way in&#x2026;&#xA;&#xA;All it requires is a bit of LCG (lightweight code generation), such as this:&#xA;&#xA;&#xA;  &#xA;    public static Action&lt;ConstantExpression, object&gt; CreateSetAccessor()&#xA;{&#xA;    var accessor = new DynamicMethod(&quot;SetValue&quot;, typeof (void), new Type[]&#xA;    {&#xA;        typeof (ConstantExpression),&#xA;        typeof (object)&#xA;    }, true);&#xA;    var generator = accessor.GetILGenerator();&#xA;    generator.Emit(OpCodes.Ldarg_0);&#xA;    generator.Emit(OpCodes.Ldarg_1);&#xA;    generator.Emit(OpCodes.Stfld,typeof(ConstantExpression).GetField(&quot;value&quot;,BindingFlags.Instance|BindingFlags.NonPublic));&#xA;    generator.Emit(OpCodes.Ret);&#xA;    return (Action&lt;ConstantExpression, object&gt;)accessor.CreateDelegate(typeof(Action&lt;ConstantExpression,object&gt;));&#xA;}&#xA;  &#xA;&#xA;&#xA;And now we have a passing test:&#xA;&#xA;&#xA;  &#xA;    var valueSetAccessor = CreateSetAccessor();&#xA;var constant = Expression.Constant(5);&#xA;var captureReference = constant;&#xA;&#xA;valueSetAccessor(constant, 2);&#xA;&#xA;Debug.Assert(ReferenceEquals(constant, captureReference));&#xA;Debug.Assert(constant.Value.Equals(2));&#xA;  &#xA;&#xA;&#xA;Now, I don&#x2019;t really recommend doing this. This is unsupported, etc.&#xA;&#xA;But it is a cool trick, and it applies pretty much generically across all of the Expression classes.</p>
+        </article>
+        <article id="article-5942">
+            <a href="https://ayende.com/blog/4018/nh-prof-for-hibernate-now-in-closed-beta" target="_blank">
+                <h2 class="title mb-6" id="article-5942">NH Prof for Hibernate &#x2013; Now in Closed Beta</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 17, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, I heard the requirement quite clearly, so let us see how this looks like, given the following code:          public class SelectBlogByIdUsingCriteria extends AbstractScenario {&#xA;&#xA;    @Override&#xA;    protected void doExecute(SessionFactory factory) {&#xA;        doInTransaction(new SessionCallback&lt;Object&gt;() {&#xA;            @Override&#xA;            public Object execute(Session session) {&#xA;                return session.createCriteria(Blog.class)&#xA;                .add(Restrictions.idEq(1))&#xA;                .list();            &#xA;            }&#xA;        });&#xA;&#xA;    }&#xA;}&#xA;  &#xA;&#xA;&#xA;We get the following result:&#xA;&#xA; &#xA;&#xA;I am currently looking for people to actually do field testing of this for me.&#xA;&#xA;If you are interested, please ping me via email.</p>
+        </article>
+        <article id="article-5943">
             <a href="https://ayende.com/blog/4017/the-things-that-you-have-to-do-to-protect-your-application" target="_blank">
-                <h2 class="title mb-6" id="article-5941">The things that you have to do to protect your application</h2>
+                <h2 class="title mb-6" id="article-5943">The things that you have to do to protect your application</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The following is NHProf&#x2019;s Main method:     Each of the currently existing conditions (and I am pretty sure that they will grow) is there because of bug reports from the field.   It gets&#x2026; interesting, sometimes, the things that user do to my poor app.</p>
         </article>
-        <article id="article-5942">
+        <article id="article-5944">
             <a href="https://ayende.com/blog/4016/funny-comments" target="_blank">
-                <h2 class="title mb-6" id="article-5942">Funny comments</h2>
+                <h2 class="title mb-6" id="article-5944">Funny comments</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I don&#x2019;t know what the story behind this is, but I really want to:              /**&#xA;     * Determine an identifier for the given transaction appropriate for use in caching/lookup usages.&#xA;     * &lt;p/&gt;&#xA;     * Generally speaking the transaction itself will be returned here.  This method was added specifically&#xA;     * for use in WebSphere and other unfriendly JEE containers (although WebSphere is still the only known&#xA;     * such brain-dead, sales-driven impl).&#xA;     *&#xA;     * @param transaction The transaction to be identified.&#xA;     * @return An appropropriate identifier&#xA;     */&#xA;    public Object getTransactionIdentifier(Transaction transaction);&#xA;  &#xA;&#xA;&#xA;This is part of the Hibernate source code.</p>
         </article>
-        <article id="article-5943">
+        <article id="article-5945">
             <a href="https://ayende.com/blog/4015/paypal-it-may-be-your-account-but-you-arent-going-to-use-it" target="_blank">
-                <h2 class="title mb-6" id="article-5943">PayPal: It may be your account, but you aren&#x2019;t going to use it</h2>
+                <h2 class="title mb-6" id="article-5945">PayPal: It may be your account, but you aren&#x2019;t going to use it</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In general, I have been very happy with PayPal over the years. Recently, however, I have become quite frustrated with it. I am using it quite often to send and accept money to people I am working with, and for a while now, I have been unable to do so.  Apparently, my actions has been caught by some automated security systems and they decided to ban any transactions on my account. That is actually acceptable from my point of view. I feel better knowing that there are active attempts to protect me from fraud or theft.   What I don&#x2019;t find acceptable is that when I called PayPal to try to resolve that, the response that I got was: It is an act of God, nothing we mere mortals can do about it.  I understand all about false positives, and aside from the annoyance factor, they are acceptable if they aren&#x2019;t happening very often. What I am not able to comprehend is responses such as: No one in PayPal can help you. And that is after I already escalated to a supervisor!  I recorded my conversation with PayPal, you can download it here or just listen:         I find the whole thing utterly infuriating, and totally unacceptable.</p>
         </article>
-        <article id="article-5944">
+        <article id="article-5946">
             <a href="https://ayende.com/blog/4014/fixing-test-failures-using-binary-search" target="_blank">
-                <h2 class="title mb-6" id="article-5944">Fixing test failures using binary search</h2>
+                <h2 class="title mb-6" id="article-5946">Fixing test failures using binary search</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">With Rhino Queues, I have a very serious problem. While all the tests would run if they were run individually, running them in concrete would cause them to fail. That is a pretty common case of some test affecting the global state of the system (in fact, the problem is one test not releasing resources and all other tests failing because they tried to access a locked resource).  The problem is finding out which. By the way, note that I am making a big assumption here, that there is only one test that does so, but for the purposes of this discussion, it doesn&#x2019;t matter, the technique works for both options.  At the heart of it, we have the following assumption:     If you have tests that cause failure, and you don&#x2019;t know which, start by deleting tests.   In practice, it means:     Run all unit tests    If the unit tests failed:         Delete a unit test file with all its tests      Go to first step       If the unit tests passed:         Revert deletion of a unit test file in reverse order to their deletion      Go to step 1      When you have only a single file, you have pinpointed the problem.   In my case, unit tests started to consistently pass when I deleted all of those ( I took a shortcut and delete entire directories ):     So I re-introduced UsingSubQueues, and&#x2026; the tests passed.  So I re-introduced Storage/CanUseQueue and&#x2026; the tests passed.  This time, I re-introduced Errors, because I have a feeling that QueueIsAsync may cause that, and&#x2026; the tests FAILED.  We have found the problem. Looking at the Errors file, it was clear that it wasn&#x2019;t disposing resources cleanly, and that was a very simple fix.  The problem wasn&#x2019;t the actual fix, the problem was isolating it.  With the fix&#x2026; the tests passed. So I re-introduced all the other tests and run the full build again.  Everything worked, and I was on my way :-)</p>
         </article>
-        <article id="article-5945">
+        <article id="article-5947">
             <a href="https://ayende.com/blog/4013/nh-prof-new-feature-error-detection" target="_blank">
-                <h2 class="title mb-6" id="article-5945">NH Prof New Feature</h2>
+                <h2 class="title mb-6" id="article-5947">NH Prof New Feature</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The feature for the day is detecting &amp; notifying the user about NHibernate errors, warning messages and other things that require human attention. As a simple example, let us take this common error:          public class ErrorSavingToDatabase : IScenario&#xA;{&#xA;    public void Execute(ISessionFactory factory)&#xA;    {&#xA;        using(var s = factory.OpenSession())&#xA;        using(var tx = s.BeginTransaction())&#xA;        {&#xA;            s.Save(new Blog&#xA;            {&#xA;                Title = &quot;Will error&quot;,&#xA;                CreatedAt = DateTime.MinValue// cause error&#xA;            });&#xA;&#xA;            tx.Commit();&#xA;        }&#xA;    }&#xA;}&#xA;  &#xA;&#xA;&#xA;Which will give us:&#xA;&#xA;&#xA0;&#xA;&#xA;&#xA;&#xA;There are quire a few things going on in here. &#xA;&#xA;First, we can see that NH Prof correctly detected the statement that caused an error and marked it as failed. We can also see the next statement, which give us the actual error details about the actual issue. This means that we have direct access to everything, and can usually understand what is going on very easily, by seeing both the error and the statement that caused it.&#xA;&#xA;This isn&#x2019;t actually limited to issues that are being raised from exceptions executing SQL queries, there are several cases where NHibernate itself needs to let you know about an issue. In those cases, the profiler will detect and display the message and expose it to you in a visible manner.</p>
         </article>
-        <article id="article-5946">
+        <article id="article-5948">
             <a href="https://ayende.com/blog/4012/challenge-multi-threaded-test-failure" target="_blank">
-                <h2 class="title mb-6" id="article-5946">Challenge</h2>
+                <h2 class="title mb-6" id="article-5948">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">On one of my machines, I can consistently get the following test failure, because of an exception throw here:     As you can see, we get an ObjectDisposedException here, which cause the test to fail. There is only one problem with that:     We only dispose the queue manager on the dispose method, and that can only be called if the test itself was completed.  On the face of it, it looks like I am doing things correctly, but there is a bug here. The CLR&#x2019;s threading semantics are not broken, even though on first glance it appears so.  As a side note, people keep asking me how I blog so much. This post is a perfect example. When I started writing this blog post, I was truly stamped. By the time I finished, I already noticed where the bug was and fixed it.  Can you tell?</p>
         </article>
-        <article id="article-5947">
+        <article id="article-5949">
             <a href="https://ayende.com/blog/4011/the-stripper-pattern" target="_blank">
-                <h2 class="title mb-6" id="article-5947">The Stripper Pattern</h2>
+                <h2 class="title mb-6" id="article-5949">The Stripper Pattern</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In 2006 (if I can recall correctly), Greg Young and I discussed the concept of the Stripper Pattern, we never really had the chance to formulate it into a real pattern, but we kept discussing this whenever we met (and had beer available).   This post is about the stripper pattern, and there is a good reason why I selected the accompanying image for this post, it is the spookiest stripper image that I can put in the blog. Because the Stripper Pattern is an anti pattern.  It all started from a fairly innocent question, asked in the NHibernate talks that I did on Progressive.NET:     How can I send my objects over the wire?   I could have given the answer, I could have talked about the reasons this is bad (versioning, isolation, tell don&#x2019;t ask, etc, etc), but what I actually said was:     I&#x27;m not running a strip club so why am I sending you all my privates?   Later on, we got into a deeper discussion of the topic, which led to this post. There is a reason that I choose that statement to answer that question. Let us move up the stack a bit and ask: What is an object?  An object is data &#x2B; behavior. If you don&#x2019;t have behavior and data, you don&#x2019;t have an object. It is as simple as that.      Nitpicker corner: I am not talking about System.Object, or something of the sort. I am talking from a conceptual level. DTO is not an object, despite the name, it is a bag of data.   Since it is not possible to send behavior over the wire, what the question means is actually:     How can I send my objects as data over the wire?   The problem is that this question doesn&#x2019;t really make sense.   What you are actually doing is divesting the object from its covering and perform acts of forbidden knowledge on its privates. Then, to add grave insult to serious injury, you take that and post it over the internet.&#xA0; Just be glad that objects can&#x2019;t sue for breach of OO contract, encapsulation violation and sexual harassment.  When you separate a data from behavior, you are no longer working with objects. At that point, you start to run into problems, a lot of them. In addition to the simply technical issues, there are very serious architectural issues with stripping away all OO from your solution.  If you need to send data over the wire, that is why we have&#xA0; a DTO for. If you need to handle updates, use the approach described here, which gives us a good OO semantics for the whole process.</p>
         </article>
-        <article id="article-5948">
+        <article id="article-5950">
             <a href="https://ayende.com/blog/4010/random-developer-quotes" target="_blank">
-                <h2 class="title mb-6" id="article-5948">Random Developer Quotes</h2>
+                <h2 class="title mb-6" id="article-5950">Random Developer Quotes</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -263,38 +295,6 @@
                 posted on: May 13, 2009
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Those are just things that I happened to hear or say in the last week:     Q: Did you read the book Beautiful Architecture?    A: No, I don&#x2019;t read fantasy books.   And:     Q: Why are you doing the dishes?    A: I was a C&#x2B;&#x2B; programmer for a long time, I am used to cleaning up after myself.</p>
-        </article>
-        <article id="article-5949">
-            <a href="https://ayende.com/blog/4009/post-4000" target="_blank">
-                <h2 class="title mb-6" id="article-5949">Post #4000</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 13, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Dear ALT.NET Community,  You are likely familiar with that classic Warren Zevon song, Werewolves of London. I was reminded of this the last night being in London under a full moon and in the same hotel as one of the more famous Lycanthropic developers in the .NET community, Ayende Rahien, with whom you are also likely familiar as, well, you are reading his feed. Duh.  Shocked? Read on...  To call Ayende a werewolf is inacurate, of course. A lycanthrope, yes: Half-man, half-animal (i.e. manimal). But his primal half does not take the form of the lupine. Rather, Ayende is a were-Rhino. This should be obvious given the various logos and trade names he chooses. There you have it! His shape-shifting nature explains his Rhino fetish along with the genesis of the names of such projects RhinoMocks, RhinoCommons, Hibernating Rhinos, etc.  Yes we&#x27;re all familiar with the conventional wisdom detailed in the classic essay of the same name by Fred Brooks, &quot;No Silver Bullets.&quot; In this corner case of our industry there is a silver bullet, a couple (luckily, friends)!  There are a few things you can do to protect yourself from this marauding monster, Mr. Rahien. When in his manimilian state, if you ask him a question about NHibernate, you will stop the abomination in his tracks. If, being a proper member of the ALT.NET tribe, you cannot think of an NHibernate question (as you are undoubtedly an expert at this point) engage the brute in a discussion regarding the popular science fiction book series, &quot;The Wheel of Time.&quot; That should do.  IMPORTANT: a curious, oft-overlooked but quite dangerous feature of the wererhino is that the beastly transformation can be triggered when the subject views a piece of code built on the Entity Framework. Be very, very careful when working with EF code around Ayende.  You have been warned.  Yours truly,  Dave Laribee</p>
-        </article>
-        <article id="article-5950">
-            <a href="https://ayende.com/blog/4008/dont-mock-my-integration-tests" target="_blank">
-                <h2 class="title mb-6" id="article-5950">Don&#x2019;t mock my integration tests</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 13, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Dror from TypeMock has managed to capture the essence of my post about unit tests vs. integration tests quite well:     Unit tests runs faster but integration tests are easier to write.   Unfortunately, he draws an incorrect conclusion out of that;     There is however another solution instead of declaring unit testing as hard to write - use an isolation framework which make writing unit test much easier.    And the answer to that is&#x2026; no, you can&#x2019;t do that. Doing something like that put you back in the onerous position of unit test, where you actually have to understand exactly what is going on and have to deal with that. With an integration test, you can assert directly on the end result, which is completely different than what I would have to do if I wanted to mock a part of the system. A typical integration test looks something like:          public class SelectNPlusOne : IScenario&#xA;{&#xA;    public void Execute(ISessionFactory factory)&#xA;    {&#xA;        using (var session = factory.OpenSession())&#xA;        using (var tx = session.BeginTransaction())&#xA;        {&#xA;            var blog = session.CreateCriteria(typeof(Blog))&#xA;                .SetMaxResults(1)&#xA;                .UniqueResult&lt;Blog&gt;();//1&#xA;            foreach (var post in blog.Posts)//2&#xA;            {&#xA;                Console.WriteLine(post.Comments.Count);// SELECT N&#xA;            }&#xA;            tx.Commit();&#xA;        }&#xA;    }&#xA;}&#xA;&#xA;&#xA;[Fact]&#xA;public void AllCallsToLoadCommentsAreIdentical()&#xA;{&#xA;    ExecuteScenarioInDifferentAppDomain&lt;SelectNPlusOne&gt;();&#xA;    var array = model.Sessions[0]&#xA;        .SessionStatements&#xA;        .ExcludeTransactions()&#xA;        .Skip(2)&#xA;        .ToArray();&#xA;    Assert.Equal(10, array.Length);&#xA;    foreach (StatementModel statementModel in array)&#xA;    {&#xA;        Assert.Equal(statementModel.RawSql, array[0].RawSql);&#xA;    }&#xA;}&#xA;  &#xA;&#xA;&#xA;This shows how we can assert on the actual end model of the system, without really trying to deal with what is actually going on. You cannot introducing any mocking to the mix without significantly hurting the clarity of the code.</p>
         </article>
         <div class="button flex justify-between">
             <a href="594.html"><span class="back arrow"></span></a>
