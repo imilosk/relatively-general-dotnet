@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-8941">
+            <a href="https://ayende.com/blog/1477/if-a-tree-falls-in-a-forest-and-there-is-no-one-there-to-hear-it-fall-does-it-make-a-noise" target="_blank">
+                <h2 class="title mb-6" id="article-8941">If a tree falls in a forest and there is no one there to hear it fall does it make a noise?</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 17, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">According to my code, it doesn&#x27;t.    Here is the scenario, the scenario is supporting on the fly view updates for Brail. Recent changes in MonoRail&#xA0;meant that loading the view is now the responsability of the framework, and not the responsability of the view engine. This, however, presented a problem. Brail&#x27;s view are compiled classes, but I want to allow edit &amp; refresh cycles, so I can&#x27;t force the develop to restart the application every time a view change.    So far, I handled it with a FileSystemWatcher that took care of it, but when the responsability moved to the framework, I needed to put something there that will give me the same functionality. The issue is that Brail is not the only View Engine for MonoRail (there are four that I am aware of), and Brail is the only one that needs this functionality. I should mention that FileSystemWatcher is a system resource, and as such, should be treated with care.    The solution, when it came to me, was relatively simple. Lazy events. Here is the code, which explain things better:            /// &lt;summary&gt;                        /// Raised when the view is changed.                        /// &lt;/summary&gt;                        public event FileSystemEventHandler ViewChanged                        {                        &#xA0;&#xA0;&#xA0; add                        &#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; //avoid concurrency problems with creating/removing the watcher                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; //in two threads in parallel. Unlikely, but better to be safe.                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; lock(this)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; //create the watcher if it doesn&#x27;t exists                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; if (viewFolderWatcher == null)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; InitViewFolderWatch();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ViewChangedImpl &#x2B;= value;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0; remove                        &#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; //avoid concurrency problems with creating/removing the watcher                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; //in two threads in parallel. Unlikely, but better to be safe.                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; lock(this)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ViewChangedImpl -= value;                        &#xA0;&#xA0; &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;if (ViewChangedImpl == null)//no more subscribers.                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; DisposeViewFolderWatch();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0; }                        }        As you can see, there is a backend event that is doing the &quot;real&quot; work of handling subscribers and raising the event itself. What this gives me is to pay only for what I use. In this case, Brail needs this service, so it subscribe to the event, which causes the FileSystemWatcher to start working. When all the event subscribers are gone, the FileSystemWatcher is disposed.    This way, it make it look like it is continously watching, but it doesn&#x27;t bother to do its work if there is no one who can&#x27;t catch it sleeping on the watch :-)</p>
+        </article>
+        <article id="article-8942">
             <a href="https://ayende.com/blog/1476/more-thoughts-about-ado-net-entity-framework" target="_blank">
-                <h2 class="title mb-6" id="article-8941">More thoughts about ADO.Net Entity Framework</h2>
+                <h2 class="title mb-6" id="article-8942">More thoughts about ADO.Net Entity Framework</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After reading the documentation, I have some unanswered questions about Linq For Entities, Microsoft new OR/M framework and I&#x27;m concerned about its usability in real life.    More spesifically, I&#x27;m concerened about the following:            Many to many relations. I have not seen a single mention of them in the documentation, and I know that DLinq doesn&#x27;t support them.            Support for indexed collections (IList&lt;T&gt;) and maps (IDictionary&lt;TKey,TVal&gt;).&#xA0;Again, no mention of those in the documentation, and again, I&#x27;m pretty sure (but not completely) that DLinq doesn&#x27;t support it.            Support for custom collections. I&#x27;m currently working on a project where just about everything is bound in time. This mean that the collection has to be aware of this. I don&#x27;t see how I can achieve the same goal using Linq for Entities*.            How can I add a new type to the system? I have a column that in the model is boolean, but in the DB is null/not null (don&#x27;t ask). How do I make map this?    To be presice, I want to know what the extention model is. There is no way that Linq for Entities can cover all the scenarios, and I have a wildly different experiances from Microsoft with regard to extention possibilities. Hell, just yesterday I learned that they decide that batching is too scary to let me handle it unless I&#x27;m going through data adapters. And I won&#x27;t mention the pain that working with ASP.Net Cache is.    The really sad part is that they likely won&#x27;t make those classes public ever, since they would consider this a breaking change.    *Someone please find a abbrevation for this monster.</p>
         </article>
-        <article id="article-8942">
+        <article id="article-8943">
             <a href="https://ayende.com/blog/1475/ado-net-entity-framework" target="_blank">
-                <h2 class="title mb-6" id="article-8942">ADO.Net Entity Framework</h2>
+                <h2 class="title mb-6" id="article-8943">ADO.Net Entity Framework</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m currently reading the documentation for ADO.Net Entities Framework. As always, I&#x27;m using this as a scratch pad for what I think as I read this.    Next-Generation Data Access - June 2006:            They still allow access to lower level services with the Entity Framework. Lower level is apperantely IDbConnection and IDbCommand. They mention the 80% brick wall, which is encouraging. The problem is that I don&#x27;t like this solution. The framework should be flexible enough that I could plug in at all the important points and replace the functionality with my custom one. Using two ways to acess the data has a big &quot;Don&#x27;t Do Unless You Know What You Are Doing And Have Fasted For Three Days&quot; sign over it with red blnking lights.                 Chapter&#xA0;3 is slightly interesting, 1,2,4,5 are extremely boring. Going over unrelated details (such as SQL Server ACID guarantees, merge replication, or order entry from 20 years ago). I understand the concept of a problem statement, but this is taking it to a new level.                 Chapter 6 is about what they are trying to achieve. Admirable goals.                 Chapter 7 shows the XML mapping. I&#x27;m not a fan of XML, and that XML is defiantely not something that you would want to write by hand.                 One nice feature that I noticed is the ability to map several tables into a single entity. This has some performance implications, because of joins                 I don&#x27;t like that immediately show how to escape from the framework and go back to working with SQL and untyped data.                 They mention WCFClient which sounds interesting. I&#x27;m not sure how that will work, the models are very different.                 From the document, it seems like SQL Everywhere is going to ship with this, and be the local cache for the framework.                 The MapProvider looks like it is the equilent of the ADO.Net driver. You apperantly get one for each DB provider. It looks like it provide quite a bit more, though. Mapping, eSQL (Entities SQL), etc.    Okay, that was the high level overview, let start on the real details.    The ADO.NET Entity Framework Overview June 2006:            Oh joy! Three ORM frameworks. Linq to SQL, Linq to DataSet, Linq to Entities.                 I understand the need of simple examples, but this is wrong:        where order.Status == &quot;Pending Stock Verification&quot;                 This is no data mdoel that I know. There is no need to start the bad&#xA0;habits in the documentation.&#xA0;                 This is a new record. They managed to piss me off on the very first page. The code example that they give as the desired state doesn&#x27;t even make sense. Check the seond part of the example (in page 6), they load all the products, regardless of the order that has it. No order will ever ship unless all the products are shippable.                 What about custom collections? I&#x27;m only 1/3 of the way, so it may appear later, but this is a very big concern.                 Page 10: What do they mean? No behavior inheritance? If you map a table to a set of related classes, you bet you will get behavior inheritance. It is one of the more powerful features on an OR/M.                 Sigh. It looks like this is much about providing a mapping layer between the database and the logical model, and getting uptyped results back. I&#x27;m not excited about this at all. This is where they are putting quite a bit of emphasis.                 Given that they create a new langauge to work with the data, why not make it compatible with the way Linq work and use from-select-where ?                 Check this:                                    SELECT VALUE sp                                                        FROM AdventureWorks.AdventureWorksDB.SalesPeople AS sp                                                        WHERE EXISTS(                                                        &#xA0; SELECT VALUE o                                                                         &#xA0; FROM NAVIGATE(p, AdventureWorks.SalesPerson_Order) AS o                                                        &#xA0; WHERE o.TotalDue &gt; 200000)                             This query makes no sense to me at all, it is supposed to bring all the sales persons with a sale over 200,000. Is there a reason I need to know the foriegn keys between the two objects?        The same query, expressed in HQL (Hiberante Query Languague) will look like this:                                     SELECT sp FROM&#xA0;             SalesPeople sp join sp.Orders o where o.TotalDue &gt; 200000                Update 20:36: Fixed HQL Query.                &#xA0;This is the magic? Please tell that they are joking...        ctx.GetQuery&lt;SalesPerson&gt;(&quot;some eSql Query&quot;);            p.Orders.Source.Where(&quot;it.Status == 0&quot;)                 Where is the Linq stuff? It was mentioned briefly as the ideal, but I didn&#x27;t see it since (page 20).                 A side note, I see a lot of code written like this:                                     &quot;SELECT VALUE &quot;                         &#x2B;            &quot;FROM AdventureWorks.AdventureWorksDB.SalesOrders AS o &quot; &#x2B;            &quot;WHERE o.Status = 0&quot;                 C# has a multi line string. It bothers me to see that they are not using it.                 Okay, chapter 4 is titled &quot;Linq to Entities&quot;, so I guess there is Linq magic there.                 &#xA0;The Linq samples looks like I expected them too. So I guess that I worried for no reason.                 The Linq on DataSet stuff it just ugly on untyped datasets. The difference between untyped &amp; typed is just amazing.                 &#xA0;No word on the difference between Linq for SQL (DLinq) and Linq for Entities except that the mapping is done directly against the database and not against a mapping layer on top of the databse (oh, how the Architects are going to love this).                 It looks like that are two types of mapping: Database --&gt; EDM,&#xA0;Database?/EDM?&#xA0;--&gt; Classes. And yet I see no references to the database on the EDM, and plenty of references to the database in the classes mapping.         Overall, not really impressed. I guess I will have to wait until I have the real bits to play bit, but except from the Linq magic, I don&#x27;t see anything really interesting. I do foresee quite a bit of confusion, though.</p>
         </article>
-        <article id="article-8943">
+        <article id="article-8944">
             <a href="https://ayende.com/blog/1474/indidrection-3" target="_blank">
-                <h2 class="title mb-6" id="article-8943">Indidrection ^ 3</h2>
+                <h2 class="title mb-6" id="article-8944">Indidrection ^ 3</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Working on a VM through a remote desktop via VPN.    It isn&#x27;t completely slow, surprisingly.</p>
         </article>
-        <article id="article-8944">
+        <article id="article-8945">
             <a href="https://ardalis.com/18721/" target="_blank">
-                <h2 class="title mb-6" id="article-8944">Tech Ed 2006 Summary</h2>
+                <h2 class="title mb-6" id="article-8945">Tech Ed 2006 Summary</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I haven&#x2019;t posted in a bit, so let me summarize what I&#x2019;ve been doing the last few days, apart from going to various parties and staying out&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8945">
+        <article id="article-8946">
             <a href="https://ardalis.com/18722/" target="_blank">
-                <h2 class="title mb-6" id="article-8945">Atlas, IIS7, and BLINQ</h2>
+                <h2 class="title mb-6" id="article-8946">Atlas, IIS7, and BLINQ</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Scott Guthrie presented on Atlas and BLINQ this afternoon at TechEd. The latest Atlas bits seem to be coming along very nicely, allowing&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8946">
+        <article id="article-8947">
             <a href="https://ardalis.com/18723/" target="_blank">
-                <h2 class="title mb-6" id="article-8946">Caching Birds of a Feather</h2>
+                <h2 class="title mb-6" id="article-8947">Caching Birds of a Feather</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I hosted a Caching Best Practices Birds of a Feather today at Tech Ed. The attendance was not quite as great as I&#x2019;d hoped but wasn&#x2019;t&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8947">
+        <article id="article-8948">
             <a href="https://ardalis.com/18724/" target="_blank">
-                <h2 class="title mb-6" id="article-8947">TechEd Boston &#x2013; What&#x27;s Up With All the Cows?</h2>
+                <h2 class="title mb-6" id="article-8948">TechEd Boston &#x2013; What&#x27;s Up With All the Cows?</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So, all week at Boston I&#x2019;ve seen these cows  all over the city, and have been wondering what, if any, significance they have. I finally&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8948">
+        <article id="article-8949">
             <a href="https://ayende.com/blog/1473/corporate-culture" target="_blank">
-                <h2 class="title mb-6" id="article-8948">Corporate Culture</h2>
+                <h2 class="title mb-6" id="article-8949">Corporate Culture</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m currently listening to Re Your Brains&#xA0;from Jonathan Coulton. The first link has the lyrics, check them out. Corporate culture with zombies in it.    I&#x27;m playing it over and over again, the words and the music are completely out of line with the content. A great joke.</p>
         </article>
-        <article id="article-8949">
+        <article id="article-8950">
             <a href="https://ayende.com/blog/1472/command-batching-in-ado-net-2-0" target="_blank">
-                <h2 class="title mb-6" id="article-8949">Command Batching in ADO.Net 2.0</h2>
+                <h2 class="title mb-6" id="article-8950">Command Batching in ADO.Net 2.0</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: June 15, 2006
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I got one question about this. How am I supposed to do this?    No, using a data adapter is not an option, I want to create my own commands and batch them. Searching gave no answer, and Reflecting over the relevant classes bring me to a whole mess of internal classes and methods in System.Data.    Any ideas?    I would really like it to be DB agnostic (or be able to query if I can batch or not), but even something for SQL Server only will be helpful.    It looks like this is not supported :-(. We dont have batching at command level for .Net Framework version 2.0. Batching is only supported at the Adapter level. Meaning all the update, insert and delete commands on the adapter are the only ones that get batched. Hope this helps.    This is extremely annoying. Why does Microsoft insist of interalizing everything? Here is a perfectly good functionality that I can&#x27;t access, reducing me to the bad way of concating queries if I need to do it.    Yuck!</p>
-        </article>
-        <article id="article-8950">
-            <a href="https://ayende.com/blog/1471/microsoft-productfeedback-service-packs-for-net" target="_blank">
-                <h2 class="title mb-6" id="article-8950">Microsoft Productfeedback &amp; Service Packs for .Net</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 15, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have to agree with Frans&#xA0;in this matter, Microsoft Product Feedback sucks. I reported several crashing bugs there (compiler, IDE), among other things. I never even got &quot;we are checking&quot; message.    In th same vein, and from the same source, Frans also talks about the due date for .Net 2.0 SP1. Apperantly it has been set to Orcas&#x27; release. I&#x27;m not overly concerned about this, since I have far more problems with VS than the framework itself. The due date for this SP is Q3 of this year, which has already started, and beyond a single page, no one seems to be talking about.    Hotfixes by request, after phoning PSS, is not a way to distribue patches. The Windows team is capable of putting patches out, why can&#x27;t the VS team do the same? We are all developers, we understand about unexpected consequences. What I don&#x27;t understand is why Microsoft is hoarding the patches this way.</p>
         </article>
         <div class="button flex justify-between">
             <a href="894.html"><span class="back arrow"></span></a>
