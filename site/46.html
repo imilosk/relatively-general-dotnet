@@ -137,8 +137,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-451">
+            <a href="https://ayende.com/blog/200289-B/production-postmortem-the-spawn-of-denial-of-service" target="_blank">
+                <h2 class="title mb-6" id="article-451">Production Postmortem</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 12, 2023
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A customer contacted us to complain about a highly unstable cluster in their production system. The metrics didn&#x2019;t support the situation, however. There was no excess load on the cluster in terms of CPU and memory, but there were a lot of network issues. The cluster got to the point where it would just flat-out be unable to connect from one node to another.&#xA;It was obviously some sort of a network issue, but our ping and network tests worked just fine. Something else was going on. Somehow, the server would get to a point where it would be simply inaccessible for a period of time, then accessible, then not, etc. What was weird was that the usual metrics didn&#x2019;t give us anything. The logs were fine, as were memory and CPU. The network was stable throughout.&#xA;If the first level of metrics isn&#x2019;t telling a story, we need to dig deeper. So we did, and we found something really interesting. Here is the total number of TCP connections on the server over time.&#xA;So there are a lot of connections on the system, which is choking it? But the CPU is fine, so what is going on? Are we being attacked? We looked at the connections, but they all came from authorized machines, and the firewall was locked down tight.&#xA;&#xA;If you look closely at the graph, you can see that it hits 32K connections at its peak. That is a really interesting number, because 32K is also the number of ephemeral port range values for Linux. In other words, we basically hit the OS limit for how many connections could be sustained between a client and a server.&#xA;The question is what could be generating all of those connections? Remember, they are coming from a trusted source and are valid operations.&#xA0; Indeed, digging deeper we could see that there are a lot of connections in the TIME_WAIT state.&#xA;We asked to look at the client code to figure out what was going on. Here is what we found:&#xA;&#xA;&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          const readline = require(&#x27;readline&#x27;);&#xA;        &#xA;        &#xA;          &#xA;          const Raven = require(&#x27;ravendb&#x27;);&#xA;        &#xA;        &#xA;          &#xA;          const process = require(&#x27;process&#x27;);&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          const store = Raven.DocumentStore.create({&#xA;        &#xA;        &#xA;          &#xA;            // ... initialize RavenDB client ...&#xA;        &#xA;        &#xA;          &#xA;          }).initialize();&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          const session = store.openSession();&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          const doc = JSON.parse(readline.readline());&#xA;        &#xA;        &#xA;          &#xA;          session.store(doc);&#xA;        &#xA;        &#xA;          &#xA;          session.saveChanges()&#xA;        &#xA;        &#xA;          &#xA;            .catch(error =&gt; { &#xA;        &#xA;        &#xA;          &#xA;              console.error(error);&#xA;        &#xA;        &#xA;          &#xA;              process.exit(1);&#xA;        &#xA;        &#xA;          &#xA;          });&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          script.js&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;&#xA;&#xA;There is&#x2026; not much here, as you can see. And certainly nothing that should cause us to generate a stupendous amount of connections to the server. In fact, this is a very short process. It is going to run, read a single line from the input, write a document to RavenDB, and then exit.&#xA;To understand what is actually going on, we need to zoom out and understand the system at a higher level. Let&#x2019;s assume that the script above is called using the following manner:&#xA;&#xA;&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          cat large-input-file.jsonl | xargs -n 1 -I {} node ./script.js &lt;&lt;&lt; &quot;{}&quot;&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          invoke.sh&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;&#xA;&#xA;What will happen now? All of this code is pretty innocent, I&#x2019;m sure you can tell. But together, we are going to get the following interesting behavior:&#xA;For each line in the input, we&#x2019;ll invoke the script, which will spawn a separate process to connect to RavenDB, write a single document to the server, and exit. Immediately afterward, we&#x27;ll have another such process, etc.&#xA;Each of those processes is going to have a separate connection, identified by a quartet of (src ip, src port, dst ip, dst port). And there are only so many such ports available on the OS. Once you close a connection, it is moved to a TIME_WAIT mode, and any packets that arrive for the specified connection quartet are going to be assumed to be from the old connection and drop. Generate enough new connections fast enough, and you literally lock yourself out of the network.&#xA;The solution to this problem is to avoid using a separate process for each interaction. Aside from alleviating the connection issue (which also requires non trivial cost on the server) it allows RavenDB to far better optimize network and traffic patterns.</p>
+        </article>
+        <article id="article-452">
+            <a href="https://andrewlock.net/redacting-sensitive-data-with-microsoft-extensions-compliance/" target="_blank">
+                <h2 class="title mb-6" id="article-452">Redacting sensitive data in logs with Microsoft&#x200B;.Extensions&#x200B;.Compliance&#x200B;.Redaction</h2>
+            </a>
+            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 12, 2023
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I show how you can add redaction to your [LogProperties] and [TagProvider] objects using the Microsoft.Extensions.Compliance.Redaction package&#x2026;</p>
+        </article>
+        <article id="article-453">
             <a href="https://devblogs.microsoft.com/dotnet/dotnet-8-hardware-intrinsics/" target="_blank">
-                <h2 class="title mb-6" id="article-451">Hardware Intrinsics in .NET 8</h2>
+                <h2 class="title mb-6" id="article-453">Hardware Intrinsics in .NET 8</h2>
             </a>
             <p class="mb-2">by Tanner Gooding [MSFT]</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">.NET 8 includes significant improvements to the Hardware Intrinsics feature.</p>
         </article>
-        <article id="article-452">
+        <article id="article-454">
             <a href="https://www.meziantou.net/removing-history-versions-of-a-file-on-onedrive-for-business.htm" target="_blank">
-                <h2 class="title mb-6" id="article-452">Removing history versions of a file on OneDrive for Business</h2>
+                <h2 class="title mb-6" id="article-454">Removing history versions of a file on OneDrive for Business</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">OneDrive for Business is different from OneDrive. OneDrive for Business is a SharePoint site collection. It means that you can use SharePoint features such as versioning. By default, OneDrive for Business keeps the last 500 versions of a file. It can be useful, but it can also take a lot of space.</p>
         </article>
-        <article id="article-453">
+        <article id="article-455">
             <a href="https://devblogs.microsoft.com/dotnet/dotnet-conf-2023-recap-videos-slides-demos-and-more/" target="_blank">
-                <h2 class="title mb-6" id="article-453">.NET Conf 2023 Recap &#x2013; Celebrating Community, Innovation, and the Launch of .NET 8</h2>
+                <h2 class="title mb-6" id="article-455">.NET Conf 2023 Recap &#x2013; Celebrating Community, Innovation, and the Launch of .NET 8</h2>
             </a>
             <p class="mb-2">by Jon Galloway</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">.NET Conf 2023 is over, but you can re-live the largest .NET event of the year with full access to video recordings, slides, demos, and more.</p>
         </article>
-        <article id="article-454">
+        <article id="article-456">
             <a href="https://devblogs.microsoft.com/dotnet/dotnet-8-networking-improvements/" target="_blank">
-                <h2 class="title mb-6" id="article-454">.NET 8 Networking Improvements</h2>
+                <h2 class="title mb-6" id="article-456">.NET 8 Networking Improvements</h2>
             </a>
             <p class="mb-2">by M&#xE1;&#x148;a</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Introducing new networking features in .NET 8 including HTTP space, metrics, sockets and more!</p>
         </article>
-        <article id="article-455">
+        <article id="article-457">
             <a href="https://devblogs.microsoft.com/dotnet/learn-dotnet8-beginner-videos/" target="_blank">
-                <h2 class="title mb-6" id="article-455">Learn .NET 8 with New Beginner Videos</h2>
+                <h2 class="title mb-6" id="article-457">Learn .NET 8 with New Beginner Videos</h2>
             </a>
             <p class="mb-2">by Katie Savage</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">New to .NET? We know there is a lot to explore &#x2013; so join our Technical Program managers as they cover all of .NET 8 through this brand new beginners video series and take .NET one step at a time.</p>
         </article>
-        <article id="article-456">
+        <article id="article-458">
             <a href="https://andrewlock.net/customising-the-new-telemetry-logging-source-generator/" target="_blank">
-                <h2 class="title mb-6" id="article-456">Enriching logs with [TagProvider] and ILogEnricher</h2>
+                <h2 class="title mb-6" id="article-458">Enriching logs with [TagProvider] and ILogEnricher</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I look at the [TagProperties] and ILogEnricher features from the Microsoft.Extensions.Telemetry and show how they can be used in your apps.&#x2026;</p>
         </article>
-        <article id="article-457">
+        <article id="article-459">
             <a href="https://www.meziantou.net/inline-snapshot-testing-in-dotnet.htm" target="_blank">
-                <h2 class="title mb-6" id="article-457">Inline Snapshot testing in .NET</h2>
+                <h2 class="title mb-6" id="article-459">Inline Snapshot testing in .NET</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">NoteThis blog post is part of The C# Advent Calendar, a series of 50 posts about C#. Be sure to check out the rest of the blog posts in the calendar!Snapshot testing is a technique that allows you to write tests that assert the state of an object. The object is serialized and stored in a file. The</p>
         </article>
-        <article id="article-458">
+        <article id="article-460">
             <a href="https://devblogs.microsoft.com/dotnet/extending-web-assembly-to-the-cloud/" target="_blank">
-                <h2 class="title mb-6" id="article-458">Extending WebAssembly to the Cloud with .NET</h2>
+                <h2 class="title mb-6" id="article-460">Extending WebAssembly to the Cloud with .NET</h2>
             </a>
             <p class="mb-2">by Richard Lander</p>
             <p class="mb-6 flex gap-1.5">
@@ -263,38 +295,6 @@
                 posted on: December 04, 2023
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We&#x27;re closely following the progress of WebAssembly, including WebAssembly System Interface (WASI). There&#x27;s a new experimental workload in .NET 8 for WASI that extends the capabilities of Wasm towards the Cloud.</p>
-        </article>
-        <article id="article-459">
-            <a href="https://www.stevejgordon.co.uk/profiling-memory-allocations-on-linux-using-the-jetbrains-dotmemory-command-line-profiler" target="_blank">
-                <h2 class="title mb-6" id="article-459">Profiling Memory Allocations on Linux using the JetBrains dotMemory Command-Line Profiler</h2>
-            </a>
-            <p class="mb-2">by Steve Gordon</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 30, 2023
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In a previous post (Automating memory profiling with the JetBrains dotMemory Profiler API), I described the steps that could be used to automate the collection of memory snapshots and profiling data by using the JetBrains Profiler API NuGet package. In that post, we triggered the profiling session using the dotMemory application on Windows. As part [&#x2026;]</p>
-        </article>
-        <article id="article-460">
-            <a href="https://devblogs.microsoft.com/dotnet/creating-aot-compatible-libraries/" target="_blank">
-                <h2 class="title mb-6" id="article-460">How to make libraries compatible with native AOT</h2>
-            </a>
-            <p class="mb-2">by Eric Erhardt</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 30, 2023
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How to make .NET libraries compatible with native AOT</p>
         </article>
         <div class="button flex justify-between">
             <a href="45.html"><span class="back arrow"></span></a>
