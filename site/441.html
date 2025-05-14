@@ -137,8 +137,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4401">
+            <a href="https://ayende.com/blog/158945/thou-shall-not-do-threading-unless-you-know-what-you-are-doing" target="_blank">
+                <h2 class="title mb-6" id="article-4401">Thou shall not do threading unless you know what you are doing</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 04, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I had a really bad couple of days. I am pissed, annoyed and angry, for totally not technical reasons. And then I run into this issue, and I just want to throw something really hard at someone, repeatedly. The issue started from this bug report:      1: NetTopologySuite.Geometries.TopologyException was unhandled   2:   HResult=-2146232832   3:   Message= ... trimmed ...   4:   Source=NetTopologySuite   5:   StackTrace:   6:        at NetTopologySuite.Operation.Overlay.Snap.SnapIfNeededOverlayOp.GetResultGeometry(SpatialFunction opCode)   7:        at NetTopologySuite.Operation.Union.CascadedPolygonUnion.UnionActual(IGeometry g0, IGeometry g1)   8:        at NetTopologySuite.Operation.Union.CascadedPolygonUnion.Worker.Execute()   9:        at System.Threading.ExecutionContext.RunInternal(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)  10:        at System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean preserveSyncCtx)  11:        at System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state)  12:        at System.Threading.ThreadHelper.ThreadStart()&#xA;At first, I didn&#x2019;t really realized why it was my problem. I mean, it is NTS problem, isn&#x2019;t it?&#xA;Except that this particular issue actually crashed ravendb (don&#x2019;t worry, it is unstable builds only). The reason it crashed RavenDB? An unhandled thread exception.&#xA;What I can&#x2019;t figure out is what on earth is going on. So I took a look at the code, have a look:&#xA;&#xA;I checked, and this isn&#x2019;t code that has been ported from the Java code. You can see the commented code there? That is from the Java version.&#xA;And let us look at what the execute method does?&#xA;&#xA;So let me see if I understand. We have a list of stuff to do, so we spin out threads, reclusively, then we wait on them. I think that the point was to optimize things in some manner by parallelizing the work between the two halves.&#xA;Do you know what the real killer is? If we assume that we have a geometry with just 20 items on it, this will generate twenty two threads.&#xA;Leaving aside the issue of not handling errors properly (and killing the entire process because of this), the sheer cost of creating the threads is going to kill this program.&#xA;Libraries should be made to be thread safe (I already had to fix a thread safety bug there),&#xA0; but they should not be creating their own threads unless it is quite clear that they need to do so.&#xA;I believe that this is a case of a local optimization for a specific scenario, it also carry all of the issues associated with local optimizations. It solves one problem and opens up seven other ones.</p>
+        </article>
+        <article id="article-4402">
+            <a href="https://ayende.com/blog/158915/lucene-is-beautiful" target="_blank">
+                <h2 class="title mb-6" id="article-4402">Lucene is beautiful</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 03, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So, after I finished telling you how much I don&#x2019;t like the lucene.net codebase, what is this post about? Well, I don&#x2019;t like the code, but then again, I generally don&#x2019;t like to read low level code. The ideas behind Lucene are actually quite amazingly powerful in their simplicity. At its core, Lucene is just a set of sorted dictionaries on disk (greatly simplified, I know). Everything else is build on top of that, and if you grok what is going on there, you would be quite amazed at the number of things that this has made possible. Indexing in Lucene is done by a pipeline of documents and fields and analyzers, which all participate together to generate those dictionaries. Searching in lucene is done by traversing those dictionaries in various ways, and combining the results in interesting ways. I am not going to go into details about how it works, you can read all about that here. The important thing is that once you have grasped the essential structure inside lucene, the rest are just details. The concept and the way the implementation fell out are quite beautiful.</p>
+        </article>
+        <article id="article-4403">
+            <a href="https://ayende.com/blog/158914/lucene-net-is-ugly" target="_blank">
+                <h2 class="title mb-6" id="article-4403">Lucene.NET is UGLY</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 02, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you ever had to go through the Lucene.NET code base, I am sure that you&#x2019;ll agree that the code base is quite ugly. It does a lot&#xA0; of low level stuff, which is almost always nasty, it is a port of a code from another language and framework, which means that it isn&#x2019;t idiomatic code, and it has a lot of&#x2026; strange things going on there.  Exceptions are used far too often. There is a strong tendency to delegate things in such a way that make it hard to figure out where things are actually happening. The big stick approach to thread safety (slap a lock on it). Some really horrible things with regards to mutable shared state with IndexInputs. Here is a good example of many of the issues that I talk about: https://github.com/apache/lucene.net/blob/trunk/src/core/Search/FieldCacheImpl.cs#L207 Read this method, and I think you&#x2019;ll understand. Then again, you can see methods of similar or greater complexity in RavenDB, for example, see here: https://github.com/ayende/ravendb/blob/1.2/Raven.Database/Indexing/IndexingExecuter.cs#L60 My main problem with the Lucene.NET codebase is that it feels alien, it isn&#x2019;t .NET code, and it shows. Then again, Lucene is also quite beautiful, but I&#x2019;ll talk about this in my next post.</p>
+        </article>
+        <article id="article-4404">
             <a href="https://ayende.com/blog/158913/things-we-learned-from-production-part-v-is-that-a-wrench-in-your-pocket-or-are-you-happy-to-see-me" target="_blank">
-                <h2 class="title mb-6" id="article-4401">Things we learned from production, part V&#x2013;Is that a wrench in your pocket or are you happy to see me?</h2>
+                <h2 class="title mb-6" id="article-4404">Things we learned from production, part V&#x2013;Is that a wrench in your pocket or are you happy to see me?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is actually going to be a short one, because it should have been pretty obvious.  An admin in production doesn&#x2019;t have the same toolset that developers have on their dev environment. The ability to break in and inspect the state of the system at any time is something that we developers usually take for granted, but it is something that is quite impossible to do in production. That means that we have to provide the admin with the ability to inspect our current state, we also need to give the admin the ability to make some changes. The most common example is to change system settings without taking the entire system down, but there are other things. Being able to force the system to do something, such as unload a database, force a full GC cycle or tweak the perf hints without getting seven people to sign off on taking the system down (and not having to do so at 3 AM) it a really good thing, as far as pretty much any admin is concerned.</p>
         </article>
-        <article id="article-4402">
+        <article id="article-4405">
             <a href="https://benfoster.io/blog/atompub-aspnet-web-api-part3/" target="_blank">
-                <h2 class="title mb-6" id="article-4402">Publishing content with AtomPub and ASP.NET Web API - Part 3</h2>
+                <h2 class="title mb-6" id="article-4405">Publishing content with AtomPub and ASP.NET Web API - Part 3</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I add support for categories to our AtomPub ASP.NET Web API application.</p>
         </article>
-        <article id="article-4403">
+        <article id="article-4406">
             <a href="https://ardalis.com/the-art-of-unit-testing-reviewed/" target="_blank">
-                <h2 class="title mb-6" id="article-4403">The Art of Unit Testing Reviewed</h2>
+                <h2 class="title mb-6" id="article-4406">The Art of Unit Testing Reviewed</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently finished reading Roy Osherove&#x2019;s The Art of Unit Testing. I was kind of splitting my time reading it and Growing Object Oriented&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4404">
+        <article id="article-4407">
             <a href="https://ardalis.com/webs-of-trust-versus-certifications/" target="_blank">
-                <h2 class="title mb-6" id="article-4404">Webs of Trust versus Certifications</h2>
+                <h2 class="title mb-6" id="article-4407">Webs of Trust versus Certifications</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the software development industry, as in many others, it&#x2019;s important or at least helpful to be able to identify individuals and companies&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4405">
+        <article id="article-4408">
             <a href="https://ayende.com/blog/158881/things-we-learned-from-production-part-iv-is-your-paperwork-in-order" target="_blank">
-                <h2 class="title mb-6" id="article-4405">Things we learned from production, part IV&#x2013;is your paperwork in order?</h2>
+                <h2 class="title mb-6" id="article-4408">Things we learned from production, part IV&#x2013;is your paperwork in order?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the major points that we worked on in the 1.2 release was making the ops team work easier. That included additional logging, like we have previously discussed, making RavenDB plays nicer with other parts of the system, adding performance counters, etc. But those are the obvious things, and this series isn&#x2019;t about the obvious things. One of the problems that we run into is that we already had a moderately good porthole into how RavenDB works.  The problem was that this porthole gave you access to the state of a single database ,which was great&#x2026; Except that in order to get a database statistics, you had to actually load that database. Imagine a system under load, and the admin need to check what is causing the load. The act of checking a database statistics will actually force that database to load, generating even more load. This is especially dangerous when we are talking about automated health monitoring tools, the fact that we monitor the health of our software shouldn&#x2019;t cause it to do additional work. In RavenDB 1.2 we have taken steps to make sure that we can report on all the active database without having to guess which ones are active and which aren&#x2019;t. We have also taken additional steps to make sure that we give the admin even more information about what is going on. You can see this pattern pretty much everywhere, in indexes, in operations, in database and server stats. There are a lot more places where we explicitly built the hooks to make it possible for the admin to figure out what is going on. The lesson from that is that you have to provide a lot of information for the administrators, so they can figure out what is going on (and that administrator may very well be you, at 2 AM, trying to diagnose a problem). At the same time, you have to be sure to provide those hooks in a way that have minimal impact on the system. Having admin hooks in place that will put undue burden on the application is seriously not a cool thing to do.</p>
         </article>
-        <article id="article-4406">
+        <article id="article-4409">
             <a href="https://benfoster.io/blog/atompub-aspnet-web-api-part1/" target="_blank">
-                <h2 class="title mb-6" id="article-4406">Publishing content with AtomPub and ASP.NET Web API - Part 1</h2>
+                <h2 class="title mb-6" id="article-4409">Publishing content with AtomPub and ASP.NET Web API - Part 1</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I cover how you can build an AtomPub server using ASP.NET Web API.</p>
         </article>
-        <article id="article-4407">
+        <article id="article-4410">
             <a href="https://benfoster.io/blog/atompub-aspnet-web-api-part2/" target="_blank">
-                <h2 class="title mb-6" id="article-4407">Publishing content with AtomPub and ASP.NET Web API - Part 2</h2>
+                <h2 class="title mb-6" id="article-4410">Publishing content with AtomPub and ASP.NET Web API - Part 2</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -247,54 +295,6 @@
                 posted on: September 28, 2012
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I cover how to publish content to the server we created in part 1 using an AtomPub capable client.</p>
-        </article>
-        <article id="article-4408">
-            <a href="https://ayende.com/blog/158849/things-we-learned-from-production-part-iii-singleton-thinking-makes-long-queues" target="_blank">
-                <h2 class="title mb-6" id="article-4408">Things we learned from production, part III&#x2013;singleton thinking makes long queues</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 27, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the more interesting things that we had to learn in production was that we aren&#x2019;t an only child. It is a bit more complex than that, and I am not explaining well, let me start at the beginning.  Usually, when we work on RavenDB, we work within the scope of a single database, all of our efforts are usually scoped to that. That means that when we worked on the multi database feature for RavenDB, we actually focused on the process of loading a single database up in the air. We considered how multiple databases will interact, and we made sure that they are isolated from one another, but that was about it. In particular, as mentioned in the previous post, starting up and shutting down were done sequentially, on a per database basis. In order to prevent issues, we had a lock on the initialize database part of the process, so two requests to the same database will not result in the same database being loaded twice. I mentioned that we were thinking on a single database mindset, right? Can you guess what happened?  Request for DB #1 &#x2013; lock acquired, starting up  Request for DB #1 &#x2013; waiting for lock to release Request for DB #1 &#x2013; waiting for lock to release Request for DB #1 &#x2013; waiting for lock to release DB initialized, lock released All requests are now freed and can be processed. What happen when we have multiple databases, however?  Request for DB #1 &#x2013; lock acquired, starting up  Request for DB #1 &#x2013; waiting for lock to release Request for DB #2 &#x2013; waiting for lock to release Request for DB #3 &#x2013; waiting for lock to release DB initialized, lock released Request for DB #2 &#x2013; lock released, lock acquired, starting up  Request for DB #3 &#x2013; waiting for lock to release You guessed it, we actually had a global lock for starting (or disposing, for that matter) databases. That meant that a single db that took time to start would impact other databases. More importantly, it would means that other requests, which were waiting for that database to load and then had to load their own database, had far less time to actually do the processing they needed. Which meant that they were far more likely to run into the request time limit and be aborted by IIS. Which left them in an inconsistent state. Which was a nightmare to figure out. We resolved this issue by making sure that the lock is now handled only on the same database, and that we won&#x2019;t lock forever, if after a while we still don&#x2019;t have the db, we will error early and give you a 503 Service Unavailable error until the db is ready to rock.</p>
-        </article>
-        <article id="article-4409">
-            <a href="https://ayende.com/blog/158817/things-we-learned-from-production-part-ii-wake-up-or-i-kill-you-dead" target="_blank">
-                <h2 class="title mb-6" id="article-4409">Things we learned from production, part II&#x2013;wake up or I kill you dead</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 25, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Getting started is probably easier than shutting down, I mean, no one is going to begrudge us some time to get our feet from under us, right? As it turned out, this assumption is wrong on quite a few levels. To start with, hosts such as IIS / Windows Service Manager will give you a certain time to start before they decide that you are hang and ruthlessly execute you without even thinking twice about it. This doesn&#x2019;t even include the issue of admins with people breathing down their necks who assume that a taste of mortality must convince RavenDB to try even harder then next time it is started after then 7th time it was killed for not starting fast enough. Because killing us during startup is pretty much the same as a standard crash, it means that we need to run recovery after this happened, which means that the next time is going to take longer, and then&#x2026; I think you can get the picture, right? But the issue here is actually much more complex.  It is actually easier to recover from a real crash (something like a process termination or kill &#x2013;9). It is harder when it isn&#x2019;t a real crash, but something like IIS just recycling the AppDomain. The reason it is harder is that anything that is scoped to the OS, like file handles, unmanaged resources, etc, are actually still alive. It means that during the crash, you have to be very careful about detecting that you are crashing and cleaning up after you properly. Moving back to the actual startup issue, so we have to startup fairly quickly, even if we just crashed. That makes sense, I guess. Now, that is fine and dandy, but that is just for the system database, what happens when you want to access a non system database (for example, the Northwind database)?  In RavenDB, we load those databases lazily, so on the first request to that particular database, we will load it. As it turned out, this simple and fairly obvious decision has caused a no end of problems. Starting up a database may take a while, in bad cases, that while may be long enough that the request time out. Now, what does it means, request time out? You might get a 408 Request Timeout from the server, but that is the client perspective. What happens on the server? Well, IIS handed over control of the request to RavenDB, and as far as IIS is concerned, RavenDB is sitting there doing nothing, well above its time limit. Now, IIS doesn&#x2019;t have a way to tell RavenDB, stop processing this request. So what do you think it does? Welcome to the nice land of Thread.Abort(). Now, if you have ever read about Thread.Abort(), you probably know that every single reference to that is filled with warnings about the need to be very careful about what you are doing, that it is a very bad idea in general and that you should take care to never use it. The reason it is such a bad idea is that you basically cut the thread at mid execution, leaving it no chance at all to actually handle things. It is an easy way to violate invariants. In particular, it is a good way for your cleanup to never happen. Think about it, we are in the middle of our constructor, opening files, settings things up, and suddenly the floor is yanked right out from under us. As it turned out, in those cases, we would leak some stuff out. The next time that you tried to access the database, you would get an error that said that the files were already opened by someone else. (To make things worse, those were unmanaged resources, they wouldn&#x2019;t get cleaned up by the system when GC is run. That led to errors that were extremely hard to figure out. Because they would only occur when running at a high load, with a db that crashed and was now recovering, and with a few other databases waiting as well. And going over the code, thinking multi threading thoughts, none of that works. At some point, I put so many locks there, just to figure out what is going on, that the code looked like this:  But the actual problem wasn&#x2019;t another thread corrupting state, the problem was that the current thread was ruthless killed in mid operation. Once we figured that one out, it was straightforward, but in no way easy, to device a solution. We made sure that our db init code was robust for thread aborts, and then we moved the actual db initialization to a separate thread, one that wasn&#x2019;t controlled by IIS, so we could actually get things done without having a hard time limit. In my next post, I&#x2019;ll discuss the fallacy of the singleton and how much pain it caused us.</p>
-        </article>
-        <article id="article-4410">
-            <a href="https://ayende.com/blog/158785/bug-fixes-in-oss-environment" target="_blank">
-                <h2 class="title mb-6" id="article-4410">Bug Fixes in OSS environment</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 21, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A user reported a bug in RavenDB. We tracked that bug into a race condition in a 3rd party library, which then forced us to fix the bug, and then do the dependency roll up:  &#xA0; Sigh&#x2026; Then again, we could do all of that ourselves.</p>
         </article>
         <div class="button flex justify-between">
             <a href="440.html"><span class="back arrow"></span></a>
