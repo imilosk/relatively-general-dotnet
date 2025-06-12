@@ -137,8 +137,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-8591">
-            <a href="https://ayende.com/blog/1786/nhibernate-performance-concerns" target="_blank">
-                <h2 class="title mb-6" id="article-8591">NHibernate performance concerns</h2>
+            <a href="https://ayende.com/blog/1809/why-i-hate-taking-dependency-on-other-people-code" target="_blank">
+                <h2 class="title mb-6" id="article-8591">Why I hate taking dependency on other people code...</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -148,13 +148,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: October 18, 2006
+                posted on: October 26, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Darrel&#xA0;investigated NHibernate and came back with a Post Traumatic Stress&#xA0;Disorder. The issue he had was with NHibernate&#x27;s Automatic Dirty Checking.    The implementation fo this feature is done by keeping the state of the object when it was loaded from the database inside the session, and comparing the initial data to the current state of the object when flushing. The problem, in Darrel&#x27;s words is:            From my perspective there are two major drawbacks to this approach.&#xA0; First, considering the data you are manipulating is probably consuming the majority of the applications memory, you have double the memory requirements for the writable objects.&#xA0;&#xA0;I am assuming you only take this hit for objects retrieved as writable, but even so, this just seems&#xA0;unreasonable especially considering the fact that many people use Hibernate&#xA0;on a server that is a shared resource!                The second problem is that when doing a flush, it is necessary to do a comparison on each and every entity&#xA0;property.&#xA0; This is necessary&#xA0;even if no changes have been made.        Let me tackle the second problem first. Yes, Flush()ing when you have large number of entities in the session is going to perform poorly. That is why NHibernate provide you with ways to tell it that it shouldn&#x27;t make those checks (calling Evict() on the stuff that you know wasn&#x27;t changed, etc). In practice, you only need to do this in rare cases. Loading large amount of objects, modifying a few and saving them is a use case that doesn&#x27;t turn out that often, in my experiance, and when it does, it is simple to optimize it. If you really wish, you can provide a way (through the interceptor) to tell NHibernate which entities are dirty or not, and save it the effort.    The first problem that Darrel has is with the memory consumtion. I will start right off by saying that I have been a devot user of NHibernate*for over two years now, and I&#x27;m building big, complex systems using it. Memory consumtion was never an issue with NHibernate.&#xA0;Optimizing NHibernate&#x27;s performance is almost solely focused on reducing the amount of queries and getting NHibernate to fetch the data in the most efficent way.    The one time I heard about an issue with memory consumtion and NHibernate, it wasn&#x27;t because of the entities cache, but because the developers had abused NHibernate&#x27;s query translation cache by generating hundreds of thousands of queries from user&#x27;s inputs.    The basic assumption that I contest is that the entities are going to be the majority of the application&#x27;s memory. This is not the case in nearly any application that I know of. Let us say that we have an entity that is 1Kb in size (this is a farily large entity, by the way). Let us say that we have 250 of those in the current request ( again, this is a very big number ). So we have 250Kb for the entities, and another 250Kb for the loaded state. 500Kb is a lot, you say?     Let us try finding other stuff (per request) that has similar size. The first thing that I can think of, of course, is ViewState. I&#xA0;am sure that I am not the only&#xA0;one who got a &quot;WTF is ViewState doing that it is 80% of the page size, including pictures!?&quot;. And, of course, you pay for ViewState&#x27;s (memory-wise)&#xA0;twice, once for the serialized data which remains in the request&#x27;s variables collection until the request ends and once for the de-serialized data.    The page itself and its controlls collection is another very big object. And I am sure that you can see where I am going from here. So, even for a case with a lot of very big entities, I would bet that the other factors in the request would overhsadow the amount of memory consumed by NHibernate by a large precentage.    But, and this is important, since when has memory been a problem for scaling an application? (Leaving aside doing silly stuff like putting a 400Mb dataset per user in the session). I/O is a far bigger factor in scaling applications, especially database I/O.    To conclude, I don&#x27;t see NHibernate&#x27;s Automatic Dirty Checking memory consumtion as a problematic issue. Quite the reverse, actually. You have no idea how powerful this is until you realize that your business logic can do its stuff (and you can test it) completely seperated from the persistance mechanism, and NHibernate will simply pick up the changes and persist them for you.&#xA0;The first time I did it, I felt like I was doing magic.    Oh, and just to point out, there aren&#x27;t really any other way to handle this, expect by doing exactly that. When I spoke with Luca Bolognese about DLinq, he mentioned that it uses basically the same approach to solve this issue.    * Mainly because whenever I stray from the Path I get hit hard on the head by the ADO.Net gods of venegance and boring code.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When I need to write stuff like this one:&#xA;&#xA;&#xA0; /* &#xA;&#xA0; THIS IS NOT A BUG.&#xA;&#xA0; This is because the get_Result can be null or &#xA;undefined and this&#xA;&#xA0; is considered a false value.&#xA;&#xA0; */&#xA;&#xA0; return &#xA;Messages.get_result() == true;&#xA;The sad part is that it took nearly an hour to figure out why this &#xA;happened.The really sad part is that I would waste my time trying to explain to the developers who wrote this code why this is not a good idea.</p>
         </article>
         <article id="article-8592">
-            <a href="https://ayende.com/blog/1785/nhibernate-1-2-impressions" target="_blank">
-                <h2 class="title mb-6" id="article-8592">NHibernate 1.2 Impressions</h2>
+            <a href="https://ayende.com/blog/1808/monorail-vs-asp-net" target="_blank">
+                <h2 class="title mb-6" id="article-8592">MonoRail vs ASP.Net</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -164,13 +164,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: October 18, 2006
+                posted on: October 26, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a completely non technical post, by the way.     In the last two days I have been busy moving my current project to using NHibernate 1.2 and dropping all references to NHibernate.Generics in favor of NHibernate 1.2&#x27;s native generics collection.&#xA0;(Finding some horrible business logic inside the Add/Remove delegates that was quite tricky to repreduce reliably).    This project is &quot;mostly read&quot; system, and it feels significantly faster after doing the upgrade. I don&#x27;t have any numbers, and it may be just a wishful thinking, but I see things responding more quickly.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Dru Sellers&#xA0;is posting about some doubts he recently had about using MonoRail. He posted a part of a conversion that we had about it yesterday, and then Ben Scheirman&#xA0;responsed with:I write my pages to be as thin as absolutely possible, so while good design is not encouraged, it&#x27;s definitely possible.     IM is not really the medium to express complex thoughts, and I thought that it may be helpful to expand a bit on the subject.    I am currently working on a very big project that uses ASP.Net Web Forms model, and there isn&#x27;t a lot of fancy UI stuff in there, and I still suffer from the model that ASP.Net tries to make me work in.            ViewState is a problem that we lost days on. Mostly because we are doing a lot of dynamic control generations, and we sometimes got the viewstate from the previous page into the new page, causing much havoc. But also because it just plainly so different than the way that the web works.            It highly encourage the PostBack model.                 Simple things are not simple. Take for example needing to do something like disabling links on certain rows in a grid because of their state (capture the RowDataBound, get the cell by its numeric index, find the right control, disable it).            Complex things are complex. Page life cycle issues, nested child controls initialization order, events firing order, view state corruption issues when building multi-view controls, etc.            It is not fun to work with.    It got to the point where for my demo, where I need to present a simple hierarchy of messages, I tried at first to do this in ASP.Net, but stopped when I realized how complex this is going to be, and wrote a little demo that did it all in WinForms. Using WinForms, it took me half an hour to get to 70% of what I wanted, using ASP.Net WebForms, it would take me a day.    Frankly, at this point, I am not going to do any ASP.Net WebForms work unless I am paid for it, and I am going to push hard to make sure that any incoming web projects will use MonoRail.    When asked, I listed the following as things that make MonoRail hard to embrace:    Not Microsoft - some people sees that as a con, not me    Potshot: At least this way I know that it will not have a hard dependency on the office 2007 beta 3 refresh 1. And it will continue working if I install IE7 on the server machine.    Not something that everyone knows.     But, it is very easy to learn how to start, and it&#xA0;doesn&#x27;t punish novices by letting&#xA0;build&#xA0;something in completely the wrong&#xA0;way. The learning curve is very smooth, as well. And frankly, if you can&#x27;t learn MonoRail without a 400 hours course that will chew the material for you, I don&#x27;t want your on my team.    Tool support not that great     If only I could get Brail syntax highlighting in Visual Studio... I don&#x27;t even&#xA0;need intellisense, I am not doing anything complex in the views. For that matter, I usually edits my views in SharpDevelop anyway, so this isn&#x27;t that big of a deal.    No 3rd party controls    There aren&#x27;t any 3rd party controls for MonoRail that I know of. But, it can (easily and painlessly) use all the HTML controls that are out there. No I&#x27;m not talking about &lt;input&gt; ;-). I&#x27;m talking about everything that the non-ASP.Net world uses, which is more than powerful enough to create beautiful sites.    No designer - a plus for me.    I am not using the designer at all, mostly because it is horrendously slow and like to put stuff like style=&quot;height=29px&quot; which are a killer to remove afterward.</p>
         </article>
         <article id="article-8593">
-            <a href="https://ayende.com/blog/1784/more-email-quotes-fun" target="_blank">
-                <h2 class="title mb-6" id="article-8593">More email quotes fun...</h2>
+            <a href="https://ayende.com/blog/1807/active-record-lecture-trial-run-success" target="_blank">
+                <h2 class="title mb-6" id="article-8593">Active Record Lecture Trial Run: Success</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -180,13 +180,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: October 18, 2006
+                posted on: October 26, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I wanted to give someone a message, so I wrote this:            GueniaPig tester = (GueniaPig)you;                tester.Test(rhinoCommons);        What was I trying to say*?    Sidenote; Do you find these quotes interesting?&#xA0;I seem to be doing quite a bit of them lately.    * Only after I sent the mail I realized that it may be insolting to the person recieving it.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So I gave the lecture to some guys at work (reminder, I am giving an Active Record lecture on monday at the Tapuz User Group meeting in Microsoft), and it went very well.    I found some interesting holes (NHQG doesn&#x27;t work on exe because of an annoying (and soon to be fixed) bug), and some stuff that I wasn&#x27;t sure about with regard to some of the more recent things in Active Record.    I set the database dialect to SQL 2005 by mistake and was facinated by the way NHibernate did paginated queries. I forgot how hard it is to do this in SQL Server.    For some reason, my laptop refused to replicate the display to the second LCD, but will happily work with it in a dual monitor setup, so I had to code with my head to the wall just to see what was going on. My laptop is a Thinkpad R50e, and I usually use it with a dual monitor setup, so it may be related to that.    It also run about 15 minutes over the planned time (and I can certainly see it taking 3 hours easily), but I think that I can safely cut some of the more advance stuff to deal with it.     The guys that I lectured for weren&#x27;t mainly programmers, so they actually didn&#x27;t get too much of the pain that just went away, but I still got a Wow from them when I showed them how they can use strongly typed queries.</p>
         </article>
         <article id="article-8594">
-            <a href="https://ayende.com/blog/1783/and-how-much-it-would-take-to-write-nhibernate" target="_blank">
-                <h2 class="title mb-6" id="article-8594">And how much it would take to write NHibernate?</h2>
+            <a href="https://ayende.com/blog/1806/a-plan-for-spam" target="_blank">
+                <h2 class="title mb-6" id="article-8594">A Plan For Spam...</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -196,15 +196,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: October 17, 2006
+                posted on: October 25, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m not quite sure that I can believe the numbers, but here they are...        75 millions and over a thousand years...    The line count seems particulary high, but I assume that this include the documentation as well. I run a check locally, and I get a number about half that much, for *.cs and *.xml files only.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Okay, hopefully, some ambulance chaser lawyer will hear about this and put it into action. Here is a new way to go after spammers. Don&#x27;t try to sue them for sending spam, sue them for sexual harrasment. I mean, sending a person 5,000 emails suggesting that they can&#x27;t keep it up is got to be at least slander, isn&#x27;t it? I still carry deep emotional scars from the sex change operation photos spam.    In the US, you can sue over hot coffee that you spilt on yourself, and win. This has got to have some merit...</p>
         </article>
         <article id="article-8595">
-            <a href="https://ayende.com/blog/1782/things-that-you-need-to-use-specialized-stuff-for" target="_blank">
-                <h2 class="title mb-6" id="article-8595">Things that you need to use specialized stuff for...</h2>
+            <a href="https://ardalis.com/reportviewer-showing-no-data-&#x2013;-solved/" target="_blank">
+                <h2 class="title mb-6" id="article-8595">ReportViewer Showing No Data &#x2013; Solved</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -212,13 +212,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: October 17, 2006
+                posted on: October 24, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I wanted to know how many lines of code NHibernate has, so I run the following PowerShell command...(gci -Recurse | select-string&#xA0;. ).Count    The result:        Bummer.    I then downloaded Line Count, which did the same, but in a reasonable time frame...</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I had a really weird issue with a ReportViewer. It would show the little green AJAX Loading&#x2026; image but it wouldn&#x2019;t show any data, just a&#x2026;Keep Reading &#x2192;</p>
         </article>
         <article id="article-8596">
-            <a href="https://ayende.com/blog/1781/rhino-tools-worth-1-000-000" target="_blank">
-                <h2 class="title mb-6" id="article-8596">Rhino Tools Worth $1,000,000 ?!</h2>
+            <a href="https://ayende.com/blog/1805/active-record-lecture-warmup-tomorrow" target="_blank">
+                <h2 class="title mb-6" id="article-8596">Active Record Lecture Warmup Tomorrow</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -228,13 +228,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: October 17, 2006
+                posted on: October 24, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I registered Rhino Tools with Ohloh (which, in Hebrew, means &quot;On no!&quot;), you can find the project site here. Ohloh&#xA0;is a project assesment site, you point it at a repository, and it does its thinks and push a nice graph in the end.     Appernatly, it would take 18 years and nearly million dollars to create Rhino Tools. I&#x27;m also very surprised by the amount of code that it found, 75 thousands lines of code?        I told it to estimate Castle, I wonder what it would be...</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I got a couple of disappointed responses about the time of my User Group &#xA;talk, since not everybody can make it. Tomorrow I am going to give a trial run &#xA;of the talk to some of the guys at work, and if you are going to miss the User &#xA;Group talk, you are welcome to join. It is going to be tomorrow (Wendsday) at &#xA;17:00 in We!&#x27;s office (Hertelia, Maskit 27). &#xA;Just drop me a call if you want to come...</p>
         </article>
         <article id="article-8597">
-            <a href="https://ayende.com/blog/1780/abstracting-abstractness-into-abstract-abstractness-of-abstracted-abstratness" target="_blank">
-                <h2 class="title mb-6" id="article-8597">Abstracting Abstractness into Abstract Abstractness of Abstracted Abstratness</h2>
+            <a href="https://ayende.com/blog/1804/real-world-refactoring" target="_blank">
+                <h2 class="title mb-6" id="article-8597">Real World Refactoring...</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -244,13 +244,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: October 17, 2006
+                posted on: October 24, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Do worry about the title, it isn&#x27;t meant to say anything meaningful.    Ted Neward&#xA0;had posted about the OSS WebCast, and one thing caught my eye:... Scott had mentioned that Corillian (his company) had built an abstraction layer on top of the open-source logging package, log4net. This reminded me so strongly of Commons Logging that I made a comment to that effect, warning that the Java community got itself into trouble (and continues to do so to this day, IMHO) by building abstraction layers on top of abstraction layers on top of abstraction layers, all in the name of &quot;we might want or need to change something... someday&quot;...    I am quite passionate about squashing this tendancy whenever I find it. There is value in abstracting a complex library to a simple set of API, but abstracting the library just because you don&#x27;t want a dependency is going to bite you.    First, your API is going to be limited, since you can&#x27;t make advantage of everything that the library has to offer, and you can&#x27;t just upgrade the library and start using the new features, since you need to decide beforehand if you can the abstraction layer.    Second, API isn&#x27;t the only thing that cause a depenedency. It is the interactions between your code and the library that cause the dependency. To give a simple example, log4net will never throw an exception, the Logging Block from Microsoft will happily throw an exception if it can&#x27;t log, which will kill you application, since you assumed that an exception cannot be thrown from logging calls.    I don&#x27;t even really like the logging services in Castle, for exactly this reason. But in this case, we does have users that need both NLog and log4net, so at least we are dealing with abstracting abstractions into nothingness</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was asked to assist in a matter of reomving a piece of legacy. Here is the &#xA;state of the project before the refactoring:&#xA;&#xA;This is a heavy lifting approach, and required of ReSharper For Real &#xA;World:&#xA;&#xA;And, after a bit of hard work, we go to this state:&#xA;&#xA;Not perfect yes, but a good start :-)</p>
         </article>
         <article id="article-8598">
-            <a href="https://ayende.com/blog/1779/hidden-network-ad" target="_blank">
-                <h2 class="title mb-6" id="article-8598">Hidden Network Ad</h2>
+            <a href="https://ayende.com/blog/1803/performance-make-the-developers-feel-the-pain" target="_blank">
+                <h2 class="title mb-6" id="article-8598">Performance</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -260,13 +260,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: October 16, 2006
+                posted on: October 23, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Check out the right side of the site, there are a couple of job ads there. From Hidden Network&#xA0;(AKA The Daily WTF). At the very least, I would get amusing job descriptions to read.    Hopefully, I&#x27;ll get paid for it :-)</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Do you care about perfromance? Do you want to avoid that last three weeks of intesive performance work that require you to break apart a beautiful domain model and cut wide swathes of optimization horrors into your code?The short answer to this is that developers must feel the pain, and they must feel it in very short intervals. [Please, do not use this sentence out of context].     How to do this? Setup the system so it would fail if&#xA0;a given performance objective is passed. A simple example can be to add a check to the request&#xA0;finish that verify that the amount of database queries falls beneath a pre-defined threshold*. If the page is executing more than X queries, it fails, immediately, on the developer machine, with a clear signal saying why. Take this approach to the test / QA machines as well. Make sure that when a performance issue hits, it is something that can&#x27;t be ignored, and it can be pointed directly to the developer responsible.    The only way to do this reliably is to fail as early as possible, which would force the developer to fix the issue on the spot, when it is still a single, isolated issue.    I can think of two or three very easy to measure stats that you can get:            Number of queries per page.            Number of remote calls (web service, remoting, etc) per page.            Page processing time (only when debugger is not attached!).    I can&#x27;t think of any way to assoicate CPU usage with the current request, otherwise I would have included that as well.    The rapid response cycle here has the same affect is here that it has when fixing bugs. Localized, immediate, fix is much faster / better than a global optimization stage later on.    * You do have a way to associate this data with the specific request, right?</p>
         </article>
         <article id="article-8599">
-            <a href="https://ayende.com/blog/1778/rhino-mocks-2-9-2-released" target="_blank">
-                <h2 class="title mb-6" id="article-8599">Rhino Mocks 2.9.2 Released</h2>
+            <a href="https://ayende.com/blog/1802/object-relational-mapping-you-are-doing-it-wrong-when" target="_blank">
+                <h2 class="title mb-6" id="article-8599">Object Relational Mapping: You are doing it wrong when...</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -276,13 +276,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: October 16, 2006
+                posted on: October 23, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a maintaince release, which fixes an issue with mocking a type whose method comes from several assemblies (inheriting a type from another assembly, that is) where some of those methods are internals, and InternalsVisibleTo is only applied to one of those assemblies.    Fairly specific bug, I would say :-)    Anyway, source and binaries are here</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You concatenate strings to build dynamic queries.            You have no consistent way of querying the database.            You need to create bad relational model to satisfy the object model that you want.            You have a hard time mapping between the database and the objects, and you are not a beginner.            You goes against well defined concepts such as layering, seperation of concerns, etc.            You need to implement functionality that is already part of the OR/M            You need to do a lot of extra work in order to make the OR/M work correctly.    If any of the above is true for you, STOP! Take a deep breath, and go take a look at the manual. There is a better way.    I believe that I can make OR/M works for 95% of the possible schemas that are out there. And that is a bold statement since I sometimes work with schemas defined for main frames. I also believe that if it is hard to do, it is hard to do because of valid reasons. A good OR/M will steer you in the direction of good database design, when you fight it, it means that there is a problem.</p>
         </article>
         <article id="article-8600">
-            <a href="https://ayende.com/blog/1777/the-pleasure-of-saying-just-do-the-simplest-thing-you-can-think-of-and-it-will-work" target="_blank">
-                <h2 class="title mb-6" id="article-8600">The pleasure of saying: &quot;Just do the simplest thing you can think of, and it will work&quot;</h2>
+            <a href="https://ayende.com/blog/1801/for-future-reference-meet-silver-bullet" target="_blank">
+                <h2 class="title mb-6" id="article-8600">For Future Reference... meet Silver Bullet</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -292,9 +292,9 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: October 16, 2006
+                posted on: October 23, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have the pleasure of answerring a lot of questions about the projects that I take part of. Some of those questions are really hard, some are really easy. But there is one type of questions that I really like to answer. I call them the &quot;It Just Works&quot; types of questions.     I got a pal that is learning Active Record at the moment. He has a lot of experiance with Microsoft technology, but I think that he has a hard time accepting just how hard we worked to make it easy for him to work.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Most Israelis should get it*, but for the non Israelis among my readers, I would like to introduce my pal, Silver Bullet, AKA &quot;The 5Kg Hammer&quot;.        &#xA0;    Amazingly versitale tool in many environments. Anyone who thinks that computers doesn&#x27;t have emotions should see how they quack when the two of us approaches them. Refactoring is a tiring work, but very satisfying :-)    * IDF Joke, &quot;If I can&#x27;t solve it, then a 5Kg Hammer would&quot;.</p>
         </article>
         <div class="button flex justify-between">
             <a href="859.html"><span class="back arrow"></span></a>

@@ -137,8 +137,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4851">
-            <a href="https://ayende.com/blog/56321/macto-talking-to-nasty-people" target="_blank">
-                <h2 class="title mb-6" id="article-4851">Macto</h2>
+            <a href="https://ayende.com/blog/84993/document-based-modeling-auctions" target="_blank">
+                <h2 class="title mb-6" id="article-4851">Document based modeling</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -148,15 +148,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: August 15, 2011
+                posted on: September 06, 2011
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, so far we have looked at the main screen and the Counting screen, it is time we introduce ourselves to the Inmate screen as well:  As you can see, there isn&#x2019;t a lot going on here. We have the Inmate&#x2019;s Id, name and location (including noting where he is located, if he is known to be outside the prison). We don&#x2019;t usually care for things like detailed information in the normal course of things (the Inamte&#x2019;s national id, for example). That information is important, but usually not relevant, we relegate it to a separate screen. The dates for incarceration and scheduled release are also important, but they aren&#x2019;t available for editing, they are there only for information purposes. The note is there to make sure that highly important information (such as whatever the Inmate is suicidal / flight risk) would be clearly available. The same is true for the Cliff Notes version of the Record. It is there not for casual use, but to ensure that pertinent information is available. Most importantly, note the last line there. Which means that if this Inmate is about to be released, we have to notify someone and get their approval for that. Well, approval is a strong word, we notify them that they need to give us a new Warrant for the Inmate, but we can delay releasing him (say, until midnight the day he is to be released) waiting for that Warrant. Warrants are important, and you can see the ones that this guy have listed here. The last Warrant is the important one, the others are shown for completion sake and to ensure that we have continuous Warrants. There are also several actions that we can do to an Inmate. We can Transfer him to another prison, Release him or Add a Warrant. Each of those is a complex process of its own, and I&#x2019;ll discuss them later on.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We recently had a client with a similar model, and I thought that this would be a good topic for a series of blog posts. For the purpose of this blog posts series, I am going to be using EBay as the example. Just to be clear, this is merely because it is a well known site that most people are likely to be familiar with. In our model, we have the following Concepts:  Categories  Products  Auctions  Bids  Sellers  Buyers  Orders We will start from what is likely the most confusing aspect. Products and Auctions. A Product is something that can be sold. It can be either a unique item &#x201C;a mint condition Spiderman comics&#x201D; or it can be something that we have lots of &#x201C;a flying monkey doll&#x201D;. There is a big distinction between the two, because of the way the business rules are structured. Once an Auction has been started, it cannot be changed. This include everything about this auction, pricing, shipping information, product information, etc. But a Product may change at any time (maybe I now have the flying monkey in red and green, instead of the original red and yellow). That leads us to conclude that we actually have two instances of the Product in our domain. We have the Product Template (mutable, can change at any time) and with have the Auctioned Product (immutable). That realization leads me to the following model for products and auctions:     {&#xA;   &quot;Name&quot;:&quot;Flying Monkey Doll&quot;,&#xA;   &quot;Colors&quot;:[&#xA;      &quot;Red &amp; Yellow&quot;,&#xA;      &quot;Blue &amp; Green&quot;&#xA;   ],&#xA;   &quot;Price&quot;:29,&#xA;   &quot;Weight&quot;:0.23&#xA;}&#xA;&#xA;&#xA;{&#xA;   &quot;Quantity&quot;:15,&#xA;   &quot;Product&quot;:{&#xA;      &quot;Name&quot;:&quot;Flying Monkey Doll&quot;,&#xA;      &quot;Colors&quot;:[&#xA;         &quot;Blue &amp; Green&quot;&#xA;      ],&#xA;      &quot;Price&quot;:29,&#xA;      &quot;Weight&quot;:0.23&#xA;   },&#xA;   &quot;StartsAt&quot;:&quot;2011-09-01&quot;,&#xA;   &quot;EndsAt&quot;:&quot;2011-09-15&quot;&#xA;}&#xA;&#xA;&#xA;&#xA;products/1&#xA;auctions/1&#xA;As you can see, the Auction is going to wholly own the product. Any change made to the product will not be reflected in the Auctioned Product. This has the advantage that we need only a single document load in order to show the auction page.&#xA;Another option would be to use the versioning bundle to do that, so we would have this:&#xA;&#xA;&#xA;&#xA;&#xA;{&#xA;   &quot;Name&quot;:&quot;Flying Monkey Doll&quot;,&#xA;   &quot;Colors&quot;:[&#xA;      &quot;Red &amp; Yellow&quot;,&#xA;      &quot;Blue &amp; Green&quot;&#xA;   ],&#xA;   &quot;Price&quot;:29,&#xA;   &quot;Weight&quot;:0.23&#xA;}&#xA;{&#xA;   &quot;Name&quot;:&quot;Flying Monkey Doll&quot;,&#xA;   &quot;Colors&quot;:[&#xA;       &quot;Blue &amp; Green&quot;&#xA;   ],&#xA;   &quot;Price&quot;:29,&#xA;   &quot;Weight&quot;:0.23&#xA;}&#xA;{&#xA;   &quot;Quantity&quot;:15,&#xA;   &quot;Product&quot;: &quot;products/1/versions/1&quot;,&#xA;   &quot;StartsAt&quot;:&quot;2011-09-01&quot;,&#xA;   &quot;EndsAt&quot;:&quot;2011-09-15&quot;&#xA;}&#xA;&#xA;&#xA;&#xA;products/1&#xA;products/1/versions/1&#xA;auctions/1&#xA;The versioning bundle ensures that we can get immutable views of our documents, so we can safely reference the product by its id and version.&#xA;That is it for now, on the next post, we will deal with how to work with bids.</p>
         </article>
         <article id="article-4852">
-            <a href="https://benfoster.io/blog/structuremap-resourcefactory-wcf-webapi/" target="_blank">
-                <h2 class="title mb-6" id="article-4852">Creating a StructureMap Resource Factory for WCF Web API</h2>
+            <a href="https://ayende.com/blog/83969/nhibernate-3-beginners-guide-published" target="_blank">
+                <h2 class="title mb-6" id="article-4852">NHibernate 3 Beginners Guide published</h2>
             </a>
-            <p class="mb-2">by Ben Foster</p>
+            <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -164,13 +164,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: August 15, 2011
+                posted on: September 05, 2011
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I demonstrate how to register a custom IResourceFactory in WCF Web Api that uses StructureMap to create our resources.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">NHibernate 3 Beginners Guide has finally been published. This books covers 3.1 (and some parts of 3.x) and was written by Gabriel Schenker, who has been maintaining the NHibernate FAQ blog for a while, and a friend of mine. Please check it out, and the full blog post about it.</p>
         </article>
         <article id="article-4853">
-            <a href="https://benfoster.io/blog/new-fabrik-theme-system-preview/" target="_blank">
-                <h2 class="title mb-6" id="article-4853">A look at the new fabrik theme system</h2>
+            <a href="https://benfoster.io/blog/finding-the-balance-of-abstraction/" target="_blank">
+                <h2 class="title mb-6" id="article-4853">Finding the balance of abstraction - From web forms to MVC</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -180,15 +180,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: August 14, 2011
+                posted on: September 04, 2011
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I give you a preview of the new fabrik theme system and discuss some of the technical challenges I faced in creating it.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">With asp.net mvc we were finally able to embrace HTML. Whilst &#x201C;html&#x201D; helpers can be great, they can also be abused. So how do you find the balance of abstraction?</p>
         </article>
         <article id="article-4854">
-            <a href="https://benfoster.io/blog/removing-the-tableserviceentity-dependency/" target="_blank">
-                <h2 class="title mb-6" id="article-4854">Removing the TableServiceEntity dependency</h2>
+            <a href="https://ayende.com/blog/81921/ohloh-stats-ravendb" target="_blank">
+                <h2 class="title mb-6" id="article-4854">Ohloh stats: RavenDB</h2>
             </a>
-            <p class="mb-2">by Ben Foster</p>
+            <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -196,13 +196,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: August 14, 2011
+                posted on: September 02, 2011
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I demonstrate how to use Azure Table storage without inheriting your classes from TableServiceEntity.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">That is quite nice to see:  One of the worries that some people has about RavenDB is that they consider it to be a sole developer effort. I wanted to make sure that everyone understood that this isn&#x2019;t the case. RavenDB has quite a big community (over 50 people have contributed code over the lifetime of the project, and has a company and a development behind it.</p>
         </article>
         <article id="article-4855">
-            <a href="https://www.meziantou.net/singleton-and-lazy-t.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4855">Singleton and Lazy&lt;T&gt;</h2>
+            <a href="https://www.meziantou.net/the-var-keyword.htm" target="_blank">
+                <h2 class="title mb-6" id="article-4855">The var keyword</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -212,13 +212,45 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: August 13, 2011
+                posted on: September 02, 2011
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In software engineering, the singleton pattern is a software design pattern that restricts the instantiation of a class to one object. This is useful when exactly one object is needed to coordinate actions across the system. The concept is sometimes generalized to systems that operate more efficien</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">C# 3.0 introduced the anonymous types and the var keyword to be able to use them:C#copyvar variableTypeAnonyme = new&#xA;{&#xA;    Website = &quot;https://www.meziantou.net/&quot;,&#xA;    Author = &quot;Meziantou&quot;,&#xA;};However, the var keyword can be used to declare any type (string, int, &#x2026;) if the type is inferable by the co</p>
         </article>
         <article id="article-4856">
-            <a href="https://ardalis.com/validating-emails-for-system-net-mail/" target="_blank">
-                <h2 class="title mb-6" id="article-4856">Validating Emails for System.Net.Mail</h2>
+            <a href="https://ayende.com/blog/78849/a-user-an-account-and-saas" target="_blank">
+                <h2 class="title mb-6" id="article-4856">A User, an Account and SaaS</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: September 01, 2011
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Users are almost always the simplest entity in your application. I mean, they usually just look like this:  How complex can something like that be? The answer is that as simple as something like that is, people still get it wrong, and quite often they get it horribly wrong.  Just to set the proper context, I am talking about applications that provide Software as a Service.&#xA0; For example, we may be building an Accounting SaaS system.  A user logs into the system, and gets to see his invoices, outstanding bills, etc. This sounds simple enough to do, so what is the reason for this post? The reason is that while this may sound simple, it is also wrong. The User Is The Account Let us introduce a few other semantics into the mix. I don&#x2019;t want to do accounting, so I get Pkida to do that for me. But, since my data is tied to my user account, I would have to provide her with my username and password. Now, I am willing to let Pkida do my accounting, but I am not going to give her my credentials. This is usually the first stumbling block for systems where &#x201C;user is an account&#x201D; model. You want multiple users to manage the same account. A good example of a system that for a very long time failed to handle this properly is Amazon AWS platform. For a long time, there was your AWS Account and your username, and they were pretty much one and the same. Consider the case of an IT department that wanted to use Amazon AWS. Until as recently as May 2011, they didn&#x2019;t have any way to have multiple people manage the account, because they would need a single user/pass for the entire thing. That is a huge problem for most scenarios. Sharing user/pass means that you lost control on the account:  You don&#x2019;t know who of the people who have access to the account made a particular change (no auditing).  You can&#x2019;t use standard approaches for detecting fraud.  It is much harder to change the password. Accounts Owns The Users The next step is to ask what happen when you have something like this:  Now we have a way to have an account, and it can have multiple users. And all is good in the world, right? Not so fast. What happens when it turns out that Pkida isn&#x2019;t just working for me, but actually manages the accounting for several companies, each of them is using the SaaS accounting package. In order to use the software, Pkida would now have to have a separate user account for every customer she manages. That sucks:  It may mean that you charge her for each account (she will go to a competitor). Some users would show very little activity. The amount of information you will have to do things like cross selling or targeted offers would be far reduced. It is annoying for the users. A much better option is a total separation of Users and Accounts. A user can have several accounts (usually with a default one selected), and they can use a single login to access each, and each account may have multiple users associated with it. This brings to question how you are going to handle charging people, but that is an issue for another post, and another day&#x2026;</p>
+        </article>
+        <article id="article-4857">
+            <a href="https://ayende.com/blog/77825/modeling-reference-data-in-ravendb" target="_blank">
+                <h2 class="title mb-6" id="article-4857">Modeling reference data in RavenDB</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 31, 2011
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The question came up in the Mailing list, and I thought it would be a good thing to post about.  How do you handle reference data in RavenDB? The typical example in most applications would be something like the list of states, their names and abbreviations. You might want to refer to a state by its abbreviation, but still allow for something like this:  How do you handle this in RavenDB? Using a relational database, you would probably have a separate table just for states, and it is certainly possible to create something similar to that in RavenDB:  The problem with this approach is that is it a very wrong headed approach one for a document database. In a relational database, you have no choice but to threat anything that has many items as a table with many rows. In a document database, we have much better alternatives.  Instead of threating each state as an individual document, we can treat them as a whole value, like this:  In the sample, I included just a couple of states, but I think that you get the idea. Note the name of this document &#x201C;Config/States&#x201D;. What are the benefits of this approach?  We only have to retrieve a single document. We are almost always going to treat the states as a list, never as individual items. There is never a transactional boundary for modifying just a single state. In fact, I would usually say that this isn&#x2019;t good enough. I would try to centralized any/all of the reference data that we use in the application into a single document. There is a high likelihood that it would be a fairly small document even after doing so, and it would be insanely easy to cache.</p>
+        </article>
+        <article id="article-4858">
+            <a href="https://ardalis.com/moving-beyond-enums/" target="_blank">
+                <h2 class="title mb-6" id="article-4858">Moving Beyond Enums</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -228,61 +260,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: August 12, 2011
+                posted on: August 30, 2011
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;ve worked with the System.Net.Mail API to send out messages, you may have run into the fact that when you add an email address to a&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-4857">
-            <a href="https://ayende.com/blog/61441/the-customer-is-always-right" target="_blank">
-                <h2 class="title mb-6" id="article-4857">The customer is always right?</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: August 12, 2011
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When you get this sort of an email, you almost always know that this is going to be bad:  Let us start with: Which product? What license key? What order? What do you expect me to do about it? At least he is polite.   Hm, I wonder what is going on in here&#x2026;  This error can occur because of a trial that has expired or a subscription that has not been renewed.     He attached a Trial licensed to this email.   It is like a Greek tragedy, you know that at some point this is going to arrive at the scene.  I mean, we explicitly added the notion of subscriptions to handle just such cases, of people who want to use the profiler just for a few days and don&#x2019;t want to pay the full version price. And you can cancel that at any time, incurring no additional charges.      Sigh&#x2026;</p>
-        </article>
-        <article id="article-4858">
-            <a href="https://ayende.com/blog/55297/macto-counting-is-the-holy-grail" target="_blank">
-                <h2 class="title mb-6" id="article-4858">Macto</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: August 11, 2011
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I might have mentioned before that Counting is somewhat important in prison. That is about as accurate as saying that you would somewhat prefer it to keep breathing. Counting is the heartbeat of the prison, the thing that the entire operation revolves around. Here we can see the counting screen:  You can see that we have an Open Count here, that is a count that is still in progress. Some cell blocks have reported their counts, and some are still in the process of making the count. A Count is Closed when we know where are the Inmates are. (When the two numbers line up properly). You probably noticed that there are two ways to report a count, the first is for Inmates who are outside the prison (court, hospital, etc). Because they are outside the prison, we track them by name. For internal counts, we don&#x2019;t really care about names, just the numbers. There is another type of a Count, a Named Count, which is a process that happen very rarely, but is usually used to reconcile what is in the computer and what is actually in the cells.  It is important to understand the &#x201C;Officer in charge&#x201D; field, basically, it is the guy who has the legal responsibility and is signing off on those numbers. In other words, if there is something wrong, that guy is going to take a hard fall.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just published an article on ASPAlliance on Moving Beyond Enums, describing when and how to move from enums to classes in your code when&#x2026;Keep Reading &#x2192;</p>
         </article>
         <article id="article-4859">
-            <a href="https://benfoster.io/blog/windows-azure-my-experience-so-far/" target="_blank">
-                <h2 class="title mb-6" id="article-4859">Windows Azure - My experience so far</h2>
-            </a>
-            <p class="mb-2">by Ben Foster</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: August 11, 2011
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I discuss my experience developing on the Windows Azure platform and make some general recommendations that will ease the pain of developing &#x201C;for the cloud&#x201D;.</p>
-        </article>
-        <article id="article-4860">
-            <a href="https://ayende.com/blog/51201/macto-getting-started-you-never-forget-your-first-inmate" target="_blank">
-                <h2 class="title mb-6" id="article-4860">Macto</h2>
+            <a href="https://ayende.com/blog/66561/why-i-dont-like-the-mvc-mini-profiler-codebase" target="_blank">
+                <h2 class="title mb-6" id="article-4859">Why I don&#x2019;t like the MVC Mini Profiler codebase</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -292,9 +276,25 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: August 10, 2011
+                posted on: August 30, 2011
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">People always love to start with CRUD, but it is almost never that simple. In this post, we will review the process required to accept an Inmate into the prison. That process is composed of the following parts:  Identification   Who is the guy?  Id number  Names  Photo  If we can&#x2019;t identify / refuse to identify, we still need to be able to accept him. Lawful chain of incarceration   Go over all the documents for his arrest  Ensure that they are all in order  Ensure that they are continuous and valid  Check if there are any urgent things to do with him. For example, he may need to be at court today or the next day. Medical exam   Is it okay to hold the guy in prison?  If he is not healthy, can we take care of him in prison?  Does he require hospitalization?  Does he require medicine / treatment?  Are there any medical consideration into where to put him? Intelligence   Interviewing the guy  Report interesting details that are known about him Acceptability   Does he fit the level of Inmates we can accept? We usually don&#x2019;t put murderers in minimum security prisons, for example.  Does he have any medical reason to reject him?  Are there any problems with the incarceration documents?  Is there any intelligence warning about the guy? Placement   Decide where to put the Inmate  What type of an Inmate is he? (Just arrested, sentenced, sentenced for a long period, etc)  Why is he in prison for?  What kind is he? (You want to avoid Inmate infighting, it creates paperwork, so you avoid putting them in conflict if possible)  Where there is room available? Another important aspect to remember is that while we are allowed to reject invalid input (for example, we are allowed to say that the id number has to consist of only numeric characters), we are not allowed to reject input that is wrong. What do I mean by that. Let us say that we have an Inmate at the door, and he doesn&#x2019;t have his incarceration paperwork in order (well, not he, whoever brought him in, but you get the point). That means that legally, we can&#x2019;t hold him. But Macto isn&#x2019;t where things are actually happening, it is merely a support system that tracks what is going on in the real world. And the prison commander can decide to accept that guy anyway (say, because the paperwork in en route), and we have to allow for that. If we try to stop people from doing this, it is going to be worked around, and we don&#x2019;t want that. The system is allowed, even encouraged, to warn the users when they are doing something wrong, but it cannot block it. The first part, Identification, is actually pretty easy, all told. This is fairly simple data entry process. We&#x2019;ll want to do some checkups on the data, such as that the id number is valid or to check the id against the name, etc. But we basically have to have some level of trust in the documents that we have. You usually don&#x2019;t have an arrest warrant for &#x201C;tall guy in brown shirt&#x201D;. If we find any problems there, we can Flag the Dossier as a potentially fraudulent name. This is also the stage where we want to check if the Inmate is a returned visit, and bring the life the old Dossier.  The second part is more complex, because there are many different types of Warrants, each with their own implications. Arrest Warrant is valid for 24 hours, Remand Warrant is good until sentencing, etc. We need to input all of those Warrants, ensure that they are consistent, valid and continuous. If there is a problem with that, we need to Flag the Dossier, but we can&#x2019;t reject it. We will discuss this in more detail in the next post. The third part is basically external to Macto, we may need to provide the Inmate ID, for correlation purposes, but nothing beyond that. We do need to get approval from the doctor that the Inmate is in an OK condition to be held in the prison. That does get recorded in Macto. The forth part is again, external to us. Usually any information is classified and wouldn&#x2019;t appear in Macto. We may get some intelligence brief about the guy, but usually we won&#x2019;t. The fifth part is important, this is where we actually take legal and physical ownership for the Inmate. Up until that point, we had him in our hands, but we weren&#x2019;t responsible for him. Accepting the Inmate is a simple matter if everything is good, but if the Dossier was Flagged, we might need approval from the officer in charge. Accepting an Inmate means that he is added to the prison&#x2019;s Roster.  The sixth part is pretty much &#x201C;where do I have a spare bed&#x201D;, after which he is added to the Roster of the cell block he is now in care of. It is important to note that Placement always happens. Even if immediately after Accepting an Inmate you rushed him to the hospital, that Inmate still has to be assigned to a cell block, because that assignment means that the cell block commander is in charge of him. That way we avoid potential mishaps when an Inmate is assigned to no one, doesn&#x2019;t get Counted. Okay, I think that this is enough for now, in the next post, we will discuss what exactly goes on in the second part, it is a pretty complex piece, and it deserve its own post.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned in passing that I didn&#x2019;t like that in the blog post about the MVC Profiler Support for RavenDB. There were three major reasons for that. First, I don&#x2019;t like code like this:  This seems to be incredibly invasive, it is really not something that I want to force on my users. Considering how much time I spent building and designing profilers, I have strong opinions about them. And one of the things that I consider as huge selling points for my profilers is that they are pretty much fire and forget. Once you initialize them, you can forget about all the rest. Obviously, a general purpose profiler like this can&#x2019;t do that, but I still don&#x2019;t like it very much. And since we were talking about profiling RavenDB, I saw no reason to go to something like this. Next, there is a pretty big focus on profiling SQL:  That is pretty meaningless for us when we talk about Profiling RavenDB. And finally, there was the Stack Trace management. Providing Stack Trace information is incredibly useful for a profiler, and the MVC Mini Profiler supports that, but I didn&#x2019;t like how it did it. Calling new StackTrace() is pretty expensive, and there are better ways of doing that. One of the goals for the RavenDB profiler is to allow people to run it in production, same as I am doing right now in this blog, after all.  Mostly, the decision to go and write it from scratch was based on making it easier for us to build something that made sense for our purposes, not try to re-use something that was built for a completely different purpose.</p>
+        </article>
+        <article id="article-4860">
+            <a href="https://ayende.com/blog/73729/debugging-security-exceptions" target="_blank">
+                <h2 class="title mb-6" id="article-4860">Debugging Security Exceptions</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 29, 2011
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the horrible things about SecurityException is just how little information you are given. For example, let us take a look at:   Yes, that is informative. The real problem is that most security analysis is done at the method level, which means that _something_ in this method caused this problem. Which meant that in order to debug this, I have to change my code to be like this:   Which gives me this:  Just to point out, the first, second, etc are purely artificial method names, meant just to give me some idea about the problem areas for this purpose only. Then we need to go into the code in the First method and figure out what the problem is there, and so on, and so forth. Annoying, and I wish that I knew of a better way.</p>
         </article>
         <div class="button flex justify-between">
             <a href="485.html"><span class="back arrow"></span></a>

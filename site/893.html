@@ -137,8 +137,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-8921">
-            <a href="https://ayende.com/blog/1507/rhino-commons" target="_blank">
-                <h2 class="title mb-6" id="article-8921">Rhino Commons</h2>
+            <a href="https://ayende.com/blog/1529/using-active-record-as-a-rule-engine" target="_blank">
+                <h2 class="title mb-6" id="article-8921">Using Active Record As A Rule Engine</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -148,15 +148,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 30, 2006
+                posted on: July 07, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I made some updates to my&#xA0;commons library. It is just a set of utility classes that I find useful. At the moment it contains:            Static Reflection                Bulk Deleter                Collection Actions - Find, Select All, Select All&#xA0;Not, etc            Date Range with operations - For Each Day, For Each Week, For Each Month, etc.            Disposable Action                EventArgs &lt;T&gt; - Which should have been in the BCL.            Property Indexers                Validation - mostly trivial stuff            Abortable Thread Pool - slightly modified from the MSDN version.            WaitForConsumersEvent                Local Data - See below    The thing that I use more than anything, though, is local data handling. I am pretty sure that I blog about this before, but I can&#x27;t find it now.&#xA0; The idea is to give you a simple hashtable of values that you can rely throughout your code. If you are working in Web context, it is using the Context.Items hash, and if you are working in a non-web context, you use a thread static hashtable.    This allows me to ignore where I am, and put stuff there that I know are private to my current logical thread of excutions.    You can find the bits here</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I posted a riddle&#xA0;about how to use Active Record as a Rule Engine, here is the answer.     First, just to remind you of the scenario: A rule engine that can process big amount of data. The engine will run as a Windows service, and not as a part of another application. Throughput is important, as well as flexibility in the rules and what they can do. The processing of each rule can be quite complex, so it is important that the rule engine will not limit what the rule can do. The rules run on varied pieces of data, which reside in a database.     Okay, so we have a database and we have a lot of rules. Let us consider first what a rule is, shall we?     A rule is usually composed of two distinct parts:             What this rule applies to?                 What this rule should do?         For instnace, consider this rule: Increase the salary by 10% of all employees that have over 5 years senority.             What this rule applies to: Employee with over 5 years senority.                 What this rule should do: Increase salary by 10%         Do you see where I am heading? Let us first look at the object model first:          I have got a Rule&lt;T&gt; class, which manages the rules. It has either an HQL Query which select the objects to works on, or a set of predicates that it uses.     The predicates are very thin wrappers over NHibernate.Expression namespace, and they mainly provide persistance support. The reason that I am using both is that is it very easy to provide a nice drag &amp; drop interface for the predicates, which allow a business analyst to define the set of objects that this rule will run on. The HQL Query is for the more complex issues, where a developer will be needed.     I hope you noticed the IRuleAction&lt;T&gt; interface. This allows to write actions that accept an object, and do something to it. This can be something like Increase Salary, Fire Employee, etc.     Note that both the Rule&lt;T&gt; and the IRuleAction&lt;T&gt; has a collection of parameters. Those are strongly typed parameters. Which means that I don&#x27;t deal with hash tables, or things like that. I get a strongly typed object that I can use in compile time.     For reference, here is the table structure that backs this up:          How this is working? Check out the Rule&lt;T&gt;.Execute() method:             public void Execute()                        {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; using (new SessionScope())                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; T[] items = GetItemsToWorkOnFromQueryOrPredicates();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; foreach (IRuleAction&lt;T&gt; action in Actions)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; foreach (T item in items)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; action.Act(item);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }// all changes to the items are persisted here.                        }         And here is how an action looks like (I omitted the uninteresting properties):             public class IncreaseEmployeeSalaryAction : IRuleAction&lt;Employee&gt;                        {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; public void Act(Employee item)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; item.Salary.IncreaseBy(Parameter.Amount);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        }         NHibernate can handle generic types quite well (but not generic type inferencing, thanks goodness), but it require the full generic type name, which can be a pain to write. Active Record does even that for me, so it is very easy to work with the system.     Hope you like the idea. An additional extention of this can be further processing of complex business rules that cannot be expressed in an HQL Query alone.     Update: Just to clarify, NHibernate is able to tell based on the XxxType column in each table which object it is, and it construct the object graph accordingly.</p>
         </article>
         <article id="article-8922">
-            <a href="https://ayende.com/blog/1506/ram-based-storage" target="_blank">
-                <h2 class="title mb-6" id="article-8922">RAM Based Storage</h2>
+            <a href="https://ardalis.com/19352/" target="_blank">
+                <h2 class="title mb-6" id="article-8922">Fourth of July Info (chain letter)</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -164,13 +164,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 30, 2006
+                posted on: July 06, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Check out this, I am fairly drooling over the specs there. No pricing in the site, which instantly puts it out of my league, though.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Every year or two I see this email come through. I haven&#x2019;t checked Snopes to see if it&#x2019;s all accurate, but if it is, it&#x2019;s certainly worth a&#x2026;Keep Reading &#x2192;</p>
         </article>
         <article id="article-8923">
-            <a href="https://ayende.com/blog/1505/override-and-obsolete" target="_blank">
-                <h2 class="title mb-6" id="article-8923">Override and Obsolete</h2>
+            <a href="https://ayende.com/blog/1528/reason-23124-to-love-resharper" target="_blank">
+                <h2 class="title mb-6" id="article-8923">Reason #23124 to love ReSharper</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -180,13 +180,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 29, 2006
+                posted on: July 06, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have recently created a grid that inherits from GridView, and add special processing. As part of the processing, I needed extra information about the data beyond just the list of items. I created a Bind() method that gets all the information, and handles the entire data binding scenario.                But this is not a common approach, and it is entirely possible that another developer will forget / not know that he needs to call this method &#xA0;and use the following to add data to the grid:                                                                                        grid.DataSource = foo;                        grid.DataBind();                                                                                        This would completely bypass my custom handling, and can lead to hard to discover bugs, after all, the code will look correct. In order to solve this issue, I used this approach:                                                                                        [Obsolete(&quot;Use the Bind() method instead.&quot;, true)                        public override object DataSource                        {                        &#xA0;&#xA0;&#xA0; set                        &#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;if(this.DesignMode==false)                        &#xA0;&#xA0;&#xA0;&#xA0; &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; throw new InvalidOperationException(@&quot;Can&#x27;t use this setter.                                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; You must use the Bind() method instead&quot;);                        &#xA0;&#xA0;&#xA0; }                        }                                                                                                I overrode just the setter for the DataSource property (something that I learned was possible only today), and added a compiler error when using this, as well as a runtime error. Both of those will direct the developer in the right path. I added the exception because the developer may call the class via is base class ,which will bypass the compiler obsolete error .                Update: Just to clarify, this is the Bind method, it does more than just         public&#xA0;void&#xA0;Bind&lt;T&gt;(ICollection&lt;T&gt;&#xA0;itemsToBind,&#xA0;ISecurable&#xA0;securable) { ... }                I added the bolded part to allow the control to work with the designer.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This&#xA;screen shot is from a NAnt build file (in this case, Castle&#x27;s).&#xA;&#xA;All&#xA;I can say it wow!!!</p>
         </article>
         <article id="article-8924">
-            <a href="https://ayende.com/blog/1504/how-to-inspire-confidence" target="_blank">
-                <h2 class="title mb-6" id="article-8924">How to inspire confidence...</h2>
+            <a href="https://ayende.com/blog/1527/safe-multi-threading" target="_blank">
+                <h2 class="title mb-6" id="article-8924">Safe Multi Threading</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -196,15 +196,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 29, 2006
+                posted on: July 06, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Not&#xA;exactly the message that I like to get from my source control repository.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am using the code below to run work in multiply threads.&#xA0;A client registers a callback and an input, and it is executed on the thread pool.    I have some notes about this code below:            public class WorkManager&lt;T&gt; : IWorkManager&lt;T&gt;                        {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; static ILog logger = LogManager.GetLogger(typeof(WorkManager&lt;T&gt;));                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; /// &lt;summary&gt;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; /// I hate XML Comments, can&#x27;t use generics in them.                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; /// &lt;/summary&gt;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; /// &lt;param name=&quot;state&quot;&gt;State is KeyValuePair&amp;lt;Action&amp;lt;T&amp;gt;,T&amp;gt;&lt;/param&gt;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; private void ExecuteWorkThreaded(object state)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; KeyValuePair&lt;Action&lt;T&gt;, T&gt; pair = (KeyValuePair&lt;Action&lt;T&gt;, T&gt;)state;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Action&lt;T&gt; action = pair.Key;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; logger.DebugFormat(&quot;Executing action: {0}.{1}&quot;, action.Method.DeclaringType, action.Method.Name);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; // this should prevent parallel execution of the same method from the same object                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; // and help prevent re-entracy issues.                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; lock (action)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; try                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; action(pair.Value);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; catch (Exception e)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; logger.Error(string.Format(&quot;Exception when executing work on {0}.{1}&quot;,                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; action.Method.DeclaringType, action.Method.Name), e);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; EventHandler&lt;EventArgs&lt;Exception&gt;&gt; temp = ExceptionRaised;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; if (temp != null)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; temp(this, new EventArgs&lt;Exception&gt;(e));                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                                &#xA0;                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; public void ExecuteWork(Action&lt;T&gt; action, T item)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; KeyValuePair&lt;Action&lt;T&gt;, T&gt; pair = new KeyValuePair&lt;Action&lt;T&gt;, T&gt;(action, item);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; AbortableThreadPool.QueueUserWorkItem(ExecuteWorkThreaded, pair);                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; public event EventHandler&lt;EventArgs&lt;Exception&gt;&gt; ExceptionRaised;                        }        I am using the command patten here, where an object perform a single task, so I don&#x27;t run into issues with two threads running actions from the same object. The object may be registered twice, but that is okay, we are serializing access to the action, so it wouldn&#x27;t run in parallel. The only requirement that I have from my actions is that they can be called more than once, which is a lot less than require them to be thread safe.    The whole idea here is to save threads. I don&#x27;t want my threads to be busy waiting for something, and I do want centralized control over how they are executed and why. As I said, the logging is extremely important to me, but it also something that I would like to free the actions from (except action related logging, of course.</p>
         </article>
         <article id="article-8925">
-            <a href="https://ardalis.com/19054/" target="_blank">
-                <h2 class="title mb-6" id="article-8925">TechSmith at TechEd</h2>
+            <a href="https://ayende.com/blog/1526/the-null-method-operator" target="_blank">
+                <h2 class="title mb-6" id="article-8925">The Null Method Operator &quot;?!&quot;</h2>
             </a>
-            <p class="mb-2">by Ardalis</p>
+            <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -212,13 +212,29 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 28, 2006
+                posted on: July 06, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I love TechSmith &#x2013; they have some extremely cool tools including my favorite, Camtasia, which is the de facto standard for creating&#x2026;Keep Reading &#x2192;</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After reading this, I was reminded how much I want the null method operator. Here is the scenario: string&#xA0;name&#xA0;=&#xA0;user&#xA0;!=&#xA0;null&#xA0;?&#xA0;user.Name&#xA0;:&#xA0;&quot;no-name&quot;;     The Null Method Operator work like this:string&#xA0;name&#xA0;=&#xA0;user.Name&#xA0;?!&#xA0;&quot;no-name&quot;;    The rules:            The first object reference is checked, and if it is null, it skips the method call and goes to the other line.            Only the first object reference is checked.&#xA0;Chained method calls are not supported, this should throw an NullReferenceError, as usual.        string&#xA0;name&#xA0;=&#xA0;user.ReturnNull.ToString()&#xA0;?!&#xA0;&quot;no-name&quot;;                        You can chain the calls, like this:        string&#xA0;name&#xA0;=&#xA0;user.Name&#xA0;?!&#xA0;Context.User.Identity.Name&#xA0;?!&#xA0;&quot;really-no-name&quot;;                I really can&#x27;t express how much&#xA0;I would like this feature. And have the null coalesing operator is like a thorn in my foot, everytime I think about it, I get annoyed that I don&#x27;t hve the Null Method Operator.    Feel free to come with a better name.</p>
         </article>
         <article id="article-8926">
-            <a href="https://ardalis.com/19055/" target="_blank">
-                <h2 class="title mb-6" id="article-8926">ASP.NET Sandbox Projects</h2>
+            <a href="https://ayende.com/blog/1525/how-to-read-a-file-the-ioc-way" target="_blank">
+                <h2 class="title mb-6" id="article-8926">How to read a file, the IoC way...</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 06, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned that it can take me quite a bit of code to read&#xA;a file. After carefully consulting the documentation, I have come to realize&#xA;that INT21 calls are not necessary in .Net. A bit amazed, I took a look at the&#xA;code, which grew in leaps and bounds and is now self sustaining, according to&#xA;my research. &#xA;&#xA;I don&#x2019;t believe in UML, but I do believe in pretty&#xA;pictures, so I put together the following picture. &#xA;&#xA;&#xA0;&#xA;&#xA;&#xA;&#xA;&#xA0;&#xA;&#xA;&#xA0;&#xA;&#xA;I left out several pieces, like the file parser, to focus on&#xA;the important issue, which is reading a file. The big fun was to listen to a&#xA;list of requirements and say &#x201C;Yes, I can do that&#x201D;, &#x201C;Yes, should&#xA;be easy&#x201D;, &#x201C;Already there&#x201D;, etc. Building the configuration is&#xA;a bit like playing puzzles, each part of the application is truly separated. &#xA0;&#xA;&#xA;You get nice configuration bugs this way. I accidently put&#xA;the mark done action before the parse file action, and couldn&#x2019;t&#xA;understand why it wasn&#x2019;t working. J&#xA;&#xA;&#xA;This is the first project in a long time where I did not&#xA;use NHibernate. I now regret this position bitterly, ADO.Net is just a PITA to&#xA;work with. The amount of repeating code that you need to write is amazing, the amount&#xA;of strings is also frightening. I&#x2019;ll probably put NHibernate there&#xA;anyway, since that would significantly reduce the amount of stuff that I need&#xA;to do. &#xA0;I am not sure that this is an overkill or not. Right now I start&#xA;to get into the data access for the application itself, and it looks like it&#xA;will be needed anyway.&#xA;&#xA;There is only so much datasets that I can stand.&#xA;&#xA;&#xA0;&#xA;&#xA;&#xA0;Anyway, most of those pieces were developed TDD`ed and&#xA;separately; I had major worries about integration, but it passed rather&#xA;smoothly. I love Windsor, and in this case, it is the&#xA;application. The above should be the simplified live object graph, as it was&#xA;generated by Windsor. Call a single method on the coordinator, and the system&#xA;starts rolling. Input comes in, and the system responds, often in fairly complex&#xA;ways. &#xA;&#xA;The only output that I have at the moment is log4net output,&#xA;which is a great help in general, but thought me quite a bit about what is&#xA;considered good logging.&#xA;&#xA;&#x201C;Executing action&#x201D; is generally not a good log&#xA;message.&#xA;&#xA;&#xA0;&#xA;&#xA;By the way, anyone knows of a good way to draw complex&#xA;object graphs?&#xA0; The example above is nice, but it is one dimensional and show&#xA;just a single aspect of the object graph. The case in point, under both the clock&#xA;and the file watcher, I&#x2019;ve many sub trees, and it is just not possible to&#xA;get them all there in the &#xA0;structure above. You would lose sight of the&#xA;forest from all the trees. J</p>
+        </article>
+        <article id="article-8927">
+            <a href="https://ardalis.com/19224/" target="_blank">
+                <h2 class="title mb-6" id="article-8927">Atlas June CTP Available</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -228,31 +244,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 28, 2006
+                posted on: July 05, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Ambrose posted about the ASP.NET Sandbox yesterday (which I saw in my daily DotNetSlackers new email), which prompted me to have another&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-8927">
-            <a href="https://ayende.com/blog/1503/how-to-look-at-encapsulation" target="_blank">
-                <h2 class="title mb-6" id="article-8927">How to look at encapsulation</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 28, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Eber Irigoyen has a post about what should I hide?, based on advice from Code Complete 2. Eber is making the statement that the question should be reversed. What should I expose?    On the face of it, it looks like a reasonable suggestion, after all, I assume that we all accept that encapsulation is a good thing. The problem is that this completely ignore the notion of extensibility. It only give you the extensibility that you think of ahead of time. For examples of where this approach fail, just look at caching &amp; batching in .Net. In both cases, the approach of show just what you must is used, and this make both completely useless for any scenario that you didn&#x27;t think when creating the code.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;ve been usingAtlas, or if you&#x2019;ve been waiting for a more stable version of Atlas, the latest Community Tech Preview release is now&#x2026;Keep Reading &#x2192;</p>
         </article>
         <article id="article-8928">
-            <a href="https://ayende.com/blog/1502/ted-neward-on-or-m" target="_blank">
-                <h2 class="title mb-6" id="article-8928">Ted Neward on OR/M</h2>
+            <a href="https://ardalis.com/19315/" target="_blank">
+                <h2 class="title mb-6" id="article-8928">Team Foundation Source Control Tips</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -260,13 +260,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 28, 2006
+                posted on: July 05, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Ten&#xA;Neward has posted a long post about OR/M - The&#xA;Vietnam of Computer Science. The first part of this post is a Vietnam war history&#xA;lesson, and I kind of missed the point, then he goes on to point at various&#xA;issues with OR/M.&#xA;&#xA;I&#xA;don&#x27;t quite get the point of the post, to tell the truth,&#xA0; and I am tempted to raise Godwin&#x27;s Law in this&#xA;matter&#xA;&#xA;He&#xA;raises some valid points, but each of those issues are already mostly solved&#xA;issues.&#xA;&#xA;To&#xA;give some examples:&#xA;&#xA;Entity identity vs. Row Identity &#x2013;&#xA;Identity maps and Unit Of Work handle this issue.Concurrency &#xA0;- Last Write Win, Optimistic Concurrency,&#xA;Explicit locking.Caching across a web farm &#x2013; Use a distribute&#xA;cache.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Barry Gervin recently wrote some nice tips for working with source control and Team System on a mailing list: The best guidance is to do a&#x2026;Keep Reading &#x2192;</p>
         </article>
         <article id="article-8929">
-            <a href="https://ayende.com/blog/1501/rhino-mocks-and-interfaces-with-generics-methods" target="_blank">
-                <h2 class="title mb-6" id="article-8929">Rhino Mocks And Interfaces With Generics Methods</h2>
+            <a href="https://ayende.com/blog/1524/elegant" target="_blank">
+                <h2 class="title mb-6" id="article-8929">Elegant</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -276,15 +276,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 28, 2006
+                posted on: July 05, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I the last week I was asked multiply times about using Rhino Mocks to mock interfaces with generic methods.    At the moment, this is not working,&#xA0;the code needed to generate generic methods on runtime is not trivial, and I tried fixing it several times, without success. Currently, Dynamic Proxy 2 is being worked on, which will have support for generic methods, so I expect to have this feature soon.    The following hack will get you by for now, it is not ideal, but it is what I have at the moment.    The ISession interface from NHibernate contains a generic Load&lt;T&gt;(object id) method, which measn that Rhino Mocks can&#x27;t mock it. Here is how we solve the issue:            public abstract class SessionWithoutGenerics : ISession                        {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; public override sealed Load&lt;T&gt;(object id)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; return (T)Load(typeof(T), id);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        }                We basically disable the mocking of this specific method, and now we mock this class, and continue life as usual.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#xA;would let this piece of code to stand on its own. I like it.&#xA;&#xA;&#xA0;&#xA;&#xA;UPDATE&#xA;TOP (100) Messages&#xA;&#xA;SET&#xA;Status = &#x27;Sending&#x27;&#xA;&#xA;OUTPUT&#xA;Inserted.*&#xA;&#xA;WHERE&#xA;Status&#xA0; IN (&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#x27;New&#x27;,&#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#x27;Sending&#x27;) -- we previously failed to send this message</p>
         </article>
         <article id="article-8930">
-            <a href="https://ayende.com/blog/1500/this-is-not-only-one-of-the-nicest-logos-that-i" target="_blank">
-                <h2 class="title mb-6" id="article-8930">This Is Not Only One Of The Nicest Logos That I</h2>
+            <a href="https://ardalis.com/19221/" target="_blank">
+                <h2 class="title mb-6" id="article-8930">BoundField DataFormatString attribute not working</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -292,9 +292,9 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 28, 2006
+                posted on: July 03, 2006
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is not only one of the nicest logos that I &#xA;have seen, it is also the logo of Rhino Mocks &#xA;Boo Macros, which is a language extension &#xA;for Boo that integrate Rhino Mocks directly &#xA;into the language. &#xA;&#xA0; &#xA;Andrew &#xA;Davey released it today, and it &#xA;completely blew me away. &#xA;I did &#xA;some Boo hacking, and I have a fully appreciation of the scale of the task that &#xA;Andrew had. &#xA;&#xA0;&#xA;Check &#xA;out how simple it looks: &#xA;&#xA0; &#xA;&#xA;&#xA;&#xA;&#xA;[Test] &#xA;&#xA;def &#xA;Example(): &#xA;&#xA;&#xA0;&#xA0;&#xA0; record &#xA;mocks: &#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; foo &#xA;as &#xA;IFoo &#xA;= &#xA;mocks.CreateMock(IFoo) &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA;expect &#xA;foo.Dog(int, &#xA;x &#xA;as &#xA;string, &#xA;y &#xA;as &#xA;int): &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; x &#xA;[ &#xA;Is.NotNull() &#xA;] &#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA;y &#xA;[ &#xA;Is.GreaterThan(0) &amp; &#xA;Is.LessThan(10) &#xA;] &#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA;return &#xA;42.0 &#xA;&#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA;&#xA;&#xA0;&#xA0;&#xA0; &#xA;verify &#xA;mocks: &#xA;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA;foo.Dog(0, &#xA;&quot;hello&quot;, &#xA;5) &#xA;&#xA;&#xA0; &#xA;The &#xA;above example creates an expectation for a call on foo.Dog(anything, not-null,&#xA0; &#xA;between 0 and 10), and then make the call. There is a lot more documentation &#xA;here. &#xA;&#xA0; &#xA;Very nice and simple to work with. &#xA;Congratulations, Andrew, and very good work.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was stuck with a problem a few weeks ago where my DataFormatString on a BoundField in a GridView was not being applied. I had a chance to&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="892.html"><span class="back arrow"></span></a>

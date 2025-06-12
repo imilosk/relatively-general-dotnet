@@ -137,8 +137,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6301">
-            <a href="https://ayende.com/blog/3732/solving-the-select-n-1-problem" target="_blank">
-                <h2 class="title mb-6" id="article-6301">Solving the Select N&#x2B;1 Problem</h2>
+            <a href="https://ayende.com/blog/3746/fluent-nhibernate" target="_blank">
+                <h2 class="title mb-6" id="article-6301">Fluent NHibernate</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -148,15 +148,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: December 01, 2008
+                posted on: December 11, 2008
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Note, I am currently writing the NH Prof documentation, so you are probably going to get quite a bit of NHibernate tidbits over the next few days. I want to show the user all the comments from all the posts, so they can delete all the nasty comments. The na&#x5DF;ve implementation would be something like:foreach (Post post in session.CreateQuery(&quot;from Post&quot;).List()) // SELECT * FROM Posts&#xA;{&#xA;    foreach (Comment comment in post.Comments) //lazy loading of comments list causes: SELECT * FROM Comments where PostId = @p0&#xA;    {&#xA;        //print comment...&#xA;    }&#xA;}In this example, we can see that we are loading a list of posts ( the first select ) and then traversing the object graph. However, we access the lazily loaded collection, causing NHibernate to go to the database and bring the results one row at a time. This is incredibly inefficient, and the NHibernate Profiler will generate a warning whenever it encounters such a case.The solution for this example is simple, we simple force an eager load of the collection up front.Using HQL:var  posts = session.CreateQuery(&quot;from Post p left join fetch p.Comments&quot;).List();Using the criteria API:session.CreateCriteria(typeof(Post))&#xA;    .SetFetchMode(&quot;Comments&quot;, FetchMode.Eager)&#xA;    .List();In both cases, we will get a join and only a single query to the database.Note, this is the classic appearance of the problem, it can also surface in other scenarios, such as calling the database in a loop, or more complex object graph traversals. In those cases, it it generally much harder to see what is causing the issue.NHibernate Profiler will detect those scenarios as well, and give you the exact line in the source code that cause this SQL to be generated.Another option for solving this issue is: MutliQuery and MultiCriteria, which are also used to solved the issue of Too Many Queries.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A while ago I mentioned that as it stood at the time, I didn&#x27;t see any major benefits for the Fluent NHibernate and that you might as well use the XML directly. What I wanted is NHibernate auto mapper. Couple of days ago I had the chance to take a look at Fluent NHibernate again. What I saw was almost exactly the dream that I had in mind. Here is my NHibernate mapping configuration for the whole application: public virtual void ConfigureNHibernate(Configuration configuration)&#xA;{&#xA;    var model = new AutoPersistenceModel&#xA;    {&#xA;        Conventions =&#xA;            {&#xA;                GetForeignKeyNameOfParent = (type =&gt; type.Name &#x2B; &quot;Id&quot;),&#xA;                GetForeignKeyName = (info =&gt; info.Name &#x2B; &quot;Id&quot;),&#xA;                GetTableName = (type =&gt; Inflector.Pluralize(type.Name)),&#xA;                GetManyToManyTableName =&#xA;                    ((child, parent) =&gt;&#xA;                     Inflector.Pluralize(child.Name) &#x2B; &quot;To&quot; &#x2B; Inflector.Pluralize(parent.Name))&#xA;            }&#xA;    };&#xA;&#xA;&#xA;    model&#xA;        .AddEntityAssembly(Assembly)&#xA;        .Where(entity =&gt;&#xA;            entity.Namespace.EndsWith(&quot;Model&quot;) &amp;&amp;&#xA;            entity.GetProperty(&quot;Id&quot;) != null &amp;&amp;&#xA;            entity.IsAbstract == false&#xA;            )&#xA;        .Configure(configuration);&#xA;}&#xA;&#xA;After that, you are done. Just create an entity in the proper place, hit the /database/create and have a lot of fun.&#xA;I am loving it.&#xA;I still have some concerns about how I can surgically modify some configuration as needed, but I think that I can manage, overall.</p>
         </article>
         <article id="article-6302">
-            <a href="https://ayende.com/blog/3731/the-typealyzer" target="_blank">
-                <h2 class="title mb-6" id="article-6302">The typealyzer</h2>
+            <a href="https://ardalis.com/ifilesystem-dependency-inversion-part-5/" target="_blank">
+                <h2 class="title mb-6" id="article-6302">IFileSystem Dependency Inversion Part 5</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -164,13 +164,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: December 01, 2008
+                posted on: December 10, 2008
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I run into this site, which perform an analysis on the text in the blog.&#xA;I run this on a couple of blogs of friends of mine, and it turned out... interesting results.&#xA;Here is what I got:&#xA;INTP - The Thinkers&#xA;&#xA;  &#xA;    &#xA;      &#xA;    &#xA;&#xA;    &#xA;      The logical and analytical type. They are especialy attuned to difficult creative and intellectual challenges and always look for something more complex to dig into. They are great at finding subtle connections between things and imagine far-reaching implications.&#xA;      &#xA;      They enjoy working with complex things using a lot of concepts and imaginative models of reality. Since they are not very good at seeing and understanding the needs of other people, they might come across as arrogant, impatient and insensitive to people that need some time to understand what they are talking about.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The saga began here. Where I left off, I&#x2019;d managed to create a new class for handling the storage of my creative files&#x2026;Keep Reading &#x2192;</p>
         </article>
         <article id="article-6303">
-            <a href="https://ayende.com/blog/3730/another-entity-framework-opinion" target="_blank">
-                <h2 class="title mb-6" id="article-6303">Another Entity Framework opinion</h2>
+            <a href="https://ayende.com/blog/3745/thinking-with-blinders" target="_blank">
+                <h2 class="title mb-6" id="article-6303">Thinking with blinders</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -180,13 +180,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 30, 2008
+                posted on: December 10, 2008
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I run across this post, which I found interesting:  If someone give me a set of classes that doesn&#x27;t bring a A to Z solution to a problem, sorry but I don&#x27;t call it a Framework ... I call it a Base Class Library. I&#x27;ve been very supportive to the Entity Framework Team (I gave design feedback through multiple channels) but now I think I&#x27;m done. This resonate very well with what Udi Dahan has said as a comment to Frans&#x27; post.  Microsoft is a platform company. They build technologies that partners can build stuff on top of.  It&#x27;s what they&#x27;ve always done. It&#x27;s what they&#x27;re continuing to do. Unfortunately, many developers in the Microsoft community don&#x27;t know/understand this, thinking that these technologies are supposed to be used to build applications directly. This often causes overly complex codebases. The EF&#x27;s team&#x27;s decision is consistent with providing a platform for partners to build their own ORMs on. That being said, I don&#x27;t care very much for a platform - just as I wouldn&#x27;t drive the chassis of a car.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Many of the&#xA0; comments to my previous post were some variation on this one:  Have you consider what would happen if they actually followed your advice?Do you really want to rewrite major parts of your application every time a new version comes out? I carefully re-read my post, and I couldn&#x27;t find anything there to suggest that to me in the post. What I suggested is relaxing the mandate of absolute backward compatibility, which cause so many problems in both design and maintenance modes. I never suggested that there should be no compatibility, and I certainly didn&#x27;t suggest &quot;let us just change things randomly to make everything breaks&quot;, which is what a lot of people seem to think I did. Backward compatibility is not a binary value. About my reaction for the breaking changes in SP1. I was quite annoyed with that, it was pointed out. Apparently some people find this to be inconsistent. I don&#x27;t think so, because you don&#x27;t get to hold both ends of the stick at the same time. If you are going to promise 100% backward compatibility, with its associated cost (i.e, causing me, personally, to go into spasm of rage as a result of seeing yet another internal) then by God and all the angels, I am going to hold you to that. If I have to pay the price for backward compatibility, then I want 100% compatibility. However, I think that this is perfectly all right to reduce that burden, and that change what I am willing to accept. Looking outside the .Net space, we have several very interesting case studies to observe: PHP, Python and Java. PHP never cared too much for backward compatibility. From looking at its eco system, it doesn&#x27;t look like it hurt it much. Just talk to any Java guy about the problems that backward compatibility are causing for the language and platform now (generics hack, anyone?). Python 3000 is probably the best case study for making an explicit decision to break away from the backward compatibility concerns. Note that this is not what I am suggesting. And just to repeat the key point of this post: Backward compatibility is not a binary value.</p>
         </article>
         <article id="article-6304">
-            <a href="https://ayende.com/blog/3729/how-to-get-good-people" target="_blank">
-                <h2 class="title mb-6" id="article-6304">How to get good people?</h2>
+            <a href="https://ayende.com/blog/3744/consenting-adults" target="_blank">
+                <h2 class="title mb-6" id="article-6304">Consenting Adults</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -196,15 +196,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 30, 2008
+                posted on: December 10, 2008
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If I knew the answer, I would bottle it and would be rich. (insert mad laugher)&#xA;Lacking a bullet proof answer, the following are my observations regarding this issue. A while ago I was the chief interviewer in my company, and I have had the chance to interview literally hundreds of people. My own conclusions match Joel from 2005. The good people are already employed elsewhere, and are likely to be happy there. If they aren&#x27;t happy, they tend to have the connections to find a job based on their known skills and experience.&#xA;In other words, unless something like the bubble burst has happened, you aren&#x27;t going to find the good people in your interviews. This means that you have to look elsewhere for that.&#xA;I know that this isn&#x27;t widely applicable, but I am using this blog as a good way of finding good people. The audience who reads this blog is already highly self selecting, and likely to share the same conceptions as I do about many things. I had several client engagements that resulted from this blog, and the environment I was working with was significantly higher than the industry average.&#xA;From the other side, the one thing that I am absolutely against is the &quot;get a new job, close the blog&quot; mentality. I wanted to point out couple of friends who did that, but I just checked, and both of them are blogging, which I somehow missed :-(&#xA;Anyway, what I am trying to say is that online presence matters. I have several friends who never had a blog, and wouldn&#x27;t consider opening one. The direct implication is that some of the smartest people I have worked with are only known through word of mouth. Real story, I was at a client site one, and was half way listening to a hallway conversation, waiting for a conference call, and I heard the following: &quot;Did you hear how Muhammad* saved [big cellular provider]&#x27;s when their [not important now]&quot;.&#xA;Some people has taken my suggestion to heart, and opened a blog. It doesn&#x27;t really matter what they are talking about, what is important is that they do. Creating interactions in the community, creating a name for themselves. Getting recognized. Reputation matter, and having access to someone&#x27;s thought stream over time is incredibly valuable in trying to estimate their abilities.&#xA;In the end, however, there is really no substitute for working with someone to actually evaluate their skills (which is a transient thing) and their abilities (which tend to change far more slowly, and what I really care about). Any attempt to short circuit the process is going to end in tears.&#xA;* That is his real name, and I had the pleasure of having him as my boss for over two years. Sadly, he doesn&#x27;t have a blog. And yes, this is my own gentle way of trying to get him one.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">David Kean has an interesting post here: &quot;I can&#x27;t believe Microsoft didn&#x27;t make [Enter API Name Here] public&quot;&#xA;In particular, he mentions this aging argument:&#xA;&#xA;  Developing good APIs is extremely difficult, especially the first time around. When we get things wrong (and we do get things wrong), trying to maintain backwards compatibility often stifles innovation as we try to correct these scenarios. Unfortunately, unlike others, we don&#x27;t have the luxury to make only 95% of our new versions backwards compatible with our previous versions.&#xA;&#xA;I have a lot of problems with this statement. Chief among them is the treating the users as people who should be cuddled. Actually, I don&#x27;t really have a problem with cuddling, the real problem is that this is literally putting road blocks for progress.&#xA;The Microsoft backward compatibility strategy is a major reason why the default approach is to close down everything. Now, it is not as if there isn&#x27;t a well defined way of saying: Touch that on your responsibility. This is quite pervasive, actually:&#xA;&#xA;  This API supports the .NET Framework infrastructure and is not intended to be used directly from your code.&#xA;&#xA;But I think that this isn&#x27;t actually the problem. The problem is that the rules that Microsoft has chosen to accept are broken. In that type of game, you are always losing. The only thing that you can do is to change the rate in which you are losing at.&#xA;Change the rules, treat the users as consenting adults, and you&#x27;ll be able to do so much more, because the task ahead of you would be so much simpler.</p>
         </article>
         <article id="article-6305">
-            <a href="https://ayende.com/blog/3728/can-you-succeed-without-good-people" target="_blank">
-                <h2 class="title mb-6" id="article-6305">Can you succeed without good people?</h2>
+            <a href="https://ardalis.com/ifilesystem-dependency-inversion-part-3/" target="_blank">
+                <h2 class="title mb-6" id="article-6305">IFileSystem Dependency Inversion Part 3</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -212,15 +212,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 30, 2008
+                posted on: December 09, 2008
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The answer is a sound yes, but for a given value of success.&#xA;A bad team can still get a product out, and that product may even be successful. But the cost that this requires is far greater than it would have been otherwise, often to the point where you have no choice but to scrap the project. The really sad part is that some people accept this cost as the true cost of building software.&#xA;Oh, and good people doesn&#x27;t necessarily equate to experts.&#xA;You need a few good people, but the rest of the team can follow fairly simple check list approach to development. There are a lot of stories about teams like that, and most of them end with a big project failure. Usually, this is because there was a hard separation between the people the business consider as the high end and the regular developers. This usually cause the people who actually dictate the architecture and shape of the system to become totally oblivious of any design issues that they may inflict on the rest of the team.&#xA;Having a mixed team, with the architecture and the implementation done by the same group, is a much better proposition in the long term. Note, however, that I am explicitly not saying that the whole team should take part in the design. This is an ideal circumstance, and I haven&#x27;t found it to be either common or even desirable in many cases. Design by committee is rarely a good idea, and I much prefer either design by addition or design by feature / feature batch. Again, those depends on the type of team that I am working on.&#xA;Another thing to note is the difference between technological experts and business experts. In both cases, we are talking about developers, but in technological experts are good for one thing, clearing the way so the developers who actually understand the business can get things done, fast.&#xA;I will reference again my posts about JFHCI, as a good example of how I think those things should be done.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In part oneI described the problem. In part twoI worked out the details of how to save files in a platform-ignorant way by creating a spike&#x2026;Keep Reading &#x2192;</p>
         </article>
         <article id="article-6306">
-            <a href="https://ayende.com/blog/3727/why-remoting-is-so-painful" target="_blank">
-                <h2 class="title mb-6" id="article-6306">Why Remoting is so painful?</h2>
+            <a href="https://ardalis.com/ifilesystem-dependency-inversion-part-4/" target="_blank">
+                <h2 class="title mb-6" id="article-6306">IFileSystem Dependency Inversion Part 4</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -228,15 +228,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 26, 2008
+                posted on: December 09, 2008
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yes, I know, 2003 called and asked to get its distribution technology back. Nevertheless, remoting is an extremely useful tool, if you can make several assumptions about the way that you are going to use it. In my case, I am assuming inter process, local machine configuration, with high expectation of reliability from both ends. Considering that I also need low latency, it seems like an appropriate solution indeed. I was pretty happy about this, until all my integration tests start to break. After a while, I managed to figure out that the root cause for that is this error: Because of security restrictions, the type XYZ cannot be accessed. Now, it worked, and it worked for a long time. What the hell is going on? After thinking about this for a while, I realized that the major thing that changed was that I am now signing my assemblies. And that caused all hell to break lose. I managed to find this post with the solution, but I am still not happy. I really dislike things that can just go and break on me.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Still working on cleaning up some legacy ASP.NET code. Here&#x2019;s where we are: Part 1: Define problem and demonstrate IFileSystem basic version&#x2026;Keep Reading &#x2192;</p>
         </article>
         <article id="article-6307">
-            <a href="https://ayende.com/blog/3726/the-worst-checkout-experience-ever" target="_blank">
-                <h2 class="title mb-6" id="article-6307">The worst checkout experience EVER</h2>
+            <a href="https://ardalis.com/energy-usage/" target="_blank">
+                <h2 class="title mb-6" id="article-6307">Energy Usage</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -244,15 +244,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 26, 2008
+                posted on: December 08, 2008
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I swear, I was just about to back away from the entire thing. It started with me trying to create a new account. I had to go through about seven screen to do so. Then there was the big warning about gmail accounts not being acceptable, then there were the mandatory formatting of address &amp; phone numbers, to match what their system wanted from me. I kinda of like their licensing agreement.    Argh, that is so stupid. I am trying to give you money, why are you trying so hard to make this hard on me?</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Rick has an interesting post about his experiences measuring electricity use of various components in his home. I&#x2019;ve been curious about this&#x2026;Keep Reading &#x2192;</p>
         </article>
         <article id="article-6308">
-            <a href="https://ayende.com/blog/3725/nh-prof-configuration-story" target="_blank">
-                <h2 class="title mb-6" id="article-6308">NH Prof</h2>
+            <a href="https://ardalis.com/ifilesystem-dependency-inversion-part-1/" target="_blank">
+                <h2 class="title mb-6" id="article-6308">IFileSystem Dependency Inversion Part 1</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -260,15 +260,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 26, 2008
+                posted on: December 08, 2008
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I think that I mentioned that NHibernate Profiler is working mostly by doing some smarts on top of the log output from NHibernate. That is not exactly the case, but that is close enough. The problem with working through the logs is that there are roughly 30 lines of XML that you need to deal with in order to manage this properly.&#xA;The first time I sent this to anyone else, he run into problems with the configuration because of very subtle issues. For a while now, I had a ticket saying that I need to document what the failure scenarios are, and how to deal with them.&#xA;Today, as I sat down to deal with this ticket, I decided that it is wrong to even try. This is shoving my own problems to my users. I shouldn&#x27;t do that, if the configuration is hard to do, that is my own issue, and not theirs. I should bear the burden of complexity.&#xA;As such, I spent some additional time getting this to work in the smoothest way possible. The end result is that in order to use NHibernate Profiler in your application, all you need to do is add the following line at the application startup (Main, Application_Start, etc).&#xA;&#xA;NHibernateProfiler.Initialize();&#xA;&#xA;That is it :-)</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the course of making my software more testable, I&#x2019;ve attempted to eliminate a dependency on the file system (in this case, via System.IO&#x2026;Keep Reading &#x2192;</p>
         </article>
         <article id="article-6309">
-            <a href="https://ayende.com/blog/3724/setting-expectations-straight" target="_blank">
-                <h2 class="title mb-6" id="article-6309">Setting expectations straight</h2>
+            <a href="https://ardalis.com/installing-graffiti-extras/" target="_blank">
+                <h2 class="title mb-6" id="article-6309">Installing Graffiti Extras</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -276,15 +276,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 26, 2008
+                posted on: December 08, 2008
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am currently working on getting a beta  version of NH Prof out, but I run into a problem. There are several features that I intend to put into the release version that I didn&#x27;t have the time to actually put it. Those are usually features that are good to have, but not necessarily important for the actual function of the tool. One of them is saving &amp; loading the captured data. Currently, I am working on more important things than dealing with this, so I didn&#x27;t implement this. However, I do want to make it clear that it will be supported, and more than that, I want to make it clear that it it is not there yet.  Using my amazing WPF skills, I manage to whip up the following:   Which is located on a style set on MenuItem. This means that the only thing that I need to do to mark a menu item visually as unusable is to set its Tag attribute to NotImpl. I love this ability.  This is how it looks like:</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ve been wanting to add Next/Previous links to my blog&#x2019;s posts to provide easier navigation for folks who come to the blog and find&#x2026;Keep Reading &#x2192;</p>
         </article>
         <article id="article-6310">
-            <a href="https://ayende.com/blog/3723/nh-prof-a-testing-story" target="_blank">
-                <h2 class="title mb-6" id="article-6310">NH Prof</h2>
+            <a href="https://ardalis.com/ifilesystem-dependency-inversion-part-2/" target="_blank">
+                <h2 class="title mb-6" id="article-6310">IFileSystem Dependency Inversion Part 2</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -292,9 +292,9 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 25, 2008
+                posted on: December 08, 2008
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Remember that I mentioned the difference about working and production quality? &#xA;One of the things that separate the two that in production quality software, you don&#x27;t need to know which buttons not to push. Here is a simple example. For a while now, if you tried to bring up two instances of NH Prof, the second one would crash. That wasn&#x27;t something that you really want to show the users. Today I got back to doing NH Prof stuff, getting it ready for public beta, and I decided that the first thing to do was to tackle this easy feature.&#xA;Doing this is actually not an issue, testing this, however, was a problem. I have two application instances and four layers to go through. Here is the first test:&#xA;&#xA;[Test]public void When_creating_two_instances_of_application_will_tell_the_other_to_pop_up(){&#x9;var bus = MockRepository.GenerateStub&lt;IBus&gt;();&#x9;var listener = new NHibernateAppenderRemotingLoggingEventListener(bus);&#x9;listener.Start();&#x9;try &#x9;{ &#x9;&#x9;var anotherBus = MockRepository.GenerateStub&lt;IBus&gt;(); &#x9;&#x9;var anotherListener &#x9;&#x9;&#x9;= new NHibernateAppenderRemotingLoggingEventListener(anotherBus);&#x9;&#x9;anotherListener.Start();&#x9;&#x9;Assert.Fail(&quot;Exception was expected&quot;);&#x9;}&#x9;catch (AnotherApplicationIsAlreadyRunningAndControlWasMovedToItException)&#x9;{&#x9;}&#x9;bus.AssertWasCalled(x =&gt; x.Publish(null),        options =&gt; options.Constraints(Is.TypeOf&lt;BringApplicationToFront&gt;())&#x9;&#x9;);}&#xA;&#xA;The logging event listener is the reason that we can&#x27;t bring up two instances of this. We use this to listen to running applications, and having several of the profilers running at one time isn&#x27;t going to be helpful. And just to deal with the nitpickers, the four layers I mentioned are: Communication layer, backend, front end, actual user interface.&#xA;Here is an example that tests communication between the back end and the front end:&#xA;&#xA;[Test]public void When_bring_up_to_front_message_is_publish_observer_should_raise_event_for_UI(){&#x9;var facility = new BusFacility();&#x9;var observer = new ModelBuilderObserver(action =&gt; action());&#x9;bool wasBroughtToFront = false;&#x9;observer.ShouldBringApplicationToFront &#x2B;= () =&gt; wasBroughtToFront = true;&#x9;facility.Initialize(observer);&#x9;using(facility.Start())&#x9;{&#x9;&#x9;facility.Bus.Publish(new BringApplicationToFront());&#x9;&#x9;facility.Bus.WaitForAllMessages();&#x9;}&#x9;Assert.IsTrue(wasBroughtToFront);}&#xA;&#xA;As for the actual UI code, I am not sure how to test that. I did a manual test, but I am not sure that I am happy about this. Then again, we are talking about testing this line of code:&#xA;&#xA;observer.ShouldBringApplicationToFront &#x2B;= () =&gt; Activate();&#xA;&#xA;I can just test that the event was subscribed to, but I don&#x27;t really see this as valuable.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my last post in this IFileSystem series, I described the problem I&#x2019;m working on of removing a dependency on the System.IO Windows file&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="630.html"><span class="back arrow"></span></a>

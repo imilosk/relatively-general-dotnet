@@ -137,8 +137,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-2431">
-            <a href="https://ayende.com/blog/180837/distributed-computing-fallacies-there-is-one-administrator" target="_blank">
-                <h2 class="title mb-6" id="article-2431">Distributed computing fallacies: There is one administrator</h2>
+            <a href="https://ayende.com/blog/181313-A/when-what-you-need-is-a-square-triangle" target="_blank">
+                <h2 class="title mb-6" id="article-2431">When what you need is a square triangle&#x2026;</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -148,61 +148,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: December 21, 2017
+                posted on: January 15, 2018
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Actually I would state it better as &#x201C;there is any administrator / administration&#x201D;. This fallacy is meant to refer to different administrators defining conflicting policies, at least according to wikipedia. But our experience has shown that the problem is much more worse. It isn&#x2019;t that you have two companies defining policies that end up at odds with one another. It is that even in the same organization, you have very different areas of expertise and responsibility, and troubleshooting any problem in an organization of a significant size is a hard matter.Sure, you have the firewall admin which is usually the same as the network admin or at least has that one&#x2019;s number. But what if the problem is actually in an LDAP proxy making a cross forest query to a remote domain across DMZ and VPN lines, with the actual problem being a DNS change that hasn&#x2019;t been propagated on the internal network because security policies require DNSSEC verification but the update was made without one.Figure that one out, with the only error being &#x201C;I can&#x2019;t authenticate to your software, therefor the blame is yours&#x201D; can be a true pain. Especially because the person you are dealing with has likely no relation to the people who have a clue about the problem and is often not even able to run the tools you need to diagnose the issue because they don&#x2019;t have permissions to do so (&#x201C;no, you may not sniff our production networks and send that data to an outside party&#x201D; is a security policy that I support, even if it make my life harder).So you have an issue, and you need to figure out where it is happening. And in the scenario above, even if you managed to figure out what the actual problem was (which will require multiple server hoping and crossing of security zones) you&#x2019;ll realize that you need the key used for the DNSSEC, which is at the hangs of yet another admin (most probably at vacation right now).And when you fix that you&#x2019;ll find that you now need to flush the DNS caches of multiple DNS proxies and local servers, all of which require admin privileges by a bunch of people. So no, you can&#x2019;t assume one (competent) administrator. You have to assume that your software will run in the most brutal of production environments and that users will actively flip all sort of switches and see if you break, just because of Murphy.What you can do, however, is to design your software accordingly. That means reducing to a minimum the number of external dependencies that you have and controlling what you are doing. It means that as part of the design of the software, you try to consider failure points and see how much of everything you can either own or be sure that you&#x2019;ll have the facilities in place to inspect and validate with as few parties involved in the process.A real world example of such a design decision was to drop any and all authentication schemes in RavenDB except for X509 client certificates. In addition to the high level of security and trust that they bring, there is also another really important aspect. It is possible to validate them and operate on them locally without requiring any special privileges on the machine or the network. A certificate can be validate easy, using common tools available on all operating systems. The scenario above, we had similar ones on a pretty regular basis. And I got really tired of trying to debug someone&#x2019;s implementation of active directory deployment and all the ways it can cause mishaps.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently I had a need to test our SSL/TLS infrastructure. RavenDB is making heavy use of SSL/TLS and I was trying to see if I could get it to do the wrong thing. In order to do that, I needed to make strange TLS connections. In particular, the kind of things that would violate the spec and hopefully cause the server to behave in a Bad Way. The problem is that in order to do that, beyond the first couple of messages, you need to handle the whole encryption portion of the TLS stack. That is not fun. I asked around, and it looks like the best way to do that is to start with an existing codebase and break it. For example, get OpenSSL and modify it to generate sort of the right response. But getting OpenSSL compiling and working is a non trivial task, especially because I&#x2019;m not familiar with the codebase and it is complex.I tried that for a while, and then despaired and looked at the abyss. And the abyss looked back, and there was JavaScript. More to the point, there was this project.&#xA0; Forge is a Node.JS implementation of TLS from the ground up. I&#x2019;m not sure why it exists, but it does. It is also quite easy to follow up and read the code, and it meant that I could spend 10 minutes and have a debuggable TLS implementation that I could hack without any issues in VS Code. I liked that.I also heard good things about the Go TLS client in this regard, but this was easier. This was a good reminder for me to look further than the obvious solution. Oh, and I tested things and it my hunch that the server would die was false, it handled things properly, so that was a whole lot of excitement over nothing.</p>
         </article>
         <article id="article-2432">
-            <a href="https://www.meziantou.net/get-an-email-when-a-new-release-of-typescript-is-available-using-microsoft-flow.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2432">Get an email when a new release of TypeScript is available using Microsoft Flow</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 21, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">TypeScript evolves quickly. The TypeScript team publishes a new release every month. Some releases contain new features, some contain bug fixes. This means you have to update your version of TypeScript in your code every month if you want to be able to use the new features. But, it&#x27;s very easy to m</p>
-        </article>
-        <article id="article-2433">
-            <a href="https://ayende.com/blog/181027/ravendb-4-0-is-ready" target="_blank">
-                <h2 class="title mb-6" id="article-2433">RavenDB 4.0 is ready!</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 20, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was told that putting more than a single exclamation mark on the title is in bad taste, but it was really hard to refrain.&#xA;Today is my birthday, and we are celebrating with no remaining issues for RavenDB 4.0.&#xA;We just made the final commits for RavenDB 4.0. This means that it is (almost) done. As we speak the release train is already picking up speed with the bits currently being churned on the build server and on their way to be publicly available.&#xA;And yet there is this almost, what does this mean? We don&#x2019;t have anything left to do in 4.0, but the release process we have is not something as simple as just pushing a build through the build server and sending it to the world.&#xA;We are now going into the final proof stage. For the next week, the entire company is going to be focused primarily on trying to see if we can break RavenDB in interesting ways. We are also rolling the new RavenDB bits to all our productions systems, doing a much larger scale test of all the features.&#xA;We decided to make these bits available to users as well, to give you direct access to the final product before the actual release. The RavenDB website is already updated with a new coat of paint, which I&#x2019;m quite fond of.&#xA;As it turns out, releasing the project is a bit of a chore, so we are also working furiously on the docs, but it will take some time to complete. We pushed a lot of the updates to the online docs already, but there is still a lot to be done, which is another reason why we hold off on the RTM label.&#xA;That said, this is it, the only work going on right now is docs, testing and making sure that all the bits are glued together. Please download the new bits and give it a try, we would dearly appreciate any and all feedback.&#xA;We&#x2019;ll have a full blog post with all the details in a week, when the official release will happen, in the meantime, we&#x2019;re off to celebrate.</p>
-        </article>
-        <article id="article-2434">
-            <a href="https://ayende.com/blog/180898/the-married-couple-component-design-pattern" target="_blank">
-                <h2 class="title mb-6" id="article-2434">The married couple component design pattern</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 20, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the tough problems in distributed programming is how to deal with a component that is made up of multiple nodes. Consider a reservation service that is made up of a few nodes that needs to ensure that regardless of which node you&#x2019;re talking to, if you made a reservation, you&#x2019;ll have a spot. There are a lot of ways to solve this from the inside, but that isn&#x2019;t what I want to talk about right now. I want to talk about the overall approach to modeling such systems. Instead of focusing on how you would implement such a system, consider this to be an internal problem for this particular component. A good parallel for this problem is making plans with a couple for a meetup. You might be talking to both of them or just one, but you don&#x2019;t care. The person you are talking to is the one that is going to giving you a decision that is valid for the couple.How they do that is not relevant. It can be that one of them is in charge of the social calendar or that they flip based on the day of the week or whoever got out of bed first this morning or whatever his mother called her dog last year or&#x2026; you don&#x2019;t care. Furthermore, you probably don&#x2019;t want to know. That is an internal problem and sticking your nose into the internal decision making is a Bad Idea that may lead to someone sleeping on your couch for an indefinite period of time.But, and this is important, you can walk to either one of them and they will make such a decision. It may be something in the order of &#x201C;Let me talk to my significant other and I&#x2019;ll get back to you by tomorrow&#x201D; or it can be &#x201C;Sure, how about 8 PM on Sunday?&#x201D; or even &#x201C;I don&#x2019;t like you, so nope, nope nope&#x201D; but you&#x2019;ll get some sort of an answer.Taking this back to the distributed components design, that kind of decision in internal to the component and the mechanics of this is handled internally shouldn&#x2019;t be exposed outside. Let&#x2019;s take a look on why this is the case.Starting out, we run all such decisions as a consensus that required a majority of the nodes. But a couple of nodes went down and took down the system in a bad way, so the next iteration we had moved to reserving some spots for each node that they own and can hand off to others on their own, without consulting any other nodes.&#xA0; This sort of change shouldn&#x2019;t matters to callers of this component, but it is very common to have outside parties take notice of how you are doing things and take a dependency on that.The main reason I call it the married couple design problem is that it should immediately cause you to consider how you should stay away from the decision making there. Of course, if you don&#x2019;t, I&#x2019;m going to call your design the Mother In Law Architecture.</p>
-        </article>
-        <article id="article-2435">
-            <a href="https://ardalis.com/simple-flowcharts-and-state-diagrams-with-webgraphviz/" target="_blank">
-                <h2 class="title mb-6" id="article-2435">Simple Flowcharts and State Diagrams with WebGraphViz</h2>
+            <a href="https://ardalis.com/codemash-aftermash-2018/" target="_blank">
+                <h2 class="title mb-6" id="article-2432">Codemash Aftermash 2018</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -212,77 +164,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: December 20, 2017
+                posted on: January 15, 2018
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve used the GraphViz tool locally to quickly produce graphs and state diagrams from text input. Recently (2017), I learned about&#x2026;Keep Reading &#x2192;</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I attended Codemash 2018 last week, and it was (as usual) a great conference. I enjoyed seeing many friends and colleagues and I gave two&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-2436">
-            <a href="https://ayende.com/blog/180577/pr-review-the-simple-stuff-will-trip-you" target="_blank">
-                <h2 class="title mb-6" id="article-2436">PR Review</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 19, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In a recent PR, I run into this code, which is used in query generation to decide if we need to quote a particular alias. The code itself is pretty straightforward and easy to follow:It also have two distinct issues. First, there is the allocation because of the ToUpper call and second, we are doing O(N) search on the alias array every single time. I asked for a change, to use HashSet and to use the OrdinalIgnoreCase comparer. Here is the change I got back:This is exactly what I asked for, and it is very subtly wrong. We are now saving an allocation, which is great, but the problem is with the Contains method. This looks okay, but this is not HashSet.Contains, instead, this is an extension method from Enumerable.Contains, which iterates over the set and compare each value.The fix is also simple:And now we don&#x2019;t have O(N) anymore.Although I&#x2019;ll admit that for such small size, it probably doesn&#x2019;t matter.</p>
-        </article>
-        <article id="article-2437">
-            <a href="https://andrewlock.net/building-asp-net-core-apps-using-cake-in-docker/" target="_blank">
-                <h2 class="title mb-6" id="article-2437">Building ASP.NET Core apps using Cake in Docker</h2>
-            </a>
-            <p class="mb-2">by Andrew Lock</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 19, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I show how to build an ASP.NET Core app by using Cake to build your project inside a Docker container, while taking advantage of layer caching&#x2026;</p>
-        </article>
-        <article id="article-2438">
-            <a href="https://www.stevejgordon.co.uk/producing-my-first-asp-net-video" target="_blank">
-                <h2 class="title mb-6" id="article-2438">Producing my First ASP.NET Video</h2>
-            </a>
-            <p class="mb-2">by Steve Gordon</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 18, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This weekend I published my first ever technical video on YouTube. It&#x2019;s a short 8 minute introduction which explains how an ASP.NET Core 2.0 web application starts up. Specifically I chose to explore the contents of the Program class, digging into the IWebHostBuilder. It&#x2019;s designed primarily for beginners to ASP.NET Core, but hopefully it will [&#x2026;]</p>
-        </article>
-        <article id="article-2439">
-            <a href="https://ayende.com/blog/180901/queries-in-ravendb-spatial-searches" target="_blank">
-                <h2 class="title mb-6" id="article-2439">Queries&#x2B;&#x2B; in RavenDB</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 18, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Spatial queries are fun, when you look at them from the outside. Not so fun when you are working to implement them, but that is probably not your concern.RavenDB had had support for spatial queries for many years now, but the RavenDB 4.0 release has touched on that as well and now you can query spatial data with much greater each. Here is a small sample of how this works:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          from Employees &#xA;        &#xA;        &#xA;          &#xA;          where spatial.within(&#xA;        &#xA;        &#xA;          &#xA;              spatial.point(Address.Location.Latitude, Address.Location.Longitude), &#xA;        &#xA;        &#xA;          &#xA;              spatial.wkt(&quot;POLYGON((-122.32246398925781 47.643055992166275,-122.32795715332031 47.62917538239487,-122.33207702636719 47.60904194838943,-122.32109069824219 47.595846873927044,-122.31422424316406 47.594920778814824,-122.30701446533203 47.58959541384278,-122.28538513183594 47.59029005739745,-122.27989196777344 47.620382422330565,-122.28401184082031 47.62454769305083,-122.27645874023438 47.632414521155376,-122.27577209472656 47.6421307328982,-122.29328155517578 47.64536906863988,-122.32246398925781 47.643055992166275))&quot;)&#xA;        &#xA;        &#xA;          &#xA;          )&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          query.sql&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;This query is doing a polygon search for all the employees located inside that polygon. You can visualize the query on the map, we have 4 employees (in yellow) in the viewport and two of them are included within the specified polygon (in blue).And here is what this looks like in the studio:In this case, you can see how we support automatic indexing of spatial data. You can also define your own spatial indexes if you need greater control but it is as easy as pie to just go ahead and start running it.From code, this is just as easy:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;            var events = session.Query&lt;Events_SpatialIndex.Result, Events_SpatialIndex&gt;()&#xA;        &#xA;        &#xA;          &#xA;                .Spatial(x =&gt; x.Coordinates, x =&gt; x.WithinRadius(1243.0, 10.1230, 10.1230))&#xA;        &#xA;        &#xA;          &#xA;                .OrderBy(x =&gt; x.Name)&#xA;        &#xA;        &#xA;          &#xA;                .OfType&lt;Event&gt;()&#xA;        &#xA;        &#xA;          &#xA;                .ToArray();&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          spatial.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;I&#x2019;m not sure why, but when looking at the results, this just feels like magic.</p>
-        </article>
-        <article id="article-2440">
-            <a href="https://www.meziantou.net/using-ssh-on-windows.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2440">Using SSH on Windows</h2>
+        <article id="article-2433">
+            <a href="https://www.meziantou.net/live-unit-testing-in-visual-studio-2017-enterprise.htm" target="_blank">
+                <h2 class="title mb-6" id="article-2433">Live unit testing in Visual Studio 2017 Enterprise</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -292,9 +180,121 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: December 18, 2017
+                posted on: January 15, 2018
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When you have to manage a Linux server from Windows, you need to install a SSH client. In the past, you would need to install Putty. But today, things have changed. There are 2 different ways of using SSH on Windows.#Method 1: Using the new SSH Client feature (beta)In the latest release of Windows</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Unit tests allow validating the behavior of your code. When you write code, you want to get feedback from your tests as soon as possible. It is where the new feature of Visual Studio 2017 takes place. The live unit testing feature runs the tests in the background as soon as you save a file and disp</p>
+        </article>
+        <article id="article-2434">
+            <a href="https://ayende.com/blog/181281-A/building-a-lets-encrypt-acme-v2-client" target="_blank">
+                <h2 class="title mb-6" id="article-2434">Building a Let&#x2019;s Encrypt ACME V2 client</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 12, 2018
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The Let&#x2019;s Encrypt ACME v2 staging endpoint is live, with planned release date of February 27. This is a welcome event, primarily because it is going to bring wild card certificates support to Let&#x2019;s Encrypt.That is something that is quite interesting for us, so I sat down and built an ACME v2 client for C#. You can find the C# ACME v2 Let&#x2019;s Encrypt client here, you&#x2019;ll note that this is a gist containing a single file and indeed, this is all you need, with the only dependency being JSON.Net. Here is how you use this code for certificate generation:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          var client = new LetsEncryptClient(LetsEncryptClient.StagingV2);&#xA;        &#xA;        &#xA;          &#xA;          await client.Init(&quot;your-email@example.com&quot;, CancellationToken.None);&#xA;        &#xA;        &#xA;          &#xA;          var tos = client.GetTermsOfServiceUri(); // user should agree to this&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          // start a new order for the *.example.net wildcard domain&#xA;        &#xA;        &#xA;          &#xA;          Dictionary&lt;string,string&gt; challenges = await client.NewOrder(new[]&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              &quot;*.example.net&quot;&#xA;        &#xA;        &#xA;          &#xA;          });&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          // do the DNS challenge&#xA;        &#xA;        &#xA;          &#xA;          foreach(var challenge in challenges)&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;             await UpdateDnsServer(host: &quot;_acme-challenge.&quot; &#x2B; challenge.Key, token: challenge.Value, recordType: &quot;TXT&quot;);&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          // Now that the DNS is updated, let Let&#x27;s Encrypt know that it can validate them&#xA;        &#xA;        &#xA;          &#xA;          await client.CompleteChallenges();&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          // get the certificate for the successful order&#xA;        &#xA;        &#xA;          &#xA;          var cert = await client.GetCertificate();&#xA;        &#xA;        &#xA;          &#xA;          //combine public cert with the private key for a full pfx&#xA;        &#xA;        &#xA;          &#xA;          var pfx = cert.Cert.CopyWithPrivateKey(cert.PrivateKey);&#xA;        &#xA;        &#xA;          &#xA;          File.WriteAllBytes(&quot;wildcard.example.net.pfx&quot;, pfx.Export(X509ContentType.Pfx));&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          client.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;Note that the code itself is geared toward our own use case (generating the certs as part of a setup process) and it only handles DNS challenges. This is partly why it is not a project but a gist, because it is just to share what we have done with others, not to take it upon ourselves to build a full blown client.I have to say that I like the V2 protocol much better, is seems much more intuitive to use and easier to work with. I particularly liked the fact that I can resume working on an order after a while, which means that failure modes such as failing to propagate a DNS update can now be much more easily recoverable. It also means that trying to run the same order twice for some reason doesn&#x2019;t generate a new order, but resume the existing one, which is quite nice, given the rate limits imposed by Let&#x2019;s Encrypt. Note that the code is also making assumptions, such as caching details for you behind the scenes and not bother with other parts of the API that are not important for our needs (modifying an account or revoking a certificate).</p>
+        </article>
+        <article id="article-2435">
+            <a href="https://ayende.com/blog/181251-A/there-is-a-docker-in-your-assumptions" target="_blank">
+                <h2 class="title mb-6" id="article-2435">There is a Docker in your assumptions</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 11, 2018
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">About a decade ago I remember getting a call from a customer that was very upset with RavenDB. They just deployed to production a brand new system, they were ready for high load so they wen with a 32 GB and 16 cores system (which was a lot at the time). The gist of the issue, RavenDB was using 15% of the CPU and about 3 GB on RAM to serve requests. When I inquired further about how fast it was doing that I got a grudging &#x201C;a millisecond or three, not more&#x201D;. I ended the call wondering if I should add a thread that would do nothing but allocate memory and compute primes. That was a long time ago, since the idea of having a thread do crypto mining didn&#x2019;t occur to me .This is a funny story, but it shows a real problem. Users really want you to be able to make full use of their system, and one of the design goals for RavenDB has been to do just that. This means making use of as much memory as we can and as much CPU as we need. We did that with an eye toward common production machines, with many GB of memory and cores to spare.And then came Docker, and suddenly it was the age of the 512MB machine with a single core all over again. That cause&#x2026; issues for us. In particular, our usual configuration is meant for a much stronger machine, so we now need to also deploy separate configuration for lower end machines. Luckily for us, we were always planning on running on low end hardware, for POS and embedded scenarios, but it is funny to see the resurgence of the small machine in production again.</p>
+        </article>
+        <article id="article-2436">
+            <a href="https://www.meziantou.net/aspect-oriented-programming-in-typescript.htm" target="_blank">
+                <h2 class="title mb-6" id="article-2436">Aspect Oriented Programming in TypeScript</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 11, 2018
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Aspect-Oriented Programming (AOP) addresses the problem of cross-cutting concerns, which would be any kind of code that is repeated in different methods and can&#x27;t normally be completely refactored into its module, like with logging, caching, or validation. These system services are commonly referre</p>
+        </article>
+        <article id="article-2437">
+            <a href="https://www.stevejgordon.co.uk/forking-cloning-github" target="_blank">
+                <h2 class="title mb-6" id="article-2437">Forking and Cloning from GitHub</h2>
+            </a>
+            <p class="mb-2">by Steve Gordon</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 10, 2018
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I&#x2019;m going to share the initial steps that you will need to take in order to be begin contributing to an open source project. I&#x2019;ve covered this more generally in the past and wanted to provide a more focused post that covered these steps for a new open source contributor. For this [&#x2026;]</p>
+        </article>
+        <article id="article-2438">
+            <a href="https://ayende.com/blog/181249-A/when-your-memory-wont-go-down" target="_blank">
+                <h2 class="title mb-6" id="article-2438">When your memory won&#x2019;t go down</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 10, 2018
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A user reported something really mysterious, RavenDB was using a lot of memory on their machine. Why the mystery? Because RavenDB is very careful to account for the memory it uses, exactly because we run into many such cases before.According to RavenDB&#x2019;s own stats, we got:300 MB in managed memory300 MB in unmanaged memory200 MB in mmap files-----------------------------------------------1.7 GB total working setYou might notice the discrepancy in numbers. I&#x2019;ll admit that we have started debugging everything from the bottom up, and in this case, we used &#x201C;strace &#x2013;k&#x201D; to figure out who is doing the allocations. In particular, we watched for anonymous mmap calls (which is a way to ask the OS for memory) and trace who is making these calls. As it turns out, it was the GC. But we are also checking the GC itself for the amount of managed memory we use, and we get a far smaller number. What is going on?By default, RavenDB is optimized to use as much of the system resources as it can, to provide low latency and lightning responses. One part of that is the use of the Server GC mode with the RetainVM flag. This means that instead of returning the memory to the operating system, the GC was keeping it around in case it will be needed again. In this case, we got to the point where most of the memory in the process was held by the GC in case we&#x2019;ll need it again.The fix was to set the RetainVM flag to false, which meant that the GC Will release memory that is not in used back to the OS much more rapidly.</p>
+        </article>
+        <article id="article-2439">
+            <a href="https://ardalis.com/how-to-get-involved-with-microsoft-developer-community/" target="_blank">
+                <h2 class="title mb-6" id="article-2439">How to Get Involved with the Microsoft Developer Community</h2>
+            </a>
+            <p class="mb-2">by Ardalis</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 10, 2018
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The other day, someone wrote me to ask: To cut to the chase, I was wondering if, given your experience, you had any recommendations or&#x2026;Keep Reading &#x2192;</p>
+        </article>
+        <article id="article-2440">
+            <a href="https://ayende.com/blog/181250-A/reminder-early-bird-pricing-for-ravendb-workshops-about-to-close" target="_blank">
+                <h2 class="title mb-6" id="article-2440">Reminder</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 09, 2018
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The early bird pricing for the Q1 RavenDB workshops is about to end, hurry up and register. We have workshops in Tel Aviv, San Francisco and New York in this round and are working on Q2 workshop Europe and South America now.In the workshop, we will dive deeply into RavenDB 4.0, and all the new and exciting things it can do for you. This is meant for developers and their operations teams who want to know RavenDB better.</p>
         </article>
         <div class="button flex justify-between">
             <a href="243.html"><span class="back arrow"></span></a>

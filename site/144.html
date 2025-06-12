@@ -137,8 +137,88 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1431">
-            <a href="https://ardalis.com/how-to-easily-format-tables-in-markdown/" target="_blank">
-                <h2 class="title mb-6" id="article-1431">How to Easily Format Tables in Markdown</h2>
+            <a href="https://ayende.com/blog/191521-A/processing-large-aggregations-in-ravendb" target="_blank">
+                <h2 class="title mb-6" id="article-1431">Processing large aggregations in RavenDB</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 27, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the distinguishing feature of RavenDB is its ability to process large aggregations very quickly. You can ask questions on very large data sets and get the results in milliseconds. This is interesting, because RavenDB isn&#x2019;t an OLAP database and the kind of questions that we ask can be quite complex.For example, we have the Products/Recommendations index, which allow us to ask:For any particular product, find me how many times it was sold, what other products were sold with it and in what frequency.The index to manage this is here:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          // map&#xA;        &#xA;        &#xA;          &#xA;          from o in docs.Orders&#xA;        &#xA;        &#xA;          &#xA;          from l in o.Lines&#xA;        &#xA;        &#xA;          &#xA;          select new {&#xA;        &#xA;        &#xA;          &#xA;              l.Product,&#xA;        &#xA;        &#xA;          &#xA;              Related = o.Lines.Select(x=&gt;x.Product)&#xA;        &#xA;        &#xA;          &#xA;                          .Where(x=&gt;x!=l.Product)&#xA;        &#xA;        &#xA;          &#xA;                          .Select(x=&gt;new { Count = 1, Product = x}),&#xA;        &#xA;        &#xA;          &#xA;              Count = 1&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          // reduce&#xA;        &#xA;        &#xA;          &#xA;          from result in results&#xA;        &#xA;        &#xA;          &#xA;          group result by result.Product into g&#xA;        &#xA;        &#xA;          &#xA;          select new {&#xA;        &#xA;        &#xA;          &#xA;              Product = g.Key,&#xA;        &#xA;        &#xA;          &#xA;              Count = g.Sum(x=&gt;x.Count),&#xA;        &#xA;        &#xA;          &#xA;              Related = g.SelectMany(x=&gt;x.Related)&#xA;        &#xA;        &#xA;          &#xA;                  .GroupBy(x=&gt;x.Product)&#xA;        &#xA;        &#xA;          &#xA;                  .Select(x=&gt;new {&#xA;        &#xA;        &#xA;          &#xA;                      Count = x.Sum(y=&gt;y.Count),&#xA;        &#xA;        &#xA;          &#xA;                      Product = x.Key&#xA;        &#xA;        &#xA;          &#xA;                  })&#xA;        &#xA;        &#xA;          &#xA;                  .OrderByDescending(x=&gt;x.Count)&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          Products.Recommendations.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;The way it works, we map the orders and have a projection for each product, and then we add the other products that were sold with the current one. In the reduce, we group by the product and aggregate the related products together. But I&#x2019;m not here to talk about the recommendation engine. I wanted to explain how RavenDB process such indexes. All the information that I&#x2019;m talking about can be seen in the Map/Reduce visualizer in the RavenDB Studio.Here is a single entry for this index. You can see that products/11-A was sold 544 times and 108 times with products/69-A. Because of the way RavenDB process Map/Reduce indexes, when we query, we run over the already precomputed results and there is very little computation cost at querying time. Let see how RavenDB builds the index. Here is a single order, where three products were sold. You can see that each of them as a very interesting tree structure. Here is how it looks like when we zoom into a particular product. You can see how RavenDB aggregate the data. First in the bottom most page on the right (#596). We aggregate that with the other 367 pages and get intermediate results at page #1410. We then aggregate that again with the intermediate results in page #105127 to get the final tall. In this case, you can see that products/11-A was sold 217,638 times and mostly with products/16-A (30,603 times) and products/72-A (20,603 times).When we have a new order, all we need to do is update a bottom most page and then recurse upward in the three. In the case we have here, there is a pretty big reduce value and we are dealing with tens of millions of orders. We have three levels to the tree, which means that we&#x2019;ll need to do three update operations to account for new or updated data. That is cheap, because it means that we have to do very little work to maintain the index.At query time, of course, we don&#x2019;t really have to do much, all the hard work was done.I like this example, because it shows case a non trivial example and how RavenDB handles this with ease. These kind of non trivial work is something that tend to be very hard to get working properly and with RavenDB this is part of my default: &#x201C;let&#x2019;s do this on the fly demo&#x201D;.</p>
+        </article>
+        <article id="article-1432">
+            <a href="https://www.meziantou.net/optimizing-js-interop-in-a-blazor-webassembly-application.htm" target="_blank">
+                <h2 class="title mb-6" id="article-1432">Optimizing JS Interop in a Blazor WebAssembly application</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 27, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Blazor WebAssembly and Blazor Server allow calling JS functions from the .NET code. By using IJSRuntime.InvokeAsync&lt;T&gt;(name), you can invoke a JS function and get its result. This interface works well in Blazor WebAssembly and Blazor Server.Razorcopy@inject IJSRuntime JSRuntime&#xA;&#xA;@code{&#xA;    pr</p>
+        </article>
+        <article id="article-1433">
+            <a href="https://ayende.com/blog/191553-C/ravendb-5-0-has-been-released" target="_blank">
+                <h2 class="title mb-6" id="article-1433">RavenDB 5.0 has been released!</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 24, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB 5.0 has been released and is now available for download and on the cloud. There are many new changes in this version, but the highlights are:&#xA;&#xA;Time Series support &#x2013; allow to store time series data and run queries on time series of any size in milliseconds.&#xA;Documents compression &#x2013; will usually reduce your disk utilization by over 50%.&#xA;Many indexing improvements, especially with regards to indexing and querying date time data.&#xA;&#xA;As I mentioned, you can upgrade to the new version right now on your own instances and you can deploy new cloud instances with RavenDB 5.0 immediately.&#xA;RavenDB 5.0 is backward compatible with RavenDB 4.2, you can shut down your RavenDB 4.2 instance, update the binaries and start RavenDB 5.0 and everything will work. The other way around will not work, mind you. Once you have run RavenDB 5.0, you cannot go back to RavenDB 4.2.&#xA;A RavenDB 5.0 instance can be part of a cluster running other RavenDB 4.2 nodes (and vice versa), which allows you to do rolling migrations and test the RavenDB 5.0 in production without committing all the way in.&#xA;An application using RavenDB 4.x client will be able to just continue working with RavenDB 5.0 server, with no change in behavior. That enables you to just switch over to the new version without needing to modify the whole stack at once.&#xA;For users running RavenDB 4.2, I&#x2019;ll remind you that this is a Long Term Support (LTS) release and it is perfectly fine to remain on that edition for the next year or so.&#xA;Users on the cloud that are running RavenDB 4.2 can request an upgrade to RavenDB 5.0 via our support, but for the foreseeable future, we are going to keep users on RavenDB 4.2 unless they ask to be upgraded to RavenDB 5.0.&#xA;I&#x2019;m really happy that we go to this milestone and I wanted to take this opportunity to congratulate the team behind RavenDB 5.0 for an excellent job done. Under non trivial circumstances, we have a pretty amazing product shipping, and I am very proud of what we have shipped.</p>
+        </article>
+        <article id="article-1434">
+            <a href="https://www.meziantou.net/storing-user-settings-in-a-blazor-webassembly-application.htm" target="_blank">
+                <h2 class="title mb-6" id="article-1434">Storing user settings in a Blazor WebAssembly application</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 22, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In an application, you often need to store user settings such as the selected theme, any application configuration, or their username. These settings must be:Accessible from anywhere in the applicationPersisted, so you can read them when the user restarts the applicationShared across multiple insta</p>
+        </article>
+        <article id="article-1435">
+            <a href="https://ayende.com/blog/191489-A/an-update-on-the-release-status-of-ravendb-5-0" target="_blank">
+                <h2 class="title mb-6" id="article-1435">An update on the release status of RavenDB 5.0</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 21, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB 5.0 is scheduled to release this week. It was supposed to be released a week or so ago, but we have a phase in the release which I guess should be called &#x201C;release the monkeys&#x201D;. In that phase, we basically have gather around the servers and push. The idea is that we are trying to generate a lot of abuse on the system and see if it will survive the storm of the monkeys.The version we deployed didn&#x2019;t survive that test, unfortunately. We had an improperly bounded transaction scope that caused a slow resource leak. Utterly unnoticeable in the grand scheme of things, but enough to cause degradation in resource usage over the course of several days of hard load. The fix itself was simple enough, but that meant that we had to go back to square one and get a new bunch of monkeys to muck around in the servers. Barring any new surprises, we expect to be able to certify the current 5.0 build as monkey resistant and set it free to the world.</p>
+        </article>
+        <article id="article-1436">
+            <a href="https://ardalis.com/data-access-principles/" target="_blank">
+                <h2 class="title mb-6" id="article-1436">Data Access Principles</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -148,45 +228,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: July 01, 2020
+                posted on: July 21, 2020
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m a big fan of Markdown. It provides a simple way to richly format text without the complexity or security issues that would come from&#x2026;Keep Reading &#x2192;</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">What are some guiding principles that can be applied to data access in software applications and architecture? In preparing a workshop on&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-1432">
-            <a href="https://www.meziantou.net/showing-a-loading-screen-while-initializing-a-blazor-application.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1432">Showing a loading screen while initializing a Blazor application</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 01, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Your Blazor application may require some initialization steps. For instance, you may need to get the user data from a web API before the user can use the application. Depending on the network this can be fast or take a few seconds. You may want to show a loading screen while initializing the applic</p>
-        </article>
-        <article id="article-1433">
-            <a href="https://ayende.com/blog/191138-C/using-ravendb-nosql-document-database-to-share-data-with-edge-points-you-cant-trust" target="_blank">
-                <h2 class="title mb-6" id="article-1433">Using RavenDB NoSQL Document Database to Share Data with Edge Points You Can&#x2019;t Trust</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 30, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my previous post, I wrote about the case of a medical provider that has a cloud database to store its data, as well as a whole bunch of doctors making house calls. There is the need to have the doctors have (some) information on their machine as well as push updates they make locally back to the cloud. However, given that their machines are in the field, and that we may encounter a malicious doctor, we aren&#x2019;t going to fully trust these systems. We still want the system to function, though. The question is how will we do it?Let&#x2019;s try to state the problem in more technical terms:The doctor need to pull data from the cloud (list of patients to visits, patient records, pharmacies and drugs available, etc).The doctor nee to be able to create patient records (exam made, checkup results, prescriptions, recommendations, etc).The doctor&#x2019;s records needs to be pushed to the cloud.The doctor should not be able to see any record that is not explicitly made available to them.The same applies for documents, attachments, time series, counters, revisions, etc. Enforcing Distributed Data IntegrityThe requirements are quite clear, but they do bring up a bit of a bother. How are we going to enforce it?One way to do that would be to add some metadata rule for the document, deciding if a doctor should or should not see that document. Something like that:In this model, a doctor will have be able to get this document if they have any of the tags associated with the document.This can work, but that has a bunch of non trivial problems and a huge problem that may not be obvious. Let&#x2019;s start from the non trivial issues:How do you handle non document data? Based on the owner document, probably. But that means that we have to have a parent document. That isn&#x2019;t always the case.It isn&#x2019;t always the case if the document was deleted, or is in a conflicted state.What do you do with revisions, if the access tags has changed? What do you follow?There are other issues, but as you can imagine, they are all around managing the fact that this model allows you to change the tags for the document and expect to handle this properly. The huge problem, however, is what should happen when a tag is removed? Let&#x2019;s assume that we have the following sequence of events:patients/oren is created, with access tag of &#x201C;doctors/abc&#x201D;That access tag is then removedDoctor ABC&#x2019;s machine is then connected to the cloud and setup replication.We need to remove patients/oren from the machine, so we send a tombstone.So far, so good. However, what about Doctor&#x27; XYZ&#x2019;s machine? At this time, we don&#x2019;t know what the old tags were, and that machine may or may not have that document. It shouldn&#x2019;t have it now, so we&#x2019;ll send a tombstone there? That leads to information leak by revealing document ids that we aren&#x2019;t authorized for. We need a better option. Using the Document ID as the Basis for Data ReplicationWe can define that once created, the access tags are immutable, and that would help considerably.&#xA0; But that is still fairly complex to manage and opens up issues regarding conflicts, deletion and re-creation of a document, etc.Instead, we are going to use the document&#x2019;s id as the source for the decision to replicate the document or not. In other words, when we register the doctor&#x2019;s machine, we set it up so it will allow:&#xA;&#xA;&#xA;Incoming paths&#xA;Outgoing paths&#xA;&#xA;&#xA;doctors/abc/visits/*&#xA;&#xA;tasks/doctors/abc/*&#xA;patients/clinics/33-conventry-rd/*pharmacies/*tasks/doctors/abc/*doctors/abclaboratories/*&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;In this case, incoming and outgoing are defined from the point of view of the cloud cluster. So this setup allows the doctor&#x2019;s machine to push updates to any document with an id that starts with &#x201C;doctors/abc/visits/&#x201D; or &#x201C;tasks/doctors/abc/*&#x201D;. And the cloud will send all pharmacies and laboratories data. The cloud will also send all the patients for the doctor&#x2019;s clinic as well as the tasks for this doctor, finally, we have the doctor&#x2019;s record itself. Everything else will be filtered.This Model is SimpleThis model is simple, it provides a list of outgoing and incoming paths for the data that will be replicated. It is also quite surprisingly powerful. Consider the implications of the configuration above.The doctor&#x2019;s machine will have a list of laboratories and pharmacies (public information) locally. It will have the doctor&#x2019;s own document as well as records of the patients in the clinic. The doctor is able to create and push patient visit&#x2019;s records. Most interestingly, the tasks for the doctor are defined to allow both push and pull. The doctor will receive updates from the office about new tasks (home visits) to make and can mark them complete and have it show up in the cloud.The doctor&#x2019;s machine (and the doctor as well) is not trusted. So we limit the exposure of the data that they can see on a Need To Know basis. On the other hand, they are limited in what they can push back to the cloud. Even with these limitations, there is a lot of freedom in the system, because once you have this defined, you can write your application on the cloud side and on the laptop and just let RavenDB handle the synchronization between them. The doctor doesn&#x2019;t need access to a network to be able to work, since they have a RavenDB instance running locally and the cloud instance will sync up once there is any connectivity. We are left with one issue, though. Note that the doctor can get the patients&#x2019; files, but is unable to push updates to them. How is that going to work?The reason that the doctor is unable to write to the patients&#x2019; files is that they are not trusted. Instead, they will send a visit record, which contains their finding and recommendation and on the cloud, we&#x2019;ll validate the data, merge it with the actual patient&#x2019;s record, apply any business rules and then update the record. Once that is done, it will show up in the doctor&#x2019;s machine magically. In other words, this setup is meant for untrusted input.There are more details that we can get into, but I hope that this outline the concepts clearly. This is not a RavenDB 5.0 feature, but will be part of the next RavenDB release, due around September.</p>
-        </article>
-        <article id="article-1434">
-            <a href="https://andrewlock.net/visualizing-asp-net-core-endpoints-using-graphvizonline-and-the-dot-language/" target="_blank">
-                <h2 class="title mb-6" id="article-1434">Visualizing endpoints using the DOT language</h2>
+        <article id="article-1437">
+            <a href="https://andrewlock.net/creating-a-custom-endpoint-visualization-graph/" target="_blank">
+                <h2 class="title mb-6" id="article-1437">Creating a custom endpoint visualization graph</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -196,61 +244,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 30, 2020
+                posted on: July 21, 2020
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Visualizing ASP.NET Core 3.0 endpoints using GraphvizOnline - Part 1</p>
-        </article>
-        <article id="article-1435">
-            <a href="https://ayende.com/blog/191137-C/sharing-data-in-a-byzantine-system" target="_blank">
-                <h2 class="title mb-6" id="article-1435">Sharing data in a Byzantine system</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 29, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB is typically deployed as a set of trusted servers. The network is considered to be hostile, which is why encrypt everything over the wire and using X509 certificates for mutual authentication, but once the connection is established, we trust the other side to follow the same rules as we do.To clarify, I&#x2019;m talking here about trust between nodes, not a client connected to RavenDB. These are also authenticated using X509 certificate, but they are limited to the access permissions assigned to them. Nodes in a cluster fully trust one another and need to do things like forward commands accepted by one node to another one. That requires that the second node trust that the first node properly authenticated the client and won&#x2019;t pass operations that the client has no authority for.Use Case 1: A Database System for Multiple Medical ClinicsI think that a real use case might make things more concrete. Let&#x2019;s assume that we have a set of clinics, with the following distribution of data.&#xA0;We have two clinics, one in Boston and one in Chicago, as well as a cloud system. The rules of the system are as follows:Data from each clinic is replicated to the cloud.Data from the cloud is replicated to the clinics.Data from a clinic may only be at the clinic or in the cloud.A clinic cannot get (or modify) data that didn&#x2019;t came from the clinic.In this model, we have three distinct locations, and we presumably trust all of them (otherwise, would we put patient data on them?). There is a need to ensure that we don&#x2019;t expose patient data from one clinic to another, but that is about it. Note that in terms of RavenDB topology, we don&#x2019;t have a single cluster here. That wouldn&#x2019;t make sense. To start with, we need to be able to operate the clinic when there is no internet connectivity. And we don&#x2019;t want to pay with any avoidable latency even if everything is working fine.&#xA0; So in this case, we have three separate clusters, one in each location, and they are connected to one another using RavenDB&#x2019;s multi master replication. Use Case 2: A Database System Sharing with Outside Edge PointsLet&#x2019;s look at another model, however, in this case, we are still dealing with medical data, but instead of a clinic, we have to deal with a doctor making house calls:In this case, we are still talking about private data, but we are no longer trusting the end device. The doctor may lose the laptop, they may have malware running on the machine or may be trying to do Bad Things directly.&#xA0; We want to be able to push data to the doctor&#x2019;s machine and receive updates from the field. RavenDB has some measures at the moment to handle this scenario. You need to only get some data from the cloud to the doctor&#x2019;s laptop, and you want to push only certain things back to the cloud. You can use pull replication and ETL. to handle this scenario, and it will work, as long as you are willing to trust the end machine. Given the stringent requirement for medical data, it is not something out of bounds, actually. Full volume encryption, forbidding use of unknown software and a few other protections ensure that if the laptop is lost, the only thing you can do with it is repurpose the hardware.&#xA0; If we can go with that assumption, this is great. However&#x2026; we need to consider the case that our doctor is actually malicious.When the Edge Point isn&#x2019;t as Healthy as the Doctor Using ItSo we need a something in the middle, between all our data and what can reside on that doctor&#x2019;s machine.&#xA0; As it currently stands, in order to create the appropriate barrier between the doctor&#x2019;s machine and the cloud, you&#x2019;ll have to write your own sync code and apply any logic / authorization at that level.Sync code is non trivial, mostly because of the number of edge cases you have to deal with and the potential for conflicts. This has already been solved by RavenDB, so having to write it again is not ideal as far as we are concerned.What would you do?</p>
-        </article>
-        <article id="article-1436">
-            <a href="https://www.meziantou.net/customizing-the-blazor-webassembly-loading-screen.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1436">Customizing the Blazor WebAssembly loading screen</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 29, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When a Blazor WebAssembly application loads, it first downloads blazor.webassembly.js and all the .NET assemblies of the application. Until everything is loaded, it displays an ugly loading message:This message can be visible for a few seconds depending on the size of the application and the connec</p>
-        </article>
-        <article id="article-1437">
-            <a href="https://ayende.com/blog/191330-C/recorded-session-modeling-in-non-relational-world" target="_blank">
-                <h2 class="title mb-6" id="article-1437">Recorded session: Modeling in non relational world</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 25, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">raMy session from the DotNet Iasi user group is up.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Visualizing ASP.NET Core 3.0 endpoints using GraphvizOnline - Part 4</p>
         </article>
         <article id="article-1438">
-            <a href="https://www.meziantou.net/convert-datetime-to-user-s-time-zone-with-server-side-blazor.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1438">Convert DateTime to user&#x27;s time zone with server-side Blazor</h2>
+            <a href="https://www.meziantou.net/detect-missing-cancellationtoken-using-a-roslyn-analyzer.htm" target="_blank">
+                <h2 class="title mb-6" id="article-1438">Detecting missing CancellationToken using a Roslyn Analyzer</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -260,15 +260,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 25, 2020
+                posted on: July 21, 2020
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">WarningA newer version of this post for .NET 8 onwards is available at Convert DateTime to user&#x27;s time zone with Blazor in .NET 8When you display DateTime data to a user, you may want to convert the date to the user&#x27;s time zone. With server-side Blazor, the code is executed on the server, so DateTi</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently, Marc Gravell asked on Twitter if an analyzer is available to detect when a method is called without specifying a CancellationToken whereas there is one available in the current context (local variable or parameter).C#copyusing System.Threading;&#xA;&#xA;namespace ConsoleApp&#xA;{&#xA;    public class MyT</p>
         </article>
         <article id="article-1439">
-            <a href="https://enterprisecraftsmanship.com/posts/how-to-unit-test-an-abstract-class/" target="_blank">
-                <h2 class="title mb-6" id="article-1439">How to Unit Test an Abstract Class</h2>
+            <a href="https://www.stevejgordon.co.uk/dotnet-on-aws-introducing-docker-ecs-integration" target="_blank">
+                <h2 class="title mb-6" id="article-1439">.NET on AWS: Introducing Docker ECS Integration</h2>
             </a>
-            <p class="mb-2">by Vladimir Khorikov</p>
+            <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -276,15 +276,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 24, 2020
+                posted on: July 20, 2020
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How to unit test an abstract class? Or a whole class hierarchy that depends on that abstract class? Let&#x2019;s see.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last week I read about a new Docker ECS Integration experience, and it piqued my interest. I immediately put it onto my list of things to try out and experiment with. After spending an hour or so with the tooling over the weekend, my early impression is that this CLI feature might be quite useful. [&#x2026;]</p>
         </article>
         <article id="article-1440">
-            <a href="https://ayende.com/blog/191331-C/ask-ayende-anything-webinar" target="_blank">
-                <h2 class="title mb-6" id="article-1440">Ask Ayende Anything webinar</h2>
+            <a href="https://www.meziantou.net/creating-a-datagrid-component-in-blazor.htm" target="_blank">
+                <h2 class="title mb-6" id="article-1440">Creating a DataGrid component in Blazor</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -292,9 +292,9 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 24, 2020
+                posted on: July 20, 2020
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Next week I&#x2019;m going to be doing a special edition of my webinar. Instead of me bringing the topic and talking about it, I want to answer your questions.I would love to get your questions. The theme is meant to be mostly about RavenDB but I&#x2019;ll accept most questions. You can leave the question in the comments, and I&#x2019;ll answer them live in the webinar.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In a previous post, I explained how to create a repeater component to encapsulate the layout logic into reusable components. In this post, I&#x27;ll show you how to create a more complex component to display a data grid. The goal of the component is to render a &lt;table&gt; element from a list of colum</p>
         </article>
         <div class="button flex justify-between">
             <a href="143.html"><span class="back arrow"></span></a>

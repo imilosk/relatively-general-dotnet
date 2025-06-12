@@ -137,8 +137,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1441">
-            <a href="https://ayende.com/blog/191329-C/production-post-mortem-the-opener-of-files-and-destroyer-of-peace" target="_blank">
-                <h2 class="title mb-6" id="article-1441">Production post mortem: The opener of files and destroyer of peace</h2>
+            <a href="https://ayende.com/blog/191457-A/checking-homework-and-the-10x-programmer" target="_blank">
+                <h2 class="title mb-6" id="article-1441">Checking homework and the 10x programmer</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -148,13 +148,29 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 23, 2020
+                posted on: July 17, 2020
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A customer opened a support call about a recurring problem that they had in their system. System.InvalidOperationException: Errno: 1224=&#x27;The requested operation cannot be performed on a file with a user-mapped section open.&#xA;&#x27; (rc=0) - &#x27;Failed to rvn_write_header &#x27;headers.one&#x27;, reason : FailOpenFile&#x27;. FailCode=FailOpenFile.&#xA;   at Sparrow.Server.Platform.PalHelper.ThrowLastError(FailCodes rc, Int32 lastError, String msg) in C:\Builds\RavenDB-Stable-4.2\42040\src\Sparrow.Server\Platform\PalHelper.cs:line 35&#xA;   at Voron.StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.WriteHeader(String filename, FileHeader* header) in C:\Builds\RavenDB-Stable-4.2\42040\src\Voron\StorageEnvironmentOptions.cs:line 706&#xA;   at Voron.Impl.FileHeaders.HeaderAccessor.Modify(ModifyHeaderAction modifyAction) in C:\Builds\RavenDB-Stable-4.2\42040\src\Voron\Impl\FileHeaders\HeaderAccessor.cs:line 200&#xA;   at Voron.Impl.Journal.WriteAheadJournal.JournalApplicator.SyncOperation.UpdateDatabaseStateAfterSync() in C:\Builds\RavenDB-Stable-4.2\42040\src\Voron\Impl\Journal\WriteAheadJournal.cs:line 998&#xA;   at Voron.Impl.Journal.WriteAheadJournal.JournalApplicator.LockTaskResponsible.RunTaskIfNotAlreadyRan() in C:\Builds\RavenDB-Stable-4.2\42040\src\Voron\Impl\Journal\WriteAheadJournal.cs:line 1192&#xA;And the code that failed was:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          HANDLE file = CreateFileW((LPCWSTR)path,&#xA;        &#xA;        &#xA;          &#xA;            GENERIC_WRITE | GENERIC_READ,&#xA;        &#xA;        &#xA;          &#xA;            FILE_SHARE_READ,&#xA;        &#xA;        &#xA;          &#xA;            NULL,&#xA;        &#xA;        &#xA;          &#xA;            CREATE_ALWAYS,&#xA;        &#xA;        &#xA;          &#xA;            FILE_ATTRIBUTE_NORMAL,&#xA;        &#xA;        &#xA;          &#xA;            NULL&#xA;        &#xA;        &#xA;          &#xA;            );&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          code.c&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;Based on that information, the issue is obvious. Someone is poking their nose into RavenDB&#x2019;s files. It is important to understand that this will cause the I/O operation to fail. And since this is part of a critical path in managing the file, it will force the entire database to unload. We asked the customer to make sure that all indexing services, anti virus programs and the like would be instructed to ignore the RavenDB directories and were assured that this is already the case. That led us to a problem. If no one else is touching our files, is it possible that it is our own code that is causing the issue?I asked the customer to use Process Monitor to track system calls made on that particular file.&#xA0; It took a day or so, but they came back with:8:13:31.4865562 AM MsMpEng.exe 3112 CreateFileMapping D:\RavenDB\Server\RavenData\System\headers.one FILE LOCKED WITH WRITERS SyncType: SyncTypeCreateSection, PageProtection: PAGE_EXECUTE&#xA;We had our culprit, Windows Defender would mess around in our files, causing some I/O operations to fail.&#xA0; The customer added RavenDB&#x2019;s directories to Windows Defender&#x2019;s excluded list as well, and that should be the end of things. Overall, this is a short issue, but it was only short because we were able to prove what other process was causing us issues.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m teaching a cloud course and I gave the students a task to do. I also now have to go through about fifty projects and evaluate them. I might not have thought this one through .What is interesting is the approaches that I&#x2019;m seeing to solve the problem.There is a wide disparity in the amount of code that people write. Sometimes by an order of magnitude. The students can chose any language, but in practice they almost all chose either Python or Node.&#xA0; There were very few that used Java (and wow that was painful to read). Two people submitted Java code. One of them gave me a single file, under 100 lines of code. The other gave me a project with 12 files (repository, service, controller, etc) and over 600 lines of code. Then there were the people who zipped node_modules and sent it over. My poor hard disk&#x2026; One guy send a zip file that is 173 MB in size, which I&#x2019;m afraid to look at (it looks like he included terraform.exe and multiple copies of node_modules!).At any rate, the reason for this post is that among the ~50 home work assignment, there was one that really shined. Not only did the student explain their reasoning in clear and concise manner, they were able to look at the problem from another angle, drastically simply the entire work and avoid a whole set of common pitfalls. They were also able to do that in about 75 lines of code and most of that was required boilerplate. I just had to go and find the docs to some obscure Python library to figure out how someone can write a solution to the problem in one tenth of the code that everyone else did and do that while behind correct, faster (they implemented caching, which very few did) and much simpler to read and understand. I&#x2019;m impressed enough to write a blog post about it, after all.I went over about fifty of assignments, and this one was a pure nugget to keep me slogging through things. There were bugs in the code, mind you, but the architecture and the approach were solid.</p>
         </article>
         <article id="article-1442">
-            <a href="https://ardalis.com/rip-dvds-with-handbrake-and-anydvd/" target="_blank">
-                <h2 class="title mb-6" id="article-1442">How to Rip DVDs with Handbrake and AnyDVD</h2>
+            <a href="https://www.stevejgordon.co.uk/dotnet-on-aws-pushing-a-dotnet-docker-image-to-amazon-ecr" target="_blank">
+                <h2 class="title mb-6" id="article-1442">.NET on AWS: Pushing a .NET Docker Image to Amazon ECR</h2>
+            </a>
+            <p class="mb-2">by Steve Gordon</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 16, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I&#x2019;ll introduce Amazon ECR and explain how to use it as a registry of Docker images, ready to run your .NET applications in the cloud. In future posts, we&#x2019;ll learn more about the options for running your .NET applications containers on AWS. This post serves as an update and continuation of an [&#x2026;]</p>
+        </article>
+        <article id="article-1443">
+            <a href="https://ardalis.com/design-no-duplicates-rule-in-domain-model/" target="_blank">
+                <h2 class="title mb-6" id="article-1443">Design a No Duplicates Rule in your Domain Model?</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -164,13 +180,45 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 23, 2020
+                posted on: July 16, 2020
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m a big fan of Plex and have a lifetime subscription. If you&#x27;re not familiar with it, it basically lets you have your own Netflix hosted&#x2026;Keep Reading &#x2192;</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Update 17 May 2023 I haven&#x27;t been streaming on Twitch for a while (as noted in the original article) but I have continued to use this sample&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-1443">
-            <a href="https://andrewlock.net/aspnetcore-in-action-2e-getting-started-with-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-1443">Getting started with ASP.NET Core</h2>
+        <article id="article-1444">
+            <a href="https://www.meziantou.net/asp-net-core-blazor-components-lifecycle.htm" target="_blank">
+                <h2 class="title mb-6" id="article-1444">ASP.NET Core Blazor components lifecycle</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 15, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">ASP.NET Core Blazor components lifecycle allows the user to perform additional operations on components during component initialization and rendering. It&#x27;s also useful to release resources when the component is removed from the page.Here&#x27;s the Blazor components lifecycle:#SetParametersAsyncThis met</p>
+        </article>
+        <article id="article-1445">
+            <a href="https://www.stevejgordon.co.uk/how-is-the-asp-net-core-middleware-pipeline-built" target="_blank">
+                <h2 class="title mb-6" id="article-1445">Deep Dive: How is the ASP.NET Core Middleware Pipeline Built?</h2>
+            </a>
+            <p class="mb-2">by Steve Gordon</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 14, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;ve ever used ASP.NET Core, then you&#x2019;ll likely be familiar with the Startup class. This class, by convention, includes at least one method named Configure. Often, a ConfigureServices method is also included and used to register services with the Microsoft dependency injection container, but this isn&#x2019;t an absolute requirement. The configure method is where [&#x2026;]</p>
+        </article>
+        <article id="article-1446">
+            <a href="https://andrewlock.net/creating-a-custom-dfagraphwriter-using-impromptuinterface-and-reflection/" target="_blank">
+                <h2 class="title mb-6" id="article-1446">Creating a custom DfaGraphWriter using ImpromptuInterface for easier reflection</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -180,63 +228,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 23, 2020
+                posted on: July 14, 2020
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This article describes some of the highlights of ASP.NET Core and gives advice on the type of applications to build with it, as well as which to avoid.&#x2026;</p>
-        </article>
-        <article id="article-1444">
-            <a href="https://ayende.com/blog/191297-C/avoiding-exposing-identifier-details-to-your-users" target="_blank">
-                <h2 class="title mb-6" id="article-1444">Avoiding exposing identifier details to your users</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 22, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A sadly common place &#x201C;attack&#x201D; on applications is called &#x201C;Web Parameter Tampering&#x201D;. This is the case where you have a URL such as this:https://secret.medical.info/?userid=823And your users &#x201C;hack&#x201D; you using:https://secret.medical.info/?userid=999And get access to another users records. As an aside, that might actually be considered to be hacking, legally speaking. Which make me want to smash my head on the keyboard a few time.Obviously, you need to run your security validation on parameters, but there are other reasons to want to avoid to expose the raw identifiers to the user. If you are using the a incrementing counter of some kind, creating two values might cause you to leak the rate in which your data change. For example, a competitor might want to create an order once a week and track the number of the order. That will give you a good indications of how many orders there have been in that time frame. Finally, there are other data leakage issues that you want to might want to take into account. For example, &#x201C;users/321&#x201D; means that you are likely to be using RavenDB while &#x201C;users/4383-B&#x201D; means that you are using RavenDB 4.0 or higher and &#x201C;607d1f85bcf86cd799439011&#x201D; means that you are using MongoDB. A common reaction to this is to switch your ids to use guids. I hate that option, it means that you are entering very unfriendly territory&#xA0; for the application. Guids convey no information to the developers working with the system and they are hard to work with, from a humane point of view. They are also less nice for the database systemto work with. A better alternative is to simply mask the information when it leaves your system. Here is the code to do so:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          public class IdentifierMasking&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              private static byte[] _key;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              public IdentifierMasking(byte[] key = null)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  _key = key ?? Sodium.SecretBox.GenerateKey();&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              public string RevealIdentifier(string hidden)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  Span&lt;byte&gt; data = SimpleBase.Base58.Bitcoin.Decode(hidden);&#xA;        &#xA;        &#xA;          &#xA;                  byte[] nonce = data.Slice(0, 12).ToArray();&#xA;        &#xA;        &#xA;          &#xA;                  byte[] encrypted = data.Slice(12).ToArray();&#xA;        &#xA;        &#xA;          &#xA;                  byte[] plain = Sodium.SecretAeadAes.Decrypt(encrypted, nonce, _key);&#xA;        &#xA;        &#xA;          &#xA;                  return Encoding.UTF8.GetString(plain);&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;              public string HideIdentifier(string id)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  byte[] nonce = Sodium.SecretAeadAes.GenerateNonce();&#xA;        &#xA;        &#xA;          &#xA;                  byte[] encrypted = Sodium.SecretAeadAes.Encrypt(Encoding.UTF8.GetBytes(id), nonce, _key);&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;                  return SimpleBase.Base58.Bitcoin.Encode(nonce.Concat(encrypted).ToArray());&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          IdentifierMasking.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;You can see that I&#x2019;m actually using AES encryption to hide the data, and then encoding it in the Bitcoin format. That means that an identifier such as &quot;users/1123&quot; will result in output such as this:bPSPEZii22y5JwUibkQgUuXR3VHBDCbUhC343HBTnd1XMDFZMuokThe length of the identifier is larger, but not overly so and the id is even URL safe . In addition to hiding the identifier itself, we also ensure that the users cannot muck about in the value. Any change to the value will result in an error to unmask it.</p>
-        </article>
-        <article id="article-1445">
-            <a href="https://www.meziantou.net/creating-a-repeater-component-with-blazor.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1445">Creating a Repeater component with Blazor</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 22, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you are familiar with the old ASP.NET, you know the &lt;asp:Repeater&gt; control. This control iterates on a collection (may come from any kind of DataSource) and use a template to generate the page.ASP.NETcopy&lt;%-- This is ASP.NET code (not ASP.NET Core) --%&gt;&#xA;&lt;asp:Repeater runat=&quot;server</p>
-        </article>
-        <article id="article-1446">
-            <a href="https://ayende.com/blog/191265-C/how-much-do-you-need-transactions" target="_blank">
-                <h2 class="title mb-6" id="article-1446">How much do you need transactions?</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 18, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The most famous example about the use of transactions is the money transfer scenario. As money is shifted from one account to the other, we want to ensure that no money goes poof or made up of whole cloth.I just logged in to the bank to pay the taxes. It is a boring process that mostly consist of checking a box in a transfer filled by the accounting department. Today there was much excitement. The transfer failed. That was strange. I got an error that the money transfers failed and that I should process the order again later.&#xA0; I checked my balance and the money is deducted from my account. I&#x2019;m trying to decide if I should shrug it off and just make sure that the money was sent in a couple of days or if I should call someone at the bank and offer them consulting services about how to build transactional systems.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Visualizing ASP.NET Core 3.0 endpoints using GraphvizOnline - Part 3</p>
         </article>
         <article id="article-1447">
-            <a href="https://ardalis.com/the-singleton-design-pattern/" target="_blank">
-                <h2 class="title mb-6" id="article-1447">The Singleton Design Pattern</h2>
+            <a href="https://enterprisecraftsmanship.com/posts/is-equality-comparison-code-pollution/" target="_blank">
+                <h2 class="title mb-6" id="article-1447">Is Equality Comparison a Code Pollution?</h2>
             </a>
-            <p class="mb-2">by Ardalis</p>
+            <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -244,13 +244,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 17, 2020
+                posted on: July 13, 2020
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The Singleton Design Pattern is a fairly simple creational pattern used to ensure that there is only ever a single instance of a class in an&#x2026;Keep Reading &#x2192;</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is about where to put the equality comparison logic: under the test or production code.</p>
         </article>
         <article id="article-1448">
-            <a href="https://www.meziantou.net/publishing-a-blazor-webassembly-application-to-github-pages.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1448">Publishing a Blazor WebAssembly application to GitHub pages</h2>
+            <a href="https://www.meziantou.net/modal-component-in-blazor.htm" target="_blank">
+                <h2 class="title mb-6" id="article-1448">Creating a Modal component in Blazor</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -260,12 +260,12 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 17, 2020
+                posted on: July 13, 2020
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Blazor WebAssembly is now officially released and is ready for production use. Blazor WebAssembly runs your client-side C# code directly in the browser, using WebAssembly. This means your application doesn&#x27;t need a server and can be published as a static website.There are multiple possibilities to</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Blazor is the shinny new framework to create web application. In this post I&#x27;ll show you how to create a component to display a modal dialog. A component is a self-contained chunk of user interface (UI). You can compare a component to a user control in WebForm, WinForms, or WPF. Components allow re</p>
         </article>
         <article id="article-1449">
-            <a href="https://ayende.com/blog/191233-B/webinar-recording-using-ravendb-as-a-queuing-infrastructure" target="_blank">
+            <a href="https://ayende.com/blog/191425-B/webinar-recording-multi-tenancy-with-ravendb" target="_blank">
                 <h2 class="title mb-6" id="article-1449">Webinar recording</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
@@ -276,15 +276,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 16, 2020
+                posted on: July 10, 2020
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The recording for using RavenDB as queueing infrastructure is ready. Today I&#x2019;m going to be talking about ACID and how it plays out in RavenDB and in MongoDB.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The recording is now available&#x2026;</p>
         </article>
         <article id="article-1450">
-            <a href="https://andrewlock.net/adding-host-filtering-to-kestrel-in-aspnetcore/" target="_blank">
-                <h2 class="title mb-6" id="article-1450">Adding host filtering to Kestrel in ASP.NET Core</h2>
+            <a href="https://ayende.com/blog/191393-B/writing-production-systems-the-wrong-way-on-purpose" target="_blank">
+                <h2 class="title mb-6" id="article-1450">Writing production systems the wrong way, on purpose</h2>
             </a>
-            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -292,9 +292,9 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: June 16, 2020
+                posted on: July 09, 2020
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe how to add host filtering to an ASP.NET Core application, and show why not filtering could allow attackers to exploit your app&#x2026;</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It should come as no surprise that our entire internal infrastructure is running on RavenDB. I wholly believe in the concept of dog fooding and it has serve us very well over the years.I was speaking to a colleague just now and it occurred to me that it is surprising that we do certain things wrong, intentionally. It is fair to say that we know what the best practices for using RavenDB are, the things that you can do to get the most out of it.In some of our internal systems, we are doing things in exactly the wrong way. We are doing things that are inefficient in RavenDB. We take the expedient route to implement things.&#xA0; A good example of that is that we have a set of documents that can grow to be multiple MB in size. They are also some of the most common changed documents in the system. Properly design would call to break them apart to make things easier for RavenDB. We intentionally modeled things this way. Well, I gave the modeling task to an intern with no knowledge of RavenDB and then I made things worse for RavenDB in a few cases where he didn&#x2019;t get it out of shape enough for my needs. Huh?! I can hear you thinking. Why on earth would we do something like that?We do this because if serves as an excellent proving ground for misuse of RavenDB. It show us how the system behave under non ideal situations. Not just when the user is able to match everything to the way RavenDB would like things to be, but how they are likely to build their system. Unaware of what is going on behind the scenes and what the optimal solution would be. We want RavenDB to be able to handle that scenario well. An example that pops to mind was having all the uploads on the system be attachments on a single document. That surfaced that we had a O(N^2) algorithm very deep in the bowels of RavenDB for placing a new attachment. It would be completely invisible under normal case, because it was fast enough under any normal or abnormal situation that we could think of. But when we started getting high latency from uploads, we realized that adding the 100,002th attachment to a document required us to scan through the whole list&#x2026; it was obvious that we needed a fix. (And please, don&#x2019;t put hundreds of thousands of attachments on a document, it will work (and it is fast now), but it isn&#x2019;t nice).Doing the wrong thing on purpose means that we can be sure that when users are doing the wrong thing accidently, they get good behavior.</p>
         </article>
         <div class="button flex justify-between">
             <a href="144.html"><span class="back arrow"></span></a>
