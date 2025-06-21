@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3331">
+            <a href="https://ayende.com/blog/173793/the-deadlock-in-the-fairness-assumption" target="_blank">
+                <h2 class="title mb-6" id="article-3331">The deadlock in the fairness assumption</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: April 11, 2016
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Looking into some benchmark code, I noticed that the developer has put some stuff there that shouldn&#x27;t be there (and is likely slowing down the benchmark). When I commented on that, the answer was: &quot;If I don&#x27;t do that, this breaks&quot;. Indeed, he was able to show me that this will actually break. And that was very bad news. Because that was a pretty sensitive spot. In fact, afterward he actually filed several bugs, including scary looking deadlock detected one. The problem is that this code works. In fact, it has been deployed, in production, for years, and I have very high confidence that it works. But eventually I was able to reproduce this locally, and then track it down to the actual root cause. First, let me show you the reproduction. First, the sample code:   public class Program&#xA;{&#xA;    public static void Main(string[] args)&#xA;    {&#xA;        var fair = new FairPractice();&#xA;        var thread = new Thread(fair.OtherWork);&#xA;        thread.Start();&#xA;&#xA;        while (thread.IsAlive)&#xA;        {&#xA;            fair.DoMainWork();&#xA;        }&#xA;    }&#xA;}&#xA;&#xA;public class FairPractice&#xA;{&#xA;    SemaphoreSlim _s = new SemaphoreSlim(1);&#xA;&#xA;    public void OtherWork()&#xA;    {&#xA;        while (true)&#xA;        {&#xA;            Thread.Sleep(100);&#xA;            if (_s.Wait(1000) == false)&#xA;            {&#xA;                Console.WriteLine(&quot;\r\nCan&#x27;t get it!&quot;);&#xA;                return;&#xA;            }&#xA;            Console.WriteLine(&quot;\r\nGot IT!!!!&quot;);            _s.Release();&#xA;        }&#xA;    }&#xA;&#xA;    private int _work;&#xA;    public void DoMainWork()&#xA;    {&#xA;        if (_s.Wait(500) == false)&#xA;            throw new TimeoutException(&quot;Can&#x27;t get semaphore&quot;);&#xA;&#xA;        Console.Write(&quot;\r{0}&quot;, &#x2B;&#x2B;_work);&#xA;        Thread.Sleep(30);&#xA;        _s.Release();&#xA;    }&#xA;}&#xA;&#xA;&#xA;&#xA;Now, this code seems pretty simple. We have a bunch of work that happens in the main loop. Taking the semaphore and holding it, then doing a small amount of work, then releasing the semaphore. &#xA;On the other thread, we have a (long) wait for this semaphore, and that is it. Now, the interesting thing here is that we would expect the 2nd thread to register a wait on the semaphore so when it is released, the 2nd thread wakes up, and get the semaphore. In practice, it looks like the main thread is the one having all the fun, and it is fast enough to re-acquire the semaphore before the 2nd thread can catch it. Looking into the code of SemaphoreSlim seems to confirm it. There are actually a bunch of stuff going on there, and this particular scenario (very short wait, just a single entry in the semaphore, a second waiter with a high threshold) seems to hit it very hard, and violate all fairness assumptions.&#xA;The good thing is that in order to hit this issue, you need to have very high speed. The reason this is good is that we are benchmarking, and that means that our code (which actually also does disk I/O) is now fast enough to his this issue.</p>
+        </article>
+        <article id="article-3332">
             <a href="https://benfoster.io/blog/aspnet-core-json-patch-partial-api-updates/" target="_blank">
-                <h2 class="title mb-6" id="article-3331">How to perform partial resource updates with JSON Patch and ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-3332">How to perform partial resource updates with JSON Patch and ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How to perform partial resource updates in APIs using JSON Patch and ASP.NET Core.</p>
         </article>
-        <article id="article-3332">
+        <article id="article-3333">
             <a href="https://ardalis.com/how-to-find-all-objects-in-a-sql-server-schema/" target="_blank">
-                <h2 class="title mb-6" id="article-3332">How to find all objects in a SQL Server Schema</h2>
+                <h2 class="title mb-6" id="article-3333">How to find all objects in a SQL Server Schema</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today I&#x2019;m migrating some databases from one server to another. Some of these applications are quite old, and user accounts that were created&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3333">
+        <article id="article-3334">
             <a href="https://benfoster.io/blog/aspnet-core-customising-model-binding-conventions/" target="_blank">
-                <h2 class="title mb-6" id="article-3333">Customising model-binding conventions in ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-3334">Customising model-binding conventions in ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How to customise the model-binding behaviour in ASP.NET Core MVC to bind complex types from the request body (how it should be).</p>
         </article>
-        <article id="article-3334">
+        <article id="article-3335">
             <a href="https://enterprisecraftsmanship.com/posts/having-the-domain-model-separate-from-the-persistence-model/" target="_blank">
-                <h2 class="title mb-6" id="article-3334">Having the domain model separated from the persistence model</h2>
+                <h2 class="title mb-6" id="article-3335">Having the domain model separated from the persistence model</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I&#x2019;d like to write about a pretty common discussion in DDD circles: should one have the domain model separated from the persistence model? In other words, should you map your domain objects to the DB tables directly using an ORM or would it be better to use a separate set of Data Access Objects (DAOs) instead?</p>
         </article>
-        <article id="article-3335">
+        <article id="article-3336">
             <a href="https://ardalis.com/logging-method-counts-and-durations/" target="_blank">
-                <h2 class="title mb-6" id="article-3335">Logging Method Counts and Durations</h2>
+                <h2 class="title mb-6" id="article-3336">Logging Method Counts and Durations</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Remember the rules of optimization: Don&#x2019;t do it! Don&#x2019;t do it, yet. Avoid premature optmization. Profile before optimizing So, assuming you&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3336">
+        <article id="article-3337">
             <a href="https://www.meziantou.net/bootstrap-sass.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3336">Bootstrap &#x2B; SASS = &#x2665;</h2>
+                <h2 class="title mb-6" id="article-3337">Bootstrap &#x2B; SASS = &#x2665;</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Bootstrap is the most popular CSS framework currently. It allows to quickly create pretty websites (tastes and colors &#x2026;). To do this, simply include the link to the CDN in your site and consult the documentation to create in a few minutes a first page with a header and content in several columns, a</p>
         </article>
-        <article id="article-3337">
+        <article id="article-3338">
             <a href="https://enterprisecraftsmanship.com/posts/trying-to-impress-people-with-your-code/" target="_blank">
-                <h2 class="title mb-6" id="article-3337">Trying to impress people with your code</h2>
+                <h2 class="title mb-6" id="article-3338">Trying to impress people with your code</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I&#x2019;d like to write about the personal traits we all possess. Namely, I want to talk about being proud of your code and trying to impress people with it.</p>
         </article>
-        <article id="article-3338">
+        <article id="article-3339">
             <a href="https://benfoster.io/blog/asp-net-identity-role-claims/" target="_blank">
-                <h2 class="title mb-6" id="article-3338">Using Role Claims in ASP.NET Identity Core</h2>
+                <h2 class="title mb-6" id="article-3339">Using Role Claims in ASP.NET Identity Core</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">What are Role Claims in ASP.NET Identity Core and how can you use them?</p>
         </article>
-        <article id="article-3339">
+        <article id="article-3340">
             <a href="https://ayende.com/blog/173761/the-role-of-logs" target="_blank">
-                <h2 class="title mb-6" id="article-3339">The role of logs</h2>
+                <h2 class="title mb-6" id="article-3340">The role of logs</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: March 23, 2016
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You are probably familiar with logging, and log levels. In particular, the following scheme is very popular.  I have been using this scheme for pretty much every software project I had in over a decade. And it works. Which is good. But I found that there are actually not really useful for our scenarios. In particular, we found that there are many cases where a component that logged something as a warn or error would generate a support ticket by eagle eyed admin, while it was just a valid part of the software behavior. The other side of that is that when we need to use the logs to find a problem, we never use fine grained logs, we just need it all. This lead me to believe that we only actually need two and a half levels.  Informative &#x2013; we are reporting so one of our support engineers or a team member can look at that and understand what the software is doing. Operational &#x2013; something deserves attention from the customer&#x2019;s operations team. There isn&#x2019;t really anything in between those. Either this is something that we fully expect an operation team at the customer to look at, or this is something that the development and/or support engineers need to see. But I mentioned two and a half, what is that half? Well, above operational, there is another half a level, which I like to call Pay Attention Now. This isn&#x2019;t actually a log level, it is a way to attract someone&#x2019;s attention to the log, or to some sort of operational alert. This is an SMS sent, or an email, etc. But beyond the &#x201C;something need attention now&#x201D;, there is nothing else that is needed. The production logs are either for routine operations monitoring (in which case they should be relatively succinct and written with an eye to a reader who isn&#x2019;t familiar with the internal working of RavenDB) or &#x201C;what is going on here&#x201D; mode, which is typically done by a team member who needs the most information possible.</p>
-        </article>
-        <article id="article-3340">
-            <a href="https://benfoster.io/blog/asp-net-core-dependency-injection-multi-tenant/" target="_blank">
-                <h2 class="title mb-6" id="article-3340">Multi-tenant Dependency Injection in ASP.NET Core</h2>
-            </a>
-            <p class="mb-2">by Ben Foster</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 23, 2016
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How to configure tenant-scoped dependencies in multi-tenant ASP.NET Core applications using SaasKit and StructureMap.&#xA;Not for the faint-hearted.</p>
         </article>
         <div class="button flex justify-between">
             <a href="333.html"><span class="back arrow"></span></a>

@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-2841">
+            <a href="https://ayende.com/blog/177761/how-does-lz4-acceleration-work" target="_blank">
+                <h2 class="title mb-6" id="article-2841">How does LZ4 acceleration work?</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: April 12, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">LZ4 has an interesting feature, acceleration. It allows you to modify the compression ratio (and the corresponding compression speed). This is quite interesting for several scenarios. In particular, while higher compression rate is almost always good, you want to take into account the transfer speed as well. For example, if I&#x2019;m interesting in writing to the disk, and the disk write rate is 400 MB / sec, it isn&#x2019;t worth it to use the default acceleration level (which can produce about 385MB / sec), and I can reduce that so the speed of compression will not dominate my writes. You can read more about it here. We started playing with this feature today, and that brought the question, what does this actually do?  This is a really good question, but before I can answer it, we need to understand how compression works. Here is a very simple illustration of the concept. &#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          void Compression(byte[] input, Stream output)&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;          &#x9;var hashTable = new int[16 * 1024];&#xA;        &#xA;        &#xA;          &#xA;          &#x9;SetArrayValues(hashTable, -1);&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;for(int i = 0; i &lt; input.Length - sizeof(int); i&#x2B;&#x2B;)&#xA;        &#xA;        &#xA;          &#xA;          &#x9;{&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;var current = BitConverter.ToInt32(input, i) % hashTable.Length;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;var prevRef = hashTable[current];&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;hashTable[current] = i;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;if(prevRef == -1)&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;&#x9;continue;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;var sizeOFBackReference = FindMatch(i, prevRef);&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;if(sizeOFBackReference &lt; sizeof(long))&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;&#x9;continue; // not worth it&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;WriteBackReference(output, prevRef, sizeOFBackReference);&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;&#x9;i &#x2B;= sizeOFBackReference;&#xA;        &#xA;        &#xA;          &#xA;          &#x9;}&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          sample-compression.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA; We created a very stupid size constrained hash table, that maps from the current 4 bytes to the previous instance where we saw those 4 bytes. When we find a match, we check to see how much of a match we have, and then write it out as a back reference.  Note that if we don&#x2019;t find a match, we update the last match position for this value, and move one byte forward, to see if there is a match in that location. This way, we are scanning the past 64KB to see if there is a match. This is meant to be a very rough approximation to how compression work, don&#x2019;t get too hang up on the details. The key point with acceleration is that it impacts what we&#x2019;ll do if we didn&#x2019;t find a match. Instead of moving by one byte, we are going to skip by more than that. The actual logic is in here, and if I&#x2019;m reading this correctly, it will probe the data to compress in increasingly wider gaps until it find a match that it can use to reduce the output size. What acceleration does is tell it to jump in even wider increments as it searches for a match. This reduce the number of potential matches it find, but also significantly reduces the amount of work that LZ4 need to do with comparing the data stream, hence how it both accelerate the speed and reduces the compression ratio.</p>
+        </article>
+        <article id="article-2842">
             <a href="https://ardalis.com/share-what-you-learn-even-if-youre-not-an-expert/" target="_blank">
-                <h2 class="title mb-6" id="article-2841">Share What You Learn (even if you&#x27;re not an expert)</h2>
+                <h2 class="title mb-6" id="article-2842">Share What You Learn (even if you&#x27;re not an expert)</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A lot of people, myself included, suffer from imposter syndrome. That feeling that you&#x27;re really not good enough to be doing whatever it is&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-2842">
+        <article id="article-2843">
             <a href="https://ayende.com/blog/177698/performance-optimizations-one-step-forward-ten-steps-back" target="_blank">
-                <h2 class="title mb-6" id="article-2842">Performance optimizations</h2>
+                <h2 class="title mb-6" id="article-2843">Performance optimizations</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As we continuously optimized more and more of our code, we kept seeing faster and faster benchmarks. In fact, the more we optimized, the faster we became. One would think that there is some sort of correlation there.&#xA;However, that is a mere theory that can be disproven, as this story will demonstrate.&#xA;When optimizing, you eventually expects to get into the land of diminishing returns. But something very strange happened, we have made a few changes, the each should have brought our speed up by a significant percentage, we had the micro benchmarks to prove that this is the case, and we were even able to see that the code was running much faster than before, but the overall benchmark time kept growing, and we started seeing higher and higher stalls in the process.&#xA;That&#x2026; sucked. Especially because we couldn&#x2019;t figure out what was going on. Every single metric we could see was saying that we should be seeing higher speed, our disk usage went up, our CPU usage went up a bit, we increased our memory buffers from 32 MB to 1GB, and every single indication we had told us that we are faster on a per operation basis. But the entire thing just started slowing down more and more.&#xA;Frustratingly, there was nothing we could really sink our teeth into. The system would just go into stalls and do nothing. We got to the point it looked like we broke the operating system, but nothing helped, stuff just didn&#x2019;t want to work. It looked like we were waiting for I/O, but tracing at the syscall level showed that we were getting much faster response from the hardware than we saw in the application. Somewhere, stuff was getting lost.&#xA;Eventually we managed to track it down to the offending line:&#xA;&#xA;So this is pretty obvious, right? We are waiting, so we are slow. But this line is called from a completely different part of the code, and it isn&#x2019;t blocking anything else in the code path that is suffering from stalls. The key here is that this line is called from:&#xA;&#xA;Still fine, right? We threw that into the thread pool, so it is fine to wait. But&#x2026;&#xA;&#xA;The line above is responsible for releasing our threads when the I/O operation has completed. Note that it needs to run on the thread pool as well, but because we are now much faster, we now have a lot of threads that are stuck in the call to SyncEnvironment, that overloaded the thread pool, and meant that the notification that we can proceed would come very late. We missed it in all of our profiling because we didn&#x2019;t look at that code path at all, since it was obviously unrelated to the issue at hand.</p>
         </article>
-        <article id="article-2843">
+        <article id="article-2844">
             <a href="https://andrewlock.net/creating-and-editing-solution-files-with-the-net-cli/" target="_blank">
-                <h2 class="title mb-6" id="article-2843">Creating and editing solution files with the .NET CLI</h2>
+                <h2 class="title mb-6" id="article-2844">Creating and editing solution files with the .NET CLI</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I show how to manage sln files with the .NET command line interface (CLI). See how to create sln files, and how to add, edit and list projects&#x2026;</p>
         </article>
-        <article id="article-2844">
+        <article id="article-2845">
             <a href="https://www.meziantou.net/using-application-insights-to-keep-a-site-online.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2844">Using Application Insights to keep a site online</h2>
+                <h2 class="title mb-6" id="article-2845">Using Application Insights to keep a site online</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">By default, web apps are unloaded if they are idle for a while. This lets the system conserve resources. If you have access to the IIS configuration, you can configure the idle time-out settings to 0 (details). If you are hosting your web app on Azure, you can enable the Always on option (details).</p>
         </article>
-        <article id="article-2845">
+        <article id="article-2846">
             <a href="https://enterprisecraftsmanship.com/posts/temporal-coupling-and-immutability/" target="_blank">
-                <h2 class="title mb-6" id="article-2845">Temporal coupling and Immutability</h2>
+                <h2 class="title mb-6" id="article-2846">Temporal coupling and Immutability</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This topic is partly covered in my Applying Functional Principles in C# Pluralsight course, Module 2. Here, I&#x2019;d like to elaborate on how temporal coupling and immutability are related to each other.&#xA; Temporal coupling Temporal coupling is coupling that occurs when there are two or more members of a class that need to be invoked in a particular order. A common example is the following:&#xA; var calculator = new PriceCalculator();&#xA;calculator.</p>
         </article>
-        <article id="article-2846">
+        <article id="article-2847">
             <a href="https://www.stevejgordon.co.uk/things-ive-learnt-week-9th-april" target="_blank">
-                <h2 class="title mb-6" id="article-2846">Things I&#x2019;ve Learnt This Week (9th April)</h2>
+                <h2 class="title mb-6" id="article-2847">Things I&#x2019;ve Learnt This Week (9th April)</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Things I&#x2019;ve Polled I started a short poll on Twitter, as I was curious to see how many people had already migrated from project.json to csproj. I had 84 votes and the breakdown was as follows. 68% All done &#x2013; csproj for me 21% Not yet &#x2013; In planning 11% Don&#x2019;t plan to move yet [&#x2026;]</p>
         </article>
-        <article id="article-2847">
+        <article id="article-2848">
             <a href="https://ayende.com/blog/177763/single-roundtrip-authentication" target="_blank">
-                <h2 class="title mb-6" id="article-2847">Single roundtrip authentication</h2>
+                <h2 class="title mb-6" id="article-2848">Single roundtrip authentication</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that we did in RavenDB 4.0 was support running on Linux, which meant giving up on Windows Authentication. To the nitpickers among you, I&#x2019;m aware that we can do LDAP authentication, and we can do Windows Auth over HTTP/S on Linux. Let us say that given the expected results, all I can wish you is that you&#x2019;ll have to debug / deploy / support such a system for real. Giving up on Windows Authentication in general, even on Windows, is something that we did with great relief. Nothing like getting an urgent call from a customer and trying to figure out what a certain user isn&#x2019;t authenticated, and trying to figure out the trust relationship between different domains, forests, DMZ and a whole host of other stuff that has utter lack of anything related to us. I hate those kind of cases. In fact, I think that my new ill wish phrase will become &#x201C;may you get a 2 AM call to support Kerberus authentication problems on a Linux server in the DMZ to a nested Windows domain&#x201D;. But that might be going too far and damage my Karma. That lead us to API Key authentication. And for that, we want to be able to get authenticate against the server, and get a token, which can then use in future requests. An additional benefit is that by building our own system we are able to actually own the entire thing and support it much better. A side issue here is that we need to support / maintain security critical code, which I&#x2019;m not so happy about. But owning this also give me the option of doing things in a more optimized fashion. And in this case, we want to handle authentication in as few network roundtrips as possible, ideally one. That is a bit challenging, since on the first request, we know nothing about the server. I actually implemented a couple of attempts to do so, but pretty much all of them were vulnerable to some degree after we did security analysis on them. You can look here for some of the details, so we gave that up in favor of mostly single round trip authentication. The very first time the client starts, it will use a well known endpoint to get the server public key. When we need to authenticate, we&#x2019;ll generate our own key pair and use it and the server public key to encrypt a hash of the secret key with the client&#x2019;s public key, then send our own public key and the&#xA0; encrypted data to the server for authentication. In return, the server will validate the client based on the hash of the password and the client public key, generate an authentication token, encrypt that with the client&#x2019;s public key and send it back. Now, this is a bit complex, I&#x2019;ll admit, and it is utterly unnecessary if the users are using HTTPS, as they should. However, there are actually quite a few deployments where HTTPS isn&#x2019;t used, mostly inside organizations where they choose to deploy over HTTP to avoid the complexity of cert management / update / etc. Our goal is to prevent leakage of the secret key over the network even in the case that the admin didn&#x2019;t setup things securely. Note that in this case (not using HTTPS), anyone listening on the network is going to be able to grab the authentication token (which is valid for about half an hour), but that is out of scope for this discussion. We can assume that communication between client &amp; server are not snoopable, given that they are using public keys to exchange the data. We also ensure that the size of the data is always the same, so there is no information leakage there. The return trip with the authentication token is also  A bad actor can pretend to be a server and fool a client into sending the authentication request using the bad actor&#x2019;s public key, instead of the server. This is done because we don&#x2019;t have trust chains. The result is that the bad actor now has the hash of the password with the public key of the client (which is also known). So the bad guy can try do some offline password guessing, we mitigate that using secret keys that are a minimum of 192 bits and generated using cryptographically secured RNG. The bad actor can off course send the data as is to the server, which will authenticate it normally, but since it uses the client&#x2019;s public key both for the hash validation and for the encryption of the reply, the bad actor wouldn&#x2019;t be able to get the token. On the client side, after the first time that the client hits the server, it will be able to cache the server public key, and any future authentication token refresh can be done in a single roundtrip.</p>
         </article>
-        <article id="article-2848">
+        <article id="article-2849">
             <a href="https://ayende.com/blog/177665/ravendb-4-0-features-document-versioning" target="_blank">
-                <h2 class="title mb-6" id="article-2848">RavenDB 4.0 Features: Document Versioning</h2>
+                <h2 class="title mb-6" id="article-2849">RavenDB 4.0 Features: Document Versioning</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After focusing for so long on the low level and performance of RavenDB 4.0, you might be forgiven if you think that we are neglecting real meaningful features in 4.0. That couldn&#x2019;t be further from the truth, the problem is that this it is actually quite hard to talk about some features meaningfully before they have been through complete round of implementing, testing, wiring for UI and UX and then beating them with a stick to see what fall. Document versioning in RavenDB isn&#x2019;t new. It has been a feature for several releases now. In RavenDB 4.0 we have decided to reimagine them complete. One of the strong points of RavenDB design from the get go was that triggers allowed you to build new features into the product without making core changes. That allowed quickly adding new features, but could cause issues with feature intersections. With RavenDB 4.0, versions are now part of the core code. That means that they get special treatment. Here is how it looks like in the UI:  You can switch between versions of the document, and see them as it was at various points in time.  Externally, this is pretty much all there is to it. Here is what this will look like when you are looking at a revision.  In terms of the client API, there is little change: &#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          List&lt;Product&gt; revisions = session.Advanced.GetRevisionsFor&lt;Product&gt;(&quot;products/77&quot;);&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          revisions-usage.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA; So what did change?  Revisions are now stored separately from documents. Previously we stored them as special documents, which led to some problems (indexes had to read to see that they aren&#x2019;t interested in them, for example), and we had to special case a lot of stuff that is supposed to work on documents to not apply to attachments. Making them their own unique thing simplify everything significantly. We have also made sure that revisions can properly flow with replication, and prevent the potential for versioning conflicts which were tricky to solve. The downside of this is that desirable operations on revisions (load a revision with include, for example), will no longer work. The whole thing is also significantly faster and cheaper to work with.&#xA0; A major change we also did was to ensure that versioning is always on, so you don&#x2019;t have to specify it at the DB creation time. Instead, you can configure it whenever you want, without having to add a bundle at runtime and risk unsupported operations.  That means that if at some point you want to start versioning your documents, you can just flip a switch, and it will immediately start versioning all changes for you.</p>
         </article>
-        <article id="article-2849">
+        <article id="article-2850">
             <a href="https://ayende.com/blog/177762/command-line-usability" target="_blank">
-                <h2 class="title mb-6" id="article-2849">Command line usability</h2>
+                <h2 class="title mb-6" id="article-2850">Command line usability</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: April 06, 2017
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I hate the new &#x201C;dotnet test&#x201D; command. I don&#x2019;t think that anyone ever thought about looking at the output it generates for real projects.  For example, here is a section form the log output our fast tests:  There is so much crap here, including duplicate information and a whole bunch of mess that it is very hard to find relevant information. For example, there is a failing test here. How long will it take you to find it? Another important aspect for us is the fact that this will actually run the same process. If you have something that will crash the test process, you&#x2019;ll never get to see what is going on. Here is what a crash due to stack overflow looks like using &#x201C;dotnet test&#x201D;  As a result, we moved to dotnet xunit, which is a much better test runner.   We get color coding, including red for failing tests, so we don&#x2019;t have to hunt them. What is more important, it will not hide crucial information from us because it feels like it. If there is a crash, we can actually see what happened.  I know it sounds trivial, but &#x201C;dotnet test&#x201D; doesn&#x2019;t have it.</p>
-        </article>
-        <article id="article-2850">
-            <a href="https://andrewlock.net/getting-started-with-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-2850">Getting started with ASP.NET Core</h2>
-            </a>
-            <p class="mb-2">by Andrew Lock</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 06, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This article describes some of the highlights of ASP.NET Core and gives advice on the type of applications to build with it, as well as which to avoid.&#x2026;</p>
         </article>
         <div class="button flex justify-between">
             <a href="284.html"><span class="back arrow"></span></a>
