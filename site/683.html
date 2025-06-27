@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6821">
+            <a href="https://ayende.com/blog/3347/let-us-make-the-ui-complex-just-because-we-feel-like-it" target="_blank">
+                <h2 class="title mb-6" id="article-6821">Let us make the UI complex, just because we feel like it</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 04, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let us take a look at this dialog, shall we?     What I see is that we have two text fields and two checkboxes, in a fairly big dialog, to express the following bit of information:     I honestly have no idea what the purpose of this is. To make it harder to input the information, presumably. Given a URL, I now need to split it apart manually, I need to know that https is usually on 443, etc.  It also mean that when I am talking to a user, I need to give her three pieces of information, and explain where to put each of them, rather than sending a URL that she can just copy / paste in place and be done with it.</p>
+        </article>
+        <article id="article-6822">
             <a href="https://ayende.com/blog/3346/architecting-twitter" target="_blank">
-                <h2 class="title mb-6" id="article-6821">Architecting Twitter</h2>
+                <h2 class="title mb-6" id="article-6822">Architecting Twitter</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There are some interesting discussions about the way Twitter is architected. Frankly, I think that having routine outages over such a long period is a sign of either negligence or incompetence. The problem isn&#x27;t that hard, for crying out loud.  With that in mind, I set out to try architecting such a system. As far as I am concerned, twitter can be safely divided into two separate applications, the server side and the client side. The web UI, by the way, is considered part of the client.  The server responsibilities:     Accept twits from the client, this include:         Analyzing the message content, (@foo should go to foo, #tag should be tagged, etc)      Forward the message to all the followers of the particular user       Answer to queries about twits from people that a certain person is following    Answer to queries about a person    It should scale    Clients are assumed to be badly written   The client responsibilities:     Display information to the user    Pretty slicing &amp; dicing of the data   Obviously, I am talking as someone who knows that there is even the need to scale, but let us leave this aside.  I am going to ignore the client, I don&#x27;t care much about this bit. For the server, it turn out that we have a fairly simple way of handling that.  We will split it into several pieces, and deal with each of them independently. The major ones are read, write and analysis.   There isn&#x27;t much need to deal with analysis. We can handle that using on the backend, without really affecting the application, so we will start with processing writes.  Twitter, like most systems, is heavily skewed toward reads. In addition to that, we don&#x27;t really need instant responsiveness. It is allowed to take a few moments before the new message is visible to all the followers.  As such, the process of handling new twits is fairly simple. A gateway server will accept the new twit and place it in a queue. A set of worker server will take the new twits out of the queue and start processing them.  There are several ways of doing that, either by distributing load by function or by simple round robin. Myself, I tend toward round robin unless there is a process that is significantly slower than the others, or require extra requirements (sending email may require opening a port in the firewall, as such, it cannot run on just any machine, but only on machines dedicated to it).  &#xA0; The process of handling a twit is fairly straightforward. As I mentioned, we are heavily skewed toward reads, so it is worth taking more time when processing a write to make sure that a read is as simple as possible.  This means that our model should support the following qualities:     Simple - Reading the timeline should involve no joins and no complexity whatsoever. Preferably, it should involve a query that uses a clustered index and that is it.    Cacheable - There should be as few a factors that affects the data that we need to handle as possible.    Shardable - the ability to split the work into multiple databases would mean that we will be able to scale out very easily.   As such, the model on the right seems like a good one (obviously this is very over simplified, but it works as an example).  This means that in order to display the timeline for a particular user, we will need to perform exactly two queries. One to the routing database, to find out what server this user data is sitting on, the second, to perform a trivial select on the timelines table.  What this means, in turn, is that the process for writing a new twit can be described using the following piece of code:     followers = GetFollowersFor(msg.Author)&#xA;followers.UnionWith( GetRepliesToIn(msg.Text) )&#xA;&#xA;for follower in followers:&#xA;&#x9;DirectPublish(follower, msg)&#xA;&#xA;&#xA;DirectPublish would simply locate the appropriate server and insert a new message, that is all.&#xA;&#xA;If we will take a pathological case of someone who has 10,000 followers, what this means is that each time this person will publish a new twit, the writer section of the application will have to go and write the message 10,000 times. Ridiculous, isn&#x27;t it?&#xA;&#xA;Not really. This model allows us to keep very low contention, since we don&#x27;t have any need for complex coordination, it is easily scalable for additional servers as needed, and it means that even in the case of several such pathological users suddenly starting to send high amount of messages, the application as a whole is not really affected. That is quite a side from the fact that inserting 10,000 rows is not really big. Especially since we are splitting it across several servers. &#xA;&#xA;But if it really bothered me, I would designate separate machines for handling such high volume users. It will ensure that regular traffic in the site can still flow while some machine in the back of the data center is slowly processing the big volume. In fact, I would probably decide that it is worth my time using bulk insert techniques for those users.&#xA;&#xA;All of that said, we now have a system where the database end is trivially simple (probably because the problem, as shown in this post, is trivial, I am pretty sure that the real world is more complex, but never mind that), scaling out the writing part is a matter of adding more workers to process more messages. Scaling out the database is a matter of putting more boxes in the data center, nothing truly complex. Scaling the read portion is a good place for judicious use of caching, but the model lends itself well for that.&#xA;&#xA;Now, feel free to tell me what I am off the hook...</p>
         </article>
-        <article id="article-6822">
+        <article id="article-6823">
             <a href="https://ayende.com/blog/3345/painless-persistence-with-castle-active-record" target="_blank">
-                <h2 class="title mb-6" id="article-6822">Painless Persistence with Castle Active Record</h2>
+                <h2 class="title mb-6" id="article-6823">Painless Persistence with Castle Active Record</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">About a year ago me and Hammett gave a few talks about Castle in JAOO. I am not sure why the recording of the talk came up now, but it have.  You can watch this presentation here: http://www.infoq.com/presentations/eini-verissimo-castle-active-record  For all the people who wanted to see a video of one of my presentation, there you go.</p>
         </article>
-        <article id="article-6823">
+        <article id="article-6824">
             <a href="https://ayende.com/blog/3344/bug-hunting-story" target="_blank">
-                <h2 class="title mb-6" id="article-6823">Bug Hunting Story</h2>
+                <h2 class="title mb-6" id="article-6824">Bug Hunting Story</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The bug: SvnBridge will not accept a change to a filename using multi byte format.  Let us start figuring out what is going on, shall we?  Hm... looks like when TortoiseSVN is PUT-ing the file, it uses the directory name instead of the actual file name. Obviously, this is a client bug, and I can close this bug and move on to doing other things. Except that I am pretty sure that SVN can handle non ASCII characters...  Let us compare the network trace from SVN and SvnBridge and see what is going on...  Oh, I got the problem. TortoiseSVN is requesting a CHECKOUT, and we return the wrong URL. Obviously I did something astoundingly stupid there when I processed that request. Indeed, taking a look at what is going on there is... interesting.  Finally I realize that the problem is that while TortoiseSVN sends the URL in seemingly reasonable format, it is obviously being read wrongly by SvnBridge. It is using ASCII encoding to read this, while it probably should use UTF8. Because of that, the URL looks something like /tfsrtm08/test/????.txt, and ? is the query string terminator, no wonder I have issues.  But, how does it work for standard SVN servers. Hm, looks like when TortoiseSVN uses Url Encoding for the URL when taking to a standard SVN server. Why is it doing this?   Hm... looks like the URL that TortoiseSVN uses when it is request a CHECKOUT is the one that is returned in the response to a PROPFIND request.  Sure, that is easy to fix, we will just Url Encode the response from the PROPFIND handler.  Except that it doesn&#x27;t work...  Oh, we also handle some of that in the file node class, so we will fix it there.  Yeah!  Except that it still doesn&#x27;t work!  Grr! Looks like the way we handle Url Encoding is too invasive, we need to only UrlEncode non ASCII characters, this means that we should not encode characters such as &#x27;/&#x27;, for example.  Let us try this again, shall we?  Hm... it still doesn&#x27;t work. What is going on.  Excuse me while I am having a nervous breakdown, please.  Oh! When we send the response to the CHECKOUT request, we send the URL for the PUT request in the location header, and we haven&#x27;t Url Encoded that yet.  And now it works... :-D  Let us run the test and commit...  We have a broken test.  *Sob*  Well, okay, that is actually a test that is supposed to be broken (it is testing the way we Url Encode urls, after all).  Number of code lines changed, less than 20.  Number of hours spent of this bug: over eight hours.  Conclusion, I am not really being productive today. I am off to visit the code generation wizard...</p>
         </article>
-        <article id="article-6824">
+        <article id="article-6825">
             <a href="https://ardalis.com/customer-service-is-key/" target="_blank">
-                <h2 class="title mb-6" id="article-6824">Customer Service Is Key</h2>
+                <h2 class="title mb-6" id="article-6825">Customer Service Is Key</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A few months ago I went to MIX08, which was I must say an excellent conference with a very different focus from DevConnections, TechEd, and&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6825">
+        <article id="article-6826">
             <a href="https://ardalis.com/atlas-tripped-over-his-own-feet/" target="_blank">
-                <h2 class="title mb-6" id="article-6825">Atlas Tripped Over His Own Feet</h2>
+                <h2 class="title mb-6" id="article-6826">Atlas Tripped Over His Own Feet</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Through Lake Quincy Media, we work with a variety of ad management platforms used by our customers. This is a story about Atlas, as told by&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6826">
+        <article id="article-6827">
             <a href="https://ardalis.com/whither-northwind/" target="_blank">
-                <h2 class="title mb-6" id="article-6826">Whither NorthWind?</h2>
+                <h2 class="title mb-6" id="article-6827">Whither NorthWind?</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The Ha recently wrote about his desire to get away from NorthWind and perhaps start some community driven effort to come up with something&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6827">
+        <article id="article-6828">
             <a href="https://ayende.com/blog/3343/deep-fried-bytes-roosterlaidaneggexception" target="_blank">
-                <h2 class="title mb-6" id="article-6827">Deep Fried Bytes: RoosterLaidAnEggException</h2>
+                <h2 class="title mb-6" id="article-6828">Deep Fried Bytes: RoosterLaidAnEggException</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">During the MVP Summit we gathered in the hotel and had recorded one of the discussions that went there.  It was hilarious, and now it is online.   Listen to the interview war stories, and check the bit in the end.</p>
         </article>
-        <article id="article-6828">
+        <article id="article-6829">
             <a href="https://ayende.com/blog/3342/simple-state-machine" target="_blank">
-                <h2 class="title mb-6" id="article-6828">Simple State Machine</h2>
+                <h2 class="title mb-6" id="article-6829">Simple State Machine</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Nathan has posted Simple State Machine to CodePlex, it is the first project that I am aware of that uses Rhino DSL and the techniques that I am talking about in the book.  What is impressive about this is the level of professionalism that is involved in the project. It is a full scale DSL, with all the supporting infrastructure. I spent half an hour or so going through the entire thing, and I am impressed.  Put simply, this is how I think state based work flows should be defined. I could easily see myself extending this a bit to add persistence support &amp; integration with NServiceBus, and be done with it.  Like most state machines, it has the ideas of states, events that can cause the state to be changed, and legal transitions from state to state. You can define tasks which will be executed upon changing a state, or upon entering / leaving a certain state.  Enough talking, let us look at a reasonably complex work flow:     workflow &quot;Order Lifecycle&quot;                                #Event &amp; State Identifier Targets.        #This section controls which Types will be used       #to resolve Event or State names into strongly typed CLR objects.       #--------------------------------------------------------       state_identifier_target @OrderStatus       event_identifier_target @OrderEvents                #Global Actions       #--------------------------------------------------------       on_change_state&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; @WriteToHistory, &quot;on_change_state&quot;       on_workflow_start&#xA0;&#xA0;&#xA0; @WriteToHistory, &quot;on_workflow_start&quot;       on_workflow_complete @WriteToHistory, &quot;on_workflow_complete&quot;                #Event Definitions       #--------------------------------------------------------       define_event&#xA0; @OrderPlaced       define_event&#xA0; @CreditCardApproved       define_event&#xA0; @CreditCardDenied       define_event&#xA0; @OrderCancelledByCustomer       define_event&#xA0; @OutOfStock       define_event&#xA0; @OrderStocked       define_event&#xA0; @OrderShipped       define_event&#xA0; @OrderReceived       define_event&#xA0; @OrderLost                #State &amp; Transition Definitions       #--------------------------------------------------------       state @AwaitingOrder:       &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; when @OrderPlaced&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &gt;&gt; @AwaitingPayment                state @AwaitingPayment:       &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; when @CreditCardApproved&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &gt;&gt; @AwaitingShipment       &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; when @CreditCardDenied&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &gt;&gt; @OrderCancelled       &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; when @OrderCancelledByCustomer &gt;&gt; @OrderCancelled                state @AwaitingShipment:       &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; when @OrderCancelledByCustomer &gt;&gt; @OrderCancelled       &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; when @OutOfStock&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &gt;&gt; @OnBackorder       &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; when @OrderShipped&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &gt;&gt; @InTransit                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; #Individual states can define transition events as well       &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; on_enter_state @WriteToHistory, &quot;on_enter_state(AwaitingShipment)&quot;                state @OnBackorder:       &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; when @OrderCancelledByCustomer &gt;&gt; @OrderCancelled       &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; when @OrderStocked&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &gt;&gt; @AwaitingShipment                state @InTransit:       &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; when @OrderReceived&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &gt;&gt; @OrderComplete       &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; when @OrderLost&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &gt;&gt; @AwaitingShipment                #NOTE: State definitions without any transitions will cause       #the state machine to Complete when they are reached.       #------------------------------------------------------------       state @OrderComplete       state @OrderCancelled   Here is the demo application UI, for the order processing life cycle:     As I said, impressive.</p>
         </article>
-        <article id="article-6829">
+        <article id="article-6830">
             <a href="https://ayende.com/blog/3341/boolangstudio-boo-in-visual-studio" target="_blank">
-                <h2 class="title mb-6" id="article-6829">BooLangStudio: Boo in Visual Studio</h2>
+                <h2 class="title mb-6" id="article-6830">BooLangStudio: Boo in Visual Studio</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: May 30, 2008
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A few days ago, the BooLangStudio was announced in the Boo mailing list, bringing Boo support into Visual Studio.  Below you can see several screen shots. And you can find out more about it here.  This is a very promising move, especially since I soon have to write my tooling chapter :-)  Of course, this is still very early in the game, but it is good to see progress in this area again.</p>
-        </article>
-        <article id="article-6830">
-            <a href="https://ardalis.com/tech-ed-2008-speaker-idol/" target="_blank">
-                <h2 class="title mb-6" id="article-6830">Tech Ed 2008 Speaker Idol</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 29, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Next week (and the week after) at Tech Ed, several experienced speakers will compete with one another in Speaker Idol, held at the Tech Ed&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="682.html"><span class="back arrow"></span></a>

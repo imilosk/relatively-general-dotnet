@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-2941">
+            <a href="https://andrewlock.net/understanding-your-middleware-pipeline-with-the-middleware-analysis-package/" target="_blank">
+                <h2 class="title mb-6" id="article-2941">Understanding your middleware pipeline with the Middleware Analysis package</h2>
+            </a>
+            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 10, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I take a look at the Microsoft.AspNetCore.MiddlewareAnalysis package, which provide insights into the configuration of your middleware pipeline.&#x2026;</p>
+        </article>
+        <article id="article-2942">
             <a href="https://ayende.com/blog/176872/ravendb-conference-videos-ravendb-embedded-at-massive-scales" target="_blank">
-                <h2 class="title mb-6" id="article-2941">RavenDB Conference videos</h2>
+                <h2 class="title mb-6" id="article-2942">RavenDB Conference videos</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this talk from the RavenDB conference, Rodrigo Rosauro is talking about deploying RavenDB at massive scale, to over 36,000 locations and a total number of machine that exceed half a million. One particular (and often forgotten) use-case for RavenDB is its usage as an embedded database. This operation mode allows application providers to abstract the complexity of database administration from their end-users while, at the same time, providing you a fully functional document store. During this talk we will explore the challenges faced while deploying RavenDB in a massive number of machines throughout the globe (aiming at hundreds of thousands), and how RavenDB improved the capabilities of our application.</p>
         </article>
-        <article id="article-2942">
+        <article id="article-2943">
             <a href="https://ayende.com/blog/176961/low-level-voron-optimizations-the-page-size-bump" target="_blank">
-                <h2 class="title mb-6" id="article-2942">Low level Voron optimizations</h2>
+                <h2 class="title mb-6" id="article-2943">Low level Voron optimizations</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Explaining the usage pages seems to be one of the things is either hit of miss for me. Either people just get it, or they struggle with the concept. I have written extensively on this particular topic, so I&#x2019;ll refer it to that post for the details on what exactly pages in a database are. Voron is currently using 4KB pages. That is pretty much the default setting, since everything else also works in units of 4KB. That means that we play nice with requirements for alignment, CPU page sizes, etc.&#xA0; However, 4KB is pretty small, and that lead to trees that has higher depth. And the depth of the tree is one of the most major reasons for concern for database performance (the deeper the tree, the more I/O we have to do). We previously tested using different page sizes (8KB, 16KB and 32KB), and we saw that our performance decreased as a result. That was surprising and completely contrary to our expectations. But a short investigation revealed what the problem was. Whenever you modify a value, you dirty up the entire page. That means that we would need to write that entire page back to storage (which means making a bigger write to the journal, then applying a bigger write to the data filed, etc). In effect, when increasing the page size to 8KB, we also doubled the amount of I/O that we had to deal with. That was a while ago, and we recently implemented journal diffing, as a way to reduce the amount of unnecessary data that we write to disk. A side affect of that is that we no longer had a 1:1 correlation between a dirty page and full page write to disk. That opened up the path to increasing the page sizes. There is still an O(PageSize) cost to doing the actual diffing, of course, but that is memory to memory cost and negligible in compared to the saved I/O.  Actually making the change was both harder and easier then expected. The hard part was that we had to do a major refactoring working to split a shared value. Both the journal and the rest of Voron used the notion of Page Size. But while we want the page size of Voron to change, we didn&#x2019;t want the journal write size to change. That led to a lot of frustration where we had to go over the entire codebase and look at each value and figure out whatever it meant writing to the journal, or pages as they are used in the rest of Voron. I&#x2019;ve got another post scheduled talking about how you can generate intentional compilation errors to make this easy for you to figure it out. Once we were past the journal issue, the rest was mostly dealing with places that made silent assumptions on the page size. That can be anything from &#x201C;the max value we allow here is 512 (because we need to fit at least so many entries in)&#x201D; to tests that wrote 1,000 values and expected the resulting B&#x2B;Tree to be of a certain depth.  The results are encouraging, and we can see them mostly on the system behavior with very large data sets, those used to generate very deep trees, and this change reduced them significantly. To give some context, let us assume that we can fit 100 entries per page using 4KB pages. That means that if we have as little as 2.5 million entries, we&#x2019;ll have (in the ideal case):   1 root page holding 3 entries 3 branch pages holding 250 entries 25,000 leaf pages holding the 2.5 million entries With 8 KB pages, we&#x2019;ll have:  1 root page holding 63 entries 12,500 lead pages holding 2.5 million entries That is a reducing of a full level. The nice thing about B&#x2B;Trees is that in both cases, the branch pages are very few and usually reside in main memory already, so you aren&#x2019;t directly paying for their I/O. What we are paying for is the search on them.  The cost of searching the 4KB tree is:  O(log2 of 3) for searching the root page O(log2 of 100) for searching the relevant branch page O(log2 of 100) for searching the leaf page In other words, about 16 operations. For the 8 KB page, that would be:  O(log2 of 63) for searching the root page O(log2 of 200) for searching the leaf page It comes to 14 operations, which doesn&#x2019;t seems like a lot, but a lot of our time goes on key comparisons on the key, so anything helps.  However, note that I said that the situation above was the ideal one, this can only happen if the data was inserted sequentially, which it doesn&#x2019;t usually do. Page splits can cause the tree depth to increase very easily (in fact, that is one of the core reasons why non sequential keys are so strongly discourage in pretty much all databases. But the large page size allows us to pack many more entries into a single page, and that also reduce the risk of page splits significantly.</p>
         </article>
-        <article id="article-2943">
+        <article id="article-2944">
             <a href="https://ardalis.com/how-to-manage-solution-projects-using-dotnet-cli/" target="_blank">
-                <h2 class="title mb-6" id="article-2943">How to Manage Solution Projects using dotnet CLI</h2>
+                <h2 class="title mb-6" id="article-2944">How to Manage Solution Projects using dotnet CLI</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You can use the latest version of the dotnet CLI (installed by default with the latest version of Visual Studio 2017, or available here) to&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-2944">
+        <article id="article-2945">
             <a href="https://www.stevejgordon.co.uk/reminder-to-take-care-when-registering-dependencies" target="_blank">
-                <h2 class="title mb-6" id="article-2944">A Reminder to Take Care when Registering Dependencies</h2>
+                <h2 class="title mb-6" id="article-2945">A Reminder to Take Care when Registering Dependencies</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I looked into a &#x201C;fun&#x201D; little problem yesterday where we were seeing occasional errors in some of our ASP.NET Core code which calls down into the ASP.NET Core Identity UserManager. We were getting a range of NullReferenceException and ObjectDisposedExceptions as well as various exceptions from Npgsql.NpgsqlConnection (we use Postgres rather than SQL in this project) [&#x2026;]</p>
         </article>
-        <article id="article-2945">
+        <article id="article-2946">
             <a href="https://ayende.com/blog/176871/ravendb-conference-videos-ravendb-for-the-modern-web-developer" target="_blank">
-                <h2 class="title mb-6" id="article-2945">RavenDB Conference videos</h2>
+                <h2 class="title mb-6" id="article-2946">RavenDB Conference videos</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this talk from the RavenDB conference, Judah is discussing using RavenDB for web development, including how to postpone the robot apocalypse by finding some love to young robots lose in the javascript maze. Modern web development is uniquely fast-paced, demands rapid development and responsiveness to changes. But our databases have been stuck in the 1970s with rigid schemas and antiquated query languages. Enter RavenDB: flexible, fast, designed for the 21st century. It&#x27;s the perfect side to your web development dish.</p>
         </article>
-        <article id="article-2946">
+        <article id="article-2947">
             <a href="https://andrewlock.net/exploring-istartupfilter-in-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-2946">Exploring IStartupFilter in ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-2947">Exploring IStartupFilter in ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I&#x27;ll take a look at what the IStartupFilter is and how it is used in the ASP.NET Core infrastructure.&#x2026;</p>
         </article>
-        <article id="article-2947">
+        <article id="article-2948">
             <a href="https://ayende.com/blog/176898/why-you-should-avoid-graceful-error-handling-like-the-plague-that-it-is" target="_blank">
-                <h2 class="title mb-6" id="article-2947">Why you should avoid graceful error handling like the plague that it is</h2>
+                <h2 class="title mb-6" id="article-2948">Why you should avoid graceful error handling like the plague that it is</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A while ago I was reviewing a pull request by a team member and I realized that I&#x2019;m looking at an attempt to negotiate graceful termination of a connection between two nodes. In particular, the code in question was invoked when one node was shutting down or had to tear down the connection for whatever reason. That code was thrown out, and it made a very graceful arc all the way to the recycle bin. But why? The underlying reason for this was to avoid needless error messages in the logs, which can trigger support calls and cost time &amp; effort to figure out what is going on. That is an admirable goal, but at the same time, it is a false hope and a dangerous one at that. Let us consider what it means that a node is shutting down. It means that it now needs to notify all its peers about this. It is no longer enough to just tear down all connections, it need to talk to them, and that means that we introduced network delays into the shutdown procedure. It also means that we now have to deal with error handling when we are trying to notify a peer that this node is shutting down,&#xA0; and that way lead to madness. On the other hand, we have the other node, which node needs to also handle its peer getting up in the middle of the conversation and saying &#x201C;I&#x2019;m going away now&#x201D; mid sentence. For that matter, since the shutdown signal (which is the common case for this to be triggered) can happen at any time, now we need to have thread safety on shutdown so we can send a legible message to the other side, and the other side must be ready to accept the shutdown message at any time. (&#x201C;Do you have any new documents for me&#x201D; request that expects a &#x201C;There are N messages for you&#x201D; now also need to handle &#x201C;G&#x2019;dbye world&#x201D; notification). Doing this properly complicates the code at every level, and you still need to handle the rude shutdown scenario.  Furthermore, what is the other side is supposed to do with the information that this node is shutting down the connection voluntarily? It is supposed to not connect to it again? If so, what policy should it use to decided if the other side is down for valid reasons or actually unavailable?  Assuming that there is actually a reason why there is a TCP connection between the two nodes, any interruption in service, for whatever reason, is not a valid state. And if we ensure that we are always ending the connection in the same rude manner, we also gain a very valuable feature. We make sure that the error handling portion of the code get exercised on a regular basis, so if there are any issues there, they will be discovered easily.  As for the original issue of reducing support calls because of transient / resolved errors. That can be solved by not logging the error immediately, but waiting a bit to verify that the situation actually warrants writing to the operations log (writing to the info log should obviously happen regardless).</p>
         </article>
-        <article id="article-2948">
+        <article id="article-2949">
             <a href="https://www.meziantou.net/advanced-email-address-validation-in-net.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2948">Advanced email address validation in .NET</h2>
+                <h2 class="title mb-6" id="article-2949">Advanced email address validation in .NET</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Applications often ask users to enter an email address, for instance to create an account. Of course, the application must check the value is a valid email address. In this post, we&#x27;ll see how to validate the email address and avoid some typing mistakes.#Check the value is an email addressFirst, we</p>
         </article>
-        <article id="article-2949">
+        <article id="article-2950">
             <a href="https://www.stevejgordon.co.uk/things-ive-learnt-week-5th-february" target="_blank">
-                <h2 class="title mb-6" id="article-2949">Things I&#x2019;ve Learnt This Week (5th February)</h2>
+                <h2 class="title mb-6" id="article-2950">Things I&#x2019;ve Learnt This Week (5th February)</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: February 05, 2017
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m keeping up my plan (week 2 yay!) to record and share things I&#x2019;ve learned during the last week. Less from me this week as it&#x2019;s been fairly hectic and I&#x2019;ve been feeling a bit unwell. Things I&#x2019;ve Learned Identity Server 4 As part of my work for Humanitarian Toolbox I&#x2019;ve been actively investigating Identity [&#x2026;]</p>
-        </article>
-        <article id="article-2950">
-            <a href="https://ayende.com/blog/176869/ravendb-conference-videos-introducing-ravendb-4-0" target="_blank">
-                <h2 class="title mb-6" id="article-2950">RavenDB Conference videos</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 03, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">About 8 months ago we had the RavenDB conference. We recorded the sessions, but we had&#x2026; technical difficulties in getting the videos and their quality. The details don&#x2019;t actually matter, and we&#x2019;ll do better next time. I&#x2019;ll be posting them for the next week or so. This video is all about RavenDB 4.0, the design and thinking behind it and a lot of low level details into what is going on with RavenDB 4.0. Warning, this is close to 2 hours in length, and it goes pretty deep and it covers a lot of material.</p>
         </article>
         <div class="button flex justify-between">
             <a href="294.html"><span class="back arrow"></span></a>
