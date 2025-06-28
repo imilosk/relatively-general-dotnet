@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6221">
+            <a href="https://ayende.com/blog/3825/more-information-of-gc-issue" target="_blank">
+                <h2 class="title mb-6" id="article-6221">More information of GC issue</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 22, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After a lot more study, it looks like there are two separate issues that are causing the problem here.      During AppDomain unload, it is permissible for the GC to collect reachable objects. I am fine with that and I certainly agree that this makes sense.    Application_End occurs concurrently with the AppDomain unload.   Looking at the docs (and there are surprisingly few about this), it seems like 1 is expected, but 2 is a bug. The docs state:     Application_End&#xA0; - Called once per lifetime of the application before the application is unloaded.    It may be my English, but to me before doesn&#x2019;t suggest at the same time as.  So I do believe it is a bug in the framework, but not in the GC, it is in the shutdown code for ASP.Net. This is still a very nasty problem.</p>
+        </article>
+        <article id="article-6222">
             <a href="https://ayende.com/blog/3824/i-am-being-stalked-by-clr-bugs" target="_blank">
-                <h2 class="title mb-6" id="article-6221">I am being stalked by CLR bugs</h2>
+                <h2 class="title mb-6" id="article-6222">I am being stalked by CLR bugs</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just spent several hours tracking down a crashing but in my current project.   The&#xA0; issue was, quite clearly, a problem with releasing unmanaged resources. So I tightened my control over resources and made absolutely sure that I am releasing everything properly.  I simply could not believe what was going on. I knew what they code is doing, and I knew that what I was getting was flat out impossible.       Yes, I know that we keep saying that, but this bug really is not possible!  The situation is quite clear, during the shutdown process of the application, an unmanaged resource&#x2019;s finalizer would throw an exception because it wasn&#x2019;t properly disposed.  The problem? It is most assuredly should be disposed. When debugging through the problem, I found out something extremely strange and worrying. The managed object&#x2019;s finalizer was running while there were strong references to the object.  You can see that in the attached screenshot (click the image see it in full size).  That is, by the way, when you have the root in a static field, so it cannot be that the whole graph is free.  This is somehow related to threading, because debugging this would often change the way this works, but running without a debugger consistently fails.  The CLR semantics for finalizers clearly state that they can only be run after there are no more strong references to the instance. Cleary, this is not what is going on here.  The only thing that I can think of that can affect this is that there is something really strange going on with app domain unloads.  Now, I can&#x2019;t figure if this is me being extremely stupid or if this is a real problem. I did manage to create a reproduction of the issue, however, which you can download here.  This is on VMWare Fusion, running Windows 2008 x64, with .Net 3.5 SP1.  To reproduce, start the application in WebDev.WebServer, wait for the page to load, and the close the WebDev.WebServer. If it crashes, you have successfully reproduced the problem.  Update &#x2013; This is really interesting. both stack traces are operating on the same object, by the way.     Adding locking around the finalizer and dispose seems to have made the problem go away.</p>
         </article>
-        <article id="article-6222">
+        <article id="article-6223">
             <a href="https://ayende.com/blog/3823/rhino-service-bus-concurrency-violations-are-business-logic" target="_blank">
-                <h2 class="title mb-6" id="article-6222">Rhino Service Bus</h2>
+                <h2 class="title mb-6" id="article-6223">Rhino Service Bus</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Concurrency is a tough topic, fraught with problems, pitfalls and nasty issues. This is especially the case when you try to build distributed, inherently parallel systems. I am dealing with the topic quite a lot recently and I have create several solutions (none of them are originally mine, mind you).  There aren&#x2019;t that many good solutions our there, most of them boil down to: &#x201C;suck it up and deal with the complexity.&#x201D; In this case, I want to try to deal with the complexity in a consistent fashion ( no one off solutions ) and in a way that I can deal without first meditating on the import of socks.  Let us see if I can come up with a good example. We have a saga that we use to check whatever a particular user has acceptable credit to buy something from us. The logic is that we need to verify with at least 2 credit card bureaus, and the average must be over 700. (This logic has nothing to do with the real world, since I just dreamt it up, by the way). Here is a simple implementation of a saga that can deal with those requirements:                    1: public class AccpetableCreditSaga : ISaga&lt;AccpetableCreditState&gt;,&#xA;&#xA;         2:   InitiatedBy&lt;IsAcceptableAsCustomer&gt;,&#xA;&#xA;         3:   Orchestrates&lt;CreditCardScore&gt;, &#xA;&#xA;         4:   Orchestrates&lt;MergeSagaState&gt;&#xA;&#xA;         5: {&#xA;&#xA;         6:   IServiceBus bus;&#xA;&#xA;         7:   public bool IsCompleted {get;set;}&#xA;&#xA;         8:   public Guid Id {get;set;}&#xA;&#xA;         9:   &#xA;&#xA;        10:   public AccpetableCreditSaga (IServiceBus bus)&#xA;&#xA;        11:   {&#xA;&#xA;        12:     this.bus = bus;&#xA;&#xA;        13:   }&#xA;&#xA;        14:   &#xA;&#xA;        15:   public void Consume(IsAcceptableAsCustomer message)&#xA;&#xA;        16:   {&#xA;&#xA;        17:     bus.Send(&#xA;&#xA;        18:       new Equifax.CheckCreditFor{Card = message.Card),&#xA;&#xA;        19:       new Experian.CheckCreditFor{Card = message.Card),&#xA;&#xA;        20:       new TransUnion.CheckCreditFor{Card = message.Card)&#xA;&#xA;        21:       );&#xA;&#xA;        22:   }&#xA;&#xA;        23:   &#xA;&#xA;        24:   public void Consume(CreditCardScore message)&#xA;&#xA;        25:   {&#xA;&#xA;        26:     State.Scores.Add(message);&#xA;&#xA;        27:     &#xA;&#xA;        28:     TryCompleteSaga();&#xA;&#xA;        29:   }&#xA;&#xA;        30:   &#xA;&#xA;        31:   public void Consume(MergeSagaState message)&#xA;&#xA;        32:   {&#xA;&#xA;        33:     TryCompleteSaga();&#xA;&#xA;        34:   }&#xA;&#xA;        35:   &#xA;&#xA;        36:   public void TryCompleteSaga()&#xA;&#xA;        37:   {&#xA;&#xA;        38:     if(State.Scores.Count &lt;2)&#xA;&#xA;        39:       return;&#xA;&#xA;        40:      &#xA;&#xA;        41:      bus.Publish(new CreditScoreAcceptable&#xA;&#xA;        42:      {&#xA;&#xA;        43:       CorrelationId = Id,&#xA;&#xA;        44:       IsAcceptable = State.Scores.Average(x=&gt;x.Score) &gt; 700&#xA;&#xA;        45:      });&#xA;&#xA;        46:      IsCompleted = true;&#xA;&#xA;        47:   }&#xA;&#xA;        48: }&#xA;    &#xA;  &#xA;&#xA;&#xA;We have this strange MergeSagaState message, but other than that, it should be pretty obvious what is going on in here.It should be equally obvious that we have a serious problem here. Let us say that we get two reply messages with credit card scores, at the same time. We will create two instances of the saga that will run in parallel, each of them getting a copy of the saga&#x2019;s state. But, the end result is that processing those messages doesn&#x2019;t match the end condition for the saga. So even though in practice we have gotten all the messages we need, because we handled them in parallel, we had no chance to actually see both changes at the same time. This means that any logic that we have that requires us to have a full picture of what is going on isn&#x2019;t going to work.&#xA;&#xA;Rhino Service Bus solve the issue by putting the saga&#x2019;s state into Rhino DHT. This means that a single saga may have several states at the same time. Merging them together is also something that the bus will take care off. Merging the different parts is inherently an issue that cannot be solved generically. There is no generic merge algorithm that you can use. Rhino Service Bus define an interface that will allow you to deal with this issue in a clean manner and supply whatever business logic is required to merge difference versions.&#xA;&#xA;Here is an example of how we can merge the different versions together:&#xA;&#xA;&#xA;  &#xA;       1: public class AccpetableCreditStateMerger : ISagaStateMerger&lt;AccpetableCreditState&gt;&#xA;&#xA;       2: {&#xA;&#xA;       3:   public AccpetableCreditState Merge(AccpetableCreditState[] states)&#xA;&#xA;       4:   {&#xA;&#xA;       5:     return new AccpetableCreditState&#xA;&#xA;       6:     {&#xA;&#xA;       7:       SCores = states.SelectMany(x=&gt;x.Scores)&#xA;&#xA;       8:         .GroupBy(x=&gt;x.Bureau)&#xA;&#xA;       9:         .Select(x =&gt; new Score&#xA;&#xA;      10:         {&#xA;&#xA;      11:           Bureau = x.Key,&#xA;&#xA;      12:           Score = x.Max(y=&gt;y.Score)&#xA;&#xA;      13:         }).ToList();&#xA;&#xA;      14:     };&#xA;&#xA;      15:   }&#xA;&#xA;      16: }&#xA;  &#xA;&#xA;&#xA;Note that this is notepad code, so it may contain errors, but the actual intention should be clear. We accept an array of states that need to be merged, find the highest score from each bureau and return the merged state.&#xA;&#xA;whenever Rhino Service Bus detects that the saga is in a conflicted state, it will post a MergeSagaState message to the saga. This will merge the saga&#x2019;s state and call the Consume(MergeSagaState), in which the saga gets to decide what it wants to do about this (usually inspect the state to see if we missed anything). This also works for completing a saga, by the way, you cannot complete a saga in an inconsistent state, you will get called again with Consume(MergeSagaSate) to deal with that.&#xA;&#xA;The state merger is also a good place to try to deal with concurrency compensating actions. If we notice in the merger that we perform some action twice and we need to revert one of them, for example. In general, it is better to be able to avoid having to do so, but that is the place for this logic.</p>
         </article>
-        <article id="article-6223">
+        <article id="article-6224">
             <a href="https://ayende.com/blog/3822/rhino-service-bus-concurrency-in-a-distributed-world" target="_blank">
-                <h2 class="title mb-6" id="article-6223">Rhino Service Bus</h2>
+                <h2 class="title mb-6" id="article-6224">Rhino Service Bus</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have talked about Rhino DHT at length, and the versioning story that exists there. What I haven&#x2019;t talked about is why I built it. Or, to be rather more exact, the actual use case that I had in mind.  Jason Diamond had pointed out a problem with the way sagas work with Rhino Service Bus.     Are BaristaSaga objects instantiated per message? If so, can two different instances be consuming different messages concurrently?     The reason I ask is because it looks like handling the PrepareDrink message could take some time. Is it possible that a PaymentComplete message could come in before the PrepareDrink message is finished being handled?     If the two instances of BaristaSaga have their own instance of BaristaState, I can see the GotPayment value set by handling the PaymentComplete message getting lost.     If the two instances of BaristaSaga share the same instance of BaristaState, do I now have to worry about synchronizing changes to the state across all of the sagas? Also, wouldn&#x27;t this prevent having multiple barista &quot;servers&quot; handling messages since they wouldn&#x27;t be able to share instances across processes/machines.   The answer to that is that yes, a saga can execute concurrently. Not only that, but it can execute concurrently on different machines. That put us in somewhat of a problem regarding consistent state.  There are several options that we can use to resolve the issue. One of them is to ensure that this cannot happen by locking on a shared resource when executing the saga (commonly done by opening a transaction on the saga&#x2019;s row). That can significantly limit the system scalability. Another option is to persist the saga&#x2019;s state in a way that ensure that we have no conflicts. One way of doing that is to persist the actual state change itself, which allow us to replay the object to a consistent state. Concurrent updates don&#x2019;t bother us because we aren&#x2019;t actually modifying the data.  That might require some careful thinking, however, to avoid a case where a saga tat is concurrently executing step on its own feet without paying attention. I strongly dislike anything that require careful thinking. It is like saying that C&#x2B;&#x2B;&#x2019;s has no memory leaks issues, it just require some careful thinking.  For RSB, I wanted to be able to do better than that. I selected Rhino DHT at persistence store for the default saga&#x2019;s state (you can still do other things, of course). That means that concurrency is very explicit. If you got to a point where there were two concurrently executing instances of the saga, their state is going to go to Rhino DHT. Since they are both going to be from the same version, Rhino DHT is going to keep both state changes around.  The next time that we need the state for that particular saga, we are actually going to get both states. At that point, we introduce the ISagaStateMerger:                    1: public interface ISagaStateMerger&lt;TState&gt;&#xA;&#xA;         2:     where TState : IVersionedSagaState&#xA;&#xA;         3: {&#xA;&#xA;         4:     TState Merge(TState[] states);&#xA;&#xA;         5: }&#xA;    &#xA;  &#xA;&#xA;&#xA;This allow us to handle the notion of concurrency resolution in a very explicit manner. We get the appropriate state merger from the container and use that to merge the states back to a consistent state, which we then pass to the saga to continue its execution.&#xA;&#xA;There is just one additional twist. A saga cannot complete until it is in a consistent state, so if the saga completes while it is in an inconsistent state, we will call the saga again (after resolving the conflict) and let it handle the final state conflict before perform the actual completion.</p>
         </article>
-        <article id="article-6224">
+        <article id="article-6225">
             <a href="https://ardalis.com/copy-pictures-to-folders-by-date-taken-with-powershell/" target="_blank">
-                <h2 class="title mb-6" id="article-6224">Copy Pictures To Folders By Date Taken with Powershell</h2>
+                <h2 class="title mb-6" id="article-6225">Copy Pictures To Folders By Date Taken with Powershell</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For about the millionth time, I was downloading the photos from my digital camera and organizing them into folders by date&#x2026; by hand. I&#x2019;ve&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6225">
+        <article id="article-6226">
             <a href="https://ayende.com/blog/3821/nh-prof-new-feature-superfluous-many-to-one-update" target="_blank">
-                <h2 class="title mb-6" id="article-6225">NH Prof new feature</h2>
+                <h2 class="title mb-6" id="article-6226">NH Prof new feature</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yes, I am aware that I said that I would only have two more feature for NH Prof before releasing. But I am currently being held hostage by the new features fairy, and negotiations over a feature freeze seems to have gotten to a stand still. Beside, it is a neat feature.  The actual feature is quite simple. Let us say that we have the following model:  &#xA0;  Notice that this is a very common case of bidirectional association, and this is mapped to the following table model:     Notice that while on the object model this is a bidirectional association and is maintained by two different places, it is maintained on a single place in the database.   This is a a very common case, and quite a few people get it wrong. By default, NHibernate has to assume that it must update the column on both sides, so creating a new post and adding it to the Blog&#x2019;s Posts collection will result in two statements being written to the database:                    1: INSERT INTO Posts(Title,&#xA;&#xA;         2:                   Text,&#xA;&#xA;         3:                   PostedAt,&#xA;&#xA;         4:                   BlogId,&#xA;&#xA;         5:                   UserId)&#xA;&#xA;         6: VALUES     (&#x27;vam&#x27; /* @p0 */,&#xA;&#xA;         7:             &#x27;abc&#x27; /* @p1 */,&#xA;&#xA;         8:             &#x27;1/17/2009 5:28:52 PM&#x27; /* @p2 */,&#xA;&#xA;         9:             1 /* @p3 */,&#xA;&#xA;        10:             1 /* @p4 */);&#xA;&#xA;        11: select SCOPE_IDENTITY ( )&#xA;&#xA;        12:&#xA0; &#xA;&#xA;        13: UPDATE Posts&#xA;&#xA;        14: SET    BlogId = 1 /* @p0_0 */&#xA;&#xA;        15: WHERE  Id = 22 /* @p1_0 */&#xA;    &#xA;  &#xA;&#xA;&#xA;As you can see, we are actually setting the BlogId to the same value, twice.&#xA;&#xA;Now, there is a very easy fix for this issue, all you have to do is to tell NHibernate on the Blog&#x2019;s Posts mapping that this is a collection where the responsibility for actually updating the column value is on the other side. This is also something that I tend to check in code reviews quite often. The fix is literally just specifying inverse=&#x2019;true&#x2019; on the &lt;many-to-one&gt; association.&#xA;&#xA;And now NH Prof will detect and warn about such cased:&#xA;&#xA; &#xA;&#xA;Beautiful!&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;This is also the first case in which I am starting to do much more in depth analysis of what is actually going on with NHibernate. I planned to do this sort of thing after the v1.0 release, but as I said, I am held hostage by the new features fairy, and this is my negotiation technique :-)</p>
         </article>
-        <article id="article-6226">
+        <article id="article-6227">
             <a href="https://ayende.com/blog/3820/advancing-to-the-past" target="_blank">
-                <h2 class="title mb-6" id="article-6226">Advancing to the past</h2>
+                <h2 class="title mb-6" id="article-6227">Advancing to the past</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am working with a client at the moment to upgrade some of the techniques and processes that they have. Yesterday I realize something very important:     The most advanced, radical, game changing technology that I introduced to this client is&#x2026; static HTML files.   And yes, I am talking about .html files that go through absolutely no server side processing. And yes, I am serious, and no, I don&#x2019;t think that I&#x2019;ll explain.</p>
         </article>
-        <article id="article-6227">
+        <article id="article-6228">
             <a href="https://ayende.com/blog/3819/it-aint-so-simple-mister" target="_blank">
-                <h2 class="title mb-6" id="article-6227">It ain&#x2019;t so simple, mister!</h2>
+                <h2 class="title mb-6" id="article-6228">It ain&#x2019;t so simple, mister!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The most requested feature for NH Prof is the ability to view the query results inline. I created a mockup just to show how this might look like. The real discussion is below the image.     On the face of it, this feature looks very simple. Query the database, throw the results into a grid, done.&#xA0; It is actually not that simple. Let me enumerate all the things that complicate this feature.  The simplest thing is a big stumbling block. How do I get the connection string?   I can make the profiler figure out what the connection string is on the profiled application. That is a relatively simple task from technical perspective. It also open up a whole can of worms. Connection strings are a considered to be highly valuable, and getting the connection string from a running application is a big No! from the security &amp; regulatory perspective.  And that is assuming that I can actually make use of the connection string. In many cases, the connection string point to a database that is not accessible from a developer machine, or not accessible as the database user.   So we remove the &#x201C;auto detect connection string&#x201D; feature and move to the next issue. I am not supporting just SQL Server. I am aiming to support all major databases that NHibernate support. But you cannot connect to a MySQL database (to take a non random example) without referencing MySQL&#x2019;s dlls. Am I suppose to take a dependency on all possible drivers? For that matter, I simply cannot distribute those drivers with NH Prof. MySQL&#x2019;s drivers are GPL. As such, they are inherently incompatible with commercial software.   So now I need to dynamically discover and load dlls. And that probably involves some sort of UI to search for them, and error handling for all sorts of interesting problems.  Then we have additional issues. What happen if you try to see the results of a DELETE statement? Or execute some sensitive stored procedure.  None of those issues are impossible to resolve, they are just things that complicate a relatively simple feature and make it much more complex.</p>
         </article>
-        <article id="article-6228">
+        <article id="article-6229">
             <a href="https://ayende.com/blog/3818/nh-prof-balancing-functionality-simplicity-and-form" target="_blank">
-                <h2 class="title mb-6" id="article-6228">NH Prof</h2>
+                <h2 class="title mb-6" id="article-6229">NH Prof</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There are two features that I want to get done before I call a feature freeze on NH Prof and just deal with any bugs and improvements that come up until I feel it is mature enough to call it v1.0.  One of them is filtering capability. This was a pretty common request once people started realizing the kind of things that they can do with NH Prof.  Ad hoc filtering into NHibernate&#x2019;s activity can bring up a lot of insight, and I certainly think that this would be an good feature to have.  The problem is that while this is a good feature, it also introduce a significant amount of complexity. This wouldn&#x2019;t be a problem if the complexity was on the application side. We can deal with complexity.  The problem is that I think that this introduce a not insignificant amount of complexity into the user&#x27;s&#x2019; hands. Take a look at the mock UI that I created:    This isn&#x2019;t the way it will end up looking, but it is a good place to start the conversation.  What is your opinion?</p>
         </article>
-        <article id="article-6229">
+        <article id="article-6230">
             <a href="https://ayende.com/blog/3817/nh-prof-new-feature-url-tracking" target="_blank">
-                <h2 class="title mb-6" id="article-6229">NH Prof new feature</h2>
+                <h2 class="title mb-6" id="article-6230">NH Prof new feature</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: January 18, 2009
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Now that is what I call a hard to build feature. Well, it wasn&#x2019;t hard, it was just tedious to do. This feature required me to modify 66 files(!). Since I pride myself on the mostly frictionless nature of NH Prof, that was annoying. The real issue was that this required that I would change all layers in the application to start tracking the URL from which the event was generated. Since we have a rigid separation between the different parts, and since we track so many things, it was mainly an annoying task to go and add a URL to all of them.  Anyway, you probably don&#x2019;t really care about my trouble in implementing this feature, let us talk about the actual feature.  We can track which URL opened a session:       And even which URL is responsible for each session:    This is the first of the last three features that I have left. I&#x2019;ll discuss the other two shortly.</p>
-        </article>
-        <article id="article-6230">
-            <a href="https://ardalis.com/devreach-dvds/" target="_blank">
-                <h2 class="title mb-6" id="article-6230">DevReach DVDs</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 17, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Earlier this week, I received a package of DVDs from the DevReach conferenceI was invited to speak at last October. I&#x2019;ve already written&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="622.html"><span class="back arrow"></span></a>

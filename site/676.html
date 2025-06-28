@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6751">
+            <a href="https://ayende.com/blog/3403/a-tdd-dilemma" target="_blank">
+                <h2 class="title mb-6" id="article-6751">A TDD Dilemma</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 05, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am currently modifying some core parts of the system, changing it from using a SQLite DB to using Berkeley DB. The problem is that it is causing... issues.  I have things fairly well isolated, but I need to write code that make this test pass:   As you notice, this is a test for the repository, and it is verifying that the changes has been written to DB correctly.  I removed the references to SQLite and am ready to write the BDB implementation. But I can&#x27;t. I have no idea how to design it, and I can&#x27;t write tests to allow incremental design because all the tests are broken.  I am creating a Temp.Tests project now, and TDDing the implementation, after which I will fix the tests that currently cannot compile.</p>
+        </article>
+        <article id="article-6752">
             <a href="https://ayende.com/blog/3402/bug-magnet" target="_blank">
-                <h2 class="title mb-6" id="article-6751">Bug magnet</h2>
+                <h2 class="title mb-6" id="article-6752">Bug magnet</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you ever need to understand why I tend to be involved so many projects, it is for a simple reason. I am apparently a bug magnet. I mentioned that I managed to cause FireBird to corrupt itself, which is why I am not intending to use it. Now I have another contender to the list.  Berkeley DB is a well known, widely used, and in general though to be very stable. I decided to use it, mainly because it is cool and I really need to learn something new. (It is running a lot of interesting things, and I want to be able to give concrete opinions on that.)  So, I start by writing tests, to ensure that it behave the way I expect it to. It doesn&#x27;t, so I go and read the documentation, and it explained that my assumptions were wrong. Okay, I can deal with that, I learn more about this, and starting to experiment with how it works.   It was going fairly well, until I started to toy with transactions and isolations. One of the early tests is to see whatever read committed transactions work.  I wanted to get this (pseudo code) to pass:     using (var environment = new BerkeleyDbEnvironment(&quot;test&quot;))&#xA;{&#xA;    using (var tx = environment.BeginTransaction())&#xA;    using (var queue = environment.OpenQueue(&quot;my-queue&quot;))&#xA;    {&#xA;&#xA;        queue.Append(new DateTime(2000, 1, 1));&#xA;&#xA;        // now test that we cannot read it&#xA;        using (var environment2 = new BerkeleyDbEnvironment(&quot;test&quot;))&#xA;        {&#xA;            using (var tx2 = environment2.BeginTransaction())&#xA;            using (var queue2 = environment2.OpenQueue(&quot;my-queue&quot;))&#xA;            {&#xA;                Assert.IsNull(queue2.Consume());&#xA;                tx2.Commit();&#xA;            }&#xA;        }&#xA;&#xA;        tx.Commit();&#xA;    }&#xA;}&#xA;&#xA;&#xA;However, not only did the test fail, it also corrupt the DB state, and corrupt the process state (leaving file handles hanging). At first, I blamed myself, then I blamed the code. Finally, I blamed the .Net API Binding.&#xA;&#xA;Eventually I decided that I really need to write my own, to fix this issue. Luckily, I decided to try to reproduce the same scenario using the native C API. This is the first time I touched C in years, so you can imagine how pissed off I was.&#xA;&#xA;I got the same error! And it is a scary one:&#xA;&#xA;&#xA;  PANIC: fatal region error detected; run recovery &#xA;    PANIC: fatal region error detected; run recovery &#xA;&#xA;    File handles still open at environment close &#xA;&#xA;    Open file handle: test\my-test-queue &#xA;&#xA;    PANIC: fatal region error detected; run recovery&#xA;&#xA;&#xA;Here the full C code, running against BDB 4.7.&#xA;&#xA;&#xA;  //create environment &amp; queue&#xA;u_int32_t envCreateFlags = DB_CREATE |&#xA;&#x9;&#x9;&#x9;   DB_INIT_LOCK|&#xA;&#x9;&#x9;&#x9;   DB_INIT_LOG|&#xA;&#x9;&#x9;&#x9;   DB_INIT_MPOOL|&#xA;&#x9;&#x9;&#x9;   DB_INIT_TXN|&#xA;&#x9;&#x9;&#x9;   DB_RECOVER;&#xA;&#xA;char* path = &quot;test&quot;;&#xA;&#xA;DB_ENV *createDbEnv;&#xA;db_env_create(&amp;createDbEnv, 0);&#xA;createDbEnv-&gt;open(createDbEnv,path, envCreateFlags, 0);&#xA;&#xA;DB *createDbDb;&#xA;db_create(&amp;createDbDb, createDbEnv, 0);&#xA;createDbDb-&gt;set_re_len(createDbDb, 128);&#xA;createDbDb-&gt;open(createDbDb, NULL, &quot;my-test-queue&quot;, NULL, DB_QUEUE, DB_CREATE, 0);&#xA;createDbDb-&gt;close(createDbDb, 0);&#xA;createDbEnv-&gt;close(createDbEnv, 0);&#xA;&#xA;// write to queue&#xA;DB_ENV *writeToQueueEnv ;&#xA;db_env_create(&amp;writeToQueueEnv, 0);&#xA;writeToQueueEnv-&gt;open(writeToQueueEnv, path, envCreateFlags, 0);&#xA;DB_TXN *writeToQueueTxn;&#xA;&#xA;writeToQueueEnv-&gt;txn_begin(writeToQueueEnv, NULL, &amp;writeToQueueTxn, DB_READ_COMMITTED);&#xA;&#xA;DB *writeToQueueDb;&#xA;db_create(&amp;writeToQueueDb, writeToQueueEnv, 0);&#xA;writeToQueueDb-&gt;open(writeToQueueDb, writeToQueueTxn, &quot;my-test-queue&quot;, NULL, DB_QUEUE, 0, 0);&#xA;&#xA;int keyVal = 5;&#xA;int valVal = 3;&#xA;&#xA;DBT key, value;&#xA;memset(&amp;key, 0, sizeof(DBT));&#xA;memset(&amp;value, 0, sizeof(DBT));&#xA;&#xA;key.data = &amp;keyVal;&#xA;key.size = sizeof(int);&#xA;value.data = &amp;valVal;&#xA;value.size = sizeof(DBT);&#xA;&#xA;writeToQueueDb-&gt;put(writeToQueueDb,&#x9;writeToQueueTxn, &amp;key, &amp;value, DB_APPEND);&#xA;&#xA;// now try to read using another transaction&#xA;&#xA;// read from queue in middle of uncommited transaction&#xA;DB_ENV *readFromQueueEnv ;&#xA;db_env_create(&amp;readFromQueueEnv, 0);&#xA;readFromQueueEnv-&gt;open(readFromQueueEnv, path, envCreateFlags, 0);&#xA;DB_TXN *readFromQueueTxn;&#xA;&#xA;readFromQueueEnv-&gt;txn_begin(readFromQueueEnv, NULL, &amp;readFromQueueTxn, DB_READ_COMMITTED);&#xA;&#xA;DB *readFromQueueDb;&#xA;db_create(&amp;readFromQueueDb, readFromQueueEnv, 0);&#xA;readFromQueueDb-&gt;open(readFromQueueDb, readFromQueueTxn, &quot;my-test-queue&quot;, NULL, DB_QUEUE, 0, 0);&#xA;&#xA;int readFromQueueKeyVal = 5;&#xA;int val2Val = 3;&#xA;&#xA;DBT readFromQueueKey, readFromQueueData;&#xA;memset(&amp;readFromQueueKey, 0, sizeof(DBT));&#xA;memset(&amp;readFromQueueData, 0, sizeof(DBT));&#xA;&#xA;readFromQueueKey.data = &amp;keyVal;&#xA;readFromQueueKey.size = sizeof(int);&#xA;readFromQueueData.data = &amp;valVal;&#xA;readFromQueueData.size = sizeof(DBT);&#xA;&#xA;int ret = readFromQueueDb-&gt;get(readFromQueueDb, readFromQueueTxn, &amp;key, &amp;value, DB_CONSUME);&#xA;if( ret == DB_NOTFOUND)&#xA;&#x9;Console::WriteLine(&quot;not found&quot;);&#xA;&#xA;readFromQueueTxn-&gt;close(readFromQueueTxn, 0);&#xA;readFromQueueDb-&gt;close(readFromQueueDb, 0);&#xA;readFromQueueEnv-&gt;close(readFromQueueEnv, 0);&#xA;&#xA;&#xA;// now commit write transaction&#xA;writeToQueueTxn-&gt;commit(writeToQueueTxn, 0);&#xA;writeToQueueDb-&gt;close(writeToQueueDb,0);&#xA;writeToQueueEnv-&gt;close(writeToQueueEnv, 0);&#xA;&#xA;&#xA;Now, what the hell am I doing wrong? I am pretty sure that I am missing something. Just to give you an idea about what the issue is, this is about as bad as if running this code would crash a SQL database:&#xA;&#xA;&#xA;  using( var con = new SomeDbConnection(&quot; connection string &quot;))&#xA;using( var tx = con.BeginTransaction())&#xA;using( var cmd = con.CreateCommand() )&#xA;{&#xA;&#x9;cmd.Transaction = tx;&#xA;&#x9;cmd.CommandText = &quot;INSERT INTO Queue (Data) VALUES(&#x27;a&#x27;)&quot;;&#xA;      cmd.ExecuteNonQuery();&#xA;&#x9;&#xA;&#x9;using( var con2 = new SomeDbConnection(&quot; connection string &quot;))&#xA;&#x9;using( var tx2 = con2.BeginTransaction())&#xA;&#x9;using( var cmd2 = con2.CreateCommand() )&#xA;&#x9;{&#xA;&#x9;&#x9;cmd.Transaction = tx;&#xA;&#x9;&#x9;cmd.CommandText = &quot;DELETE FROM Queue&quot;&#xA;&#x9;      int rowAffected = cmd.ExecuteNonQuery();&#x9;&#x9;&#xA;&#x9;&#x9;Assert.AreEqual(0, rowAffected);&#xA;&#x9;&#x9;tx2.Commit();&#xA;&#x9;}&#x9;&#xA;&#x9;&#xA;&#x9;tx.Commit();&#xA;}&#xA;&#xA;&#xA;Sigh, if I were a tester, I would be a menace.&#xA;&#xA;Updates:&#xA;&#xA;The error occurs if &amp; only if you are creating two environments in the same process. What is annoying is that this is at least implicitly allowed. Only if you specify DB_REGISTER you are limited to a single environment per process (and there is a check for it).&#xA;&#xA;It turns out that this is an issue of using the DB_RECOVER flag in multiple environments at the same time. When you create a new environment with DB_RECOVER, it clear the process state. Yuck. Full details can be found here.</p>
         </article>
-        <article id="article-6752">
+        <article id="article-6753">
             <a href="https://ardalis.com/mavens-in-the-developer-community/" target="_blank">
-                <h2 class="title mb-6" id="article-6752">Mavens in the Developer Community</h2>
+                <h2 class="title mb-6" id="article-6753">Mavens in the Developer Community</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Since launching DevMavens this week, I&#x2019;ve had a few folks tell me they didn&#x2019;t previously know what a maven was. The site shows some&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6753">
+        <article id="article-6754">
             <a href="https://ayende.com/blog/3401/challenge-find-the-bug" target="_blank">
-                <h2 class="title mb-6" id="article-6753">Challenge</h2>
+                <h2 class="title mb-6" id="article-6754">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is another subtle bug:     public class Log&#xA;{&#xA;&#x9;string path;&#xA;&#xA;&#x9;public Log(string path)&#xA;&#x9;{&#xA;&#x9;&#x9;if(Directory.Exists(path)==false)&#xA;&#x9;&#x9;&#x9;Directory.CreateDirectory(path);&#xA;&#x9;&#x9;this.path=path;&#x9;&#x9;&#xA;&#x9;}&#xA;&#xA;&#x9;public TextWriter GetLogger(string name)&#xA;&#x9;{&#xA;&#x9;&#x9;string fileName = Path.Combine(path, name);&#xA;&#x9;&#x9;if(File.Exists(fileName))&#xA;&#x9;&#x9;&#x9;return File.AppendText(fileName);&#xA;&#x9;&#x9;return File.CreateText(fileName);&#xA;&#x9;}&#xA;}&#xA;&#xA;&#xA;&#xA;  Assume that the name that we pass to GetLogger() is always valid. &#xA;&#xA;  Assume that there are no permission errors.&#xA;&#xA;  Assume that no one is going to delete the log directory behind our back.&#xA;&#xA;  Assume no file system level errors (like file system full, etc).&#xA;&#xA;&#xA;Update: A few readers pointed out a few more problems with the code, so let us constrain it even further...&#xA;&#xA;&#xA;  Assume single threaded access.&#xA;&#xA;  Assume proper disposable of file handle.&#xA;&#xA;&#xA;Under what conditions will this fail?</p>
         </article>
-        <article id="article-6754">
+        <article id="article-6755">
             <a href="https://ayende.com/blog/3400/in-search-of-an-embedded-db" target="_blank">
-                <h2 class="title mb-6" id="article-6754">In search of an embedded DB</h2>
+                <h2 class="title mb-6" id="article-6755">In search of an embedded DB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I need to use an embedded DB in a project. Naturally, I turned to my old friend, SQLite. It has served me well in the past, and I am well versed in all its tricks. Except... SQLite really fall apart when you are talking about even moderately multi threaded applications. By that I mean, it works just as advertised, for sure. It just lock the entire DB when used, which tend to kill other threads who want to access the poor DB.  I then turned to FireBird, but a short spike told me that it is... inadequate. I managed to get the database into inconsistent state, but I am not sure how or why. There seem to be very little information about it as well, so at the moment it is out of the game.  Sql CE is worse than SQLite when it comes to handling multiple threads, so that wasn&#x27;t even in the running.  Vista DB is commercial, and I plan to make this an OSS project, so that is out as well.   I want to use Berkeley DB, but is seems like the .Net story is hard. There are CLR Binding, but I run into several blocking issues with them. There is no 1:1 mapping to the C API or the Java API, the error messages are... terse. And there aren&#x27;t any tests at all! Even worse, the code is interfacing with native code, so it is C# after a rail road has hit it at 200 kph and having spent three days crying in a desert.  I put some time into trying to get this to work, and once the initial hump is over (understanding the association between environments, databases and transactions), it makes a lot of sense. Of course, there are a lot of features that I wouldn&#x27;t even try to figure out.  First order of business, create a .Netified wrapper that will abstract the C like API away from me.  Okay, I am being ungracious here, the API make a lot of sense and the code is good for the purpose it was built, it was just that I had a moment of existential uncertainty when I looked at the code and it looked like C&#x2B;&#x2B;#.</p>
         </article>
-        <article id="article-6755">
+        <article id="article-6756">
             <a href="https://ardalis.com/ddd-quickly/" target="_blank">
-                <h2 class="title mb-6" id="article-6755">DDD Quickly</h2>
+                <h2 class="title mb-6" id="article-6756">DDD Quickly</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I picked up the print version of Domain Driven Design Quickly on Amazon recently. I didn&#x2019;t realize at the time that it was also available as&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6756">
+        <article id="article-6757">
             <a href="https://ardalis.com/blog-move/" target="_blank">
-                <h2 class="title mb-6" id="article-6756">Blog Move</h2>
+                <h2 class="title mb-6" id="article-6757">Blog Move</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Please join me as I move my blog to my own URL, SteveSmithBlog.com. I&#x2019;ll continue to post there about more or less the same things I did&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6757">
+        <article id="article-6758">
             <a href="https://ardalis.com/announcing-devmavens/" target="_blank">
-                <h2 class="title mb-6" id="article-6757">Announcing DevMavens</h2>
+                <h2 class="title mb-6" id="article-6758">Announcing DevMavens</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This month marks the launch of a new site we&#x2019;ve been working on to help recognize and support a number of influential bloggers in the .NET&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6758">
+        <article id="article-6759">
             <a href="https://ardalis.com/setting-up-windows-live-writer-with-graffiti/" target="_blank">
-                <h2 class="title mb-6" id="article-6758">Setting up Windows Live Writer With Graffiti</h2>
+                <h2 class="title mb-6" id="article-6759">Setting up Windows Live Writer With Graffiti</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So now I&#x2019;ve set up Windows Live Writer to point to my new Graffiti blog. The docs were true to the task and it was pretty painless. Assuming&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6759">
+        <article id="article-6760">
             <a href="https://ardalis.com/isnull-extension-method/" target="_blank">
-                <h2 class="title mb-6" id="article-6759">IsNull Extension Method</h2>
+                <h2 class="title mb-6" id="article-6760">IsNull Extension Method</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: July 02, 2008
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m strongly considering adopting the use of an IsNull extension method in my .NET 3.5 coding projects. A quick search to see what others&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-6760">
-            <a href="https://ardalis.com/search-stored-procedures/" target="_blank">
-                <h2 class="title mb-6" id="article-6760">Search Stored Procedures</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 02, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Sometimes, especially on very old applications that have gone through several rewrites but are still using the original database, I find&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="675.html"><span class="back arrow"></span></a>
