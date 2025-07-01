@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-41">
+            <a href="https://devblogs.microsoft.com/dotnet/dotnet-10-preview-4/" target="_blank">
+                <h2 class="title mb-6" id="article-41">.NET 10 Preview 4 is now available!</h2>
+            </a>
+            <p class="mb-2">by .NET Team</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 13, 2025
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Find out about the new features in .NET 10 Preview 4 across the .NET runtime, SDK, libraries, ASP.NET Core, Blazor, C#, .NET MAUI, and more!</p>
+        </article>
+        <article id="article-42">
             <a href="https://andrewlock.net/using-the-new-ai-template-to-create-a-chatbot-about-a-website/" target="_blank">
-                <h2 class="title mb-6" id="article-41">Using the new AI template to create a chatbot about a website</h2>
+                <h2 class="title mb-6" id="article-42">Using the new AI template to create a chatbot about a website</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I use the new Microsoft&#x27;s new .NET AI template to ingest the contents of a website and create a chatbot that can answer questions with citations&#x2026;</p>
         </article>
-        <article id="article-42">
+        <article id="article-43">
             <a href="https://ayende.com/blog/202469-C/optimizing-the-cost-of-clearing-a-set" target="_blank">
-                <h2 class="title mb-6" id="article-42">Optimizing the cost of clearing a set</h2>
+                <h2 class="title mb-6" id="article-43">Optimizing the cost of clearing a set</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let&#x2019;s say I want to count the number of reachable nodes for each node in the graph. I can do that using the following code:void DFS(Node start, HashSet&lt;Node&gt; visited) &#xD;&#xA;{&#xD;&#xA;    if (start == null || visited.Contains(start)) return;&#xD;&#xA;    visited.Add(start);&#xD;&#xA;    foreach (var neighbor in start.Neighbors) &#xD;&#xA;    {&#xD;&#xA;        DFS(neighbor, visited);&#xD;&#xA;    }&#xD;&#xA;}&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;void MarkReachableCount(Graph g)&#xD;&#xA;{&#xD;&#xA;   foreach(var node in g.Nodes)&#xD;&#xA;   {&#xD;&#xA;       HashSet&lt;Node&gt; visited = [];&#xD;&#xA;       DFS(node, visisted);&#xD;&#xA;       node.ReachableGraph = visited.Count;&#xD;&#xA;   }&#xD;&#xA;}A major performance cost for this sort of operation is the allocation cost. We allocate a separate hash set for each node in the graph, and then allocate whatever backing store is needed for it. If you have a big graph with many connections, that is expensive. A simple fix for that would be to use:void MarkReachableCount(Graph g)&#xD;&#xA;{&#xD;&#xA;   HashSet&lt;Node&gt; visited = [];&#xD;&#xA;   foreach(var node in g.Nodes)&#xD;&#xA;   {&#xD;&#xA;       visited.Clear();&#xD;&#xA;       DFS(node, visisted);&#xD;&#xA;       node.ReachableGraph = visited.Count;&#xD;&#xA;   }&#xD;&#xA;}This means that we have almost no allocations for the entire operation, yay!This function also performs significantly&#xA0;worse than the previous one, even though it barely allocates. The reason for that? The call to Clear()&#xA0;is expensive. Take a look at the implementation&#xA0;-&#xA0;this method needs to zero out two arrays, and it will end up being as large as the node with the most reachable nodes. Let&#x2019;s say we have a node that can access 10,000 nodes. That means that for each node,&#xA0;we&#x2019;ll have to clear an array of about 14,000 items, as well as another array that is as big as the number of nodes we just visited. No surprise that the allocating version was actually cheaper. We use the visited&#xA0;set for a short while, then discard it and get a new one. That means no expensive Clear()&#xA0;calls. The question is, can we do better? Before I answer that, let&#x2019;s try to go a bit deeper in this analysis. Some of the main costs in HashSet&lt;Node&gt;&#xA0;are the calls to GetHashCode()&#xA0;and Equals(). For that matter, let&#x2019;s look at the cost of the Neighbors&#xA0;array on the Node.Take a look at the following options:public record Node1(List&lt;Node&gt; Neighbors);&#xD;&#xA;public record Node2(List&lt;int&gt; NeighborIndexes);Let&#x2019;s assume each node has about 10 - 20 neighbors. What is the cost in memory for each option? Node1&#xA0;uses references (pointers), and will take 256 bytes just for the Neighbors&#xA0;backing array (32-capacity array x 8 bytes). However, the Node2 version uses half of that memory.This is an example of data-oriented design, and saving 50% of our memory costs is quite&#xA0;nice. HashSet&lt;int&gt;&#xA0;is also going to benefit quite nicely from JIT optimizations (no need to call GetHashCode(), etc. - everything is inlined).We still have the problem of allocations vs. Clear(),&#xA0;though. Can we win?Now that we have re-framed the problem using int indexes, there is a very obvious optimization opportunity: use a bit map (such as BitsArray). We know upfront how many items we have, right? So we can allocate a single array and set the corresponding bit to mark that a node (by its index) is visited.That dramatically reduces the costs of tracking whether we visited a node or not, but it does not&#xA0;address the costs of clearing the bitmap.Here is how you can handle this scenario cheaply:public class Bitmap&#xD;&#xA;{&#xD;&#xA;    private ulong[] _data;&#xD;&#xA;    private ushort[] _versions;&#xD;&#xA;    private int _version;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    public Bitmap(int size)&#xD;&#xA;    {&#xD;&#xA;        _data = new ulong[(size &#x2B; 63) / 64];&#xD;&#xA;        _versions = new ushort[_data.Length];&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    public void Clear()&#xD;&#xA;    {&#xD;&#xA;        if(_version&#x2B;&#x2B; &lt; ushort.MaxValue)&#xD;&#xA;            return;&#xD;&#xA;            &#xD;&#xA;        Array.Clear(_data);&#xD;&#xA;        Array.Clear(_versions);&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    public bool Add(int index)&#xD;&#xA;    {&#xD;&#xA;        int arrayIndex = index &gt;&gt; 6;&#xD;&#xA;        if(_versions[arrayIndex] != _version)&#xD;&#xA;        {&#xD;&#xA;            _versions[arrayIndex] = _version;&#xD;&#xA;            _data[arrayIndex] = 0;&#xD;&#xA;        }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;        int bitIndex = index &amp; 63;&#xD;&#xA;        ulong mask = 1UL &lt;&lt; bitIndex;&#xD;&#xA;        ulong old = _data[arrayIndex];&#xD;&#xA;        _data[arrayIndex] |= mask;&#xD;&#xA;        return (old &amp; mask) == 0;&#xD;&#xA;    }&#xD;&#xA;}The idea is pretty simple, in addition to the bitmap - we also have another array that marks the version of each 64-bit range. To clear the array, we increment the version. That would mean that when adding to the bitmap, we reset the underlying array element if it doesn&#x2019;t match the current version. Once every 64K items, we&#x2019;ll need to pay the cost of actually resetting the backing stores, but that ends up being very cheap overall (and worth the space savings to handle the overflow).The code is tight, requires no allocations, and performs very&#xA0;quickly.</p>
         </article>
-        <article id="article-43">
+        <article id="article-44">
             <a href="https://www.meziantou.net/use-csharp-14-extensions-to-simplify-enum-parsing.htm" target="_blank">
-                <h2 class="title mb-6" id="article-43">Use C# 14 extensions to simplify enum Parsing</h2>
+                <h2 class="title mb-6" id="article-44">Use C# 14 extensions to simplify enum Parsing</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In .NET, many types provide a static Parse method to convert strings into their respective types. For example:C#copyint.Parse(&quot;123&quot;);&#xA;double.Parse(&quot;123.45&quot;);&#xA;DateTime.Parse(&quot;2023-01-01&quot;);&#xA;IPAddress.Parse(&quot;192.168.0.1&quot;);However, enums require the use of the Enum.Parse method:C#copyEnum.Parse&lt;MyEn</p>
         </article>
-        <article id="article-44">
+        <article id="article-45">
             <a href="https://ayende.com/blog/202531-B/not-sharding-ravendb-vector-search" target="_blank">
-                <h2 class="title mb-6" id="article-44">NOT Sharding RavenDB Vector Search</h2>
+                <h2 class="title mb-6" id="article-45">NOT Sharding RavenDB Vector Search</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I ran into an interesting post, &quot;Sharding Pgvector,&quot; in which PgDog&#xA0;(provider of scaling solutions for Postgres) discusses scaling pgvector indexes (HNSW and IVFFlat) across multiple machines to manage large-scale embeddings efficiently. This approach speeds up searches and improves recall by distributing vector data, addressing the limitations of fitting large indexes into memory on a single machine.That was interesting to me because they specifically&#xA0;mention this Wikipedia dataset, consisting of 35.1 million vectors. That&#x2026; is not really enough to justify&#xA0;sharding, in my eyes. The dataset is about 120GB of Parquet files, so I threw that into RavenDB using the following format:Each vector has 768 dimensions in this dataset. 33 minutes later, I had the full dataset in RavenDB, taking 163 GB of storage space. The next step was to define a vector search index, like so:from a in docs.Articles&#xD;&#xA;select new &#xD;&#xA;{&#xD;&#xA;    Vector = CreateVector(a.Embedding)&#xD;&#xA;}That index (using the HNSW algorithm) is all that is required to start doing proper vector searches in RavenDB.Here is what this looks like - we have 163GB for the raw data, and the index itself is 119 GB. RavenDB (and PgVector) actually need to store the vectors twice - once in the data itself and once in the index. Given the size of the dataset, I used a machine with 192 GB&#xA0;of RAM to create the index. Note that this still means the total data size is about &#x2153; bigger than the available memory, meaning we cannot compute it all in memory. This deserves a proper explanation &#xA0;- HNSW is a graph algorithm that assumes you can cheaply access any part of the graph during the indexing process. Indeed, this is effectively doing pure random reads on the entire dataset. You would generally run this on a machine with at least&#xA0;192 GB of RAM. &#xA0;I assume this is why pgvector&#xA0;required sharding for this dataset.I decided to test it out on several different machines. The key aspect here is the size of memory, I&#x2019;m ignoring CPU counts and type, they aren&#x2019;t the bottleneck for this scenario. As a reminder, we are talking about a total data size that is close to 300 GB.RAMRavenDB indexing time:192 GB2 hours, 20 minutes64 GB14 hours, 8 minutes32 GB37 hours, 40 minutesNote that all of those were run on a single machine, all using local NVMe disk. And yes, that is less than two days to index that&#xA0;much data on a machine that is grossly inadequate for it.I should note that on the smaller machines, query times are typically ~5ms, so even with a lot of data indexed, the actual search doesn&#x2019;t need to run on a machine with a lot of memory. In short, I don&#x2019;t see a reason why you would need to use sharding for that amount of data. It can comfortably fit inside a reasonably sized machine, with room to spare. I should also note that the original post talks about using the IVFFlat algorithm instead of HNSW. Pgvector supports both, but RavenDB only uses HNSW. From a technical perspective, I would love&#xA0;to be able to use IVFFlat, since it is a much more traditional algorithm for databases. You run k-means over your data to find the centroids (so you can split the data into reasonably sized chunks), and then just do an efficient linear search on that small chunk as needed. It fits much more nicely into the way databases typically work. However, it also has some significant drawbacks:You have to have the data upfront, you cannot build it incrementally.The effectiveness of the IVFFlat index degrades&#xA0;over time with inserts &amp; deletes, because the original centroids are no longer as accurate. Because of those reasons, we didn&#x2019;t implement that. HNSW is a far more complex algorithm, both in terms of the actual approach and the number of hoops we had to go through to implement that efficiently, but as you can see, it is able to provide good results even on large datasets, can be built incrementally and doesn&#x2019;t degrade over time.Head-to-head comparisonI decided to run pgvector&#xA0;and RavenDB on the same dataset to get some concrete ideas about their performance. Because I didn&#x2019;t feel like waiting for hours, I decided to use this dataset. It has 485,859 vectors and about 1.6 GB of data.RavenDB indexed that in 1 minute and 17 seconds. My first attempt with pgvector took over 7 minutes when setting&#xA0;maintenance_work_mem = &#x27;512MB&#x27;.&#xA0;I had to increase it to 2GB to get more reasonable results (and then it was 1 minute and 49 seconds).RavenDB is able to handle it a lot&#xA0;better when there isn&#x2019;t enough memory to keep it all in RAM, while pgvector seems to degrade badly. SummaryIn short, I don&#x2019;t think that you should need to go for sharding (and its associated complexity) for that amount of data. And I say that as someone whose database has&#xA0;native sharding capabilities. For best performance, you should run large vector indexes on machines with plenty of RAM, but even without that, RavenDB does an okay job of keeping things ticking.</p>
         </article>
-        <article id="article-45">
+        <article id="article-46">
             <a href="https://ayende.com/blog/202467-C/making-the-costs-visible-then-fixing-them" target="_blank">
-                <h2 class="title mb-6" id="article-45">Making the costs visible, then fixing them</h2>
+                <h2 class="title mb-6" id="article-46">Making the costs visible, then fixing them</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We recently tackled performance improvements for vector search in RavenDB. The core challenge was identifying performance bottlenecks. Details of specific changes are covered in a separate post. The post is already written, but will be published next week, here is the direct link to that.In this post, I don&#x2019;t want to talk about the actual changes we made, but the approach we took to figure out where the cost is. Take a look at the following flame graph, showing where our code is spending the most time. As you can see, almost the entire&#xA0;time is spent computing cosine similarity. That would be the best target for optimization, right?I spent a bunch of time writing increasingly complicated ways to optimize the cosine similarity function. And it worked, I was able to reduce the cost by about 1.5%!That is something that we would generally celebrate, but it was far from where we wanted to go. The problem was elsewhere, but we couldn&#x2019;t see it in the profiler output because the cost was spread around too much. Our first task was to restructure the code so we could actually see&#xA0;where the costs were. For instance, loading the vectors from disk was embedded within the algorithm. By extracting and isolating this process, we could accurately profile and measure its performance impact. This restructuring also eliminated the &quot;death by a thousand cuts&quot; issue, making hotspots evident in profiling results. With clear targets identified, we can now focus optimization efforts effectively.That major refactoring had two primary goals. The first was to actually extract the costs into highly visible locations, the second had to do with how you address them. Here is a small example that scans a social graph for friends, assuming the data is in a file.def read_user_friends(file, user_id: int) -&gt; List[int]:&#xD;&#xA;    &quot;&quot;&quot;Read friends for a single user ID starting at indexed offset.&quot;&quot;&quot;&#xD;&#xA;    pass # redacted&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;def social_graph(user_id: int, max_depth: int) -&gt; Set[int]:&#xD;&#xA;    if max_depth &lt; 1:&#xD;&#xA;        return set()&#xD;&#xA;    &#xD;&#xA;    all_friends = set() &#xD;&#xA;    visited = {user_id} &#xD;&#xA;    work_list = deque([(user_id, max_depth)])  &#xD;&#xA;    &#xD;&#xA;    with open(&quot;relations.dat&quot;, &quot;rb&quot;) as file:&#xD;&#xA;        while work_list:&#xD;&#xA;            curr_id, depth = work_list.popleft()&#xD;&#xA;            if depth &lt;= 0:&#xD;&#xA;                continue&#xD;&#xA;                &#xD;&#xA;            for friend_id in read_user_friends(file, curr_id):&#xD;&#xA;                if friend_id not in visited:&#xD;&#xA;                    all_friends.add(friend_id)&#xD;&#xA;                    visited.add(friend_id)&#xD;&#xA;                    work_list.append((friend_id, depth - 1))&#xD;&#xA;    &#xD;&#xA;    return all_friendsIf you consider this code, you can likely see that there is an expensive part of it, reading from the file. But the way the code is structured, there isn&#x2019;t really much that you can do about it. Let&#x2019;s refactor the code a bit to expose the actual costs. def social_graph(user_id: int, max_depth: int) -&gt; Set[int]:&#xD;&#xA;    if max_depth &lt; 1:&#xD;&#xA;        return set()&#xD;&#xA;    &#xD;&#xA;    all_friends = set() &#xD;&#xA;    visited = {user_id} &#xD;&#xA;    &#xD;&#xA;    with open(&quot;relations.dat&quot;, &quot;rb&quot;) as file:&#xD;&#xA;        work_list =  read_user_friends(file, [user_id])&#xD;&#xA;        while work_list and max_depth &gt;= 0:&#xD;&#xA;            to_scan = set()&#xD;&#xA;            for friend_id in work_list: # gather all the items to read&#xD;&#xA;                if friend_id in visited:&#xD;&#xA;                    continue&#xD;&#xA;                &#xD;&#xA;                all_friends.add(friend_id)&#xD;&#xA;                visited.add(friend_id)&#xD;&#xA;                to_scan.add(curr_id)&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;            # read them all in one shot&#xD;&#xA;            work_list = read_users_friends(file, to_scan)&#xD;&#xA;            # reduce for next call&#xD;&#xA;            max_depth = max_depth - 1    &#xD;&#xA;    &#xD;&#xA;    return all_friendsNow, instead of scattering the reads whenever we process an item, we gather them all and then send a list of items to read all at once. The costs are far clearer in this model, and more importantly, we have a chance to actually do&#xA0;something about it.Optimizing a lot of calls to read_user_friends(file, user_id)&#xA0;is really hard, but optimizing read_users_friends(file, users)&#xA0;is a far simpler task. Note that the actual costs didn&#x2019;t change because of this refactoring, but the ability to actually make the change is now far easier. Going back to the flame graph above, the actual cost profile differs dramatically as the size of the data rose, even if the profiler output remained the same. Refactoring the code allowed us to see where the costs were and address them effectively.Here is the end result as a flame graph. You can clearly see the preload section that takes a significant portion of the time. The key here is that the change allowed us to address this cost directly and in an optimal manner.The end result for our benchmark was:Before: 3 minutes, 6 secondsAfter: 2 minutes, 4 secondsSo almost exactly &#x2153; of the cost was removed because of the different approach we took, which is quite&#xA0;nice. This technique, refactoring the code to make the costs obvious, is a really powerful one. Mostly because it is likely the first step to take anyway&#xA0;in many performance optimizations (batching, concurrency, etc.).</p>
         </article>
-        <article id="article-46">
+        <article id="article-47">
             <a href="https://devblogs.microsoft.com/dotnet/csharp-exploring-extension-members/" target="_blank">
-                <h2 class="title mb-6" id="article-46">C# 14 &#x2013; Exploring extension members</h2>
+                <h2 class="title mb-6" id="article-47">C# 14 &#x2013; Exploring extension members</h2>
             </a>
             <p class="mb-2">by Kathleen Dollard</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">C# 14 introduces extension members. See how the `extension` syntax offers flexibility for extension authors and continuity for developers using extensions</p>
         </article>
-        <article id="article-47">
+        <article id="article-48">
             <a href="https://ayende.com/blog/202499-A/event-exploring-the-power-of-ai-search-in-modern-applications-today" target="_blank">
-                <h2 class="title mb-6" id="article-47">Event: Exploring the Power of AI Search in Modern Applications (TODAY)</h2>
+                <h2 class="title mb-6" id="article-48">Event: Exploring the Power of AI Search in Modern Applications (TODAY)</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Join Our Community Discussion: Exploring the Power of AI Search in Modern ApplicationsWe&#x27;re excited to announce our second Community Open Discussion, focusing on a transformative feature in today&#x27;s applications: AI search.This technology is rapidly becoming the new standard for delivering intelligent and intuitive search experiences.Join Dejan from our DevRel team for an open and engaging discussion.Whether you&#x27;re eager to learn, contribute your insights, or simply listen in, everyone is welcome!We&#x2019;ll talk about:The growing popularity and importance of AI search.A deep dive into the technical aspects, including embeddings generation, query term caching, and quantization techniques.An open forum to discuss best practices and various approaches to implementing AI search.A live showcase demonstrating how RavenDB AI Integration allows you to implement AI Search in just 5 minutes, with the same simplicity as our regular search API.Event Details:Date:&#xA0;Wednesday, May 7th, 19:00 CETLocation:RavenDB Developers Community DiscordBring your questions and your enthusiasm &#x2013; we look forward to seeing you there!</p>
         </article>
-        <article id="article-48">
+        <article id="article-49">
             <a href="https://devblogs.microsoft.com/dotnet/why-we-built-our-startup-in-csharp/" target="_blank">
-                <h2 class="title mb-6" id="article-48">Why we built our startup in C#</h2>
+                <h2 class="title mb-6" id="article-49">Why we built our startup in C#</h2>
             </a>
             <p class="mb-2">by Sam Cox</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Tracebit built their B2B SaaS security product using C#.</p>
         </article>
-        <article id="article-49">
+        <article id="article-50">
             <a href="https://andrewlock.net/exploring-the-new-ai-chat-template/" target="_blank">
-                <h2 class="title mb-6" id="article-49">Exploring the new AI chat template</h2>
+                <h2 class="title mb-6" id="article-50">Exploring the new AI chat template</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: May 06, 2025
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I explore the new .NET AI Chat Web App template (currently in preview) and take a brief look at the implementation it provides&#x2026;</p>
-        </article>
-        <article id="article-50">
-            <a href="https://ayende.com/blog/202437-C/ravendb-storage-provider-for-orleans" target="_blank">
-                <h2 class="title mb-6" id="article-50">RavenDB Storage Provider for Orleans</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 05, 2025
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Orleans is a distributed computing framework for .NET. It allows you to build distributed systems with ease, taking upon itself all the state management, persistence, distribution, and concurrency.The core aspect in Orleans is the notion of a &#x201C;grain&#x201D; - a lightweight unit of computation &amp; state. You can read more about it in Microsoft&#x2019;s documentation, but I assume that if you are reading this post, you are already at least somewhat familiar with it.We now support using RavenDB as the backing store for grain persistence, reminders, and clustering. You can read the official announcement about the release here, and the docs covering how to use RavenDB &amp; Microsoft Orleans.You can use RavenDB to persist and retrieve Orleans grain states, store Orleans timers and reminders, as well as manage Orleans cluster membership. RavenDB is well suited for this task because of its asynchronous nature, schema-less design, and the ability to automatically adjust itself to different loads on the fly.If you are using Orleans, or even just considering it, give it a spin with RavenDB. We would love your feedback.</p>
         </article>
         <div class="button flex justify-between">
             <a href="4.html"><span class="back arrow"></span></a>
