@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4071">
+            <a href="https://ayende.com/blog/164481/how-do-they-do-this" target="_blank">
+                <h2 class="title mb-6" id="article-4071">How do they DO this?</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: November 15, 2013
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As mentioned, we are doing some more performance work in Voron. And we got some really surprising results there. Voron is writing at really good rate, (better than anything else we tested against), just not a good enough rate. To be fair, if we haven&#x2019;t seen the Esent benchmark with close to 750k writes / second, we might have been happy, but obviously it is possible to be much faster than we are now. So I decided to figure it out. To start with, I run Voron through a profiler, and verified that the actual cost there was purely in calling FlushFileBuffers (the Windows version to fsync). In fact, in our tests, about 75% of the time was spent just calling this function. The test in questions does 1 million inserts, using 10,000 transactions of 100 items each. But Esent can basically do so many it doesn&#x2019;t even count. So how do they do that? I&#x2019;m going to dedicate this post to discussing the process for finding it out, then spend the next one or two discussing the implications. At this level, we can&#x2019;t really use something like a profiler to figure out what is wrong, we need a more dedicated tool. And in this case, we are talking about Process Monitor. It gives you the ability to see what system calls are being made on your system. Here is what it looks like when we are committing a transaction with Voron:  And here is what it looks like when we are committing a transaction with Esent:  I was curious to test SQL Server too, and here is what it looks like when SQL Server is committing a transaction:  And if I&#x2019;m already doing this, here is SQL CE transaction commit:  No, this isn&#x2019;t a mistake. It didn&#x2019;t do anything. By default, SQL CE only flushes to memory. You have to force it to flush to disk my using tx.Commit(CommitMode.Immediate); If you do that, the transaction commits looks like this:      Not a mistake, you still get nothing. It appears that even with Immediate, it is only writing to disk when it feels like it. At a guess, it is using memory mapped files and doing FlushViewOfFile, instead of calling FlushFileBuffers, but I am not really sure. Since I run the benchmarks without immediate, I decided to try running the SQL CE stuff there again. Here are the numbers:  This brings to mind an interesting questions, what the hell is it doing that takes so long if it doesn&#x2019;t even flush to disk? Anyway, let us look at the SQLite version:  And&#x2026; I don&#x2019;t really know how to comment on that, to tell you the truth. I can&#x2019;t figure out what it is doing, and I probably don&#x2019;t really want to. Now, let us look at LMDB:  I am not really sure how to explain the amount of work done here. I think that work because it uses manual file I/O. When I use the WriteMap option, I get:  Which is more reasonable and expected. I would have shown leveldb as well, but I can&#x2019;t run it on Windows.  I think that this is enough for now. I&#x2019;ll discuss the implications of the difference in behavior in my next post. In the meantime, I would love to know what you think about this.</p>
+        </article>
+        <article id="article-4072">
             <a href="https://ayende.com/blog/164449/setting-the-baseline-for-performance-testing-for-voron" target="_blank">
-                <h2 class="title mb-6" id="article-4071">Setting the baseline for performance testing for Voron</h2>
+                <h2 class="title mb-6" id="article-4072">Setting the baseline for performance testing for Voron</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After finishing up the major change of moving Voron to a Write Ahead Journal, it was time to actually start doing some performance testing.  To make things interesting, I decided that we shouldn&#x2019;t just compare this in isolation, but we should actually compare it to its peers.  Those are early results, and we are going to have to do a lot more work to make sure that everything works faster.  We have run those tests on the following machine:   All the tests were run on a freshly formatted 512GB SSD drive. Note that we are currently showing only the fast runs, we also have a set of tests for much larger data sets (tens of GB) and another for performance over time, but we will deal with those separately. All of the current tests are for writing of 1 million items. Consisting of a 4 bytes integer and a 128 bytes value. We have tested: SQLite, SQL CE, LMDB, Esent and Voron.  For LMDB, because it needed a fixed file size, we set the initial file size to be 64 GB. All the databases were run using the default configuration options, no secondary indexes were used. All the tests were done using a single thread. Note that in all cases we used managed code to run the test. This may impact some of the results because some of those engines are native, and there might be some overhead there. The first test was to see how it performs with sequential writes:   Esent really shines in this, probably because this is pretty much the sweat spot for it. Voron is the second best, but the reason that we do those sorts of tests is to see where we have problems, and I think that we have a problem here, we are supposed to be much better here. In fact, we have earlier tests that show much better performance, so we appear to have a regression. We&#x2019;ll work on that next. Next, let us look at sequential reads:   Here, LMDB eclipses everyone else by far, this is its sweet spot. I am pretty happy about Voron&#x2019;s performance here, especially since it appears to be close to twice as fast as Esent is for this scenario. Next, we have random writes:   Surprisingly, Voron is doing pretty badly here, even though it is doing much better than LMDB (this is its weak spot) or SQLite.  For random reads, however, the situation is nicer to us:   So, we have our baseline. And I want to see how we can do better. Expect the future posts to focus on what exactly is slowing our writes down. In the meantime, we do have some really good news, we tested Voron with and without concurrent flushing to the data file, and there isn&#x2019;t any meaningful difference between the performance of the two options in our current test run.</p>
         </article>
-        <article id="article-4072">
+        <article id="article-4073">
             <a href="https://ayende.com/blog/164546/ravendb-webinar-mystery-feature-3-native-java-api-is-now-available-on-the-tubes" target="_blank">
-                <h2 class="title mb-6" id="article-4072">RavenDB Webinar &#x2013; Mystery Feature #3 &#x2013; Native Java API is now available on the tubes</h2>
+                <h2 class="title mb-6" id="article-4073">RavenDB Webinar &#x2013; Mystery Feature #3 &#x2013; Native Java API is now available on the tubes</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20"></p>
         </article>
-        <article id="article-4073">
+        <article id="article-4074">
             <a href="https://ayende.com/blog/164513/the-ravendb-3-0-mystery-features" target="_blank">
-                <h2 class="title mb-6" id="article-4073">The RavenDB 3.0 Mystery Features</h2>
+                <h2 class="title mb-6" id="article-4074">The RavenDB 3.0 Mystery Features</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So far, we have shown the following features:  HTML5 Studio OWIN / Web API based infrastructure. Native Java API I think that you can guess that RavenDB running on Voron is one of the others remaining features, but there are two more in the pipeline that we haven&#x2019;t talked about&#x2026; Can you guess what they are?</p>
         </article>
-        <article id="article-4074">
+        <article id="article-4075">
             <a href="https://ayende.com/blog/164322/more-thoughts-about-compression-storage" target="_blank">
-                <h2 class="title mb-6" id="article-4074">More thoughts about compression &amp; storage</h2>
+                <h2 class="title mb-6" id="article-4075">More thoughts about compression &amp; storage</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that I liked in LevelDB is that it pretty much had compression built in from day one. The entire format is built to save space just about wherever it can. From using 7 bit numbers to prefix compression to making compression core part of the on disk data structure. Considering the cost of I/O, it is usually worth trading CPU time for I/O costs. LMDB, in contrast, went quite the opposite way. It actively discourage compression, since you have no support in the format. But it is more than that, LMDB is meant to be used by directly getting a memory pointer, and it actively encourage you to do such things as have a pointer reference from one record to another record.  The idea is that you can just persist your in memory state and require zero difference between the on disk structure and the in memory structure. This allows you to take full advantage of the memory mapped nature of the database.  Voron, however, doesn&#x2019;t really do that. And the idea of compressing the data can significantly cut the amount of I/O we use, and can allow us to pack much more data into the same space. Now, in a few places, Howard Chu (creator of LMDB) points out that you don&#x2019;t need any support from LMDB to add compression, and points to this as proof. I don&#x2019;t find this satisfactory. I think that this puts a lot of effort on the application side, and require a lot of special hacks. Now, what do we talk about when we talk about compression. We can, of course, individually compress each record. But that just means that we remove redundancies in that single value. In practice, it is almost always better to do compression on multiple values, because then you can get much better compression ratios.  For reference, I have taken the opposite view a while ago, see here: http://ayende.com/blog/162466/some-thoughts-about-compression-storage But let us say that we compress the whole page? Taking a sample page from one of our files, I can see that compressing that (using DeflateStream) is taking essentially zero time, and show that a 4KB set of sample data got turned into about 800 bytes.  That means a lot, because it means that I can shove more data into a single page. And if I can do that, it means that I can also (drastically) reduce the height of the tree, and since that is one of the major factors in I/O costs in B-Tree based systems, that might actually have a lot more performance implications that it would seem. It is also a lot harder. For example, you would have a very hard time telling ahead of time if an addition / deletion is going to be within the page boundary, or if it is going to require to require a split. For now, it is a really nice idea, with some interesting perf implications for later on, but I don&#x2019;t think we&#x2019;ll explore this very closely in the near future.</p>
         </article>
-        <article id="article-4075">
+        <article id="article-4076">
             <a href="https://ayende.com/blog/164483/re-why-you-should-never-use-mongodb" target="_blank">
-                <h2 class="title mb-6" id="article-4075">re</h2>
+                <h2 class="title mb-6" id="article-4076">re</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was pointed at this blog post, and I thought that I would comment, from a RavenDB perspective. TL;DR summary:  If you don&#x2019;t know what how to tie your shoes, don&#x2019;t run. The actual details in the posts are fascinating, I&#x2019;ve never heard about this Diaspora project. But to be perfectly honest, the problems that they run into has nothing to do with MongoDB or its features. They have a lot to do with a fundamental lack of understanding on how to model using a document database. In particular, I actually winced in sympathetic pain when the author explained how they modeled a TV show. They store the entire thing as a single document:   Hell, the author even talks about General Hospital, a show that has 50&#x2B; sessions and 12,000 episodes in the blog post. And at no point did they stop to think that this might not be such a good idea? A much better model would be something like this:  Actors  [episode ids] TV shows  [seasons ids] Seasons  [review ids] [episode ids] Episodes  [actor ids] Now, I am not settled in my own mind if it would be better to have a single season document per season, containing all episodes, reviews, etc. Or if it would be better to have separate episode documents. What I do know is that having a single document that large is something that I want to avoid. And yes, this is a somewhat relational model. That is because what you are looking at is a list of independent aggregates that have different reasons to change. Later on in the post the author talks about the problem when they wanted to show &#x201C;all episodes by actor&#x201D;, and they had to move to a relational database to do that. But that is like saying that if you stored all your actors information as plain names (without any ids), you would have hard time to handle them in a relational database.  Well, duh! Now, as for the Disapora project issues.&#xA0; They appear to have been doing some really silly things there. In particular, let us store store the all information multiple times:   You can see for example all the user information being duplicated all over the place.&#xA0; Now, this is a distributed social network, but that doesn&#x2019;t call for it to be stupid about it.&#xA0; They should have used references instead of copying the data. Now, to be fair, there are very good reasons why you&#x2019;ll want to duplicate the data, when you want a point in time view of it. For example, if I commented on a post, I probably want my name in that post to remain frozen. It would certainly make things much easier all around. But if changing my email now requires that we&#x2019;ll run some sort of a huge update operation on the entire database&#x2026; well, it ain&#x2019;t the db fault. You are doing it wrong. Now, when you store references to other documents, you have a few options. If you are using RavenDB, you have Include support, so you can get the associated documents easily enough. If you are using mongo, you have an additional step in that you have to call $in(the ids), but that is about it.  I am sorry, but this is blaming the dancer blaming the floor.</p>
         </article>
-        <article id="article-4076">
+        <article id="article-4077">
             <a href="https://ayende.com/blog/164321/google-has-a-sense-of-humor" target="_blank">
-                <h2 class="title mb-6" id="article-4076">Google has a sense of humor</h2>
+                <h2 class="title mb-6" id="article-4077">Google has a sense of humor</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20"></p>
         </article>
-        <article id="article-4077">
+        <article id="article-4078">
             <a href="https://ayende.com/blog/164418/ravendb-3-0-mystery-feature-3-webinar" target="_blank">
-                <h2 class="title mb-6" id="article-4077">RavenDB 3.0 Mystery Feature #3 Webinar!</h2>
+                <h2 class="title mb-6" id="article-4078">RavenDB 3.0 Mystery Feature #3 Webinar!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It appears that we are really picking up the pace. We are now is feature 3 of the 6 Big Ticket items that we have for RavenDB 3.0. You can registered for this webinar here: https://www2.gotomeeting.com/register/162117130 Oh, and be sure to&#x2026; expand your mind. As usual, guesses about what this feature is are welcome.</p>
         </article>
-        <article id="article-4078">
+        <article id="article-4079">
             <a href="https://ayende.com/blog/164290/deleting-aint-easy" target="_blank">
-                <h2 class="title mb-6" id="article-4078">Deleting ain&#x2019;t easy</h2>
+                <h2 class="title mb-6" id="article-4079">Deleting ain&#x2019;t easy</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We started getting test failures in Voron regarding to being unable to cleanup the data directory. Which was a major cause for concern. We thought that we had a handle leak, or something like that.  As it turned out, we could reproduce this issue with the following code:      1: class Program   2: {   3:     static void Main(string[] args)   4:     {   5:         var name = Guid.NewGuid().ToString();   6:         for (int i = 0; i &lt; 1000; i&#x2B;&#x2B;)   7:         {   8:             Console.WriteLine(i);   9:             Directory.CreateDirectory(name);  10:&#xA0;   11:             for (int j = 0; j &lt; 10; j&#x2B;&#x2B;)  12:             {  13:                 File.WriteAllText(Path.Combine(name, &quot;test-&quot; &#x2B;j), &quot;test&quot;);  14:             }  15:&#xA0;   16:             if (Directory.Exists(name))  17:                 Directory.Delete(name, true);  18:         }  19:           20:     }  21: }&#xA;If you run this code, in 6 out of 10 runs, it would fail with something like this:&#xA;&#xA;I am pretty sure that the underlying cause is some low lever &#x201C;thang&#x201D; somewhere on my system. FS Indexing, AV, etc. But it basically means that directory delete is not atomic, and that I should basically just suck it up and write a robust delete routine that can handle failure and retry until it is successful.</p>
         </article>
-        <article id="article-4079">
+        <article id="article-4080">
             <a href="https://ayende.com/blog/164417/ravendb-mystery-feature-2-webinar-is-now-available" target="_blank">
-                <h2 class="title mb-6" id="article-4079">RavenDB&#x2013;Mystery Feature #2 webinar is now available</h2>
+                <h2 class="title mb-6" id="article-4080">RavenDB&#x2013;Mystery Feature #2 webinar is now available</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: November 08, 2013
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20"></p>
-        </article>
-        <article id="article-4080">
-            <a href="https://ayende.com/blog/164259/vorons-journal-design-decisions" target="_blank">
-                <h2 class="title mb-6" id="article-4080">Voron&#x2019;s Journal: Design Decisions</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 07, 2013
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ve spoken before about the idea behind Voron&#x2019;s Journal. It allows us to do some pretty sweet things:  Sequential writes.  Incremental backups.  Multi Versioning Concurrency Control.  Mutable trees. We haven&#x2019;t really run perf testing yet (we have some early benchmarks, but they aren&#x2019;t ready to be talked about yet), but things are looking up. In particular, because we write to the log sequentially, we get a much better write speed. I&#x2019;ll discuss the mechanics of flushing the journal in a bit, and I already talking about incremental backup. What I really want to talk about now is how we implement MVCC and a major optimization: Mutable trees. In LMDB, the engine uses a copy on write method to ensure that you can modify the data while other transactions are reading from it. This leads to a lot of of writes (and free space). We can avoid that entirely by using the journal file. This end up reduce the amount of writes we have to do by a factor of 10 or so in our random writes scenario. You can read more about this here. The downside of having a journal is that you can&#x2019;t really just keep the data there. You need to move it to the data file at some point. (CouchDB&#x2019;s engine uses what is effectively only a journal file, but need to compact to save space). And as it turns out, there are a lot of issues that we need to consider here. To start with, we have a minor write amplification. We are (at worst) writing twice as much data as we get. The reason that I am saying that we are writing at most twice as much data is that there are actually optimizations in place to stop up from writing the same page multiple times. So if we wrote five values in five transactions, we would have to write the 5 transactions to the journal, but only update a single page in the data file. More interesting are how we are going to actually handle flushing the journal. Or to be rather more exact, when we are going to do that. We need to balance system speed vs. number of journal files vs. recovery time vs. performance spikes. My current thinking is that we&#x2019;ll start with 1MB log file (see side note), and flush to disk every 1MB. When a log file is full, we create a new one, and if there is more than a single log file, we will double the size of the log file (up to 64 &#x2013; 256MB, I guess). This allows us to very quickly upsize the log file automatically without needing to do explicit configuration. It also means that under load, we will get bigger log files, hence better write performance. Once we are beyond the 1MB range (a size that I don&#x2019;t think require any optimizations at all), we need to start thinking on how to do work in parallel, both flushing to the data file and writing to the current log file.  Side note: optimizing small and growing One of the things that we noticed with our users is that we have a lot of users that are trying out the database with very small data sets. With RavenDB default configuration, we are set up to take about 64MB of disk space, and we got some complaints about that. It might be better to start small and increase the size, than start with a more reasonable default that hurts small dbs. What I think we&#x2019;ll do is allow only one concurrent data flushing, which will be how we limit the amount of work that flushing can take. After every write, we will check how much space we have to flush. If the space is about 50% of the current log file size, we will initiate a flush. We will also initiate a flush if there have been no writes for 5 seconds. What we are trying to do with this logic is that ideally, under load, we will always have writes to both the log file and flushing from the log file. The reason we want to do that is to ensure that we get consistent performance. We want to avoid spikes and stalls in performance. It is more important to be consistent that allow high burst speeds.</p>
         </article>
         <div class="button flex justify-between">
             <a href="407.html"><span class="back arrow"></span></a>
