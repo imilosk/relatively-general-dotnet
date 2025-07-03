@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-441">
+            <a href="https://andrewlock.net/8-ways-to-set-the-urls-for-an-aspnetcore-app/" target="_blank">
+                <h2 class="title mb-6" id="article-441">8 ways to set the URLs for an ASP.NET Core app</h2>
+            </a>
+            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 13, 2024
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe 8 different ways to set which URLs your ASP.NET Core application listens on.&#x2026;</p>
+        </article>
+        <article id="article-442">
             <a href="https://ayende.com/blog/200641-B/ravendb-cloud-now-offering-nvme-based-clusters" target="_blank">
-                <h2 class="title mb-6" id="article-441">RavenDB Cloud now offering NVMe based clusters</h2>
+                <h2 class="title mb-6" id="article-442">RavenDB Cloud now offering NVMe based clusters</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m really happy to announce that RavenDB Cloud is now offering NVMe based instances on the Performance tier. In short, that means that you can deploy RavenDB Cloud clusters to handle some truly high workloads. You can learn more about what is actually going on in our documentation. For performance numbers and costs, feel free to skip to the bottom of this post.I&#x2019;m assuming that you may not be familiar with everything that a database needs to run fast, and this feature deserves a full explanation of what is on offer. So here are the full details of what you can now do.RavenDB is a transactional database that often processes far more data than the memory available on the machine. Consequently, it needs to read from and write to &#xA0;the disk. In fact, as a database, you can say that it is its primary role. This means that one of the most important factors for database performance is the speed of your disk. I have written about the topic before in more depth, if you are interested in exploring the topic. When running on-premises, it&#x2019;s easy to get the best disks you can. We recommend at least good SSDs and prefer NVMe drives for best results. When running on the cloud, the situation is quite different. Machines in the cloud are assumed to be transient, they come and go. Disks, on the other hand, are required to be persistent. So a typical disk on the cloud is actually a remote storage device (typically replicated). That means that disk I/O on the cloud is&#x2026; slow. To the point where you could get better performance from off-the-shelf hardware from 20 years ago.There are higher tiers of high-performance disks available in the cloud, of course. If you need them, you are paying quite a lot for that additional performance. There is another option, however. You can use NVMe disks on the cloud as well. Well, you could, but do you want to?The reason you&#x2019;d want to use an NVMe disk in the cloud is performance, of course. But the problem with achieving this performance on the cloud is that you lose the safety of &#x201C;this disk is persistent beyond the machine&#x201D;. In other words, this is literally a disk that is attached to the physical server hosting your VM. If something goes wrong with that machine, you lose the disk. Traditionally, that means that you can only use that for transient data, not as the backend store for a database. However, RavenDB has some interesting options to deal with this. RavenDB Cloud runs RavenDB clusters with 3 copies of the data by default, operating in a full multi-master configuration. Given that we already have multiple copies of the data, what would happen if we lost a machine?The underlying watchdog would realize that something happened and initiate recovery, which will effectively spawn the instance on another node. That works, but what about the data? All of that data is now lost. The design of RavenDB treats that as an acceptable scenario, the cluster would detect such an issue, move the affected node to rehabilitation mode, and start pumping all the data from the other nodes in the cluster to it.In short, now we&#x2019;ve shifted from a node failure being catastrophic to having a small bump in the data traffic bill at the end of the month. Thanks to its multi-master setup, RavenDB can recover even if two&#xA0;nodes go down at the same time, as we&#x2019;ll recover from the third one. RavenDB Cloud runs the nodes in the cluster in separate availability zones specifically to handle such failure scenarios. We have run into this scenario multiple times, both as part of our testing and as actual production events. I am happy to say that everything works as expected, the failed node comes up empty, is filled by the rest of the cluster, and then seamlessly resumes its work. The users were not even aware that something happened.Of course, there is always the possibility that the entire region could go down, or that three separate instances in three separate availability zones would fail at the same time. What happens then? That is expected to be a rare scenario, but we are all about covering our edge cases.In such a scenario, you would need to recover from backup. Clusters using NVMe disks are configured to run using Snapshot backups, which consume slightly more disk space than normal but can be restored more quickly. RavenDB Cloud also blocks the user&#x27;s ability to scale up or down such clusters from the portal and requires a support ticket to perform them. This is because special care is needed when performing such operations on NVMe machines. Even with those limitations, we are able to perform such actions with zero downtime for the users.And after all this story, let&#x2019;s talk numbers. Take a look at the following table illustrating the costs vs. performance on AWS (us-east-1):Type# of coresMemoryDiskCost ($ / hour)P40 (Premium disk)1664 GB2 TB, 10,000 IOPS, 360 MB/s8.790PN30 (NVMe)864 GB2 TB, 110,000 IOPS, 440 MB/s6.395PN40 (NVMe)16128 GB4 TB, 220,000 IOPS, 880 MB/s12.782The situation is even more blatant when looking at the numbers on Azure (eastus):Type# of coresMemoryDiskCost ($ / hour)P40 (Premium disk)1664 GB2 TB, 7,500 IOPS, 250 MB/s7.089PN30 (NVMe)864 GB2 TB, 400,000 IOPS, 2 GB/s6.485PN40 (NVMe)16128 GB4 TB, 800,000 IOPS, 4 GB/s12.956In other words, you can upgrade to the NVMe cluster and actually reduce&#xA0;the spend if you are stalled on I/O. We expect most workloads to see both higher performance and lower cost from a move from P40 with premium disk to PN30 (same amount of memory, fewer cores). For most workloads, we have found that IO rate matters even more than core count or CPU horsepower. I&#x2019;m really excited about this new feature, not only because it can give you a big performance boost but also because it leverages the same behavior that RavenDB already exhibits for handling issues in the cluster and recovering from unexpected failures. In short, you now have some new capabilities at your fingertips, being able to use RavenDB Cloud for even more demanding workloads. Give it a try, I hear it goes vrooom &#x1F642;.</p>
         </article>
-        <article id="article-442">
+        <article id="article-443">
             <a href="https://www.meziantou.net/creating-an-httpclient-that-uses-dns-over-https.htm" target="_blank">
-                <h2 class="title mb-6" id="article-442">Creating an HttpClient that uses DNS over Https</h2>
+                <h2 class="title mb-6" id="article-443">Creating an HttpClient that uses DNS over Https</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">DNS is a key component of the Internet. It&#x27;s used to translate a domain name to an IP address. For instance, when you type https://www.meziantou.net in your browser, the browser will query the DNS server to get the IP address of the server hosting the website. Then, the browser will connect to the</p>
         </article>
-        <article id="article-443">
+        <article id="article-444">
             <a href="https://ardalis.com/hello-redis-getting-started-with-redis-dotnet/" target="_blank">
-                <h2 class="title mb-6" id="article-443">Hello, Redis - Getting Started with Redis and dotnet 8</h2>
+                <h2 class="title mb-6" id="article-444">Hello, Redis - Getting Started with Redis and dotnet 8</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Integrating Redis Caching in .NET 8 Applications Redis is an open-source, in-memory data structure store, used as a database, cache, and&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-444">
+        <article id="article-445">
             <a href="https://devblogs.microsoft.com/dotnet/resilience-and-chaos-engineering/" target="_blank">
-                <h2 class="title mb-6" id="article-444">Resilience and chaos engineering</h2>
+                <h2 class="title mb-6" id="article-445">Resilience and chaos engineering</h2>
             </a>
             <p class="mb-2">by Martin Tomka</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Chaos engineering with HTTP clients and Polly library</p>
         </article>
-        <article id="article-445">
+        <article id="article-446">
             <a href="https://devblogs.microsoft.com/dotnet/my-top-10-new-visual-studio-features-of-2023-for-dotnet-developers/" target="_blank">
-                <h2 class="title mb-6" id="article-445">My Top 10 NEW Visual Studio Features of 2023 for .NET Developers</h2>
+                <h2 class="title mb-6" id="article-446">My Top 10 NEW Visual Studio Features of 2023 for .NET Developers</h2>
             </a>
             <p class="mb-2">by James Montemagno</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There are tons of great new feature for .NET developers to love in Visual Studio 2022, here are my top 10 that were released in 2023 that you can take advantage of right now.</p>
         </article>
-        <article id="article-446">
+        <article id="article-447">
             <a href="https://andrewlock.net/using-default-interface-methods-for-performance-gains-in-iheaderdictionary/" target="_blank">
-                <h2 class="title mb-6" id="article-446">Using default interface methods for performance gains in IHeaderDictionary</h2>
+                <h2 class="title mb-6" id="article-447">Using default interface methods for performance gains in IHeaderDictionary</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I look at an example of how default interfaces were used to improve the performance of IHeaderDictionary&#x2026;</p>
         </article>
-        <article id="article-447">
+        <article id="article-448">
             <a href="https://devblogs.microsoft.com/dotnet/dev-tunnels-a-game-changer-for-mobile-developers/" target="_blank">
-                <h2 class="title mb-6" id="article-447">Dev Tunnels: A Game Changer for Mobile Developers</h2>
+                <h2 class="title mb-6" id="article-448">Dev Tunnels: A Game Changer for Mobile Developers</h2>
             </a>
             <p class="mb-2">by James Montemagno</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">See how Dev Tunnels can enhance your development process by securely sharing local web services across the internet and enabling you to easily connect to them from mobile apps, webhooks, and more.</p>
         </article>
-        <article id="article-448">
+        <article id="article-449">
             <a href="https://www.meziantou.net/enable-the-new-terminallogger-in-dotnet-8-sdk-automatically.htm" target="_blank">
-                <h2 class="title mb-6" id="article-448">Enable the new TerminalLogger in .NET 8 SDK automatically</h2>
+                <h2 class="title mb-6" id="article-449">Enable the new TerminalLogger in .NET 8 SDK automatically</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In .NET 8, you can use the new TerminalLogger. This terminal logger provides better output than the default console logger. It provides live progression and improves error reporting. However, it&#x27;s not enabled by default. You need to use the --tl option to enable it (e.g. dotnet build --tl).Instead</p>
         </article>
-        <article id="article-449">
+        <article id="article-450">
             <a href="https://ardalis.com/http-file-not-sending-auth-header/" target="_blank">
-                <h2 class="title mb-6" id="article-449">Solved! Visual Studio .http File Not Sending Authorization Header</h2>
+                <h2 class="title mb-6" id="article-450">Solved! Visual Studio .http File Not Sending Authorization Header</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: February 01, 2024
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I ran into a weird problem with how Visual Studio was sending API requests. I was trying to use a bearer token, and it worked fine in&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-450">
-            <a href="https://ardalis.com/log-request-headers-middleware/" target="_blank">
-                <h2 class="title mb-6" id="article-450">Log Request Headers Middleware for ASP.NET Core</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 31, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently I ran into a weird problem with how Visual Studio was sending API requests and I really wanted to see exactly what headers were&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="44.html"><span class="back arrow"></span></a>
