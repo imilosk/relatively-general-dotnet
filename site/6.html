@@ -137,8 +137,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-51">
+            <a href="https://www.meziantou.net/use-csharp-14-extensions-to-simplify-enum-parsing.htm" target="_blank">
+                <h2 class="title mb-6" id="article-51">Use C# 14 extensions to simplify enum Parsing</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 12, 2025
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In .NET, many types provide a static Parse method to convert strings into their respective types. For example:C#copyint.Parse(&quot;123&quot;);&#xA;double.Parse(&quot;123.45&quot;);&#xA;DateTime.Parse(&quot;2023-01-01&quot;);&#xA;IPAddress.Parse(&quot;192.168.0.1&quot;);However, enums require the use of the Enum.Parse method:C#copyEnum.Parse&lt;MyEn</p>
+        </article>
+        <article id="article-52">
             <a href="https://ayende.com/blog/202531-B/not-sharding-ravendb-vector-search" target="_blank">
-                <h2 class="title mb-6" id="article-51">NOT Sharding RavenDB Vector Search</h2>
+                <h2 class="title mb-6" id="article-52">NOT Sharding RavenDB Vector Search</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +168,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I ran into an interesting post, &quot;Sharding Pgvector,&quot; in which PgDog&#xA0;(provider of scaling solutions for Postgres) discusses scaling pgvector indexes (HNSW and IVFFlat) across multiple machines to manage large-scale embeddings efficiently. This approach speeds up searches and improves recall by distributing vector data, addressing the limitations of fitting large indexes into memory on a single machine.That was interesting to me because they specifically&#xA0;mention this Wikipedia dataset, consisting of 35.1 million vectors. That&#x2026; is not really enough to justify&#xA0;sharding, in my eyes. The dataset is about 120GB of Parquet files, so I threw that into RavenDB using the following format:Each vector has 768 dimensions in this dataset. 33 minutes later, I had the full dataset in RavenDB, taking 163 GB of storage space. The next step was to define a vector search index, like so:from a in docs.Articles&#xD;&#xA;select new &#xD;&#xA;{&#xD;&#xA;    Vector = CreateVector(a.Embedding)&#xD;&#xA;}That index (using the HNSW algorithm) is all that is required to start doing proper vector searches in RavenDB.Here is what this looks like - we have 163GB for the raw data, and the index itself is 119 GB. RavenDB (and PgVector) actually need to store the vectors twice - once in the data itself and once in the index. Given the size of the dataset, I used a machine with 192 GB&#xA0;of RAM to create the index. Note that this still means the total data size is about &#x2153; bigger than the available memory, meaning we cannot compute it all in memory. This deserves a proper explanation &#xA0;- HNSW is a graph algorithm that assumes you can cheaply access any part of the graph during the indexing process. Indeed, this is effectively doing pure random reads on the entire dataset. You would generally run this on a machine with at least&#xA0;192 GB of RAM. &#xA0;I assume this is why pgvector&#xA0;required sharding for this dataset.I decided to test it out on several different machines. The key aspect here is the size of memory, I&#x2019;m ignoring CPU counts and type, they aren&#x2019;t the bottleneck for this scenario. As a reminder, we are talking about a total data size that is close to 300 GB.RAMRavenDB indexing time:192 GB2 hours, 20 minutes64 GB14 hours, 8 minutes32 GB37 hours, 40 minutesNote that all of those were run on a single machine, all using local NVMe disk. And yes, that is less than two days to index that&#xA0;much data on a machine that is grossly inadequate for it.I should note that on the smaller machines, query times are typically ~5ms, so even with a lot of data indexed, the actual search doesn&#x2019;t need to run on a machine with a lot of memory. In short, I don&#x2019;t see a reason why you would need to use sharding for that amount of data. It can comfortably fit inside a reasonably sized machine, with room to spare. I should also note that the original post talks about using the IVFFlat algorithm instead of HNSW. Pgvector supports both, but RavenDB only uses HNSW. From a technical perspective, I would love&#xA0;to be able to use IVFFlat, since it is a much more traditional algorithm for databases. You run k-means over your data to find the centroids (so you can split the data into reasonably sized chunks), and then just do an efficient linear search on that small chunk as needed. It fits much more nicely into the way databases typically work. However, it also has some significant drawbacks:You have to have the data upfront, you cannot build it incrementally.The effectiveness of the IVFFlat index degrades&#xA0;over time with inserts &amp; deletes, because the original centroids are no longer as accurate. Because of those reasons, we didn&#x2019;t implement that. HNSW is a far more complex algorithm, both in terms of the actual approach and the number of hoops we had to go through to implement that efficiently, but as you can see, it is able to provide good results even on large datasets, can be built incrementally and doesn&#x2019;t degrade over time.Head-to-head comparisonI decided to run pgvector&#xA0;and RavenDB on the same dataset to get some concrete ideas about their performance. Because I didn&#x2019;t feel like waiting for hours, I decided to use this dataset. It has 485,859 vectors and about 1.6 GB of data.RavenDB indexed that in 1 minute and 17 seconds. My first attempt with pgvector took over 7 minutes when setting&#xA0;maintenance_work_mem = &#x27;512MB&#x27;.&#xA0;I had to increase it to 2GB to get more reasonable results (and then it was 1 minute and 49 seconds).RavenDB is able to handle it a lot&#xA0;better when there isn&#x2019;t enough memory to keep it all in RAM, while pgvector seems to degrade badly. SummaryIn short, I don&#x2019;t think that you should need to go for sharding (and its associated complexity) for that amount of data. And I say that as someone whose database has&#xA0;native sharding capabilities. For best performance, you should run large vector indexes on machines with plenty of RAM, but even without that, RavenDB does an okay job of keeping things ticking.</p>
         </article>
-        <article id="article-52">
+        <article id="article-53">
             <a href="https://ayende.com/blog/202467-C/making-the-costs-visible-then-fixing-them" target="_blank">
-                <h2 class="title mb-6" id="article-52">Making the costs visible, then fixing them</h2>
+                <h2 class="title mb-6" id="article-53">Making the costs visible, then fixing them</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +184,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We recently tackled performance improvements for vector search in RavenDB. The core challenge was identifying performance bottlenecks. Details of specific changes are covered in a separate post. The post is already written, but will be published next week, here is the direct link to that.In this post, I don&#x2019;t want to talk about the actual changes we made, but the approach we took to figure out where the cost is. Take a look at the following flame graph, showing where our code is spending the most time. As you can see, almost the entire&#xA0;time is spent computing cosine similarity. That would be the best target for optimization, right?I spent a bunch of time writing increasingly complicated ways to optimize the cosine similarity function. And it worked, I was able to reduce the cost by about 1.5%!That is something that we would generally celebrate, but it was far from where we wanted to go. The problem was elsewhere, but we couldn&#x2019;t see it in the profiler output because the cost was spread around too much. Our first task was to restructure the code so we could actually see&#xA0;where the costs were. For instance, loading the vectors from disk was embedded within the algorithm. By extracting and isolating this process, we could accurately profile and measure its performance impact. This restructuring also eliminated the &quot;death by a thousand cuts&quot; issue, making hotspots evident in profiling results. With clear targets identified, we can now focus optimization efforts effectively.That major refactoring had two primary goals. The first was to actually extract the costs into highly visible locations, the second had to do with how you address them. Here is a small example that scans a social graph for friends, assuming the data is in a file.def read_user_friends(file, user_id: int) -&gt; List[int]:&#xD;&#xA;    &quot;&quot;&quot;Read friends for a single user ID starting at indexed offset.&quot;&quot;&quot;&#xD;&#xA;    pass # redacted&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;def social_graph(user_id: int, max_depth: int) -&gt; Set[int]:&#xD;&#xA;    if max_depth &lt; 1:&#xD;&#xA;        return set()&#xD;&#xA;    &#xD;&#xA;    all_friends = set() &#xD;&#xA;    visited = {user_id} &#xD;&#xA;    work_list = deque([(user_id, max_depth)])  &#xD;&#xA;    &#xD;&#xA;    with open(&quot;relations.dat&quot;, &quot;rb&quot;) as file:&#xD;&#xA;        while work_list:&#xD;&#xA;            curr_id, depth = work_list.popleft()&#xD;&#xA;            if depth &lt;= 0:&#xD;&#xA;                continue&#xD;&#xA;                &#xD;&#xA;            for friend_id in read_user_friends(file, curr_id):&#xD;&#xA;                if friend_id not in visited:&#xD;&#xA;                    all_friends.add(friend_id)&#xD;&#xA;                    visited.add(friend_id)&#xD;&#xA;                    work_list.append((friend_id, depth - 1))&#xD;&#xA;    &#xD;&#xA;    return all_friendsIf you consider this code, you can likely see that there is an expensive part of it, reading from the file. But the way the code is structured, there isn&#x2019;t really much that you can do about it. Let&#x2019;s refactor the code a bit to expose the actual costs. def social_graph(user_id: int, max_depth: int) -&gt; Set[int]:&#xD;&#xA;    if max_depth &lt; 1:&#xD;&#xA;        return set()&#xD;&#xA;    &#xD;&#xA;    all_friends = set() &#xD;&#xA;    visited = {user_id} &#xD;&#xA;    &#xD;&#xA;    with open(&quot;relations.dat&quot;, &quot;rb&quot;) as file:&#xD;&#xA;        work_list =  read_user_friends(file, [user_id])&#xD;&#xA;        while work_list and max_depth &gt;= 0:&#xD;&#xA;            to_scan = set()&#xD;&#xA;            for friend_id in work_list: # gather all the items to read&#xD;&#xA;                if friend_id in visited:&#xD;&#xA;                    continue&#xD;&#xA;                &#xD;&#xA;                all_friends.add(friend_id)&#xD;&#xA;                visited.add(friend_id)&#xD;&#xA;                to_scan.add(curr_id)&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;            # read them all in one shot&#xD;&#xA;            work_list = read_users_friends(file, to_scan)&#xD;&#xA;            # reduce for next call&#xD;&#xA;            max_depth = max_depth - 1    &#xD;&#xA;    &#xD;&#xA;    return all_friendsNow, instead of scattering the reads whenever we process an item, we gather them all and then send a list of items to read all at once. The costs are far clearer in this model, and more importantly, we have a chance to actually do&#xA0;something about it.Optimizing a lot of calls to read_user_friends(file, user_id)&#xA0;is really hard, but optimizing read_users_friends(file, users)&#xA0;is a far simpler task. Note that the actual costs didn&#x2019;t change because of this refactoring, but the ability to actually make the change is now far easier. Going back to the flame graph above, the actual cost profile differs dramatically as the size of the data rose, even if the profiler output remained the same. Refactoring the code allowed us to see where the costs were and address them effectively.Here is the end result as a flame graph. You can clearly see the preload section that takes a significant portion of the time. The key here is that the change allowed us to address this cost directly and in an optimal manner.The end result for our benchmark was:Before: 3 minutes, 6 secondsAfter: 2 minutes, 4 secondsSo almost exactly &#x2153; of the cost was removed because of the different approach we took, which is quite&#xA0;nice. This technique, refactoring the code to make the costs obvious, is a really powerful one. Mostly because it is likely the first step to take anyway&#xA0;in many performance optimizations (batching, concurrency, etc.).</p>
         </article>
-        <article id="article-53">
+        <article id="article-54">
             <a href="https://devblogs.microsoft.com/dotnet/csharp-exploring-extension-members/" target="_blank">
-                <h2 class="title mb-6" id="article-53">C# 14 &#x2013; Exploring extension members</h2>
+                <h2 class="title mb-6" id="article-54">C# 14 &#x2013; Exploring extension members</h2>
             </a>
             <p class="mb-2">by Kathleen Dollard</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +200,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">C# 14 introduces extension members. See how the `extension` syntax offers flexibility for extension authors and continuity for developers using extensions</p>
         </article>
-        <article id="article-54">
+        <article id="article-55">
             <a href="https://ayende.com/blog/202499-A/event-exploring-the-power-of-ai-search-in-modern-applications-today" target="_blank">
-                <h2 class="title mb-6" id="article-54">Event: Exploring the Power of AI Search in Modern Applications (TODAY)</h2>
+                <h2 class="title mb-6" id="article-55">Event: Exploring the Power of AI Search in Modern Applications (TODAY)</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Join Our Community Discussion: Exploring the Power of AI Search in Modern ApplicationsWe&#x27;re excited to announce our second Community Open Discussion, focusing on a transformative feature in today&#x27;s applications: AI search.This technology is rapidly becoming the new standard for delivering intelligent and intuitive search experiences.Join Dejan from our DevRel team for an open and engaging discussion.Whether you&#x27;re eager to learn, contribute your insights, or simply listen in, everyone is welcome!We&#x2019;ll talk about:The growing popularity and importance of AI search.A deep dive into the technical aspects, including embeddings generation, query term caching, and quantization techniques.An open forum to discuss best practices and various approaches to implementing AI search.A live showcase demonstrating how RavenDB AI Integration allows you to implement AI Search in just 5 minutes, with the same simplicity as our regular search API.Event Details:Date:&#xA0;Wednesday, May 7th, 19:00 CETLocation:RavenDB Developers Community DiscordBring your questions and your enthusiasm &#x2013; we look forward to seeing you there!</p>
         </article>
-        <article id="article-55">
+        <article id="article-56">
             <a href="https://devblogs.microsoft.com/dotnet/why-we-built-our-startup-in-csharp/" target="_blank">
-                <h2 class="title mb-6" id="article-55">Why we built our startup in C#</h2>
+                <h2 class="title mb-6" id="article-56">Why we built our startup in C#</h2>
             </a>
             <p class="mb-2">by Sam Cox</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Tracebit built their B2B SaaS security product using C#.</p>
         </article>
-        <article id="article-56">
+        <article id="article-57">
             <a href="https://andrewlock.net/exploring-the-new-ai-chat-template/" target="_blank">
-                <h2 class="title mb-6" id="article-56">Exploring the new AI chat template</h2>
+                <h2 class="title mb-6" id="article-57">Exploring the new AI chat template</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -232,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I explore the new .NET AI Chat Web App template (currently in preview) and take a brief look at the implementation it provides&#x2026;</p>
         </article>
-        <article id="article-57">
+        <article id="article-58">
             <a href="https://ayende.com/blog/202437-C/ravendb-storage-provider-for-orleans" target="_blank">
-                <h2 class="title mb-6" id="article-57">RavenDB Storage Provider for Orleans</h2>
+                <h2 class="title mb-6" id="article-58">RavenDB Storage Provider for Orleans</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Orleans is a distributed computing framework for .NET. It allows you to build distributed systems with ease, taking upon itself all the state management, persistence, distribution, and concurrency.The core aspect in Orleans is the notion of a &#x201C;grain&#x201D; - a lightweight unit of computation &amp; state. You can read more about it in Microsoft&#x2019;s documentation, but I assume that if you are reading this post, you are already at least somewhat familiar with it.We now support using RavenDB as the backing store for grain persistence, reminders, and clustering. You can read the official announcement about the release here, and the docs covering how to use RavenDB &amp; Microsoft Orleans.You can use RavenDB to persist and retrieve Orleans grain states, store Orleans timers and reminders, as well as manage Orleans cluster membership. RavenDB is well suited for this task because of its asynchronous nature, schema-less design, and the ability to automatically adjust itself to different loads on the fly.If you are using Orleans, or even just considering it, give it a spin with RavenDB. We would love your feedback.</p>
         </article>
-        <article id="article-58">
+        <article id="article-59">
             <a href="https://www.meziantou.net/stringcomparison-invariantculture-is-not-always-invariant.htm" target="_blank">
-                <h2 class="title mb-6" id="article-58">StringComparison.InvariantCulture is not always invariant</h2>
+                <h2 class="title mb-6" id="article-59">StringComparison.InvariantCulture is not always invariant</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">CultureInfo.InvariantCulture is not invariant for all operations. It is a special culture that is used for formatting and parsing operations that do not depend on any specific culture. For instance, this is well-suited to format values in order to persist them. However, it is not invariant for stri</p>
         </article>
-        <article id="article-59">
+        <article id="article-60">
             <a href="https://ayende.com/blog/202436-C/ravendb-news-may-2025" target="_blank">
-                <h2 class="title mb-6" id="article-59">RavenDB News</h2>
+                <h2 class="title mb-6" id="article-60">RavenDB News</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -279,22 +295,6 @@
                 posted on: May 02, 2025
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB is moving at quite a pace, and there is actually more stuff happening than I can find the time to talk about. I usually talk about the big-ticket items, but today I wanted to discuss some of what we like to call Quality of Life features.The sort of things that help smooth the entire process of using RavenDB - the difference between something that works and something polished. That is something I truly care about, so with a great sense of pride, let me walk you through some of the nicest things that you probably wouldn&#x2019;t even notice that we are doing for you.RavenDB Node.js Client - v7.0 released (with Vector Search)We updated the RavenDB Node.js client to version 7.0, with the biggest item being explicit support for vector search queries from Node.js. You can now write queries like these:const docs = session.query&lt;Product&gt;({collection: &quot;Products&quot;})&#xD;&#xA;   .vectorSearch(x =&gt; x.withText(&quot;Name&quot;),&#xD;&#xA;      factory =&gt; factory.byText(&quot;italian food&quot;))&#xD;&#xA;  .all();This is the famous example of using RavenDB&#x2019;s vector search to find pizza and pasta in your product catalog, utilizing vector search and automatic data embeddings.Converting automatic indexes to static indexesRavenDB has auto indexes. Send a query, and if there is no existing index to run the query, the query optimizer will generate one for you. That works quite amazingly well, but sometimes you want to use this automatic index as the basis for a static (user-defined) index. Now you can do that directly from the RavenDB Studio, like so:You can read the full details of the feature at the following link.RavenDB Cloud - Incidents History &amp; Operational SuggestionsWe now expose the operational suggestions to you on the dashboard. The idea is that you can easily and proactively check the status of your instances and whether you need to take any action.You can also see what happened to your system in the past, including things that RavenDB&#x2019;s system automatically recovered from without you needing to lift a finger.For example, take a look at this highly distressed system:As usual, I would appreciate any feedback you have on the new features.</p>
-        </article>
-        <article id="article-60">
-            <a href="https://ayende.com/blog/202435-C/recording-practical-ai-integration-with-ravendb" target="_blank">
-                <h2 class="title mb-6" id="article-60">Recording</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 30, 2025
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last week I did an hour long webinar showing AI integration in RavenDB. From vector search to RAG, from embedding generation to Gen AI inside of the database engine.Most of those features are already released, but I would really love your feedback on the Gen AI integration story (starts at around to 30 minutes mark in the video). Let me know what you think!</p>
         </article>
         <div class="button flex justify-between">
             <a href="5.html"><span class="back arrow"></span></a>
