@@ -137,8 +137,72 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-2591">
+            <a href="https://ayende.com/blog/180033/re-entity-framework-core-performance-tuning-part-ii" target="_blank">
+                <h2 class="title mb-6" id="article-2591">re</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 06, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After looking at this post detailing how to optimize data queries in EF Core, I obviously decided that I need to test how RavenDB handles the same load.To make things fair, I tested this on my laptop, running on battery mode. The size of the data isn&#x2019;t that much, only 100,000 books and half a million reviews, so I decided to increase that by an order of magnitude.The actual queries we make from the application are pretty simple and static. We can sort by votes / publication date / price (ascending /descending) and we can filter by number of votes and the publication year. This means that we don&#x2019;t have an explosion of querying options, so that simplify the kind of work we are doing. To make things simple for myself, I kept the same model of books / authors and reviews as separate collections. This isn&#x2019;t the best model for document database, but it allows us to compare apples to apples against the work the EF Core based solution and the RavenDB solution need to do.A major cost in Jon&#x2019;s solution is the need to aggregate the reviews for a book (so the average for the review can be computed). In the end, the only way to get the solution required was to just manually calculate the average reviews for each book and store the computation in the book. We&#x2019;ll discuss this a bit more in a few minutes, for now, I want to turn our eyes toward the simplest possible query in this page, getting 100 books sorted by the book id.Because we aren&#x2019;t running on the same machine, it is hard to make direct parallels, but on Jon&#x2019;s machine he got 80 ms for this kind of query on 100,000 books. When increasing the data to half a million&#xA0; books, the query time rose to 150ms. Running the same query gives us the results instantly (zero ms). Querying and sorting by the title, for example, give us the results in 19 ms for a page size of 100 books.Now, let us look at the major complexity for this system, sorting and filtering by the number of votes in the system. This is hard because the reviews are stored separately from the books. With EF Core, there is the need to join between the tables, which is quite expensive and eventually led Jon to take upon himself the task of manually maintaining the values. With RavenDB, we can use a map/reduce index to handle this all for us. More specifically, we are going to use a multi map/reduce index.Here is what the index definition looks like:We map the results from both the Books and the BookReviews into the same shape, and then reduce them together into the final output, which contains the relevant aggregation. Now, let us do some queries, shall we? Here is us querying over the entire dataset (an order of magnitude higher than the EF Core sample set), filtering by the published date and ordering by the computed votes average. In here, we get the first 100 items, and you can see that we got over 289,753 total results:One very interesting feature of this query is that we are asking to include the book document for the results. This is handled after the query (so no need to do a join to the entire 289K&#x2B; results), and we are able to get everything we want in a very simple fashion. Oh, and the total time? 17 ms. Compared to the 80ms result for EF with 1/10 of the data size. That is pretty nice (and yes, different machines, hard to compare, etc).I&#x2019;ll probably have another post on this topic, showing off some of the cool things that you can do with RavenDB and queries.</p>
+        </article>
+        <article id="article-2592">
+            <a href="https://ayende.com/blog/180001/ravendb-4-0-unsung-heroes-the-design-of-the-security-error-flow" target="_blank">
+                <h2 class="title mb-6" id="article-2592">RavenDB 4.0 Unsung heroes</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 05, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is again a feature that very few people will even notice exist, but a lot of time, effort and thinking went into building. How should RavenDB handle a case when a user make a request that it is not authorize to make. In particular, we need to consider the case of a user pointing the browser to a server or database that they aren&#x2019;t authorized to see or without having the x509 certificate properly registered.To understand the problem we need to figure out what the default experience will be like, and if we require a client certificate to connect to RavenDB, and the client does not provide it, by default the response is some variation of just closing the TCP connection. That result in the client getting an error that looks like this:TCP connection closed unexpectedlyThat is not conductive for a good error experience and will typically cause a user to spend a lot of time trying to figure out what the network problem is, while everything is working just fine, the server just doesn&#x2019;t want to talk to the user.The problem is that at the TLS level, there isn&#x2019;t really a good way to give back some meaningful error. We are too low level, all we can do is just terminate the connection. Instead of doing that, RavenDB will accept the connection, regardless of whatever it has a valid certificate (or even any certificate) and pass the connection to one level up in the chain. At that point, we can check whatever the certificate is valid and if it isn&#x2019;t (or if it doesn&#x2019;t have the permissions to do what we want it to do we can use the protocol&#x2019;s own mechanism to report errors.With HTTP, that means we can return a 403 error to the user, including an explanation on why we rejected the connection (no certificate, expired certificate, certificate doesn&#x2019;t have the right permissions, etc). This make things much easier when you need to troubleshoot permissions issues.</p>
+        </article>
+        <article id="article-2593">
+            <a href="https://ardalis.com/aspnet-core-inmemorydatabase-upgrade-breaking-change/" target="_blank">
+                <h2 class="title mb-6" id="article-2593">ASPNET Core InMemoryDatabase Upgrade Breaking Change</h2>
+            </a>
+            <p class="mb-2">by Ardalis</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 05, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There&#x2019;s a minor breaking change in ASP.NET Core 2.0 that I&#x2019;ve encountered while updating my Clean Architecture sample. In 1.x, you could&#x2026;Keep Reading &#x2192;</p>
+        </article>
+        <article id="article-2594">
+            <a href="https://ayende.com/blog/179969/re-entity-framework-core-performance-tuning-part-i" target="_blank">
+                <h2 class="title mb-6" id="article-2594">re</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 04, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I run into a really interesting article about performance optimizations with EF Core and I thought that it deserve a second &amp; third look. You might have noticed that I have been putting a lot of emphasis on performance and I had literally spent years on optimizing relational database access patterns, including building a profiler dedicated for inspecting what an OR/M is doing. I got the source and run the application. I have a small bet with myself, saying that in any application using a relational database, I&#x2019;ll be able to find a SELECT N&#x2B;1 issue within one hour. So far, I think that my rate is 92% or so. In this case, I found the SELECT N&#x2B;1 issue on the very first page load.Matching this to the code, we have:Which leads to:And here we can already tell that there is a problem, we aren&#x2019;t accessing the authors. This actually happens here:So we have the view that is generating 10 out of 12 queries. And the more results per page you have, the more this costs.But this is easily fixed once you know what you are looking at. Let us look at something else, the actual root query, it looks like this:Yes, I too needed a minute to recover from this. We have:One JOINTwo correlated sub queriesJon was able to optimize his code by 660ms to 80ms, which is pretty awesome. But that is all by making modifications to the access pattern in the database. Given what I do for a living, I&#x2019;m more interested in what it does inside the database, and here is what the query plan tells us:There are only a few tens of thousands of records and the query is basically a bunch of index seeks and nested loop joins. But note that the way the query is structured forces the database to evaluate all possible results, then filter just the top few. That means that you have to wait until the entire result set has been processed, and as the size of your data grows, so will the cost of this query.I don&#x2019;t think that there is much that can be done here, given the relational nature of the data access ( no worries, I&#x2019;m intending to write another post in this series, you guess what I&#x2019;m going to write there, right? ).</p>
+        </article>
+        <article id="article-2595">
             <a href="https://enterprisecraftsmanship.com/posts/domain-events-simple-reliable-solution/" target="_blank">
-                <h2 class="title mb-6" id="article-2591">Domain events: simple and reliable solution</h2>
+                <h2 class="title mb-6" id="article-2595">Domain events: simple and reliable solution</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -152,9 +216,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today, I&#x2019;d like to write about a simple and reliable way to implement domain events.</p>
         </article>
-        <article id="article-2592">
+        <article id="article-2596">
             <a href="https://ayende.com/blog/179940/ravendb-4-0-unsung-heroes-the-indexing-threads" target="_blank">
-                <h2 class="title mb-6" id="article-2592">RavenDB 4.0 Unsung Heroes</h2>
+                <h2 class="title mb-6" id="article-2596">RavenDB 4.0 Unsung Heroes</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -168,9 +232,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A major goal in RavenDB 4.0 is to eliminate as much as possible complexity from the codebase. One of the ways we did that is to simplify thread management. In RavenDB 3.0 we used the .NET thread pool and in RavenDB 3.5 we implemented our own thread pool to optimize indexing based on our understanding of how indexing are used. This works, is quite fast and handles things nicely as long as everything works. When things stop working, we get into a whole different story.A slow index can impact the entire system, for example, so we had to write code to handle that, and noisy indexing neighbors can impact overall indexing performance&#xA0; and tracking costs when the indexing work is interleaved is anything but trivial. And all the indexing code must be thread safe, of course.Because of that, we decided we are going to dramatically simplify our lives. An index is going to use a single dedicated thread, always. That means that each index gets their own thread and are only able to interfere with their own work. It also means that we can have much better tracking of what is going on in the system. Here are some stats from the live system.And here is another:What this means is that we have fantastically detailed view of what each index is doing, in terms of CPU, memory and even I/O utilization is needed. We can also now define fine grained priorities for each index:The indexing code itself can now assume that it single threaded, which free a lot of complications and in general make things easier to follow.There is the worry that a user might want to run 100 indexes per database and 100 databases on the same server, resulting in a thousand of indexing threads. But given that this is not a recommended configuration and given that we tested it and it works (not ideal and not fun, but works), I&#x2019;m fine with this, especially given the other alternative that we have today, that all these indexes will fight over the same limited number of threads and stall indexing globally. The end result is that thread per index allow us to have fine grained control over the indexing priorities, account for memory and CPU costs as well simplify the code and improve the overall performance significantly. A win all around, in my book.</p>
         </article>
-        <article id="article-2593">
+        <article id="article-2597">
             <a href="https://ardalis.com/your-api-and-view-models-should-not-reference-domain-models/" target="_blank">
-                <h2 class="title mb-6" id="article-2593">Your API and View Models Should Not Reference Domain Models</h2>
+                <h2 class="title mb-6" id="article-2597">Your API and View Models Should Not Reference Domain Models</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -184,9 +248,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;re organizing your application following Clean Architecture and Domain-Driven Design, with your Core domain model in one project that&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-2594">
+        <article id="article-2598">
             <a href="https://andrewlock.net/creating-and-trusting-a-self-signed-certificate-on-linux-for-use-in-kestrel-and-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-2594">Creating and trusting a self-signed certificate on Linux for use in Kestrel and ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-2598">Creating and trusting a self-signed certificate on Linux for use in Kestrel and ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -200,9 +264,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I show how to create a self-signed certificate on Linux. I show how you can trust the certificate, and how to configure Kestrel to use it.&#x2026;</p>
         </article>
-        <article id="article-2595">
+        <article id="article-2599">
             <a href="https://ayende.com/blog/179939/ravendb-4-0-unsung-heroes-indexing-related-data" target="_blank">
-                <h2 class="title mb-6" id="article-2595">RavenDB 4.0 Unsung Heroes</h2>
+                <h2 class="title mb-6" id="article-2599">RavenDB 4.0 Unsung Heroes</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,9 +280,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB is a non relational database, which means that you typically don&#x2019;t model documents as having strong relations. A core design principle &#xA;for modeling documents is that they should be independent, isolated and coherent, or more specifically,Independent &#x2013; meaning a document should have its own separate existence from any other documents. &#xA; Isolated &#x2013; meaning a document can change independently from other documents. &#xA; Coherent &#x2013;  meaning a document should be legible on its own, without referencing other documents.That said, even when following proper modeling procedures there are still cases when you want to search a document by its relationship. For example, you might want to search for all for all the employees whose manage name is John, and you don&#x2019;t care if this is John Doe or John Smith for some reason.RavenDB allows you to handle this scenario by using LoadDocument during the index phase. That creates a relationship between the two documents and ensures that whenever the referenced document is updated, the referencing documents will be re-indexed to catch up to the new details. It is quite an elegant feature, even if I say so myself, and I&#x2019;m really proud of it.It is also the source of much abuse in the wild. If you don&#x2019;t model properly, it is often easy to paper over that using LoadDocument in the indexes. The problem is that in RavenDB 3.x an update to a document that was referenced using LoadDocument was also required to touch all of the referencing documents. This slowed down writes, which is something that we generally try really hard to avoid and could also caused availability issues if there were enough referencing documents (as in, all of them, which happened more frequently then you might think).With RavenDB 4.0, we knew that we had to do better. We did this by completely changing how we are handling LoadDocument tracking. Instead of having to re-index all the relevant values globally, we are now tracking them on a per index basis. In each index, we track the relevant references on a per collection basis, and as part of the indexes we&#x2019;ll check if there has been any updates to any of the documents that we have referenced. If we do have an document that has a lot of referencing documents, it will still take some time to re-index all of them, but that cost is now limited to just the index in question.You can still create an index and slow it down in this manner, but the pay to play model is much nicer and there is no affect on the write speed for documents and no general impact on the whole database, which is pretty sweet. The only way you would ever run into this feature is if you run into this problem in 3.x and try to avoid it, which is now not necessary for the same reason (although the same modeling concerns apply).</p>
         </article>
-        <article id="article-2596">
+        <article id="article-2600">
             <a href="https://www.meziantou.net/still-not-using-typescript.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2596">Still not using TypeScript?</h2>
+                <h2 class="title mb-6" id="article-2600">Still not using TypeScript?</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -231,70 +295,6 @@
                 posted on: October 02, 2017
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve been using TypeScript since version 1.3 on a professional project. I think it improves my productivity in front-end development. Lots of people still use JavaScript. When I speak with them, it&#x27;s very easy to convince them to switch to TypeScript. Here&#x27;s the key reasons to use TypeScript &#x1F603;Type</p>
-        </article>
-        <article id="article-2597">
-            <a href="https://ayende.com/blog/179938/ravendb-4-0-unsung-heroes-map-reduce" target="_blank">
-                <h2 class="title mb-6" id="article-2597">RavenDB 4.0 Unsung Heroes</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 29, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the hardest things that we did in RavenDB 4.0 would probably go completely unnoticed by users. We completely re-wrote how RavenDB is processing map/reduce queries. One of my popular blog posts is still a Visual Explanation to Map/Reduce, and it still does a pretty good job of explaining what map/reduce is. The map/reduce code in RavenDB 3.x is one of the more fragile things that we have, require you to maintain in your head several completely different states that a particular reduction can be in and how they transition between states. Currently, there are probably two guys* who still understand how it works and one guy that is still able to find bugs in the implementation. It is also not as fast as we wished it would be.So with RavenDB 4.0 we set out to build it from scratch, based in no small part on the fact that we had also written our storage engine for 4.0 and was able to take full advantage of that. You can read about the early design in this blog post, but I&#x2019;m going to do a quick recap and explain how it works now.The first stage in map/reduce is&#x2026; well, the map. We run over the documents and extract the key portions we&#x2019;ll need for the next part. We then immediately apply the reduce on each of the results independently. This give us the final map/reduce results for a single document. More to the point, this also tells us what is the reduce key for the results is. The reduce key is the value that the index grouped on.We store all of the items with the same reduce key together. And here is where its get interesting. Up until a certain point, we just store all of the values for a particular reduce key as an embedded value inside a B&#x2B;Tree. That means that whenever any of the values changes, we can add that value to the appropriate location and reduce all the matching values in one go. This works quite well until the total size of all the values exceed about 4KB or so. At this point, we can&#x2019;t store the entire thing as an embedded value and we move all the values for that reduce key to its own dedicated B&#x2B;Tree. This means that we start with a single 8KB page and fill it up, then split it, and so on. But there is a catch. The results of a map/reduce operation tend to be extremely similar to one another. At a minimum, they share the same properties and the same reduce key. That means that we would end up storing a lot of duplicate information. To resolve that, we also apply recursive compression. Whenever a page nears 8KB in size, we will compress all the results stored in that page as a single unit. This tend to have great compression rate and can allow us to store up to 64KB of uncompressed data in a single page. When adding items to a map/reduce index, we apply an optimization so it looks like:results = reduce(results, newResults);Basically, we can utilize the recursive nature of reduce to optimize things for the append only path. When you delete or update documents and results change or are removed, things are more complex. We handle that by running a re-reduce on the results. Now, as long as the number of results is small (this depend on the size of your data, but typically up to a thousand or so) we&#x2019;ll just run the reduce over the entire result set. Because the data is always held in a single location, this means that it is extremely efficient in terms of memory access and the tradeoff between computation and storage leans heavily to the size of just recomputing things from scratch.When we have too many results (the total uncompressed size exceeds 64KB) we start splitting the B&#x2B;Tree and adding a level to the three. At this point, the cost of updating a value is now the cost of updating a leaf page and the reduce operation on the root page. When we have more data still,&#xA0; we will get yet another level, and so on.The (rough) numbers are:Up to 64KB (roughly 1000 results) &#x2013; 1 reduce for the entire datasetUp to  16 MB &#x2013; 2 reduces (1 for up to 1000 results, 1 for up to 254 results)Up to  4 GB &#x2013; 3 reduces (1 for up to 1000 results, 2 for up to 254 results each)Up to 1 TB&#xA0; - 4 reduces (1 for up to 1000 results, 3 for up to 254 results each)I think you get how it works now, right? The next level up is 1 to 248 TB and will requite 5 reduces.These numbers is if your reduce data is very small, in the order of a few dozen byes. If you have large data, this means that the tree will expand faster, and you&#x2019;ll get less reduces at the first level.Note that at the first level, if there is only an addition (new document, basically), we can process that as a single operation between two values and then proceed upward as the depth of the tree requires.There are also optimizations in place if we have multiple updates to the same reduce key, in that case, we can first apply all the updates, then do the reduce once for all of them in one shot.And all of that is completely invisible to the users, unless you want to peek inside, which is possible using the Map/Reduce visualizer:This can give you insight deep into the guts of how RavenDB is handling map/reduce operations.The current status is that map/reduce indexing are actually faster than normal indexes, because they are almost all our code, while a large portion of the normal indexing cost is with Lucene.* That is an exaggeration, there is one guy that know how it works. Okay, okay, I&#x2019;ll admit that we can dive into the code and figure out what is going on, but it takes quite a bit of time if there is a significant issue there.</p>
-        </article>
-        <article id="article-2598">
-            <a href="https://ayende.com/blog/179937/0-1x-or-10x-time-matters" target="_blank">
-                <h2 class="title mb-6" id="article-2598">0.1x or 10x, time matters</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 28, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There is a lot of chatter in the industry about the notion of 10x programmers. People who can routinely be an order of magnitude faster than mere mortals.&#xA0; Okay, that was a bit snarky, I&#x2019;ll admit.I have had the pleasure to interact with a lot of developers, from people whose conversation I could barely follow (way above my level) and whose code I mined for insight and ideas to the the classic outsourcing developer who setup a conference call for assistance in writing &#x201C;Hello World&#x201D; to the console. I think that I have enough experience at this point to comment on the nature of developer productivity. More to the point, I know of quite a lot of way to destroy it.The whole 10x developer mentality assume that a single (or very few) developers are actually able to make a major difference, and that is usually not the case. Let me try to explain why, and note that I assume a perfect world in which there no need to burn this 10x dev with all nighters and hero mode. The problem is what we are talking about when we are talking about major difference. Usually, as developers, we can talk about making major technical changes. Let us consider the Windows Kernel Dispatcher Lock removal. That was 8 years ago and it is still something that pop to my mind when I consider big changes in the guts of software. This is something that is clearly beneficial, was quite complex to get right and require a lot of work. No idea if the people working on it were &#x201C;10x&#x201D; but I assume that the kernel team in Microsoft weren&#x2019;t pulled from the lowest bidder by the Shady Outsourcing R Us. What real difference did it make for Windows? Well, it became faster, which is great. But I think it is fair to say that most people never heard about it, and of those who did, fewer cared. The things that really matter for a product are a solid technical base, and then all the rest of the stuff. This can be the user interface, the documentation, the getting started guide and even the &#x201C;yes dear&#x201D; installer. It is the whole experience that matters, and you&#x2019;ll not typically find a who can do all of that significantly better than others. One of the guys in the office is currently spending much more time writing the documentation and walkthrough for a feature than the time it took to actually write it. The problem with developers is that we tend to live in our own world and consider everything else that isn&#x2019;t technical secondary.But as good as the software is, the actual release to customers require a lot more work that isn&#x2019;t even remotely technical, be it marketing materials, working with partners or just making sure that the purchase workflow actually work.</p>
-        </article>
-        <article id="article-2599">
-            <a href="https://www.meziantou.net/mocking-an-httpclient-using-an-httpclienthandler.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2599">Mocking an HttpClient using an HttpClientHandler</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 28, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently, I wrote a .NET client for Open Exchange Rates, a service to get exchange rates for more than 100 currencies. You can find it on GitHub. The code is pretty simple, it simply calls the API of Open Exchange Rates using an HttpClient class and deserializes json using Json.NET. I don&#x27;t want to</p>
-        </article>
-        <article id="article-2600">
-            <a href="https://ayende.com/blog/179906/writing-ssl-proxy-part-ii-delegating-authentication" target="_blank">
-                <h2 class="title mb-6" id="article-2600">Writing SSL Proxy</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 27, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned that RavenDB 4.0 uses x509 client certificate for authentication, right? As it turns out, this can create some issues for us when we need to do more than just blind routing to the right location.Imagine that our proxy is setup in front of the RavenDB Docker Swarm not just for handling routing but to also apply some sort of business logic. It can be that you want to do billing per client basis on their usage, or maybe even inspect the incoming data into RavenDB to protect against XSS (don&#x2019;t ask, please). But those are strange requirements. Let us go with something that you can probably emphasize with more easily. We want to have a RavenDB cluster that uses a Let&#x2019;s Encrypt certificate, but that certificate has a very short life time, typically around 3 months. So you probably don&#x2019;t want to setup these certificates within RavenDB itself, because you&#x2019;ll be replacing them all the time. So we want to write a proxy that would handle the entire process of fetching, renewing and managing Let&#x2019;s Encrypt certificates for our database, but the certificates that the RavenDB cluster will use are internal ones, with much longer expiration times. So far, so good. Except&#x2026;The problem that we have here is that here we have a problem. Previously, we used the SNI extension in our proxy to know where we are going to route the connection, but now we have different certificates for the proxy and for the RavenDB server. This means that if we&#x2019;ll try to just pass the connection through to the RavenDB node, the client will detect that it isn&#x2019;t using a trusted certificate and fail the request. On the other hand, if we terminated the SSL connection at the proxy, we have another issue, we use x509 client certificate for ensuring that the user actually have the access they desire. And we can&#x2019;t just pass the client certificate forward, since we terminated the SSL connection.Luckily, we don&#x2019;t have to deal with a true man in the middle simulation here, because we can configure the RavenDB server to trust the proxy. All we are left now is to figure out how the proxy can tell the RavenDB server what is the client certificate that the proxy authenticated. A common way to do that is to send the client certificate details over in a header, and that would work, but&#x2026;Sending the certificate details in a header has two issues for us. First, it would mean that we need to actually parse and mutate the incoming data stream. Not that big a deal, but it is something that I would like to avoid if possible. Second, and more crucial for us, we don&#x2019;t want to have to validate the certificate on each and every request. What we want to do is take advantage on the fact that connections are reused and do all the authentication checks once, when the client connects to the server. Authentication doesn&#x2019;t cost too much, but when you are aiming at tens and thousands of requests a second, you want to reduce costs as much as possible. So we have two problems, but we can solve them together. Given that the RavenDB server can be configured to trust the proxy, we are going to do the following. Terminate the SSL connection at the proxy, and validate the client certificate (just validate the certificate, not check permissions or such) and then the magic happens. The proxy will generate a new certificate, signed with the proxy own key and registering the original client certificate thumbprint in the new client certificate (caching that certificate, obviously). Then the proxy route the request to its destination, signed with its own client certificate. The RavenDB server will recognize that this is a proxied certificate, pull the original certificate thumbprint from the proxied client certificate and use that to verify the permissions to assign to the user.The proxy can then manage things like refreshing the certificates from Let&#x2019;s Encrypt and RavenDB can get proxied requests.</p>
         </article>
         <div class="button flex justify-between">
             <a href="259.html"><span class="back arrow"></span></a>
