@@ -4,11 +4,11 @@ A curated collection of .NET blog posts and articles, automatically deployed to 
 
 ## 🌐 Live Site
 
-The site is available at: https://imilosk.github.io/relatively-general-dotnet/
+The site is available at: https://relativelygeneral.net/
 
 ## 📖 About
 
-This repository hosts a static website that aggregates and displays .NET-related blog posts from various sources including:
+This repository hosts a static website that aggregates and displays .NET-related blog posts from various sources, including:
 
 - Microsoft DevBlogs
 - Popular .NET community blogs
