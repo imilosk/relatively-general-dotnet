@@ -138,72 +138,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4591">
-            <a href="https://ardalis.com/how-can-i-view-msmq-messages-and-queues/" target="_blank">
-                <h2 class="title mb-6" id="article-4591">How Can I View MSMQ Messages and Queues?</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 17, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m working with NServiceBus to send messages to and from different parts of my application. NServiceBus is a mature tool that sits on top&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-4592">
-            <a href="https://ayende.com/blog/156577/on-umbracos-nhibernates-pullout" target="_blank">
-                <h2 class="title mb-6" id="article-4592">On Umbraco&#x2019;s NHibernate&#x2019;s Pullout</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 15, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was asked to comment on this topic:  Here is the link to the full article, but here is the gist:  Performance.The culprit of v5 is our usage of NHibernate. This doesn&#x27;t mean that NHibernate is evil, just that it has turned out to be the wrong fit for our project (in part due to our architecture and db schema, in part due to lack of proper NHibernate experience on the team). It&#x27;s a badly tamed NHibernate that is caused the many N&#x2B;1 SQL statements. The long term solution is to replace NHibernate with native, optimized SQL calls but it&#x27;s a bigger operation that we&#x27;ll look into over the summer. The short team solution is to continue with finding as many bottlenecks as we can as tune those, combined with introducing a Lucene based cache provider which will cache queries and results which will survive app pool restarts (much like the v4 XML cache). The architecture has been prepared for the latter and we&#x27;ll have this in place by the end of May. Another thing that causes massive performance issues is that we&#x27;re seeing a trend where people are calling ToList() on razor queries to compensate for the lack of LINQ features in our implementation. Unfortunately, this causes most (if not all) of the database to be loaded into memory, naturally causing big performance issues (and an enormous number of N&#x2B;1 SQL calls). This leads us to... And a while later:  V5 couldn&#x27;t be fixed. We needed to completely rewrite the entire business layer to ever get v5 into being the type of product people expect from Umbraco I marked the parts that I intend to respond to in yellow, green highlight is for some additional thoughts later on, keep it in mind. Now, to be fair, I looked at Umbraco a few times, but I never actually used it, and I never actually dug deep.  The entire problem can be summed in this page, from the Umbraco documentation site. This is the dynamic model that Umbraco exposes to the views to actually generate the HTML. From the docs:  DynamicModel is a dynamic object, this gives us a number of obvious benefits, mostly a much lighter syntax for accessing data, as well as dynamic queries, based on the names of your DocumentTypes and their properties, but at the same time, it does not provide intellisense.  Any time you provide the view with a way to generate queries, it is a BIG issue. For the purpose of discussion, I&#x2019;ll focus on the following example,&#xA0; also taken from Umbraco docs:     1:  @inherits PartialViewMacroPage   2:  @using Umbraco.Cms.Web   3:  @using Umbraco.Cms.Web.Macros   4:  @using Umbraco.Framework   5:  &#xA0;   6:  @{   7:      @* Get the macro parameter and check it has a value - otherwise set to empty hive Id *@   8:      var startNodeID = String.IsNullOrEmpty(Model.MacroParameters.startNodeID) ? HiveId.Empty.ToString() : Model.MacroParameters.startNodeID;   9:  }  10:  &#xA0;  11:  @* Check that startNodeID is not an empty HiveID AND also check the string is a valid HiveID *@  12:  @if (startNodeID != HiveId.Empty.ToString() &amp;&amp; HiveId.TryParse(startNodeID).Success)  13:  {  14:      @* Get the start node as a dynamic node *@  15:      var startNode = Umbraco.GetDynamicContentById(startNodeID);  16:  &#xA0;  17:      @* Check if the startNode has any child pages, where the property umbracoNaviHide is not True *@      18:      if (startNode.Children.Where(&quot;umbracoNaviHide != @0&quot;, &quot;True&quot;).Any())  19:      {  20:          &lt;ul&gt;  21:              @* For each child page under startNode, where the property umbracoNaviHide is not True *@  22:              @foreach (var page in startNode.Children.Where(&quot;umbracoNaviHide != @0&quot;, &quot;True&quot;))  23:              {   24:                  &lt;li&gt;&lt;a href=&quot;@page.Url&quot;&gt;@page.Name&lt;/a&gt;&lt;/li&gt;  25:              }  26:          &lt;/ul&gt;  27:      }      28:  }&#xA;&#xA;&#xA;This is a great example of why you should never do queries from the views. Put simply, you don&#x2019;t have any idea what is going to happen. Let us start going through the onion, and see where we get.&#xA;Umbraco.GetDynamicContentById &#x2013; Is actually UmbracoHelper.GetDynamicContentById, which looks like this:&#xA;&#xA;&#xA;I mean, I guess I could just stop right here, look at the first line, and it should tell you everything. But let us dig deeper. Here is what GetById looks like:&#xA;&#xA;&#xA;Note that with NHibernate, this is a worst practice, because it forces a query, rather than allow us to use the session cache and a more optimized code paths that Load or Get would use.&#xA;Also, note that this is generic on top of an IQueryable, so we have to go one step back and look at Cms().Content, which is implemented in:&#xA;&#xA;&#xA;I just love how we dispose of the Unit of Work that we just created, before it is used by any client. But let us dig a bit deeper, okay?&#xA;&#xA;&#xA;&#xA;&#xA;And we still haven&#x2019;t found NHibernate! That is the point where I give up, I am pretty sure that Umbraco 5 is using NHibernate, I just can&#x2019;t find how or where.&#xA;Note that in those conditions, it is pretty much settled that any optimizations that you can offer isn&#x2019;t going to work, since you don&#x2019;t have any good way to apply it, it is so hidden behind all those layers.&#xA;But I am pretty sure that it all end up with a Linq query on top of&#xA0; a session.Query&lt;Content&gt;(), so I&#x2019;ll assume that for now.&#xA;So we have this query in line 15, to load the object, then, on line 18, we issue what looks like a query:&#xA;if (startNode.Children.Where(&quot;umbracoNaviHide != @0&quot;, &quot;True&quot;).Any())&#xA;&#xA;&#xA;We actually issue two queries here, one to load the Children collection, and the second in the Where(). It took a while to figure out what the Where was, but I am pretty sure it is:&#xA;&#xA;&#xA;Which translate the string to a Linq query, which then have to be translated to a string again. To be perfectly honest, I have no idea if this is executed against the database ( I assume so ) or against the in memory collection.&#xA;Assuming it is against the database, then we issue the same query again, two lines below that.&#xA;And this is in a small sample, think about the implications for a more complex page. When you have most of you data access so abstracted, it is very hard to see what is going on, let alone do any optimizations. And when you are doing data access in the view, the very last thing that the developer has in his mind is optimizing data access.&#xA;This is just setting up for failure. Remember what I said about: replace NHibernate with native, optimized SQL calls, this is where it gets interesting. Just about every best practice of NHibernate was violated here, but the major problem is not the NHibernate usage. The major problem is that there is very little correlation between what is happening and the database. And the number of queries that are likely to be required to generate each page are truly enormous.&#xA;You don&#x2019;t issues queries from the view, that is the #1 reason for SELECT N&#x2B;1, and when you create a system where that seems to be the primary mode of operation, that is always going to cause you issues.&#xA;Replace NHibernate with optimized SQL calls, but you are still making tons of direct calls to the DB from the views. &#xA;I actually agree with the Umbraco decision, it should be re-written. But the starting point isn&#x2019;t just the architectural complexity. The starting point should be the actual interface that you intend to give to the end developer.</p>
-        </article>
-        <article id="article-4593">
-            <a href="https://ayende.com/blog/156321/tertiary-includes-in-ravendb" target="_blank">
-                <h2 class="title mb-6" id="article-4593">Tertiary includes in RavenDB</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 14, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For a while, I was absolutely against this, in fact, I refused to implement this several times when asked, because it is complicate to do and indicate design problems in your domain model. During a course today, I found out that I might want to refuse, but the feature is actually in the product for the last two&#x2B; years, we just didn&#x2019;t know about this. But what are tertiary includes in the first place? Let us imagine that we have something like this:  Now, I want to load an order, but also show its Customer and Products. Those are secondary includes, and are very easy to do with RavenDB: var orders = session.Query&lt;Order&gt;()                  .Include(&quot;Customer&quot;)&#xA;                  .Include(&quot;Lines,Product&quot;)&#xA;                  .ToList();&#xA;&#xA;&#xA;There is also a strongly typed option for this, of course. &#xA;What this does is instruct RavenDB to load into the session the Customer and the associated Products into the session, so when you do something like this:&#xA;var cust = session.Load&lt;Customer&gt;(order.Customer);&#xA;&#xA;&#xA;The value will be loaded from the session cache, without going to the sever. As I said, this is a feature that we have had for quite a while, and it is a really nice one, because it drastically reduce the number of queries that you have to make.&#xA;The problem is that some people want to take it one step further, they want to be able to search on an Order, but also load the Location of a Product. I don&#x2019;t really like this, and as I said, when asked for this feature, I consistently said that it isn&#x2019;t there because it represent a remnant of relational thinking in your design.&#xA;But as it turned out, we do support this, although quite by accident.&#xA;The reason is quite simple, we evaluate Includes only after we evaluate the TranformResults function. Which means that the TranformResults function gets to choose whatever you want to include. Here is how it works:&#xA;TranformResults  = (database, results) =&gt;&#xA;   from result in results&#xA;   select new &#xA;   {&#xA;     Order = result,&#xA;     Locations = result.SelectMany(x=&gt;x.Lines).Select(x=&gt;database.Load&lt;Product&gt;(x.Product).Location)&#xA;   }&#xA;&#xA;&#xA;And then, you can just ask to Include(&#x201C;Locations&#x201D;), and you are pretty much set.&#xA;Except, that this is a really awkward thing to do, and I don&#x2019;t really like it at all.&#xA;Sure, I don&#x2019;t like this feature, but people will use it, and if it already there, we might as well make it elegant. Therefor, we now have the option of doing:&#xA;TranformResults  = (database, results) =&gt;&#xA;   from result in results&#xA;   let _ = database.Include(result.SelectMany(x=&gt;x.Lines).Select(x=&gt;x.Product))&#xA;   select result;&#xA;&#xA;&#xA;I think you&#x2019;ll agree that this is much nicer all around, this tells the server to include the data, without us needing to explicitly ask this from the client.</p>
-        </article>
-        <article id="article-4594">
-            <a href="https://ayende.com/blog/153217/why-scalability-matters" target="_blank">
-                <h2 class="title mb-6" id="article-4594">Why scalability matters?</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 13, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Otherwise, you get this:  And that is one sale that isn&#x2019;t going to happen!</p>
-        </article>
-        <article id="article-4595">
             <a href="https://ayende.com/blog/156353/entities-associations-point-in-time-vs-current-associations" target="_blank">
-                <h2 class="title mb-6" id="article-4595">Entities Associations: Point in Time vs. Current Associations</h2>
+                <h2 class="title mb-6" id="article-4591">Entities Associations: Point in Time vs. Current Associations</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +153,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Having just finished giving three courses (2 on RavenDB and 1 on NHibernate), you might want to say that I have a lot of data stuff on my mind. Teaching is always a pleasure to me, and one of the major reasons for that is that I get to actually learn a lot whenever I teach. In this case, in all three courses, we run into an issue with modeling associations. For the sake of the example, let us talk about employees and paychecks. You can see the model below:  Do you note the blue lines? Those represent Employee reference, but while they are both referencing the same employee, they are actually quite different associations. The Manager association is a Current Association. It is just a pointer to the managing employee. What does this means? Let us say that the manager of a certain employee changed her name. In that scenario, when we look at the current employee record, we should see the updated employee manager name. In this case, we are always interested in the current status. On the other hand when looking at the paycheck PaidTo reference to an employee, we have something all together different. We have a reference no to the current employee record, but to the employee record as it was at a certain point in time. If the employee in question change his name, that paycheck was issued to Mr. Version One, not to Mr. Version Two, even though the name has been changed. when dealing with associations, it is important to distinguish between the two options, as each require different way of working with the association.</p>
         </article>
-        <article id="article-4596">
+        <article id="article-4592">
             <a href="https://ayende.com/blog/156161/code-crimes-because-even-the-law-needs-to-be-broken" target="_blank">
-                <h2 class="title mb-6" id="article-4596">Code crimes, because even the Law needs to be broken</h2>
+                <h2 class="title mb-6" id="article-4592">Code crimes, because even the Law needs to be broken</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In 99.9% of the cases, if you see this, it is a mistake:  But I recently came into a place where this is actually a viable solution to a problem. The issue occurs deep inside RavenDB. And it boils down to a managed application not really having any way of actually assessing how much memory it is using.  What I would really like to be able to do is to specify a heap (using HeapCreate) and then say: &#x201C;The following objects should be created on this heap&#x201D;, which would allow to me to control exactly how much memory I am using for a particular task. In practice, that isn&#x2019;t really possible (if you know how, please let me know). What we do instead is to use as much memory as we can, based on the workload that we have. At certain point, we may hit an Out of Memory condition, which we take to mean, not that there is no more memory, but the system&#x2019;s way of telling us to calm down. By the time we reached the exception handler, we already lost all of the current workload, that means that now there is a LOT of garbage around for the GC. Before, when it tried to cleanup, we were actually holding to a lot of that memory, but not anymore. Once an OOME happened, we can adjust our own behavior, to know that we are consuming too much memory and should be more conservative about our operations. We basically reset the clock back and become twice as conservative about using more memory. And if we get another OOME? We become twice as conservative again , and so on. Eventually, even under high workloads and small amount of memory, we complete the task, and we can be sure that we make effective use of the system&#x2019;s resources available to us.</p>
         </article>
-        <article id="article-4597">
+        <article id="article-4593">
             <a href="https://www.meziantou.net/impersonation-and-security.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4597">Impersonation and security</h2>
+                <h2 class="title mb-6" id="article-4593">Impersonation and security</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is part of the series &#x27;Vulnerabilities&#x27;. Be sure to check out the rest of the blog posts of the series!Impersonation and security (this post)SQL injectionsHow to prevent CSRF attacksASP MVC and XSRFCross-site scripting (XSS)ASP MVC: Mass AssignmentRegex - Deny of Service (ReDoS)Deserializ</p>
         </article>
-        <article id="article-4598">
+        <article id="article-4594">
             <a href="https://www.meziantou.net/computing-the-size-of-a-folder.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4598">Computing the size of a folder</h2>
+                <h2 class="title mb-6" id="article-4594">Computing the size of a folder</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The .Net framework does not provide any function to compute the size of all the files in a folder (and its subfolders). As it is not very hard to do here&#x27;s the code:C#copypublic static long FolderSize(string path)&#xA;{&#xA;    long size = 0;&#xA;    DirectoryInfo directoryInfo = new DirectoryInfo(path);&#xA;    I</p>
         </article>
-        <article id="article-4599">
+        <article id="article-4595">
             <a href="https://ayende.com/blog/156545/ravendb-training" target="_blank">
-                <h2 class="title mb-6" id="article-4599">RavenDB Training</h2>
+                <h2 class="title mb-6" id="article-4595">RavenDB Training</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -281,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Demand for RavenDB training has been going up, and we are actually running around (pretty much world wide) trying to catch up. After completing a course in Stockholm a couple of weeks ago, we have a new course in Stockholm in October, which you can register to using the following link. I&#x2019;ll also be doing a course in Munich, Germany, early next month. You can register to that here. And, of course, we have the already scheduled courses, I mean, just take a look:  RavenDB 2 day workshop with Oren Eini - Munich, Germany - Tuesday, 03 July 2012 Sharding &amp; Scaling with RavenDB - Berlin, Germany - Wednesday, 04 July 2012 RavenDB 2 day workshop in the Hibernating Rhinos&#x27; offices - Hadera, Israel - Wednesday, 11 July 2012 RavenDB 2 day workshop with Itamar Syn-Hershko - New York, USA - Tuesday, 21 August 2012 RavenDB at Philly.NET user group - Malvern, PA, USA - Monday, 27 August 2012 RavenDB Meetup in Washington DC - Washington DC, USA - Tuesday, 28 August 2012 RavenDB 1-day bootcamp with Itamar Syn-Hershko - Chicago, IL, USA - Thursday, 30 August 2012 RavenDB 2-day workshop - Austin, TX - Wednesday, 05 September 2012 RavenDB 2 day workshop with Itamar Syn-Hershko - London, UK - Wednesday, 12 September 2012 RavenDB 2 day workshop with Oren Eini - Stockholm, Sweden - Thursday, 04 October 2012 And on top of that, we have been doing some really cool stuff that I can&#x2019;t hardly wait to talk about this, as part of our upcoming 1.2 release for RavenDB.</p>
         </article>
-        <article id="article-4600">
+        <article id="article-4596">
             <a href="https://ayende.com/blog/153633/why-i-love-resharper" target="_blank">
-                <h2 class="title mb-6" id="article-4600">Why I LOVE ReSharper</h2>
+                <h2 class="title mb-6" id="article-4596">Why I LOVE ReSharper</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -296,6 +232,70 @@
                 posted on: June 08, 2012
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mean, just look at this. This is magic. More to the point, think about what this means to try to implement something like that. I wouldn&#x2019;t know where to even start.</p>
+        </article>
+        <article id="article-4597">
+            <a href="https://ayende.com/blog/156513/assuming-that-the-laws-of-physics-no-longer-apply-we-can-build-this" target="_blank">
+                <h2 class="title mb-6" id="article-4597">Assuming that the laws of physics no longer apply, we can build this</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 08, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a reply to a post by Frans Bouma, in which he asks for:  &#x2026;loud vendors should offer simply one VM to me. On that VM I run the websites, store my DB and my files. As it&#x27;s a virtual machine, how this machine is actually ran on physical hardware (e.g. partitioned), I don&#x27;t care, as that&#x27;s the problem for the cloud vendor to solve. If I need more resources, e.g. I have more traffic to my server, way more visitors per day, the VM stretches, like I bought a bigger box. This frees me from the problem which comes with multiple VMs: I don&#x27;t have any refactoring to do at all: I can simply build my website as if it runs on my local hardware server, upload it to the VM offered by the cloud vendor, install it on the VM and I&#x27;m done. Um&#x2026; no.  Go ahead and read the whole post, it is interesting. But the underlying premise that is rely on is flawed. It is like starting out with assuming that since TCP/IP contains no built in prohibition to send data faster than light, the cloud providers can and should create networks that can send data faster than light. After all, I can show a clear business case for the reduced ping time, and that is certainly something that can be abstracted from my application. What aren&#x2019;t those bozos doing that? Well, the answer to that is that it just ain&#x2019;t possible. There are several minor problems along the way. The CAP theorem, to start with, but even if we ignore that aspect of the problem, there are also the fallacies of distributed computing. According to Frans&#x2019; premise, we can have a single VM that can scale up to as many machines as is needed, without any change required to the system. Let us start with Frans&#x2019; answer to the actual scope of the problem:  But what about memory replication and other problems? This environment isn&#x27;t simple, at least not for the cloud vendor. But it is simple for the customer who wants to run his sites in that cloud: no work needed. No refactoring needed of existing code. Upload it, run it. Um.. no.  Let us take a look at a few pieces of code, and see what is going to happen to then in Frans&#x2019; cloud environment. For example, let us take a look at this: var tax = 0;&#xA;foreach(var item in order.Items)&#xA;{&#xA;  tax &#x2B;= item.CalculateTax();   &#xA;}&#xA;order.Tax = tax;&#xA;&#xA;&#xA;Problem, because of the elasticity of the VM, we actually spread things around so each of the items in the order collection is located in another physical machine. This is, of course, completely transparent to the code. But that means that each loop iteration is actually doing a network call behind the scene.&#xA;OR/M users are familiar with this as the SELECT N&#x2B;1 problem, but in this case, you have a potential problem on every memory access. Network attached memory isn&#x2019;t new, you can read about it in OS books and it is a nice theoretical idea, but it is just isn&#x2019;t going to work, because you actually care about the speed of accessing the data.&#xA;In fact, we have many algorithms that were changed specifically to be able to take advantage of cache lines, L1 &amp; L2 cache, etc. Because that has a major increase in the system performance, and that is only on a single machine. Trying to imagine a transparent network memory is futile, you actually care about memory access speed, a lot.&#xA;But let us talk about another aspect, I want to make have an always incrementing order id number. So I do:&#xA;&#xA;Interlocked.Increment(ref lastOrderId);&#xA;All well and good when running on a single machine, but how should the VM make it work when running on multiple machines? &#xA;And remember, this call actually translate to a purpose built assembly instruction (XADD or one of its friends). In this case, you need to do this across the network, and touch as many machines as your system currently runs on.&#xA;But the whole point here is to allow us to rapidly generate a new number. This has now turned into a total mess in terms of performance.&#xA;What about parallel computing, for that matter?&#xA;var results = new Result[items.Length];&#xA;Parallel.For(items, (item, i) =&gt; &#xA;{&#xA;    results[i] = item.Calculate();&#xA;});&#xA;&#xA;&#xA;I have many items, and I want to be able to compute the result in parallel, so I run this fairly standard code. But we are actually going to execute this on multiple threads, so this get scheduled on several different machines. But now you have to copy the results buffer to all of those machines, as well as any related state that they have, then copy it back out when it is done, then somehow merge the different changes made by different systems into a coherent whole.&#xA;Good luck with that.&#xA;I could go on, but I think that you get the point by now.&#xA;And we haven&#x2019;t talked about the error condition yet. What happen if my system is running on 3 machines, and one of them goes down (power outage, hardware failure, etc)? 3rd of my memory, ongoing work and a lot of stuff just got lost. For that matter, I might have (actually, probably have) dangling references to memory that used to be on the failed machines, so the other two systems are likely to hit this inaccessible memory and fail themselves.&#xA;So.. no, this idea is a pipe dream, it isn&#x2019;t going to work, not because of some evil plot by dastardly folks conspiring to make your life harder, but for the simple reason that it is easier to fly by flapping your arms.</p>
+        </article>
+        <article id="article-4598">
+            <a href="https://benfoster.io/blog/windows-azure-something-for-the-little-guy/" target="_blank">
+                <h2 class="title mb-6" id="article-4598">Windows Azure - Something for the little guy...almost.</h2>
+            </a>
+            <p class="mb-2">by Ben Foster</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 08, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday Microsoft released some fantastic new features to the Azure platform. Azure is now more attractive than ever to smaller dev shops but is still not quite there.</p>
+        </article>
+        <article id="article-4599">
+            <a href="https://ayende.com/blog/156097/the-high-cost-of-concurrentbag-in-net-4-0" target="_blank">
+                <h2 class="title mb-6" id="article-4599">The HIGH cost of ConcurrentBag in .NET 4.0</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 07, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I got some strange results when using concurrent collections, so I decided to try to track it down, and wrote the following code: var count = ?;&#xA;var list = new List&lt;object&gt;(count);&#xA;var sp = Stopwatch.StartNew();&#xA;for (int i = 0; i &lt; count; i&#x2B;&#x2B;)&#xA;{&#xA;    list.Add(new ConcurrentBag&lt;int&gt;());&#xA;}&#xA;sp.Stop();&#xA;Console.WriteLine(&quot;{0} {2} items in {1:#,#;;0}ms = {3:#,#;;0}ms per item&quot;,&#xA;    sp.Elapsed, sp.ElapsedMilliseconds, count, sp.ElapsedMilliseconds / count);&#xA;&#xA;&#xA;&#xA;And then I started to play with the numbers, and it is not good.&#xA;&#xA;10 items in 2ms = 0ms per item&#xA;This is incredibly high number, you have to understand. Just to compare, List&lt;int&gt; takes 8 ms to create 100,000 items.&#xA;Let us see how it works when we use more of this.&#xA;&#xA;100 items in 5ms = 0ms per item &#xA;1,000 items in 37ms = 0ms per item &#xA;10,000 items in 2,319ms = 0ms per item&#xA;Note the numbers, will you?&#xA;1,000 items in 37 ms, but 10,000 items? 2.3 seconds!&#xA;&#xA;20,000 items in 21,331ms = 1ms per item&#xA;And doubling the amount took ten times as long?&#xA;&#xA;25,000 items in 32,588ms = 1ms per item&#xA;And at this point, I stopped trying, because I didn&#x2019;t have the patience.&#xA;Note that the other concurrent collection, ConcurrentStack, ConcurrentQueue and ConcurrentDictionary do not suffer from the same problem.&#xA;I contacted Microsoft about this, and this is already resolved in .NET 4.5. The underlying issue was that ThreadLocal, which ConcurrentBag uses, didn&#x2019;t expect to have a lot of instances. That has been fixed, and now can run fairly fast.</p>
+        </article>
+        <article id="article-4600">
+            <a href="https://ardalis.com/windows-azure-june-2012-update-required-reading/" target="_blank">
+                <h2 class="title mb-6" id="article-4600">Windows Azure June 2012 Update Required Reading</h2>
+            </a>
+            <p class="mb-2">by Ardalis</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 06, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today (right now as I type this) Microsoft has unveiled a TON of new features that are launching as part of Windows Azure. If you&#x2019;d like to&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="459.html"><span class="back arrow"></span></a>

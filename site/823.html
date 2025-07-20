@@ -138,72 +138,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-8221">
-            <a href="https://ayende.com/blog/2155/the-production-value-of-seams" target="_blank">
-                <h2 class="title mb-6" id="article-8221">The Production Value of Seams</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 03, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There are some interesting points of views about testable design that I somehow missed catching in real time.    Roy Osherove:...in many ways, pure object oriented design does not go well hand in hand with the notion of testable design.    He then goes on to show what happens when you addTestability concerns to the some of the usual OOD principals.    Eli Lupian:Roy and I are on the opposite sides of this methodology. I personally hate to change my production code just for the tests.As Roy says &#x201C;pure object oriented design does not go well hand in hand with the notion of testable design.&#x201D; After creating a good design (without taking testability into account), there is no real business value of implementing hooks to change internal private members and to expose properties that should remain private by design! Unless you want to clutter your code with load of Totally Irrelevant Code Please, Stop Designing for testability!!     He then shows how you can keep traditional OOP approach and still test your code using TypeMock.    I am firmly in Roy&#x27;s camp when it comes for designing code to be testable. Before I goes on to explain further, I want to take issue with a couple of points in Eli&#x27;s post:Have you ever tried to browse a code with loads of interfaces, it take ages because you have to keep finding the concrete implementation, and the place where the instance was created.    Ctrl&#x2B;Alt&#x2B;B in Resharper will take me directly to the implementation. grep *.cs -S &quot;interface\s&#x2B;INameOfInterface&quot; will do the same if I don&#x27;t have Resharper. Not an issue.Think about this&#xA0;code smell: When you find that an interface and implementation have exactly the&#xA0;same public methods, it is a sign that the interface is not exposing a trait of the object but the Object itself    No a code smell at all, in my opinion, just good seperation of the interface and its implementation. I may want to supply alternate implementation, which would be much harder if I had to a concrete class to work with.    Let me share a story. A&#xA0;while ago I was working on a system that needed to write to a file. The simplest code that I could write was:File.WriteAllText(filename,&#xA0;text);    That is not testable without using an invasive approach like TypeMock, so I choose this way:using(TextWriter&#xA0;writer&#xA0;=&#xA0;IoC.Resolve&lt;IFileWriterFactory&gt;().Create(filename))    &#xA0;&#xA0;writer.Write(text);    I added two level of abstractions to the code, just to make it testable. Following Eli&#x27;s approach, I had decreased the readability of the code and made it harder to understand and maintain. The problem is that I don&#x27;t think that Eli considered the value of the seams that are created by writing testable code. (Take a look at the stats here, it was a bit more involved).    A seam is a core concept in Working Effectively With Legacy Code. A seam is a place where you can alter behavior in your program without editing in that place. They are crucial for being able to test your code. (Just to note, TypeMock create seams all over the place by simply being able to intercept any call under .Net).    Seams makes the code testable, but it also makes it a lot more flexible. Couple of weeks after I introduced the IFileWriterFactory, I had&#xA0;learned that the files that I was creating were to be consumed by a stupid batch process, which would copy them over to a mainframe system. If I happened to be in the middle of creating the file when the process start running, the mainframe would get a partial file, and chaos would enuse.    The standard way of handling this is to actually output two files, one with the real content, the second with an agreed upon extension, which basically tells the process &quot;if you see a file with extension foo.csv.done, I have finished writing the file foo.csv&quot;. I had couple hundreds places in the application that I was writing files.    If I was following the traditional approach, I had to find all the places that I was writing to a file, and change the to:File.WriteAllText(filename,&#xA0;text);    File.WriteAllText(filename&#x2B;&quot;.done&quot;, &quot;&quot;);    As I mentioned, there were quite a few place that did it. Because I had a seam in place, I could simple change the returned implementation of the TextWriter that FileWriterFactory implemented, which would generate the &quot;.done&quot; file when the writer was disposed. You can bet that this was a valuable thing to be able to do.    In general, I find that testable design if far more flexible, because it means that you can inject different behaviors into the code. This means that you get more extensible code that you can later leverage to produce more business value. The simple abstraction that I have shown above is something that saved me two days of mindlessly going through the code and making the same stupid change all over the place.Theoretically, I could probably use some black magic and intercepted the call to FileSteam.Close() and do the same. I do not feel that it would be a maintainable or discoverable solution at all.    So no, I do not believe that testability is not a first class concern, and I feel that it produce much better code in the end. Having more places where you can change the behavior without changing the code is a good thing, and it would end up saving you quite a bit of time. I can see it in Rhino Mocks all over the place, the fact that it is as decoupled as that means that I can take it in different directions (and offer extensability points for users) very easily.     The other side is apperant in many recent Microsoft releases, where internal and sealed are slapped on just about anything, and extensability points for something that they didn&#x27;t explicitly planned are simply non-existant. This in turn greatly reduce the ability to work with the code.</p>
-        </article>
-        <article id="article-8222">
-            <a href="https://ardalis.com/use-redgate-ants-profiler-with-vista-and-asp-net/" target="_blank">
-                <h2 class="title mb-6" id="article-8222">Use RedGate ANTS Profiler with Vista and ASP.NET</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 02, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Found these two forum poststhat show how, as well as how to wire up ANTS to Webdev.WebServer.exe (aka Cassini). Here&#x2019;s the summary: Start&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-8223">
-            <a href="https://ayende.com/blog/2154/enough-with-the-orcas-ctp-anouncements" target="_blank">
-                <h2 class="title mb-6" id="article-8223">Enough with the Orcas CTP anouncements!!!</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 02, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Please, I had enough of it. There is really no reason that just about every third blogger that I read will post about the new Oracs CTP. I got it by the ninth post that had copy &amp; paste the list from MSDN to their post.</p>
-        </article>
-        <article id="article-8224">
-            <a href="https://ardalis.com/plasma-v1-0-release-available/" target="_blank">
-                <h2 class="title mb-6" id="article-8224">Plasma v1.0 Release Available</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 01, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Plasma is an ASP.NET in-memory web server emulator that can be used for ASP.NET unit testing or automation. Its initial codebase was written&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-8225">
             <a href="https://ayende.com/blog/2153/word-question" target="_blank">
-                <h2 class="title mb-6" id="article-8225">Word question</h2>
+                <h2 class="title mb-6" id="article-8221">Word question</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +153,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is stupid, but I can&#x27;t search for this, because I can&#x27;t figure out how it is called.    I need to find the key shortcut to move between the two views of the document. Any idea how to do it, or how it is called (so I can search it)?</p>
         </article>
-        <article id="article-8226">
+        <article id="article-8222">
             <a href="https://ayende.com/blog/2152/atlas-weight-issues-take-2" target="_blank">
-                <h2 class="title mb-6" id="article-8226">Atlas Weight Issues</h2>
+                <h2 class="title mb-6" id="article-8222">Atlas Weight Issues</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I got some really great comments on my last post. Apperantly FireFox doesn&#x27;t report on the wire numbers, so here are the numbers from Fiddler.     After clearing the cache, a page with a text box, ScriptManager and CalendarExtender:      Request Count: &#xA0;17    Bytes Sent: &#xA0;10,492    Bytes Received: 149,145      Refreshing the page (meaning we get stuff from the cache):      Request Count: &#xA0;14    Bytes Sent: &#xA0;9,382    Bytes Received: 31,932      That is still 31Kb that I am not sure where they are coming from. Based on the feedback from the last post, it looks like there are a few other things that need to be done.             Get AjaxToolKit that is compiled in release mode.                         &lt;compilation debug=&quot;false&quot;&gt;                                                      &lt;                         scriptResourceHandler enableCompression=&quot;true&quot; enableCaching=&quot;true&quot; /&gt;                 After clearing the cache, same page:      Request Count: &#xA0;14    Bytes Sent: &#xA0;9,282    Bytes Received: 122,254      Refresh the page (get stuff from cache):      Request Count: &#xA0;14    Bytes Sent: &#xA0;9,382    Bytes Received: 32,010      So, we still get 31Kb, but worse than that, we get 14 requests(!).     Same page, without CalendarExtender (no cache):      Request Count: &#xA0;5    Bytes Sent: &#xA0;2,806    Bytes Received: 56,702      With cache:      Request Count: &#xA0;4    Bytes Sent: &#xA0;2,482    Bytes Received: 23,873      The request that seems to be biggest (and apperntly uncached) is: /WebResource.axd?d=vreWgJm8KHsCnZnd2dT3Zg2&amp;t=633067941986250000&#xA0;and it contains javascript functions such as WebForm_PostBackOptions and friends.     For comparision purposes, I have removed the ScriptManager as well:      Request Count: &#xA0;2    Bytes Sent: &#xA0;978    Bytes Received: 2,540     And when it is cached:     Request Count: &#xA0;1    Bytes Sent: &#xA0;554    Bytes Received: 747     As far as I can tell, I am doing everything the way I should do it. But this also means that the issue is with the weight, but the request count. HTTP allows only 2 requests per host, and that means that in cases where just the scripts takes 14 requests, everything else that is Ajaxified will need to wait for them to complete.    The solution for me was to drop the CalendarExtender completely, I went with a simple javascript calendar, it doesn&#x27;t do sliding animations and other cool stuff that the CalendarExtender does, but it doesn&#x27;t kill my site&#xA0;when it is working, either.</p>
         </article>
-        <article id="article-8227">
+        <article id="article-8223">
             <a href="https://ayende.com/blog/2151/atlas-weight-issues-what-am-i-missing" target="_blank">
-                <h2 class="title mb-6" id="article-8227">Atlas weight issues</h2>
+                <h2 class="title mb-6" id="article-8223">Atlas weight issues</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have the strong feeling that I am missing something. We have just run into a major slow down in one of our pages, as a result of adding the CalendarExtender. This led me to do some searching, and I am not sure that I can believe the results.    Let us take this simple page:            &lt;%@ Page Language=&quot;C#&quot; AutoEventWireup=&quot;true&quot; CodeBehind=&quot;test.aspx.cs&quot; Inherits=&quot;ExplodingMonkeys.Web.test&quot; %&gt;                                                        &lt;!DOCTYPE html PUBLIC &quot;-//W3C//DTD XHTML 1.0 Transitional//EN&quot;                 &#xA0;&#xA0; &quot;http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd&quot;&gt;        &#xA0;                        &lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot; &gt;                        &lt;head runat=&quot;server&quot;&gt;                        &#xA0;&#xA0;&#xA0; &lt;title&gt;Untitled Page&lt;/title&gt;                        &lt;/head&gt;                        &lt;body&gt;                        &#xA0;&#xA0;&#xA0; &lt;form id=&quot;form1&quot; runat=&quot;server&quot;&gt;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &lt;asp:TextBox ID=&quot;Date&quot; runat=&quot;server&quot; /&gt;                        &#xA0;&#xA0;&#xA0; &lt;/form&gt;                        &lt;/body&gt;                        &lt;/html&gt;        When rendered to the browser, it weight 528 bytes. Now, let us add a &lt;asp:ScriptManager runat=&quot;server&quot;/&gt; to the page. The size of the page exploded to 79 kilobytes, from this change alone.    I then added the following to the page:         &lt;ajax:CalendarExtender runat=&quot;server&quot; TargetControlID=&quot;Date&quot; CssClass=&quot;ClassName&quot; Format=&quot;MMMM d, yyyy&quot;         PopupButtonID=&quot;http://ajax.asp.net/ajaxtoolkit/Calendar/Calendar_scheduleHS.png&quot; /&gt;        The page size reached 143 kilobytes. I am pretty sure that I am missing something here. I enabled both caching and compression in the web config:             &lt;    scriptResourceHandler enableCompression=&quot;true&quot; enableCaching=&quot;true&quot; /&gt;        And then tried again. The results were better, but not really encouraging.    With just script manager: 79 KB (56 KB from cache)    With calendar extender: 143 KB (115 KB from cache)    Just to make it clear, there is a noticable delay on our pages, it went from being instantenous to taking four or five seconds. And I am talking about localhost testing, on powerful machines. (Again that HTTP 2 connections per server issue, I think).    Am I missing something, or are those the real numbers?</p>
         </article>
-        <article id="article-8228">
+        <article id="article-8224">
             <a href="https://ayende.com/blog/2150/enterprise-library-license" target="_blank">
-                <h2 class="title mb-6" id="article-8228">Enterprise Library License</h2>
+                <h2 class="title mb-6" id="article-8224">Enterprise Library License</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The issue of the EntLib licenses just came up in the mono dev list. Quoting from the license:Platform Limitation - The licenses granted in sections 2(A) &amp; 2(B) extend only to the software or derivative works that you create that run on a Microsoft Windows operating system product.    That really surprised me. I supposes it makes some sort of sense for Microsoft, but I don&#x27;t like it.</p>
         </article>
-        <article id="article-8229">
+        <article id="article-8225">
             <a href="https://ayende.com/blog/2149/what-would-happen-to-nhibernate-after-linq-ships" target="_blank">
-                <h2 class="title mb-6" id="article-8229">What would happen to NHibernate after Linq ships?</h2>
+                <h2 class="title mb-6" id="article-8225">What would happen to NHibernate after Linq ships?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -281,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was asked this question, and I think that the answer is interesting enough to post here.    There are two sets of technologies that MS is currently pushing.    There is Linq, which is additional support for querying directly from the language, and there is the various ORM efforts that Microsoft is pushing.    When the Linq bits will stabilize to the point where it is viable to start projects using them, there will be support for querying NHibernate with Linq.    I have looked in detailed into the four (or is it five now?) ORM efforts that microsoft is currently pushing, and I am not seeing anything that excites me there.    Early feedback that I got from Microsoft confirmed that even ADO.Net for Entities, which is the only ORM effort that tries to match NHibernate&#x27;s capabilities, is not going to be extensible enough to support what I and my customers needs. This is the usual 80% solution, with a hood welded shut in all the interesting locations.    In addition to this, I find the whole configuration schema to be an order of magnitude more complex than it needs to be, with the additional complexity that this would bring later on when trying to understand what it means.        So no, I do not believe that Microsoft pushing their ORM efforts would have a bad affect on NHibernate, and having Linq would just make our life that much easier.        That said, an ORM that comes from Microsoft is probably going to be popular because it comes from Microsoft. I believe that this will merely confirm for many in the .NET world that ORM is a valid way to work.    The same people that are currently using or evaluating NHibernate will keep it, those that would never use a non Microsoft tool would use the MS ORM. Not that much different from now. People trying to migrate all but the simple projects from NHibernate to MS&#x27; ORM would run into the afore-mentioned brick walls, and would either keep using NHibernate, or would have to invest significant effort porting the application.</p>
         </article>
-        <article id="article-8230">
+        <article id="article-8226">
             <a href="https://ardalis.com/spam-countermeasures/" target="_blank">
-                <h2 class="title mb-6" id="article-8230">Spam Countermeasures</h2>
+                <h2 class="title mb-6" id="article-8226">Spam Countermeasures</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -296,6 +232,70 @@
                 posted on: February 27, 2007
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Spam is an increasingly annoying and expensive part of our lives as computer users. In the last week, I&#x2019;ve been forced to take measures to&#x2026;Keep Reading &#x2192;</p>
+        </article>
+        <article id="article-8227">
+            <a href="https://ayende.com/blog/2148/if-program-i-cant-programmer-am-i" target="_blank">
+                <h2 class="title mb-6" id="article-8227">If Program I Can&#x27;t, Programmer Am I?</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 27, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Jeff Atwood&#xA0;has posted about the difficulities of some so-called programmers to program. The intersting facts are here. An extremely simple task is given, and quite a bit of people simply can&#x27;t handle it, or take an undue amount of time to solve it.    A while ago I posted all sort of interesting questions that I would not put in interviews, it was the sort of interview questions from hell. I did a lot of interviews since then, and I have gotten sick of the level of people that I meet.    My current favoriate question is to give them this code:            public&#xA0;class&#xA0;Program        {        &#xA0;&#xA0;&#xA0;public&#xA0;static&#xA0;void&#xA0;Main(string[]&#xA0;args)        &#xA0;&#xA0;{        &#xA0;&#xA0;&#xA0;&#xA0;//print&#xA0;the&#xA0;input&#xA0;string&#xA0;in&#xA0;reverse                &#xA0;&#xA0;}        }        And ask them to solve it. It has gotten to the point that this is literally the first thing that I would ask a candidate to do.&#xA0;I am not picky, I would accept a solution in any imperative langauge except Ook#. And quite a bit of them simply can&#x27;t do it. I am usually interviewing people that are supposed to have two years or more of experiance building applications in .Net. And they simply can&#x27;t do it.     Let me tell you how vicious how I am with this horrible question, I give them a laptop (mine, actually) loaded with Visual Studio &#x2B; ReSharper, full access to the net (and yes, that include Google), and they still can&#x27;t do it. In one particular case, I watch the candidate go to google, skip the first result that was titled &quot;Reversing a String in C#&quot; and go directly to a code sample in C(!). He then spent the next five minutes shocking me by trying to get it to compile.    I can think of at least five different ways of doing it, depending on whatever you know that string can be iterated or that it has an indexer. I would expect that even if you didn&#x27;t know either about string, you would realize that you can use Substring() to do it in a horribly inefficent way.    I can accept people with lack of knowledge, I can accept newbies (no prejustice is good), but I can&#x27;t accept someone who can&#x27;t program.</p>
+        </article>
+        <article id="article-8228">
+            <a href="https://ayende.com/blog/2147/method-dispatch-internals" target="_blank">
+                <h2 class="title mb-6" id="article-8228">Method Dispatch Internals</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 27, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Sasha Goldshtein&#xA0;just posted some very interesting stuff about the way the JIT optimize method dispatch. Despite the interesting topic, what caught my eye more than everything else was:Currently, the JIT is documented (perhaps &quot;blogged about&quot; would be more precise here)     I found it hilarious.    Recommended reading.</p>
+        </article>
+        <article id="article-8229">
+            <a href="https://ayende.com/blog/2146/patterns-and-buzzwards" target="_blank">
+                <h2 class="title mb-6" id="article-8229">Patterns and buzzwards</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 27, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Raymond Lewallen has posted Patterns are no Buzzwards, I agree with the sentiment, but I think that he is ignoring a big issue.What is the all too frequent usage of patterns?     All too often, I am seeing patterns used indiscrimately. &quot;What do you mean I should use a Momento here, it is in the Book&quot;.&#xA0;Patterns are invaluable as&#xA0;a way of expressing complex ideas in a simple, consistent manner, the problem is that this value is cheapened by misuse all over the place.    The idea of patterns in great, the implementation of it... could use some refactoring.</p>
+        </article>
+        <article id="article-8230">
+            <a href="https://ayende.com/blog/2145/entities-services-and-what-goes-between-them" target="_blank">
+                <h2 class="title mb-6" id="article-8230">Entities, Services and what goes between them...</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 27, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A developer I am working with had added a method Customer.FindOrdersByCity() and we got into a discussion why it wasn&#x27;t the correct place for the method. This dicussion has made it clear that I have never really sat down and wrote what I though about what guidelines I follow with regard to good application design.    Let us start with the definations:            Entity - an (usually persistable) object that is part of the application model. Usually the application is based around actions on entities or by entities. Examples: Customer, Order, Employee            Infrastructure Service - part of the underlying infrastructure of the application, usually handles concerns that are common to many applications . Examples: DatabaseService, LoggingService            Application Service - part of the core application, handles business concerns that are usually specific for the application. Examples: OrdersService, CustomerService, BillingService            Controller - responsible for coordinating a cohesive part of the application, usually a single user interaction, but can be larger than that. Examples: NewOrderController, CustomersController            Views - responsible for converting the data from the controller into something that the consumer can understand. This is not just a user, I have WCF services as views, among other things.    There isn&#x27;t much to talk about with regards to infrastructure services, I put them in Rhino-Commons and forget about them :-) Controllers/Views I have already talked about at length.    In general, I would like to keep my entities clean of dependencies on services. I like to put business logic only in the entities, and use the surrounding framework to get what is needed (usually this means lazy loading) without the explicit involvement of the entity with the service layer. This means that they are light-weight, independent of the infrastructure, and can be tested independantly.    Application Services are interesting, they generally use both the infrastructure services and the model to do useful stuff. They may contain business logic, if that is the best place to put it, although I would rather have it in the entities. They are usually responsible for setting things up so the entities can do their work.    As usual, the best examples are code, so let us take a look at the Order class:            public class Order                        {                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; public virtual Money CalculateCost()                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Money cost = Money.Zero;                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; foreach (OrderLine line in OrderLines)                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; cost = cost.Add(line.Cost);                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; cost = cost.Add(this.ShippingCosts);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; return ApplyTaxes(cost);                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                                }        The business logic is in the entity, but what does the service does, then?            public class OrderService                        {                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; public virtual Money CalculateCostForOrder(int orderId)                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Order order = Repository&lt;Order&gt;.FindOne(                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; (Where.Order.Id == orderId).ToDetachedCriteria()                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; .SetFetchMode(&quot;OrderLines&quot;, FetchMode.Eager));                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; return order.CalculateCost();                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                                }        This is a very rough draft, but you get the idea, I hope. The service loads the entity, making sure to load the OrderLines collection with the entity (to save another query later) and delegate the calculation to the entity.    What did I gain here? I could have just put the calculation directly in the service, couldn&#x27;t I?&#xA0; I could do that, but then I would have lost the OO capabilities that I have with entities (vs. Data Transfer Objects). If I wanted to have a OnSaleOrder, with a special discount, I could do this polymorphically, instead of adding conditions to the service.    There is a strong relation between a service and an entity (but hopefully not the other way around), this means that there usually will be a service per entity, but that is not always the case (OrdersService and NewOrderService, for instance) and there certainly will be cases where there are entities that have no service (those will usually not be the aggerate roots of the system, of course).    The service in general has a very procedural interface, although I am starting to consider fluent interfaces and method objects for services as well.</p>
         </article>
         <div class="button flex justify-between">
             <a href="822.html"><span class="back arrow"></span></a>
