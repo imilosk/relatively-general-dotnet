@@ -138,8 +138,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1901">
+            <a href="https://ayende.com/blog/187489-C/using-c-to-build-ravendb-or-my-raspberry-pi-with-700pb-of-disk-space" target="_blank">
+                <h2 class="title mb-6" id="article-1901">Using C to build RavenDB (or my Raspberry Pi with 700PB of disk space)</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 29, 2019
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the changes that we made in RavenDB 4.2 is a pretty radical one, even if we didn&#x2019;t really talk about it. It is the fact that RavenDB now contains C code. Previously, we were completely managed (with a bunch of P/Invoke) calls. But we now we have some C code in the project. The question is why?The answer isn&#x2019;t actually about performance or the power of native C code. We are usually pretty happy with the kind of assembly instructions that we can get from C#. The actual problem was that we needed a proper abstraction. At this moment, RavenDB is running on the following platforms:Windows x86-32 bitsWindows x86-64 bitsLinux x86-32 bitsLinux x86-64 bitsLinux ARM 32 bitsLinux ARM 64 bitsmacOS 64 bitsAnd each of this platform requires some changes in how we do things. The other problem is that .NET is a well specified system, all the types sizes are well known, for example. The same isn&#x2019;t true for the underlying API. Windows does a really good job of maintaining proper APIs across versions and 32/64 editions. Linux basically doesn&#x2019;t seem to care. Types sizes change quite often, sometimes in unpredictable ways. Probably the most fun part was figuring out that on x86, Linux syscall #224 is gettid(), but on ARM, you&#x2019;ll call to gettime(). The problem is that if you are using C, all of that is masked for you. And it got quite unwieldly. So we decided to create a PAL (platform abstraction layer) in C to handle these details.The rules for the PAL are simple, we don&#x2019;t make assumptions about types, sizes or underlying platform. For example, let&#x2019;s take a look at some declarations.All the types are explicit about their size, and where we need to pass a complex type (SYSTEM_INFORMATION) we define it ourselves, rather than rely on any system type. And here are the P/Invoke definitions for these calls. Again, we are being explicit with the types event though in C# the size of types are fixed.You might have noticed that I care about error handling. And error handling in C is&#x2026; poor. We use the following convention in these kind of operations:Each method does a single logical thing.Each method return either success or flag indication the internal step in which it fail.On failure, the method will return the system error code for the failure.The idea is that on the calling side, we can construct exactly where and why we failed and still get good errors.Yesterday I run into an issue where we didn&#x2019;t move some code to the PAL, and we actually had a bug there. The problem was that when running on ARM32 machine, we would pass a C# struct to a syscall. The problem was that we defined that struct based on the values in 64 bits Linux. When called on 32 bits system, the values went to the wrong location. Luckily, this was a call that was never used. It is used by our dashboard to let the admin know how much disk space is available. There is no code that actually take action based on this information.Which was great, because when we actually run the code, we got this value in the Studio:When I dug deeper into the code, it gave really bad results. My Raspberry PI thought it had 700 PB of disk space free. The actual reason we got this funny error? We send the number of bytes to the client, and under these conditions, we can only support up to about 8 PB of free space in the browser.I moved the code from C# P/Invoke to a simple method to calculate this:Implementing this for all platforms means that we have a much nicer interface and our C# code is abstracted from the gory details on how we actually compute this.</p>
+        </article>
+        <article id="article-1902">
+            <a href="https://ardalis.com/speaking-and-presenting-last-minutes-checklist/" target="_blank">
+                <h2 class="title mb-6" id="article-1902">Speaking and Presenting Last Minutes Checklist</h2>
+            </a>
+            <p class="mb-2">by Ardalis</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 29, 2019
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You have a presentation to give. You&#x2019;ve been asked to speak to a group of your peers. You&#x2019;re giving a conference session. The previous&#x2026;Keep Reading &#x2192;</p>
+        </article>
+        <article id="article-1903">
+            <a href="https://ayende.com/blog/187457-A/speaking-at-london-next-week" target="_blank">
+                <h2 class="title mb-6" id="article-1903">Speaking at London next week</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 28, 2019
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Just a reminder, next week I&#x2019;ll be speaking at the CodeNode on: When Select() is Broken&quot;Select isn&#x27;t broken&quot; is an important bit of advice from the Pragmatic Programmer book. In most cases, you won&#x27;t find bugs in your OS, programming languages or core libraries. It is almost always your code that is at fault. Except...In this session, Oren will discuss how RavenDB has exposed numerous issues in the CoreCLR, the JIT and the underlying operating systems. Along the way, you&#x27;ll learn deep debugging techniques and how to rule out your own code and pinpoint the actual underlying problem.</p>
+        </article>
+        <article id="article-1904">
             <a href="https://andrewlock.net/using-scoped-services-inside-a-quartz-net-hosted-service-with-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-1901">Using scoped services inside a Quartz.NET hosted service with ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-1904">Using scoped services inside a Quartz.NET hosted service with ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe how to run Quartz.NET jobs using an ASP.NET Core hosted service, and how to handle scoped services inside singleton jobs.&#x2026;</p>
         </article>
-        <article id="article-1902">
+        <article id="article-1905">
             <a href="https://www.meziantou.net/ci-cd-pipeline-for-a-visual-studio-extension-vsix-using-azure-devops.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1902">CI/CD pipeline for a Visual Studio extension (VSIX) using Azure DevOps</h2>
+                <h2 class="title mb-6" id="article-1905">CI/CD pipeline for a Visual Studio extension (VSIX) using Azure DevOps</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am the author of the Meziantou.Analyzer, an open-source Roslyn analyzer that ensures the code you write follow some good practices in term of design and performance. This analyzer is published as a Visual Studio extension on the marketplace and as a NuGet package.As I regularly update this projec</p>
         </article>
-        <article id="article-1903">
+        <article id="article-1906">
             <a href="https://www.stevejgordon.co.uk/analysing-the-large-object-heap-in-jetbrains-dotmemory" target="_blank">
-                <h2 class="title mb-6" id="article-1903">Analysing the Large Object Heap in JetBrains dotMemory</h2>
+                <h2 class="title mb-6" id="article-1906">Analysing the Large Object Heap in JetBrains dotMemory</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my last post, which is part of my &#x2018;Writing High-Performance C# and .NET Code&#x2018; series, we looked at how we can begin interpreting some of the data from a dotMemory profiling session. In this post, we&#x2019;ll continue the analysis by investigating why we saw that the Large Object Heap (LOH) size grows for about [&#x2026;]</p>
         </article>
-        <article id="article-1904">
+        <article id="article-1907">
             <a href="https://ayende.com/blog/187425-B/backup-goes-wild" target="_blank">
-                <h2 class="title mb-6" id="article-1904">Backup goes wild</h2>
+                <h2 class="title mb-6" id="article-1907">Backup goes wild</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We have a lot of internal test scenarios that run RavenDB through its paces.One of them had an issue. It would test that RavenDB backups worked properly, but it would (sometimes) fail to clean up after itself.The end result was that over time, the test database would accumulate more and more backup tasks that it had to execute (and all of them on the same schedule).You can see here how RavenDB is allocating them to different nodes in an attempt to spread the load as much as possible. We fixed the bug in the test case, but I also consider this a win because we now have protection from backup DoS attacks . And I just love this image.</p>
         </article>
-        <article id="article-1905">
+        <article id="article-1908">
             <a href="https://www.stevejgordon.co.uk/interpreting-the-dotnet-core-memory-timeline-in-jetbrains-dotmemory" target="_blank">
-                <h2 class="title mb-6" id="article-1905">Interpreting the .NET Core Memory Timeline in JetBrains dotMemory</h2>
+                <h2 class="title mb-6" id="article-1908">Interpreting the .NET Core Memory Timeline in JetBrains dotMemory</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my last post, which is part of my &#x2018;Writing High-Performance C# and .NET Code&#x2018; series,&#xA0; we looked at how dotMemory can be used to view the amount of memory allocated by code in an application using the memory traffic comparison. In this post, I&#x2019;ll begin looking at some of the other information available in [&#x2026;]</p>
         </article>
-        <article id="article-1906">
+        <article id="article-1909">
             <a href="https://ayende.com/blog/187393-B/reliable-paging-through-a-data-set-while-it-is-being-modified" target="_blank">
-                <h2 class="title mb-6" id="article-1906">Reliable paging through a data set while it is being modified</h2>
+                <h2 class="title mb-6" id="article-1909">Reliable paging through a data set while it is being modified</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">What happens when you want to to page through result sets of a query while the underlying data set is being constantly modified? This seems like a tough problem, and one that you wouldn&#x2019;t expect to encounter very often, right? But a really good example of just this issue is the notion of a feed in a social network. To take Twitter for simplicity, you have many people generating twits, and other users are browsing through their timeline.What ends up happening is that the user browsing through their timeline is actually trying to page through the results, but at the same time, you are going to get more updates to the timeline while you are reading it. One of the key requirements that we have here, then, is that we want to be sure that we aren&#x2019;t actually creating a lot of jitter for the user as they scroll through the timeline. Luckily, because this is a hard problem, the users are already quite familiar with some of the side affects. It would surprise no one to see the same twit multiple times in the timeline. It can be because of a retweet or a like by a user you follow, or it can be a result of the way paging is done.Now that we understand what we want to achieve, let&#x2019;s see how you can try getting there. The simplest way to handle this is to ask the database for some sort of a stable reference for the query. So instead of executing the query and being done with it, you&#x2019;ll have the server maintain it for a period of time and send you the pages as you need them. This is simple, easy to implement and costly in terms of system resources. You&#x2019;ll need to keep the query results in memory for each one of your users, and that can be quite a lot of memory to keep around just in case. Especially given the different between human&#x2019;s interaction times and the speed of modern systems.Another way to do that is to ask the database engine to generate a way to re-create the query as it was at that time. This is sometimes called a continuation token or some such. That works great, usually, but come with its own complications. For example, imagine that I&#x2019;m doing this on the following query:from Users order by LastName limit 5Which gives us the following result:And I got the first five users, and now I want to get the next five. Between the first and second query, a user whose last name is &#x201C;Aardvark&#x201D; was inserted in the system. At this point, what would you expect to get from the query? We have two choices here, as you can see below:The problem is that from my perspective, both of those has serious issues. To start with, to compute the results shown in orange, you&#x2019;ll need to jump through some serious hoops on the backend, and the result looks strange. To get the results in green is quite easy, but it will mean that you missed out on seeing Aardvark. You might have noticed that the key issue here isn&#x2019;t so much with the way we build the query, but the order in which we need to traverse it. We ask to sort it by last name, but we also want to get results as they come by. As it turns out, the process becomes a whole lot simpler if we unify these concepts. If we issue the following query, for example, our complexity threshold drops by a lot.from Messages order by CreatedAt desc limit 5This is because we now get the following results:And paging through this now is pretty easy, if we want to page down, we can now issue the query to get the next page of data:from Messages order by CreatedAt desc where CreatedAt &lt; 217 limit 5By making sure that we are paging and filtering on the same property, we can easily scroll through the results without having to do too much work, either in the application or in our database backend. We can also query if there are new stuff that were missed by checking CreatedAt &gt; 222, of course.But there is one wrinkle here. I intentionally used the CreateAt field but put numeric values there. Did you notice that there was no 220 value? That one was created on an isolated node and didn&#x2019;t arrive yet. When it will show up in the local database, we&#x2019;ll need to decide if we&#x2019;ll give it a new value (making sure it will show up in the timeline) or store it as is, meaning that it might get lost.These type of questions are probably more relevant at the business level. You might want to apply different behaviors based on how many likes a twit has, for example.Another option is to have an UpdatedAt field as well, which can allow you to quickly answer the question: &#x201C;What items in the range I scan has changed?&#x201D;. This method also allows for simpler model for handling updates, but much of that depends on the kind of behavior you want to get. This method handles updates, including updates to the parts seen and unseen in a reasonable way and predictable cost.</p>
         </article>
-        <article id="article-1907">
+        <article id="article-1910">
             <a href="https://www.stevejgordon.co.uk/profiling-dotnetcore-memory-traffic-using-jetbrains-dotmemory" target="_blank">
-                <h2 class="title mb-6" id="article-1907">Profiling .NET Core Memory Traffic using JetBrains dotMemory</h2>
+                <h2 class="title mb-6" id="article-1910">Profiling .NET Core Memory Traffic using JetBrains dotMemory</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,54 +296,6 @@
                 posted on: May 22, 2019
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I will continue my journey into writing high-performance C# and .NET Core code by taking a look at a benchmarking challenge I recently encountered. While writing some sample code for an upcoming talk, I wanted to create a demo based on a scenario that I&#x2019;d experienced at work. In that scenario, I [&#x2026;]</p>
-        </article>
-        <article id="article-1908">
-            <a href="https://ayende.com/blog/187361-A/ravendb-4-2-has-been-released" target="_blank">
-                <h2 class="title mb-6" id="article-1908">RavenDB 4.2 has been released!</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 22, 2019
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m really happy to announce that RavenDB 4.2 has been RTMed. The newest version of RavenDB is now generally available.This release brings to the table a host of new features. The major ones are:Pull Replication (docs)Revisions revert (docs)Encrypted backups (docs) We also have a host of minor ones. From theming support in the studio to revisions diffing. This release includes over 1,500 commits and represent over a year of work by our whole team.But the headline for this release is actually an experimental feature, Graph Queries. This feature allows you to run graph queries against your existing data set. This is part of our strategy of allow you to use the same data inside RavenDB from multiple view points.There are also a host of features that graduated from being experimental into stable:Counters &#x2013; which are another aspect of the multi model approach.JavaScript indexesCluster-wide transactionsAnd with that, I&#x2019;m going to go off and bask in the glow of completing the release, paying no mind to the blinking cursor that talks about the next one the big 5.0.</p>
-        </article>
-        <article id="article-1909">
-            <a href="https://ardalis.com/finding-a-career-horse-to-ride/" target="_blank">
-                <h2 class="title mb-6" id="article-1909">Finding a Career Horse to Ride</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 22, 2019
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">About 20 years ago I read the book, Horse Sense, by Al Ries and Jack Trout. The authors posit, &#x201C;The key to success if finding a horse to&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-1910">
-            <a href="https://ayende.com/blog/187330-C/floss-weekly-ravendb" target="_blank">
-                <h2 class="title mb-6" id="article-1910">FLOSS Weekly: RavenDB</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 21, 2019
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last week I was on FLOSS Weekly, talking about RavenDB. Let me know how it came out.</p>
         </article>
         <div class="button flex justify-between">
             <a href="190.html"><span class="back arrow"></span></a>
