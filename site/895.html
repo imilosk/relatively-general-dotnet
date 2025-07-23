@@ -138,8 +138,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-8941">
+            <a href="https://ayende.com/blog/1537/an-orm-is-no-excuse-to-violate-the-single-responsability-principal" target="_blank">
+                <h2 class="title mb-6" id="article-8941">An ORM is NO excuse to violate the Single Responsability Principal</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 15, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is directed at yours truly. Take a look at this class:        The ISessionManager interface is provided by Windsor NHibernate Integration, it gives me an access to NHibernate&#x27;s ISession, which in turn gives me an access to the database.    It is really easy to write code for this system, you pull some stuff from the database, minor processing, and it is done. It is testable, because you are using only interfaces. The problem is with the ease of testing. I couldn&#x27;t quite put my hand on why my tests were cumbersome to write.     Take a look at this snippet:            [Test]                        public void LogErrorIfFileHasNotArrived()                        {                        &#xA0;&#xA0;&#xA0; MockRepository mocks = new MockRepository();                        &#xA0;&#xA0;&#xA0; ISessionManager sessionManager = GetSessionManagerAndSetupMocks(mocks, new ArrayList());        Where GetSessionManagerAndSetupMocks is defined:                    &#xA0;                        private static ISessionManager GetSessionManagerAndSetupMocks(MockRepository mocks, IList list)                        {                        &#xA0;&#xA0;&#xA0; ISessionManager sessionManager = mocks.CreateMock&lt;ISessionManager&gt;();                        &#xA0;&#xA0;&#xA0; ISession session = mocks.CreateMock&lt;ISession&gt;();                        &#xA0;&#xA0;&#xA0; ICriteria criteria = mocks.CreateMock&lt;ICriteria&gt;();                        &#xA0;&#xA0;&#xA0; Expect.Call(sessionManager.OpenSession()).Return(session);                        &#xA0;&#xA0;&#xA0; Expect.Call(session.CreateCriteria(typeof (FileState))).Return(criteria);                        &#xA0;&#xA0;&#xA0; Expect.Call(criteria.Add(null)).IgnoreArguments().Repeat.Twice().Return(criteria);                        &#xA0;&#xA0;&#xA0; Expect.Call(criteria.List()).Return(list);                                &#xA0;                        &#xA0;&#xA0;&#xA0; session.Flush();                        &#xA0;&#xA0;&#xA0; session.Dispose();                        &#xA0;&#xA0;&#xA0; return sessionManager;                        }        And that is for a fairly simple test. This creates an environment where it is pretty hard to write the tests, because I need to setup quite a bit of code, and it has to be intimately familiar with the structure of the class under test. I am dealing more with infrastructure than with testing something that adds a real value.    I am currently refactoring all the usages of ISessionManager (and NHibernate) to satallite interfaces/classes, which allows me to transform the above test to this:            [ Test]                        public void LogErrorIfFileHasNotArrived()                        {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; MockRepository mocks = new MockRepository();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ICheckFileArrivedDataHelper dataHelper = mocks.CreateMock&lt;ICheckFileArrivedDataHelper&gt;();                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; MemoryAppender appender = new MemoryAppender();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; BasicConfigurator.Configure(appender);                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Expect.Call(dataHelper.GetFilesNotMarkedByWatcher(3)).Return(new FileState[0]);                                            &#xA0;                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; mocks.ReplayAll();                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; CheckFileArrivedTask fileNotArrivedTask = new CheckFileArrivedTask(dataHelper, 3);                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; fileNotArrivedTask.Execute();                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; LoggingEvent loggingEvent = appender.GetEvents()[0];                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Assert.AreEqual(Level.Error, loggingEvent.Level);                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; string msg = @&quot;File type: 3 did not arrived in its period!&quot;;                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Assert.AreEqual(msg, loggingEvent.MessageObject);                                &#xA0;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; mocks.VerifyAll();                        }        The part in large font replaced all the code in GetSessionManagerAndSetupMocks. Now the intent of the test is much clearer, and it is far easier to test this stuff. I no longer have to match every little thing that is going on there, instead, I can focus on the bigger picture.    I still need to test the implementation of the data helper, but that can be done in the integration tests.</p>
+        </article>
+        <article id="article-8942">
+            <a href="https://ayende.com/blog/1536/funny-spam" target="_blank">
+                <h2 class="title mb-6" id="article-8942">Funny Spam</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 15, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">No, I am not out of my mind.&#xA0; I am an admin in the Castle Forums, and someone has been posting jokes with links to various medical sites. Those are actually pretty good jokes, so it is spam that get a chuckle before I delete it.</p>
+        </article>
+        <article id="article-8943">
+            <a href="https://ayende.com/blog/1535/help-on-naming" target="_blank">
+                <h2 class="title mb-6" id="article-8943">Help on naming</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 15, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Hm, I just created an interface called &quot;IDontKnowWhatToCallThisInterface&quot; as a part of a refactoring effort.     I moved a lot of data access code to it and I still can&#x27;t come up with a good name:            public interface IDontKnowWhatToCallThisInterface&lt;T&gt;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; where T : EntityBase                        {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; FileState[] GetAllFilesThatNeedsToGenerateStatusFile(int fileType);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; void UpdateGeneratedStatusFileAt(FileState state);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; int GetReportId(string name);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; T[] GetAllRowsForFileState(FileState state);                        }        Suggestions are welcome...</p>
+        </article>
+        <article id="article-8944">
             <a href="https://ayende.com/blog/1534/not-a-book-review-applying-domain-driven-design-and-patterns" target="_blank">
-                <h2 class="title mb-6" id="article-8941">Not a  book review: Applying Domain-Driven Design and Patterns</h2>
+                <h2 class="title mb-6" id="article-8944">Not a  book review: Applying Domain-Driven Design and Patterns</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I got Applying Domain-Driven Design and Patterns&#xA0;two days ago, and I have been trying to read it ever since. If you followed my adventures with reading about databinding, you know that I can usually devour a book in a day or so.     At the moment, I am on page 30, and I am incredibly frustrated. The issue is with this book. I only need to touch it to feel this sudden craving (&quot;Must Code. Must Code. Must Code!&quot;) to reach the computer and start working. I am reading about two pages and then I have to code.     The last time I had this feeling I was reading Working Effectively with Legacy Code&#xA0;and I wrote Rhino Mocks to shooth the ache to code. This is really scary, so far the only things he talks about are TDD and Refactoring, which are well known to me. But I can&#x27;t keep the book in my hands too long.    Update: I am now somewhere in chapter two, and the issue is Domain Patterns. This time I had almost twenty minutes of reading time before I had to code something. I am now thinking about the reverse term to page turner to apply to the book, any suggestions?     Just to clarify: So far, I really like the book. I hold Jimmy personaly responsible for a major refactoring effort (which I just blogged about), which has made some very visible marks on the codebase I am currently working on. Very positive ones, I should add.    Here I was, peacefully reading about design patterns, eagerly waiting for the real meat to arrive, and suddenly I hit my head and exclaim: &quot;I violated the Single Responsability Principal, that is what it is so hard to test!&quot; It is rare that I get so excited about something that I has to put it down. But Applying DDD is one of those books. It is not a page turner, it is a code pusher. I read two pages I just have to apply those ideas immediately.    Like I said, I&#x27;m only in the beginning of the book, so it is not a review (I&#x27;m planning on posting that the moment I finish the book), but I already like what I read.</p>
         </article>
-        <article id="article-8942">
+        <article id="article-8945">
             <a href="https://ardalis.com/19652/" target="_blank">
-                <h2 class="title mb-6" id="article-8942">Best Web Hosting</h2>
+                <h2 class="title mb-6" id="article-8945">Best Web Hosting</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just filled out a customer satisfaction survey for my hosting provider, ORCSWeb, which makes me think I should probably write a little&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8943">
+        <article id="article-8946">
             <a href="https://ayende.com/blog/1533/nhibernate-best-practice-avoid-using-char-nchar-columns-as-discriminators" target="_blank">
-                <h2 class="title mb-6" id="article-8943">NHibernate Best Practice: Avoid using CHAR/NCHAR columns as discriminators</h2>
+                <h2 class="title mb-6" id="article-8946">NHibernate Best Practice: Avoid using CHAR/NCHAR columns as discriminators</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that I do is provide NHibernate support for some of our clients. This gives me the chance to see NHibernate used in many different scenarios.    A few days ago I got a call,&#xA0;they couldn&#x27;t get discriminator values to work with NHibernate. That was very surprising, since I worked with them before, and they are well tested code. After looking at the code and the mapping, I was still at a loss. Everything looked fine, I couldn&#x27;t figure out what was happening. I still got &quot;WrongClassException: Object with id: 1 was not of the specified sublcass: Foo (Discriminator: Bar&#xA0;&#xA0;&#xA0; )&quot;    I pulled the big guns and loaded NHibernate&#x27;s sources and started debugging, and then it became immediately&#xA0;clear what the issue was. The discriminator values for this class were &quot;Foo&quot; and &quot;Bar&quot;, but the discriminator value from the database was &quot;Bar&#xA0; &quot;. Notice the extra spaces.    A quick look at the schema showed that the discriminator column was defined as NCHAR(5), which meant that any value less than 5 characters would be padded. Changing that column to NVARCHAR solved the issue.    In general, I would recommend to use integers as discriminator columns, and use a lookup table (with FK!) to handle the human readable values. Not only does this allow to easily check what type is each row, but it is faster to load (less data travels on the wire) and safer from whitespace / enconding / capitilization issues.    While I admit that I have not met someone trying to use Hebrew characters as discriminator values, I&#x27;m sure that the only thing that protects us from that is that the guys who thinks Taarich* is a good name for a column are still busy learning just how much damage they can cause with datasets.    * Taarich - one of many ways to write Date in Hebrew in English. If the last statement didn&#x27;t make any sense, don&#x27;t worry, it shouldn&#x27;t.</p>
         </article>
-        <article id="article-8944">
+        <article id="article-8947">
             <a href="https://ardalis.com/19630/" target="_blank">
-                <h2 class="title mb-6" id="article-8944">Starter Kits and Samples for SQLExpress and .NET 2.0</h2>
+                <h2 class="title mb-6" id="article-8947">Starter Kits and Samples for SQLExpress and .NET 2.0</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you haven&#x2019;t seen them already, there are a bunch of sample applications available for SQL 2005 from Microsoft. These include: Internet&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8945">
+        <article id="article-8948">
             <a href="https://ayende.com/blog/1532/terror" target="_blank">
-                <h2 class="title mb-6" id="article-8945">Terror</h2>
+                <h2 class="title mb-6" id="article-8948">Terror</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is not a post about technology.You may, or may not, have heard about the recent trouble in Israel. For the past month a Israeli soldier, Gilad Shalit is being held by Hamas terrorists. Today, eight of our soldiers were killed and two were kidnapped by the Hizballa terrorists.There has been calls to immediately negotiate the release of thousands of terrorists held in Israeli&#x27;s prison in exchange for those three kidnapped soldiers.I have been personally involved in two such operations (links to Hebrew site).New Path - to strengthen Abu Mazan position.Blue &amp; white - exchanging prisoners in return to a kidnapped civilian and the bodies of three sodliers.The facts behind the numbers were that within a month about 25% of those released turned up in prison again, for terrorist activities. At that point I lost count and interest.I know for certain of at least two occuations where prisoners that were released in those operations had commited suicide bombing (link to one of them, couldn&#x27;t find the other on the web) that killed my people. In those two occations, the terrorists were released from my prison.This is posted as a reminder that exchanging these prisoners does not end with the exchange itself.</p>
         </article>
-        <article id="article-8946">
+        <article id="article-8949">
             <a href="https://ardalis.com/19444/" target="_blank">
-                <h2 class="title mb-6" id="article-8946">Presenting to Cleveland .NET SIG Tuesday Night</h2>
+                <h2 class="title mb-6" id="article-8949">Presenting to Cleveland .NET SIG Tuesday Night</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ll be speaking to the Cleveland .NET SIG tomorrow night about .NET Caching Best Practices, my current (and somewhat longstanding) favorite&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8947">
+        <article id="article-8950">
             <a href="https://ayende.com/blog/1531/annoying-freeware" target="_blank">
-                <h2 class="title mb-6" id="article-8947">Annoying Freeware</h2>
+                <h2 class="title mb-6" id="article-8950">Annoying Freeware</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,54 +296,6 @@
                 posted on: July 10, 2006
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This&#xA;really annoys me. This was checked by default, and if I was operating in the usual&#xA;mode of Next, Next, Next it would have installed software I don&#x27;t want on my&#xA;machine. I certainly did not expect this from VMWare.&#xA;&#xA;&#xA0;&#xA;&#xA;&#xA;&#xA;&#xA0;&#xA;&#xA;&#xA0;&#xA;&#xA;Yes,&#xA;it is a free product, so what? It is still annoying. They even list this in&#xA;their site:&#xA;&#xA;&quot;Integrated Google Search.&#xA;VMware Player includes Google search capabilities, fully integrated for&#xA;conveniently searching the web without launching a browser.&quot;&#xA;&#xA;I&#xA;guess they didn&#x27;t hear about the single responsibility principal. &#xA0;I fail&#xA;to see the connection between virtual machines and searching the web.&#xA;&#xA;Moreover,&#xA;Google seems to be very keen on put their toolbar in every product possible,&#xA;but this just give it very bad reputation in my eyes.</p>
-        </article>
-        <article id="article-8948">
-            <a href="https://ayende.com/blog/1530/tdding-log4net" target="_blank">
-                <h2 class="title mb-6" id="article-8948">TDDing Log4net</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 08, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have an application where logging is a business concern.Usually, logging is something that I do so I could remotely debug the application, or have a better understanding of what is going on. This is the first time where the logs are actually something that is a business concern.I usually don&#x27;t tests logging, so I wasn&#x27;t sure how to start. I probably should mention that I am using log4net for the logs.After searching a bit, I found that it is really simple:[SetUp]public void TestInitialize(){&#xA0;&#xA0;&#xA0; _memoryAppender = new MemoryAppender();&#xA0;&#xA0;&#xA0; BasicConfigurator.Configure(_memoryAppender); }And then, in the tests, all you need to do is:LoggingEvent[] events = _memoryApender.GetEvents();And start asserting.Strangely, the best place to read about log4net strengths is here, in the comments for a blog post (check the second comment by Ron Grabowski).</p>
-        </article>
-        <article id="article-8949">
-            <a href="https://ayende.com/blog/1529/using-active-record-as-a-rule-engine" target="_blank">
-                <h2 class="title mb-6" id="article-8949">Using Active Record As A Rule Engine</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 07, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I posted a riddle&#xA0;about how to use Active Record as a Rule Engine, here is the answer.     First, just to remind you of the scenario: A rule engine that can process big amount of data. The engine will run as a Windows service, and not as a part of another application. Throughput is important, as well as flexibility in the rules and what they can do. The processing of each rule can be quite complex, so it is important that the rule engine will not limit what the rule can do. The rules run on varied pieces of data, which reside in a database.     Okay, so we have a database and we have a lot of rules. Let us consider first what a rule is, shall we?     A rule is usually composed of two distinct parts:             What this rule applies to?                 What this rule should do?         For instnace, consider this rule: Increase the salary by 10% of all employees that have over 5 years senority.             What this rule applies to: Employee with over 5 years senority.                 What this rule should do: Increase salary by 10%         Do you see where I am heading? Let us first look at the object model first:          I have got a Rule&lt;T&gt; class, which manages the rules. It has either an HQL Query which select the objects to works on, or a set of predicates that it uses.     The predicates are very thin wrappers over NHibernate.Expression namespace, and they mainly provide persistance support. The reason that I am using both is that is it very easy to provide a nice drag &amp; drop interface for the predicates, which allow a business analyst to define the set of objects that this rule will run on. The HQL Query is for the more complex issues, where a developer will be needed.     I hope you noticed the IRuleAction&lt;T&gt; interface. This allows to write actions that accept an object, and do something to it. This can be something like Increase Salary, Fire Employee, etc.     Note that both the Rule&lt;T&gt; and the IRuleAction&lt;T&gt; has a collection of parameters. Those are strongly typed parameters. Which means that I don&#x27;t deal with hash tables, or things like that. I get a strongly typed object that I can use in compile time.     For reference, here is the table structure that backs this up:          How this is working? Check out the Rule&lt;T&gt;.Execute() method:             public void Execute()                        {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; using (new SessionScope())                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; T[] items = GetItemsToWorkOnFromQueryOrPredicates();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; foreach (IRuleAction&lt;T&gt; action in Actions)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; foreach (T item in items)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; action.Act(item);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }// all changes to the items are persisted here.                        }         And here is how an action looks like (I omitted the uninteresting properties):             public class IncreaseEmployeeSalaryAction : IRuleAction&lt;Employee&gt;                        {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; public void Act(Employee item)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; item.Salary.IncreaseBy(Parameter.Amount);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        }         NHibernate can handle generic types quite well (but not generic type inferencing, thanks goodness), but it require the full generic type name, which can be a pain to write. Active Record does even that for me, so it is very easy to work with the system.     Hope you like the idea. An additional extention of this can be further processing of complex business rules that cannot be expressed in an HQL Query alone.     Update: Just to clarify, NHibernate is able to tell based on the XxxType column in each table which object it is, and it construct the object graph accordingly.</p>
-        </article>
-        <article id="article-8950">
-            <a href="https://ardalis.com/19352/" target="_blank">
-                <h2 class="title mb-6" id="article-8950">Fourth of July Info (chain letter)</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 06, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Every year or two I see this email come through. I haven&#x2019;t checked Snopes to see if it&#x2019;s all accurate, but if it is, it&#x2019;s certainly worth a&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="894.html"><span class="back arrow"></span></a>
