@@ -138,8 +138,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1921">
+            <a href="https://andrewlock.net/creating-a-quartz-net-hosted-service-with-asp-net-core/" target="_blank">
+                <h2 class="title mb-6" id="article-1921">Creating a Quartz.NET hosted service with ASP.NET Core</h2>
+            </a>
+            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 21, 2019
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe how to run Quartz.NET jobs using an ASP.NET Core hosted service, and how to handle scoped services inside singleton jobs.&#x2026;</p>
+        </article>
+        <article id="article-1922">
+            <a href="https://ayende.com/blog/187329-C/timeseries-in-ravendb-exploring-the-requirements" target="_blank">
+                <h2 class="title mb-6" id="article-1922">TimeSeries in RavenDB: Exploring the requirements</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 20, 2019
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last week I posted about some timeseries work that we have been doing with RavenDB. But I haven&#x2019;t actually talked about the feature in this space before, so I thought that this would be a good time to present what we want to build.The basic idea with timeseries is that this is a set of data points taken over time. We usually don&#x2019;t care that much about an individual data point but care a lot about their aggregation. Common usages for time series include:Heart beats per minuteCPU utilizationCentral back interest rateDisk I/O rateHeight of ocean tideLocation tracking for a vehicleUSD / Bitcoin closing priceAs you can see, the list of stuff that you might want to apply this to is quite diverse. In a world that keep getting more and more IoT devices, timeseries storing sensor data are becoming increasingly common. We looked into quite a few timeseries databases to figure out what needs they serve when we set out to design and build timeseries support to RavenDB. RavenDB is a document database, and we envision timeseries support as something that you use at the document boundary. A good example of that would the heartrate example. Each person has their own timeseries that record their own heartrate over time. In RavenDB, you would model this as a document for each person, and a heartrate timeseries on each document. Here is how you would add a data point to my Heartrate&#x2019;s timeseries:I intentionally starts from the Client API, because it allow me to show off several things at once.Appending a value to a timeseries doesn&#x2019;t require us to create it upfront. It will be created automatically on first use.We use UTC date times for consistency and the timestamps have millisecond precision. We are able to record a tag (the source for this measurement) on a particular timestamp.The timeseries will accept an array of values for a single timestamp.Each one of those items is quite important to the design of RavenDB timeseries, so let&#x2019;s address them in order.The first thing to address is that we don&#x2019;t need to create timeseries ahead of time. Doing so will introduce a level of schema to the database, which is something that we want to avoid. We want to allow the user complete freedom and minimum of fuss when they are building features on top of timeseries. That does lead to some complications on our end. We need to be ab le to support timeseries merging. Allowing you to append values on multiple machines and merging them together into a coherent whole. Given the nature of timeseries, we don&#x2019;t expect to see conflicting values. While you might see the same values come in multiple times, we assume that in that case you&#x2019;ll likely just get the same values for the same timestamps (duplicate writes). In the case of different writes on different machines with different values for the same timestamp, we&#x2019;ll arbitrarily select the largest of those values and proceed. Another implication of this behavior is that we need to handle out of band updates. Typically in timeseries, you&#x2019;ll record values in increasing date order. We need to be able to accept values out of order. This turns out to be pretty useful in general, not just for being able to handle values from multiple sources, but also because it is possible that you&#x2019;ll need to load archived data to already existing timeseries.&#xA0; The rule that guided us here was that we wanted to allow the user as much flexibility as possible and we&#x2019;ll handle any resulting complexity. The second topic to deal with is the time zone and precision. Given the overall complexity of time zones in general, we decided that we don&#x2019;t want to deal with any of that and want to store the times in UTC only. That allows you to work properly with timestamps taken from different locations, for example. Given the expected usage scenarios for this feature, we also decided to support millisecond precision. We looked at supporting only second level of precision, but that was far too limiting. At the same time, supporting lower resolution than millisecond would result in much lower storage density for most situations and is very rarely useful.Using DateTime.UtcNow, for example, we get a resolution on 0.5 &#x2013; 15 ms, so trying to represent time to a lower resolution isn&#x2019;t really going to give us anything. Other platforms have similar constraints, which added to the consideration of only capturing the time to millisecond granularity.The third item on the list may be the most surprising one. RavenDB allows you to tag individual timestamps in the timeseries with a value. This gives you the ability to record metadata about the value. For example, you may want to use this to record the type of instrument that supplied the value. In the code above, you can see that this is a value that I got from a FitBit watch. I&#x2019;m going to assign it lower confidence value than a value that I got from an actual medical device, even if both of those values are going to go on the same timeseries.We expect that the number of unique tags for values in a given time period is going to be small, and optimize accordingly. Because of the number of weasel words in the last sentence, I feel that I must clarify. A given time period is usually in the order of an hour to a few days, depending on the number of values and their frequencies. And what matters isn&#x2019;t so much the number of values with a tag, but the number of unique tags. We can very efficiently store tags that we have already seen, but having each value tagged with a different tag is not something that we designed the system for.You can also see that the tag that we have provided looks like a document id. This is not accidental. We expect you to store a document id there, and use the document itself to store details about the value. For example, if the type of the device that captured the value is medical grade or just a hobbyist. You&#x2019;ll be able to filter by the tag as well as filter by the related tag document&#x2019;s properties. But I&#x2019;ll show that when I&#x2019;ll post about queries, in a different post.The final item on the list that I want to discuss in this post is the fact that a timestamp may contain multiple values. There are actually quite a few use cases for recording multiple values for a single timestamp:Longitude and latitude GPS coordinatesBitcoin value against USD, EUR, YENSystolic and diastolic reading for blood pressureIn each cases, we have multiple values to store for a single measurement. You can make the case that the Bitcoin vs. Currencies may be store as stand alone timeseries, but GPS coordinates and blood pressure both produce two values that are not meaningful on their own. RavenDB handles this scenario by allowing you to store multiple values per timestamp. Including support for each timestamp coming with a separate number of values. Again, we are trying to make it as easy as possible to use this feature. The number of values per timestamp is going to be limited to 16 or 32, we haven&#x2019;t made a final decision here. Regardless of the actual maximum size, we don&#x2019;t expect to have more than a few of those values per timestamp in a single timeseries. Then again, the point of this post is to get you to consider this feature in your own scenarios and provide feedback about the kind of usage you want to have for this feature. So please, let us know what you think.</p>
+        </article>
+        <article id="article-1923">
             <a href="https://www.stevejgordon.co.uk/creating-strings-with-no-allocation-overhead-using-string-create-csharp" target="_blank">
-                <h2 class="title mb-6" id="article-1921">Creating Strings with No Allocation Overhead Using String.Create</h2>
+                <h2 class="title mb-6" id="article-1923">Creating Strings with No Allocation Overhead Using String.Create</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I&#x2019;ll continue my series about writing high-performance C# and .NET code. This time, I will focus on a new(ish) method available on the String type &#x2013; String.Create. First introduced in .NET Core 2.1, this method is currently planned for inclusion as part of .NET Standard 2.1 once that is released. What Does [&#x2026;]</p>
         </article>
-        <article id="article-1922">
+        <article id="article-1924">
             <a href="https://ayende.com/blog/187297-C/analyzing-five-years-of-fitbit-data" target="_blank">
-                <h2 class="title mb-6" id="article-1922">Analyzing five years of FitBit data</h2>
+                <h2 class="title mb-6" id="article-1924">Analyzing five years of FitBit data</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">About five years ago, my wife got me a present, a FitBit. I didn&#x2019;t wear a watch for a while, and I didn&#x2019;t really see the need, but it was nice to see how many steps I took and we had a competition about who has the most steps a day. It was fun. I had a few FitBits since then and I&#x2019;m mostly wearing one. As it turns out, FitBit allows you to get an export of all of your data, so a few months ago I decided to see what kind of information I have stored there, and what kind of data I can get from it.The export process is painless and I got a zip with a lot of JSON files in it. I was able to process that and get a CSV file that had my heartrate over time. Here is what this looked like:The file size is just over 300MB and it contains 9.42 million records, spanning the last 5 years.The reason I looked into getting the FitBit data is that I&#x2019;m playing with timeseries right now, and I wanted a realistic data set. One that contains dirty data. For example, even in the image above, you can see that the measurements aren&#x2019;t done on a consistent basis. It seems like ten and five second intervals, but the range varies.&#xA0; I&#x2019;m working on a timeseries feature for RavenDB, so that was perfect testing ground for me. I threw that into RavenDB and I got the data to just under 40MB in side.I&#x2019;m using Gorilla encoding as a first pass and then LZ4 to further compress the data. In a data set where the duration between measurement is stable, I can stick over 10,000 measurements in a single 2KB segment. In the case of my heartrate, I can store an average of 672 entries in each 2KB segment. Once I have the data in there, I can start actually looking at interesting patterns.For example, consider the following query:Basically, I want to know how I&#x2019;m doing on a global sense, just to have a place to start figuring things out. The output of this query is:These are interesting numbers. I don&#x2019;t know what I did to hit 177 BPM in 2016, but I&#x2019;m not sure that I like it. What I do like is this number:I then run this query, going for a daily precision on all of 2016:And I got the following results in under 120 ms. These are early days for this feature, but I was able to take that and generate the following (based on the query above).All of the results has been generated on my laptop, and we haven&#x2019;t done any performance work yet. In fact, I&#x2019;m posting about this feature because I was so excited to see that I got queries to work properly now. This feature is early stages yet. But it is already quite cool.</p>
         </article>
-        <article id="article-1923">
+        <article id="article-1925">
             <a href="https://ayende.com/blog/187265-B/the-psychology-of-system-security" target="_blank">
-                <h2 class="title mb-6" id="article-1923">The psychology of system security</h2>
+                <h2 class="title mb-6" id="article-1925">The psychology of system security</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday I talked about the design of the security system of RavenDB. Today I re-read one of my favorite papers ever about the topic.&#xA;&#xA;This World of Ours by James Mickens&#xA;&#xA;This is both one of the most hilarious paper I ever read (I had someone check up on me when I was reading that, because of suspicious noises coming from my office) and a great insight into threat modeling and the kind of operating environment that your system will run at.</p>
         </article>
-        <article id="article-1924">
+        <article id="article-1926">
             <a href="https://andrewlock.net/verifying-phone-number-ownership-with-twilio-using-asp-net-core-identity-and-razor-pages/" target="_blank">
-                <h2 class="title mb-6" id="article-1924">Verifying phone number ownership with Twilio using ASP.NET Core Identity and Razor Pages</h2>
+                <h2 class="title mb-6" id="article-1926">Verifying phone number ownership with Twilio using ASP.NET Core Identity and Razor Pages</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I show how to verify phone number ownership with Twilio&#x27;s Verify API in a Razor Pages app that uses ASP.NET Core Identity for user management&#x2026;</p>
         </article>
-        <article id="article-1925">
+        <article id="article-1927">
             <a href="https://ayende.com/blog/187233-B/the-design-of-ravendbs-security" target="_blank">
-                <h2 class="title mb-6" id="article-1925">The design of RavenDB&#x2019;s security</h2>
+                <h2 class="title mb-6" id="article-1927">The design of RavenDB&#x2019;s security</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB stores (critical) data for customers. We have customers in pretty much every field imaginable, healthcare, finance, insurance and defense. They do very different things with RavenDB, some run a single cluster, some deploy to tens of thousands of locations. The one thing that they all have in common is that they put their data into RavenDB, and they really don&#x2019;t want to put that data at the hands of an unknown third party.Some of my worst nightmares are articles such as these:Over 275 Million Records Exposed by Unsecured MongoDB Database &#x2013; May, 2019Insecure (MongoDB) Database Leads to Over 800 Million Records Data Breach &#x2013; March, 2019Unprotected MongoDB Exposes Over 200 Millions Resumes &#x2013; January, 2019Unprotected MongoDB Exposes Scraped Profile Data of 66 Million &#x2013; December, 2018That is just for the last six months, and just one site that I checked. To be fair, none of these cases are because of a fault in MongoDB. It wasn&#x2019;t some clever hack or a security vulnerability. It was someone who left a production database accessible over the public Internet with no authentication.Production database &#x2B; Public Internet &#x2B; No authentication?Profit (for someone else, I assume)When we set out to design the security model for RavenDB, we didn&#x2019;t account only for bad actors and hostile networks. We had to account for users who did not care.Using MongoDB as the example, by default it will only listen on localhost, which sounds like it is a good idea. Because no one external can access it. Safe by default, flowers, parade, etc.And then you realize that the first result for searching: &#x201C;mongodb remote connection refused&#x201D; will lead to this page:Where you&#x2019;ll get a detailed guide on how to change what IPs MongoDB will listen to. And guess what? If you follow that article, you&#x2019;ll fix the problem. You would be able to connect to your database instance, as would everything else in the world!There is even a cool tip in the article, talking about how to enable authentication in MongoDB. Because everyone reads that, right? Except maybe the guys at the beginning of this post. So our threat model had to include negligent users. And that leads directly to the usual conundrum of security.I&#x2019;ll now pause this post to give you some time to reflect on the Wisdom of Dilbert:2011-08-012007-11-16In general, I find that the best security for a computer is to disconnect it from any power sources. That does present some challenges for normal operations, though. So we had to come up with something better.In RavenDB, security is binary. You are either secured (encrypted communication and mutual authentication) or you are not (everything is plain text and there everyone is admin). Because the Getting Started scenario is so important, we have to account for it, so you can get RavenDB started without security. However, that will only work when you set RavenDB to bind to local host.How is that any different than MongoDB? Well, the MongoDB guys have a pretty big set of security guidelines. At one point I took a deep look at that and, excluding the links for additional information, the MongoDB security checklist consisted of about 60 pages. We decided to go a very different route with RavenDB.If you try to change the binding port of RavenDB from localhost, it will work, and RavenDB will happily start up and serve an error page to all and sundry. That error page is very explicit about what is going on. You are doing something wrong, you don&#x2019;t have security and you are exposed. So the only thing that RavenDB is willing to do at that point is to tell you what is wrong, and how to fix it.That lead us to the actual security mechanism in RavenDB. We use TLS 1.2, but it is usually easier to just talk about it as HTTPS. That gives us encrypted data over the wire and it allows for mutual authentication at the highest level. It is also something that you can configure on your own, without requiring an administrator to intervene. The person setting up RavenDB is unlikely to have Domain Admin privileges or the ability to change organization wide settings. Nor should this be required. HTTPS relies on certificates, which can be deployed, diagnosed and debugged without any special requirements.Certificates may not require you to have a privileges access level, but they are complex. One of the reasons we choose X509 Certificates as our primary authentication system is that they are widely used. Many places already have policies and expertise on how to deal with them. And for the people who don&#x2019;t know how to deal with them, we could automate a lot of that and still get the security properties that we wanted.In fact, Let&#x2019;s Encrypt integration allowed us to get to the point where we can setup a cluster from scratch, with security, in a few minutes. I actually got it on video, because it was so cool to be able to do this.Using certificates also meant that we could get integration with pretty much anything. We got good support from browsers, we got command line integration, great tools, etc.This isn&#x2019;t a perfect system. If you need something that our automated setup doesn&#x2019;t provide, you&#x2019;ll need to understand how to work with certificates. That isn&#x2019;t trivial, but it is also not a waste, it is both interesting and widely applicable. The end result of RavenDB&#x2019;s security design is a system that is meant to be deployed in hostile environment, prevent information leakage on the wire and allow strong mutual authentication of clients and servers. It is also a system that was designed to prevent abuses. If you really want to, you can get an unsecured instance on the public internet. Here is one such example: http://live-test.ravendb.netIn this case, we did it intentionally, because we wanted to get this in the browser:But the easy path? The path that we expect most users to follow? That one ends up with a secured and safe system, without showing up on the news because all your data got away from you.</p>
         </article>
-        <article id="article-1926">
+        <article id="article-1928">
             <a href="https://www.meziantou.net/stop-using-intptr-for-dealing-with-system-handles.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1926">Stop using IntPtr for dealing with system handles</h2>
+                <h2 class="title mb-6" id="article-1928">Stop using IntPtr for dealing with system handles</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When using system handles such as file handles, process handles, or any other handles provided by the kernel, you should take care to release them correctly when you don&#x27;t need them anymore. The native APIs often provides a method to get a handle and a method to release it, plus sometimes a few met</p>
         </article>
-        <article id="article-1927">
+        <article id="article-1929">
             <a href="https://ayende.com/blog/187201-A/hidden-pitfalls-in-a-trivial-domain-model" target="_blank">
-                <h2 class="title mb-6" id="article-1927">Hidden pitfalls in a trivial domain model</h2>
+                <h2 class="title mb-6" id="article-1929">Hidden pitfalls in a trivial domain model</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I read this post about using Object Relational Mapper in Go with great interest. I spent about a decade immersed deeply within the NHibernate codebase, and I worked on a bunch of OR/Ms in .NET and elsewhere. My first reaction when looking at this post can be summed in a single picture:This is a really bad modeling decision, and it is a really common one when people are using an OR/M. The problem is that this kind of model fails to capture a really important aspect of the domain, it&#x2019;s size.Let&#x2019;s consider the Post struct. We have a couple of collections there. Tags and Comments, it is reasonable to assume that you&#x2019;ll never have a post with more than a few tags, but a popular post can easily have a lot of comments. Using Reddit as an example, it took me about 30 seconds to find a post that had over 30,000 comments on it. On the other side, the Tag.Posts collection may contains many posts. The problem with such a model is that trying to access such properties is that they are trapped. If you hit something that has a large number of results, that is going to cause you to use a lot of memory and put a lot of pressure on the database.The good thing about Go is that it is actually really hard to play the usual tricks with lazy loading and proxies behind your back. So the GORM API, at least, is pretty explicit about what you load there. The problem with this, however, is that developers will explicitly call the &#x201C;gimme the Posts&#x201D; collection and it will work when tested locally (small dataset, no load on the server). It will fail in production in a very insidious way (slightly slower over time until the whole thing capsize). I would much rather move those properties outside the entities and into standalone queries, ones that come with explicit paging that you have to take into account. That reflect the actual costs behind the operations much more closely.</p>
         </article>
-        <article id="article-1928">
+        <article id="article-1930">
             <a href="https://ardalis.com/automatically-detect-expiring-https-ssl-certificates/" target="_blank">
-                <h2 class="title mb-6" id="article-1928">Automatically Detect Expiring HTTPS SSL Certificates</h2>
+                <h2 class="title mb-6" id="article-1930">Automatically Detect Expiring HTTPS SSL Certificates</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,38 +296,6 @@
                 posted on: May 08, 2019
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">All too often we hear about a site going down or suffering problems because they&#x27;ve let their public x509 certificate expire. SSL&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-1929">
-            <a href="https://andrewlock.net/safely-migrating-passwords-in-asp-net-core-identity-with-a-custom-passwordhasher/" target="_blank">
-                <h2 class="title mb-6" id="article-1929">Safely migrating passwords in ASP.NET Core Identity with a custom PasswordHasher</h2>
-            </a>
-            <p class="mb-2">by Andrew Lock</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 07, 2019
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I create a custom IPasswordHasher&lt;&gt; implementation that can be used in ASP.NET Core Identity to migrate from weak hashes like MD5 or SHA1.&#x2026;</p>
-        </article>
-        <article id="article-1930">
-            <a href="https://ayende.com/blog/187169-B/it-works-if-im-looking-at-it" target="_blank">
-                <h2 class="title mb-6" id="article-1930">It works if I&#x2019;m looking at it!</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 06, 2019
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today my team tracked down, hunted and summarily executed a bug. It was a nasty one, because under certain (pretty rare) error conditions, we would get into pretty nasty state and not recover from it.The problem was that the code to handle this and handle the state properly was there, and on when we tested it locally, worked just fine. But on production, it didn&#x2019;t work. Unless we tried to figure out why it wasn&#x2019;t working, in which case it did work.As you can imagine, this can be a pretty frustrating state of affair. Eventually we tracked it down to the following problem. Here is the relevant code. And the problem is that the exception aren&#x2019;t thrown (and therefor not handled). Can you see the issue?</p>
         </article>
         <div class="button flex justify-between">
             <a href="192.html"><span class="back arrow"></span></a>
