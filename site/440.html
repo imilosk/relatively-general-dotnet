@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4391">
+            <a href="https://ayende.com/blog/160417/ravendb-memory-issue-the-process" target="_blank">
+                <h2 class="title mb-6" id="article-4391">RavenDB Memory Issue, The Process</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 24, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, we got it. Dear DB, get your hands OFF my memory (unless you really need it, of course). The actual issue was so hard to figure out because it was not a memory leak. It exhibit all of the signs for that, sure, but it was not.  Luckily for RavenDB, we have a really great team, and the guy who provided the final lead is Arek, from AIS.PL, who does really great job. Arek manage to capture the state in a way that showed that a lot of the memory was help by the OptimizedIndexReader class, to be accurate, about 2.45GB of it. That made absolutely no sense, since OIR is a relatively cheap class, and we don&#x2019;t expect to have many of them. Here is the entire interesting part of the class:   2: public class OptimizedIndexReader&lt;T&gt; where T : class   3: {   4:     private readonly List&lt;Key&gt; primaryKeyIndexes;   5:     private readonly byte[] bookmarkBuffer;   6:     private readonly JET_SESID session;   7:     private readonly JET_TABLEID table;   8:     private Func&lt;T, bool&gt; filter;   9:&#xA0;   10:     public OptimizedIndexReader(JET_SESID session, JET_TABLEID table, int size)  11:     {  12:         primaryKeyIndexes = new List&lt;Key&gt;(size);  13:         this.table = table;  14:         this.session = session;  15:         bookmarkBuffer = new byte[SystemParameters.BookmarkMost];  16:     }&#xA;&#xA;As you can see, this isn&#x2019;t something that looks like it can hold 2.5GB. Sure, it has a collection, but the collection isn&#x2019;t really going to be that big.&#xA0; It may get to a few thousands, but it is capped at around 131,072 or so. And the Key class is also small. So that can&#x2019;t be it.&#xA;There was a&#x2026; misunderstanding in the way I grokked the code. Instead of having one OIR with a collection of 131,072 items. No, the situation was a lot more involved. When using map/reduce indexes, we would have as many of the readers as we would have (keys times buckets). When talking about large map/reduce indexes, that meant that we might need tens of thousands of the readers to process a single batch. Now, each of those readers would usually contain just one or two items, so that wasn&#x2019;t deemed to be a problem.&#xA;Except that we have this thing on line 15. BookmarkMost is actualy 1,001 bytes. With the rest of the reader, let us call this an even 1Kb. And we had up to of 131,072 of those around, per index. Now, we weren&#x2019;t going to hang on to those guys for a long while, just until we were done indexing. Except&#x2026; Since this took up a lot of memory, this also meant that we would create a lot of garbage memory for the GC to work on, that would slow everything down, and result in us needing to process larger and larger batches.&#xA0; As the size of the batches would increase, we would use more and more memory. And eventually we would start paging. &#xA;Once we did that, we were basically is slowville, carrying around a lot of memory that we didn&#x2019;t really need. If we were able to complete the batch, all of that memory would instance turn to garbage, and we could move on. But if we had another batch with just as much work to do&#x2026;&#xA;And what about prefetching? Well, as it turned out, we had our own problems with prefetching, but they weren&#x2019;t relating to this. Prefetching simply made things so fast that they served the data to the map/reduce index at a rate fast enough to expose this issue, ouch!&#xA;We probably still need to go over some things, but this looks good.</p>
+        </article>
+        <article id="article-4392">
             <a href="https://benfoster.io/blog/centralized-logging-and-diagnostics-with-elmah-and-nlog/" target="_blank">
-                <h2 class="title mb-6" id="article-4391">Centralized Logging and Diagnostics with Elmah and NLog</h2>
+                <h2 class="title mb-6" id="article-4392">Centralized Logging and Diagnostics with Elmah and NLog</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I cover how to set up centralized Logging and Diagnostics using Elmah and NLog.</p>
         </article>
-        <article id="article-4392">
+        <article id="article-4393">
             <a href="https://ayende.com/blog/160386/ravendb-2-0-stopship-bug-memory-is-nice-let-us-eat-it-all" target="_blank">
-                <h2 class="title mb-6" id="article-4392">RavenDB 2.0 StopShip bug: Memory is nice, let us eat it all.</h2>
+                <h2 class="title mb-6" id="article-4393">RavenDB 2.0 StopShip bug: Memory is nice, let us eat it all.</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the past few days, it sometimes felt like RavenDB is a naughty boy who want to eat all of the cake and leave none for others.  The issue is that under certain set of circumstances, RavenDB memory usage would spike until it would consume all of the memory on the machine. The problem is that we are pretty sure what is the root cause of the problem, it is the prefetching data that is killing us. Proven by the fact that when we disable that, we seem to be operating fine. And we did find quite a few such issues. And we got them fixed. And still the problem persists&#x2026; (picture torn hair and head banging now). To make things worse, in our standard load tests, we couldn&#x2019;t see this problem. It was our dog fooding tests that actually caught it. And it only happened after a relatively long time in production. That sucked, a lot.  The good news is that I eventually sat down and wrote a test harness that could pretty reliably reproduce this issue. That narrowed down things considerably. This issue is related to map/reduce and to prefetching, but we are still investigating. Here are the details:  Run RavenDB on a machine that has at least 2 GB of free RAM.  Run the Raven.SimulatedWorkLoad, it will start writing documents and creating indexes After about 50,000 &#x2013; 80,000 documents have been imported, you&#x2019;ll begin seeing memory rises rapidly, to use as much free memory as you have. On my machine, it got to 6 GB before I had to kill it. I took a dump of the process memory at around 4.3GB, and we are analyzing this now. The frustrating thing is that the act of taking the mem dump dropped the memory usage to 1.2GB. I wonder if we aren&#x2019;t just creating so much memory garbage that the GC just let us consume all available memory. The problem with that is that it gets so bad that we start paging, and I don&#x2019;t think the GC should allow that. The dump file can be found here (160MB compressed), if you feel like taking a stab in it. Now, if you&#x2019;ll excuse me, I need to open WinDBG and see what I can find.</p>
         </article>
-        <article id="article-4393">
+        <article id="article-4394">
             <a href="https://ayende.com/blog/160385/goodbye-2012-our-end-of-year-discount-starts-now" target="_blank">
-                <h2 class="title mb-6" id="article-4393">Goodbye, 2012: Our end of year discount starts now!</h2>
+                <h2 class="title mb-6" id="article-4394">Goodbye, 2012: Our end of year discount starts now!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, as the year draws to a close, it is that time again, I got older, apparently. Yesterday marked my 31th trip around the sun. To celebrate, I decided to give the first 31 people a 31% discount for all of our products. This offer applies to:  Raven DB (Standard edition) NHibernate Profiler Entity Framework Profiler Linq to SQL Profiler LLBLGen Profiler This also applies to our support &amp; consulting services. All you have to do is to use the following coupon code: goodbye-2012 Enjoy the end of the year, and happy holidays.</p>
         </article>
-        <article id="article-4394">
+        <article id="article-4395">
             <a href="https://ayende.com/blog/160353/think-about-production-silly" target="_blank">
-                <h2 class="title mb-6" id="article-4394">Think about production, silly!</h2>
+                <h2 class="title mb-6" id="article-4395">Think about production, silly!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We just finished doing a big optimization in RavenDB, and one of the things that we needed to do was to store additional (internal) information so we could act upon it later on. If you must know, we now keep track of stats during indexing and can select the appropriate indexing approach based on the amount of data that we have available. The details about this aren&#x2019;t that important. What is important is that this is a piece of data that is used by RavenDB to make decisions. That means that just about the worst thing that we could possibly do is leave things at this state:   Think about what will happen in production, when you have an annoyed (and tired) ops team trying to figure out what is going on. Having a black box is the worst thing that you could possibly do, because you give the admin absolutely no input. And remember, you are going to be the one on call when the support phone rings. One of the very final touches that we did was to add a debug endpoint that will expose those details to the user, so we could actually inspect them at runtime, and in production.&#xA0; We have a lot of those, some are intended for monitoring purposes, such as the /admin/stats or the /databases/db-name/stats endpoints, some are meant for troubleshooting, such as the /databases/db-name/logs?type=error endpoint and some are purely for debugging purposes, such as /databases/db-name/indexes/index/name?debug=keys which gives you the stats about all the keys in a map/reduce index. Trust me, you are going to need those, at some point.</p>
         </article>
-        <article id="article-4395">
+        <article id="article-4396">
             <a href="https://ayende.com/blog/160321/production-cloud-profiling-with-uber-prof" target="_blank">
-                <h2 class="title mb-6" id="article-4395">Production Cloud Profiling With Uber Prof</h2>
+                <h2 class="title mb-6" id="article-4396">Production Cloud Profiling With Uber Prof</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">With Uber Prof 2.0 (NHibernate Profiler, Entity Framework Profiler, Linq to SQL Profiler, LLBLGen Profiler) we are going to bring you a new era of goodness. In 1.0, we gave you a LOT of goodness for the development stage of building your application, but now we are able to take it a few steps further. Uber Prof 2.0 supports production profiling, which means that you can run it in production and see what is going on in your application now! To make things even more interesting, we have also done a lot of work to make sure that this works on the cloud as well. For example, go ahead and look at this site: http://efprof.cloudapp.net/ This is a live application, that doesn&#x2019;t really do anything special, I&#x2019;ll admit. But the kicker is when you go to this URL: http://efprof.cloudapp.net/profiler/profiler.html  This is EF Prof, running on the cloud, and giving you the results that you want, live. You can read all about this feature and how to enable it here, but I am sure that you can see the implications.</p>
         </article>
-        <article id="article-4396">
+        <article id="article-4397">
             <a href="https://ayende.com/blog/160292/optimizations-gone-wild-o-n-memory-leaks" target="_blank">
-                <h2 class="title mb-6" id="article-4396">Optimizations gone wild, O(N!) memory leaks</h2>
+                <h2 class="title mb-6" id="article-4397">Optimizations gone wild, O(N!) memory leaks</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So, after doing so much work on the indexing optimization, it turned out that we had a bug. I assume that you remember this optimization, right?  In which we were able to pre fetch data from the disk and not have to wait for data at all. This all worked beautifully when running on data sets that included simple indexes. But the moment we had map/reduce indexes, something bad happened. That something bad was that we kept missing the batch that we loaded (this relates to how we load &amp; find the appropriate batches).  We do all the lookups by etag, and map/reduce add gaps in the etags. Which meant that we kept missing the etag, and had to start loading things up again. And because whenever we load something we also start loading the next batch&#x2026; Here is what the memory looked like:   Yup, for every batch we loaded the next 5 batches, for a total of O(N!) items in memory for everything. Now, we had some cleanup routines, but we did NOT expect to have that much, so we would recover, eventually, but usually not before we consumed all the memory. Opps!</p>
         </article>
-        <article id="article-4397">
+        <article id="article-4398">
             <a href="https://benfoster.io/blog/web-api-multipart-file-upload-additional-form-data/" target="_blank">
-                <h2 class="title mb-6" id="article-4397">Sending additional form data in multipart uploads with ASP.NET Web API</h2>
+                <h2 class="title mb-6" id="article-4398">Sending additional form data in multipart uploads with ASP.NET Web API</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I demonstrate how you can use ASP.NET Web API&#x2019;s HTTP client to send additional form data in a multipart form upload.</p>
         </article>
-        <article id="article-4398">
+        <article id="article-4399">
             <a href="https://ayende.com/blog/160291/ravendb-indexing-optimizations-step-iii-skipping-the-disk-altogether" target="_blank">
-                <h2 class="title mb-6" id="article-4398">RavenDB indexing optimizations, Step III&#x2013;Skipping the disk altogether</h2>
+                <h2 class="title mb-6" id="article-4399">RavenDB indexing optimizations, Step III&#x2013;Skipping the disk altogether</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Coming back a bit, before prefetching, we actually had something like this:  &#xA0;  With the new prefetching, we can parallelize the indexing &amp; the I/O fetching. That is good, but the obvious optimization is actually not going to the disk at all. We already have the documents we want in memory, why no send them directly to the pre fetched queue?  As you can see, we didn&#x2019;t need to even touch the disk to get this working properly. This gives us a really big boost in terms of how fast we can index things. Also note that because we already have those docs in memory, we can still merge separate writes into a single indexing batch, reducing the cost of indexing even further.</p>
         </article>
-        <article id="article-4399">
+        <article id="article-4400">
             <a href="https://ayende.com/blog/160290/ravendb-indexing-optimizations-step-ii-pre-fetching" target="_blank">
-                <h2 class="title mb-6" id="article-4399">RavenDB indexing optimizations, Step II&#x2013;Pre Fetching</h2>
+                <h2 class="title mb-6" id="article-4400">RavenDB indexing optimizations, Step II&#x2013;Pre Fetching</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: December 13, 2012
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Getting deeper into our indexing optimization routines, when we last left it, we had the following system:  This was good because it was able to predictively decide when to increase the batch size and smooth over spikes easily. But note where we have the costs?  The next step was this:  Pre fetching, basically. What we noticed is that we were spending a lot of time just loading the data from the disk, and we changed our behavior to allow us to load things while we are indexing. So on the next indexing batch, we will usually find all of the data we needed already in memory and ready to rock. This gave us a pretty big boost in how fast we can index things , but we aren&#x2019;t done yet. In order to make this feature viable, we had to do a lot of work there. For starter, we had to make sure we would take too much memory, and we wouldn&#x2019;t impact other aspects of the database, etc. Interesting work, all around, even if I am just focusing on the high level optimizations. There is still a fairly obvious optimization waiting for us, but I&#x2019;ll discuss that in the next post.</p>
-        </article>
-        <article id="article-4400">
-            <a href="https://ayende.com/blog/160289/ravendb-indexing-optimizations-step-i-dynamic-batches" target="_blank">
-                <h2 class="title mb-6" id="article-4400">RavenDB indexing optimizations, Step I&#x2013;dynamic batches</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 12, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the major features in RavenDB was significant improvements to indexing speed. I thought that this would be a good idea to discuss this in detail. Here is a very simple example of how RavenDB used to handle indexing.  The blue boxes are inserts, and the green and red ones are showing the indexing work done.  &#xA0;  This is simplified, of course, but that is a good way to show exactly what is going on there. In particular, you can see that it takes quite a long time for us to index everything. The good thing here is that the actual cost we have is per index, so we want to batch things properly. Note that this behavior is already somewhat optimized. Most of the time, you don&#x2019;t have a few calls with thousands of documents. Usually we are talking about many calls each saving a small number of documents. This approach would balance those things out, because we can merge many save calls into a single indexing run. However, that still took too much time, so we introduced the idea of dynamically change the batch size (the reason we have batches is to limit the amount of RAM we use, and allow us to respond more quickly in general). So we changed things to do this:  Note that we increased the batch size as we note that we have more things to index. The batch size will automatically grow all the way to 128K docs, depending on a whole host of factors (load, speed, memory, number of indexes, etc). Since the cost is most in per batch, we actually got a not insignificant improvement from this approach.&#xA0; But we can do better, as we will see in our next post.</p>
         </article>
         <div class="button flex justify-between">
             <a href="439.html"><span class="back arrow"></span></a>
