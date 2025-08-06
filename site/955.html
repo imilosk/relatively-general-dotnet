@@ -138,8 +138,88 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-9541">
+            <a href="https://ayende.com/blog/1020/pitfalls-of-moving-data-to-sql-server-from-oracle" target="_blank">
+                <h2 class="title mb-6" id="article-9541">Pitfalls of moving data to SQL Server from Oracle</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 04, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I need to move a couple oftables from an Oracle database to SQL Server, how do I do this?    Well, there is SSMA*, but it has a couple of problems dealing with strange decisions on the Oracle side. It also require a hefty machine to run on, as well as taking quite&#xA0;a bit of time to run.     I used it to generate the schema, and then defined a linked server to Oracle and wrote a very simple script to port the data. It failed, miserably. Let&#x27;s assume that my script looked like this:            INSERT INTO Customers                        (                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [Name],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [Email],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [Address],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [RegisteredAt]                        )                        SELECT                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [Name],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [Email],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [Address],                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; [RegisteredAt]                        FROM ORACLE..ADMIN.CUSTOMERS                        What is there to go wrong? Well, for one thing the range of allowed dates in SQL Server and Oracle is different (1753 - 9999 in SQL, -4712 - 4712 in Oracle). Apperantly some of the customers where registered quite some time ago, about two thousands years ago, to be precise. So I bumped them up to the twentieth century, and tried again.    It failed again. This time it complained about a primary key violation during the copy. That really made me scratch my head. I checked Oracle, and the PK was enabled and doing its job quite well. For the purposed of this conversation, let&#x27;s assume that the PK is composed of [Name] and [Address].    Can you guess what the problem is now? I couldn&#x27;t, so I started running the following queries on both SQL Server &amp; Oracle             SELECT     COUNT(DISTINCT [Name]) FROM Customers                 SELECT     COUNT(DISTINCT [Address]) FROM Customers        Well, the Address query returned the same count, but the Name query returned a wildly different result. Looking into it a bit, I discovered that I had set of names that looked like this: Alice, ALICE, alice, bob, Bob, BOB, etc.     But SQL Server&#x27;s case sensitivity is a server wide option. For a couple of minutes, it looked like I was stuck, but then a friend reminded me about the Collation option in the column spesification, and that does allows you to define case sensitivity in the column level. Once I did that, everything worked just fine.    * Sql Server Migration Assistant</p>
+        </article>
+        <article id="article-9542">
+            <a href="https://ayende.com/blog/1019/great-debugging-blog" target="_blank">
+                <h2 class="title mb-6" id="article-9542">Great Debugging Blog</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 04, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just found this blog&#xA0;by Tess, it talks about all the ways to track down issues with your applications. There is a lot of great info there, and I&#x27;m sure to head that way any time that I need to solve any complex issues with an application.</p>
+        </article>
+        <article id="article-9543">
+            <a href="https://ayende.com/blog/1018/on-production-agile-databases" target="_blank">
+                <h2 class="title mb-6" id="article-9543">On Production &quot;Agile&quot; Databases</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 04, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In most cases, the database is the heart and soul of the application. Every database book or class will be sure to mention that most databases outlast the application that created it.    This usually cause to organization to threat a database as a fragile thing that need nurturing and three levels of approval (including from the Janitor&#x27;s Sister, who once read a book about building data driven application in VB 3.0) before the smallest change can go into the database. It&#x27;s worse when it is a production database. I don&#x27;t think that I would&#x27;ve liked wprking in such a place.    And then there is the other extreme. The production database is a free-for-all bring-all-your-friends and let&#x27;s-decorate-this-place-because-it-looks-boring. Common signs for such a database is prolification of tables with names that contains OLD, TEMP, TMP, FOO, etc. It makes working with the database interesting.    Out of the two extremes, I would choose the first one in a nine out of ten cases.</p>
+        </article>
+        <article id="article-9544">
+            <a href="https://ardalis.com/textpayme-&#x2013;-the-next-paypal/" target="_blank">
+                <h2 class="title mb-6" id="article-9544">TextPayMe &#x2013; The Next PayPal</h2>
+            </a>
+            <p class="mb-2">by Ardalis</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 03, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">SignUp at TextPayMe  TextPayMe is a new service that I just learned about from Scott Hanselman. Basically, it lets you send money to anybody&#x2026;Keep Reading &#x2192;</p>
+        </article>
+        <article id="article-9545">
+            <a href="https://ardalis.com/and-you-thought-waterfall-software-development-process-was-dead/" target="_blank">
+                <h2 class="title mb-6" id="article-9545">And You Thought Waterfall Software Development Process Was Dead</h2>
+            </a>
+            <p class="mb-2">by Ardalis</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 01, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Help bring back the Waterfall Software Development Process! Attend Waterfall 2006 this year, being held April 1st in Niagara Falls, NY&#x2026;Keep Reading &#x2192;</p>
+        </article>
+        <article id="article-9546">
             <a href="https://ardalis.com/cache-manager-released/" target="_blank">
-                <h2 class="title mb-6" id="article-9541">Cache Manager Released</h2>
+                <h2 class="title mb-6" id="article-9546">Cache Manager Released</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Those of you who subscribe to the ASPAlliance Times weekly newsletter already know that Cache Manager 1.0 was released earlier this week&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-9542">
+        <article id="article-9547">
             <a href="https://ardalis.com/c-code-snippets/" target="_blank">
-                <h2 class="title mb-6" id="article-9542">C# Code Snippets</h2>
+                <h2 class="title mb-6" id="article-9547">C# Code Snippets</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">David Yack just pointed me to the C# Code Snippets that should have been in VS 2005 but weren&#x2019;t. Download them now from MSDN. C# Code&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-9543">
+        <article id="article-9548">
             <a href="https://ardalis.com/microsoft-mix-2006-conference-in-las-vegas/" target="_blank">
-                <h2 class="title mb-6" id="article-9543">Microsoft Mix 2006 Conference in Las Vegas</h2>
+                <h2 class="title mb-6" id="article-9548">Microsoft Mix 2006 Conference in Las Vegas</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;ve been suffering withdrawal from Microsoft conferences since you left PDC 05 last September after going to TechEd 05 last summer&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-9544">
+        <article id="article-9549">
             <a href="https://ayende.com/blog/1017/tip-searching-stored-procedures-text" target="_blank">
-                <h2 class="title mb-6" id="article-9544">Tip: Searching Stored Procedures Text</h2>
+                <h2 class="title mb-6" id="article-9549">Tip: Searching Stored Procedures Text</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is another tip for those who need to explore big SQL databases with a lot of stored procedures and quite a bit of logic. This will gives you a list of all the procedures that has a certain string in them:            CREATE PROCEDURE dev_FindInSP                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; @str nvarchar(max)                        AS                        select distinct name from sys.procedures procs join syscomments comments                        on procs.object_id = comments.id where [text] like &#x27;%&#x27; &#x2B; @str &#x2B; &#x27;%&#x27;</p>
         </article>
-        <article id="article-9545">
+        <article id="article-9550">
             <a href="https://ardalis.com/outlook-calendar-default-month-view/" target="_blank">
-                <h2 class="title mb-6" id="article-9545">Outlook Calendar Default Month View</h2>
+                <h2 class="title mb-6" id="article-9550">Outlook Calendar Default Month View</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,86 +296,6 @@
                 posted on: January 29, 2006
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Can somebody tell me how to alter Outlook so that the default calendar month view shows me a useful time period (e.g. the future, not the&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-9546">
-            <a href="https://ayende.com/blog/1016/vb-net-oddity" target="_blank">
-                <h2 class="title mb-6" id="article-9546">VB.Net oddity</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 29, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Can someone explain why VB.Net has a keyword called &quot;AddessOf&quot; ? I would expect such a thing from a low level language, and even C# could be excused if it had this. But AdressOf seems to me like a throwback to ancient times where passing function pointers around was the norm.</p>
-        </article>
-        <article id="article-9547">
-            <a href="https://ardalis.com/google-duplicate-content-filter-loses-to-msn-search/" target="_blank">
-                <h2 class="title mb-6" id="article-9547">Google Duplicate Content Filter Loses To MSN Search</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 27, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">SEOChat recently ran an article pitting Google, Yahoo, and MSN Search up against one another in the are of handling dupliate content. Google&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-9548">
-            <a href="https://ayende.com/blog/1015/development-of-further-patterns-of-enterprise-application-architecture" target="_blank">
-                <h2 class="title mb-6" id="article-9548">Development of Further Patterns of Enterprise Application Architecture</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 26, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Fowler&#xA0;has put even more patterns&#xA0;on his web site. I&#x27;ve very much enjoyed reading his PoEA book, so I&#x27;m looking forward for more from him.</p>
-        </article>
-        <article id="article-9549">
-            <a href="https://ayende.com/blog/1014/how-to-kill-the-c-compiler" target="_blank">
-                <h2 class="title mb-6" id="article-9549">How to kill the C# Compiler</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 26, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My legendary skills in breaking code have now reached a new level, in which I managed to break the C# Compiler. Check out this code:             &#xA0;                 public delegate void Proc();                                &#xA0;                        public class CrashAndBurnAttribute : System.Attribute                        {                        &#xA0;&#xA0;&#xA0; public CrashAndBurnAttribute(Proc p)                        &#xA0;&#xA0;&#xA0; { }                        }                                &#xA0;                        public class CrashAndBurnClient                        {                        &#xA0;&#xA0;&#xA0; [CrashAndBurn(delegate { return; })]                        &#xA0;&#xA0;&#xA0; public void Foo()                        &#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0; }                        }         If you try to run compile it from VS.Net you&#x2019;ll get a nice crash dialog, and the result of running the compilation from the command line is:                 Microsoft (R) Visual C# 2005 Compiler version 8.00.50727.42                        for Microsoft (R) Windows (R) 2005 Framework version 2.0.50727                        Copyright (C) Microsoft Corporation 2001-2005. All rights reserved.                                &#xA0;                        crash.cs(11,16): error CS1706: Expression cannot contain anonymous methods                        error CS0583: Internal Compiler Error (0xc0000005 at address 5A10A8E0): likely culprit is &#x27;COMPILE&#x27;.                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; An internal error has occurred in the compiler. To work around this problem, try simplifying or changing the program near the locations listed below. Locations at the top of the list are closer to the point at which the internal error occurred. Errors such as this can be reported to Microsoft by using the /errorreport option.                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;                                 crash.cs(11,25): error CS0585: Internal Compiler Error: stage &#x27;COMPILE&#x27;                        crash.cs(12,14): error CS0584: Internal Compiler Error: stage &#x27;COMPILE&#x27; symbol &#x27;CrashAndBurnClient.Foo()&#x27;                        crash.cs(12,14): error CS0584: Internal Compiler Error: stage &#x27;COMPILE&#x27; symbol &#x27;CrashAndBurnClient.Foo()&#x27;                        crash.cs(12,14): error CS0584: Internal Compiler Error: stage &#x27;COMPILE&#x27; symbol &#x27;CrashAndBurnClient.Foo()&#x27;                        crash.cs(9,14): error CS0584: Internal Compiler Error: stage &#x27;COMPILE&#x27; symbol &#x27;CrashAndBurnClient&#x27;                        crash.cs: error CS0584: Internal Compiler Error: stage &#x27;COMPILE&#x27; symbol &#x27;&lt;global namespace&gt;&#x27;                        crash.cs: error CS0586: Internal Compiler Error: stage &#x27;COMPILE&#x27;                        error CS0587: Internal Compiler Error: stage &#x27;COMPILE&#x27;                        error CS0587: Internal Compiler Error: stage &#x27;BEGIN&#x27;                    This is actually sad, since I really wanted to be able to do pass delegates to attributes.</p>
-        </article>
-        <article id="article-9550">
-            <a href="https://ayende.com/blog/1013/performance-tidbits" target="_blank">
-                <h2 class="title mb-6" id="article-9550">Performance tidbits</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 26, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently had to write a lazy loaded property that picked what its value will be based on the environment it run on. Basically, I had the same old problem of keeping data for the current context only. This usually means the current thread, but in ASP.Net, it is the current request.    My solution for it was simple:&#xA0;    .    &#xA0;    So I can store/retrieve data without caring in what environment I&#x2019;m running on by simply using:    &#xA0;                CurrentData.Items[&quot;current-db-connection&quot;] = new SqlConnection();                I need this ability to store data that is important for the current logical execution thread (be that an ASP.Net request or a real thread). The usual method of implemention the Items property on the CurrentData class would be something like:                                public static ICurrentDataStore Items                        {                        &#xA0;&#xA0;&#xA0; get                                 &#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; if (items == null)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; items = CreateCurrentDataStoreForEnviornment();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; return items;                                 &#xA0;&#xA0;&#xA0; }                        }                &#xA0;    But I thought that I could get rid of the null check, this should allow the JIT to view the property as a simple accessor, so it would be just as fast as accessing a field directly. I could&#x2019;ve simply instasitated the items field to the proper value based on the environment, but I wanted to mimic a real lazy loaded property. I ended up with this class:    &#xA0;            public class DataStoreSwitcher : ICurrentDataStore                        {                        &#xA0;&#xA0;&#xA0; private Action&lt;ICurrentDataStore&gt; set;                                &#xA0;                        &#xA0;&#xA0;&#xA0; public DataStoreSwitcher(Action&lt;ICurrentDataStore&gt; set)                        &#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; this.set = set;                        &#xA0;&#xA0;&#xA0; }                                &#xA0;                        &#xA0;&#xA0;&#xA0; #region ICurrentDataStore Members                                &#xA0;                        &#xA0;&#xA0;&#xA0; public object this[object key]                        &#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; get                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ICurrentDataStore real = EnsureCorrectDataStoreForEnvironment();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; return real[key];                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; set                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ICurrentDataStore real = EnsureCorrectDataStoreForEnvironment();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; real[key] = value;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                        &#xA0;&#xA0;&#xA0; }                                &#xA0;                        &#xA0;&#xA0;&#xA0; private ICurrentDataStore EnsureCorrectDataStoreForEnvironment()                        &#xA0;&#xA0;&#xA0; {                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ICurrentDataStore real;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; if (HttpContext.Current == null)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; real = new CurrentThreadDataStore();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; else                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA0;&#xA0;real = new CurrentRequestDataStore();                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; set(real);                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; return real;                        &#xA0;&#xA0;&#xA0; }                                &#xA0;                        &#xA0;&#xA0;&#xA0; #endregion                        }                &#xA0;    I initialize the variable like this:    &#xA0;            private static ICurrentDataStore items =                        &#xA0;&#xA0;&#xA0; new DataStoreSwitcher(                        &#xA0;&#xA0;&#xA0; delegate(ICurrentDataStore real)                                 &#xA0;&#xA0;&#xA0; {                                 &#xA0; &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;items = real;                                 &#xA0;&#xA0;&#xA0; });                        &#xA0;    In this particular point, there is very little to be gain from this technqiue, and if the case was a hefty resource (choosing database connection, for instance), it can certainly be useful. Beside, I like using delegate J, and it&#x2019;s a cool thing to do.</p>
         </article>
         <div class="button flex justify-between">
             <a href="954.html"><span class="back arrow"></span></a>

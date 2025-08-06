@@ -138,8 +138,88 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-7531">
+            <a href="https://ayende.com/blog/2790/playing-with-boos-dsls" target="_blank">
+                <h2 class="title mb-6" id="article-7531">Playing with Boo&#x27;s DSLs</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: September 21, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Boo has gotten a lot better in terms of flexibility lately, a lot better. I was able to churn this little DSL in about an hour: OnCreate Account:&#xA;&#x9;Entity.AccountNumber = date.Now.Ticks&#xA;&#x9;&#xA;&#x9;&#xA; OnCreate Order:&#xA;&#x9;if Entity.Total &gt; Entity.Account.MaxOrderTotal:               BeginManualApprovalFor Entity &#xA;&#xA;From the perspective of the DSL, it is very easy to use, and from the implementer perspective, this was ridiculously easy to implement.&#xA;The only half-way complex thing here is the introduce base class action, which is usually the first approach that you take, which is why I don&#x27;t consider it complex. Then you can just do create the base class:&#xA;abstract class DslBase:&#xA;&#xA;&#x9;[property(Entity)]         entity as object         def OnCreate(entity as System.Type, action as callable()):&#xA;&#x9;&#x9;Actions.RegisterOnCreate(entity.Name, action)&#xA;&#x9;&#x9;&#xA;&#x9;abstract def Execute():&#xA;&#x9;&#x9;pass&#xA;&#x9;&#xA;&#x9;def BeginManualApprovalFor(order as Order):&#xA;&#x9;&#x9;print &quot;Starting approval process for Order #${order.Id}&quot;&#xA;In the base class you just do what you would normally do, in this case, it just register the new action. Here is the implementation:&#xA;class Actions:&#xA;&#x9;&#xA;&#x9;static onCreateActions = {}&#xA;&#x9;&#xA;&#x9;static def RegisterOnCreate(entityName as string, action as callable()):&#xA;&#x9;&#x9;onCreateActions[entityName] = action&#xA;&#x9;&#x9;&#xA;&#x9;&#xA;&#x9;static def OnCreate(entity as object):&#xA;&#x9;&#x9;entityName = entity.GetType().Name&#xA;&#x9;&#x9;action = onCreateActions[entityName] as callable()&#xA;&#x9;&#x9;if not action:&#xA;&#x9;&#x9;&#x9;print &quot;No action defined for ${entityName}&quot;&#xA;&#x9;&#x9;&#x9;return&#xA;&#x9;&#x9;dsl = (action.Target as DslBase)&#xA;&#x9;&#x9;dsl.Entity = entity&#xA;&#x9;&#x9;action()&#xA;&#xA;The client code is simply:&#xA;SampleDSL().Prepare(&quot;Sample.boo&quot;)&#xA;&#xA;account = Account(MaxOrderTotal: 100)&#xA;&#xA;print &quot;Before: ${account.AccountNumber}&quot;&#xA;Actions.OnCreate( account )&#xA;print &quot;After: ${account.AccountNumber}&quot;&#xA;&#xA;order = Order(Account: account, Total: 500 )&#xA;Actions.OnCreate( order )&#xA;All you have left then is to get a rich enough library of methods on the DslBase, for the business user to work with, document how this is done, and that is it.</p>
+        </article>
+        <article id="article-7532">
+            <a href="https://ayende.com/blog/2789/resharper-for-boo" target="_blank">
+                <h2 class="title mb-6" id="article-7532">ReSharper for Boo</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: September 21, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, it has not gotten to that level, but I just hit ALT&#x2B;Insert in #Develop, and I got this dialog:   Wow!</p>
+        </article>
+        <article id="article-7533">
+            <a href="https://ayende.com/blog/2788/i-will-not-be-at-the-alt-net-conference" target="_blank">
+                <h2 class="title mb-6" id="article-7533">I will not be at the ALT.Net conference</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: September 21, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yes, it sucks, and I feel really bad about it, but I will not be able to be at the ALT.Net conference. The main reason is that I was stupid and didn&#x27;t take into account how long it will take to get a visa, and I also forgot that right now there is a huge concentration of holidays, so the embassy is apparently swamped with requests, and taking longer to process them even than the usual. :-(</p>
+        </article>
+        <article id="article-7534">
+            <a href="https://ayende.com/blog/2787/speaking-at-jaoo" target="_blank">
+                <h2 class="title mb-6" id="article-7534">Speaking at JAOO</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: September 21, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Consider this a public service announcement:   I am going to be at JAOO&#xA0;next week, talking about building DSLs with Boo and about Castle along with Hammett.</p>
+        </article>
+        <article id="article-7535">
+            <a href="https://ayende.com/blog/2786/ayende-is-not-your-helpdesk" target="_blank">
+                <h2 class="title mb-6" id="article-7535">Ayende is not your helpdesk</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: September 21, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I routinely get a lot of emails with questions about the various stuff that I do. That was wonderful while I could keep up with the flow, but it is not something that can really scale up. As a rule, I have started to refer all such questions to the appropriate channels for them.  For NHibernate: The NHibernate forums For Castle: Castle Forums or the Users Mailing List For Rhino Mocks: The Rhino Mocks Mailing List For Rhino Tools: The Rhino Tools Developers mailing list The reasoning behind this decision is very simple, I don&#x27;t have the time to help everyone, and in all those places, there are other people that are doing great job answering those questions.  This also means that over time, there is a wealth of knowledge gathered there, so make a search first, to see if the question has already been asked. As an exception to this, if you have a question about one of my posts, go ahead and send me an email about it. If you really want&#xA0;me to help you, contact me about commercial support.</p>
+        </article>
+        <article id="article-7536">
             <a href="https://ayende.com/blog/2785/they-dont-owe-you-anything" target="_blank">
-                <h2 class="title mb-6" id="article-7531">They don&#x27;t owe you anything</h2>
+                <h2 class="title mb-6" id="article-7536">They don&#x27;t owe you anything</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post really annoys me, the author is talking about moving to Subversion from Bazar as the source control of the project, because people didn&#x27;t want to install Bazar, then he goes off and says this:  Unfortunately, this kind of laziness has become pervasive in the Free Software world, as compared to say 10 years ago. Back then it was all but expected that you&#x2019;d have to fix the build to get something working. But it was fine, because you would fix it and send a quick patch. Believe it or not, this actually felt pretty awesome. You were helping to keep the train on the tracks, and that meant getting your hands messy. I had to read it thrice to get it through.&#xA0;This guy is talking about Open Source software, and he seems to think that putting more road blocks in the way of participation in a project is a good thing. WTF?! I don&#x27;t know about that, but I know that as a member of several OSS projects, the teams usually try to minimize the amount of work that you need to either use and / or develop in the project. Not only does it make sense, but it means that other people can get started easily. To do otherwise is to make sure that people would not use the project. This may be some sort of an &quot;acceptance criteria&quot;, but it is a stupid one. You are not paying people to do it, you are asking them to give up valuable time in order to figure out your stuff. It is your duty to make it easier, not to complain about them not passing the hurdle that you put there. Then there is this, in the comments, which is more relevant to the post:  By the way, saying how you &#x201C;have to learn half a dozen different vcs tools&#x201D; would mean that you&#x2019;re working on half a dozen different projects, which is quite unlikely isn&#x2019;t it? Right now in my OSS folder there are 18 projects that I keep track of. And there are at least 10 others that I checkout and delete from time to time. They all use subversion. This means that the barrier to entry into a project is finding the project URL, checking out the trunk, and then waiting for it to complete. The barrier for entry in any other system is a lot higher. I need to install a new SCM, lean how to use it, how to generate a patch, diff, etc. This is a non trivial cost, and not something that I am willing to do unless you have a really good reason. If presses, I would probably use CVS, but I don&#x27;t really like it. Using anything else requires not only memorizing a new set of commands, but also grokking another SCM model entirely.  If you want to get contributors, you need to tempt, not to hunt.</p>
         </article>
-        <article id="article-7532">
+        <article id="article-7537">
             <a href="https://ayende.com/blog/2784/the-performance-penalty-of-using-asp-net" target="_blank">
-                <h2 class="title mb-6" id="article-7532">The Performance Penalty of using ASP.Net</h2>
+                <h2 class="title mb-6" id="article-7537">The Performance Penalty of using ASP.Net</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Bret is talking about tracking an issue with Watir that appeared after the application was migrated from ASP.Net to Ruby on Rails (IE issue, apparently).   I think the reason we haven&#x2019;t seen this problem before is because our .Net apps have been a lot slower that Rails. Slow enough to keep this IE bug from showing up. That is certainly something that I have seen before. The main problem is not the runtime performance, it is the initial performance. If I make a change to a page, I have to wait ~30 seconds for it to load. Contrast that with making a change to a MonoRail view, where a change in the view appears instantly. The problem is that changing the controller requires re-compilation, which has the same performance penalties.  This is something that kept me annoyed, but it is getting more so lately, because I can feel the difference between changing the view (brail, instant) and the controller (C#, ~30 seconds), where before anything that changed caused the same long delay. As far as I can tell, this has to do with AppDomain load / unload, but I never really bothered to take a look. William&#xA0;was talking about this same problem a while ago. This may not affect the runtime production performance, but it plays hell with the developer&#x27;s performance.</p>
         </article>
-        <article id="article-7533">
+        <article id="article-7538">
             <a href="https://ayende.com/blog/2783/the-half-life-of-a-project" target="_blank">
-                <h2 class="title mb-6" id="article-7533">The half life of a project</h2>
+                <h2 class="title mb-6" id="article-7538">The half life of a project</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The half-life of a radioactive substance is the time required for half of a sample to undergo radioactive decay. en.wikipedia.org/wiki/Halflife Scott Bellware&#xA0;is talking about the rate of decay of the maintainability of a project.   The rate of decay of maintainability is the measure of how fast your maintainable code looses it&#x27;s maintainability after your agile development guru or consultant moves on to another project. This is a subject of a particular concern of mine, since I was often accused of building software that only I could work with. I am currently teaching an MSPD course with the express purpose of grokking the way that the average developers go about their work. It has given me a lot of insight into why Microsoft does some things (and I still vehemently disagree with the decision).  I taught data access approach using With and anonymous delegates: With.Transaction(delegate(SqlCommand cmd)&#xA;{&#xA;   cmd.CommandText = &quot;SELECT COUNT(*) FORM Customers&quot;;&#xA;   return (int)cmd.ExecuteScalar();&#xA;});&#xA;This is for people who learned C# as part of the course. It works, and while this is not something that they are likely to build on their own, once you set up the infrastructure and explain how it works, there weren&#x27;t particular issues with this.&#xA;The crux of Scott&#x27;s post is this statement:&#xA;&#xA;The keystone of intentional maintainability, nestled in the slot at the apex of an arch of XP practices, is code that is instantly understandable by the folks who have to do the maintenance.&#xA;That is an argument that I have had with quite a few people, quite often. Because the problem is with the definition&#xA0;of &quot;the folks who have to do the maintenance&quot;. At one time, I had a... discussion with someone that thought that they can hire someone off the street (purposefully low level, to keep costs down) and have them start working on a big (10 months of continuous development) project from day 1.&#xA;That meant, as far as they were concerned, that we were to use only the &quot;standard&quot; approaches, so we wouldn&#x27;t break the wizards and make the application &quot;unmaintainable&quot;. That is not maintainable in my book, quite the opposite, frankly. &#xA;From my point of view, an application is maintainable if I can take someone of the street, give them the overall view of how things work, walk them through a use case or two, and then set them on the code on their own.&#xA;This method belongs to the LoginController, and I am going to assume that it is going to be instantly understandable my most people who can read code.&#xA0;But, and this is important, it is not maintainable unless you figure out what is going on all around it. &#xA;/// &lt;summary&gt;&#xA;/// Authenticates the specified user, will redirect to the destination page&#xA;/// if the login is successful.&#xA;/// &lt;/summary&gt;&#xA;/// &lt;remarks&gt;&#xA;/// If the login is not successful, additional information may be found on:&#xA;/// Scope.Flash[Constants.ErrorMessage]&#xA;/// &lt;/remarks&gt;&#xA;/// &lt;param name=&quot;user&quot;&gt;The user.&lt;/param&gt;&#xA;/// &lt;param name=&quot;password&quot;&gt;The password.&lt;/param&gt;&#xA;/// &lt;returns&gt;True if the user has authenticated successfully, false otherwise&lt;/returns&gt;&#xA;public virtual bool Authenticate(string user, string pass word)&#xA;{&#xA;&#x9;&#xA;&#x9;bool isValidLogin = authenticationService.IsValidLogin(user, password);&#xA;&#x9;if (isValidLogin)&#xA;&#x9;{&#xA;&#x9;&#x9;Usage.SuccessfulLogin(user);&#xA;&#x9;&#x9;string returnUrl = Scope.Input[Constants.ReturnUrl];&#xA;&#x9;&#x9;if (!string.IsNullOrEmpty(returnUrl))&#xA;&#x9;&#x9;&#x9;Context.AuthenticateAndRedirect(returnUrl, user);&#xA;&#x9;&#x9;else&#xA;&#x9;&#x9;&#x9;Context.AuthenticateAndRedirect(Settings.Default.HomePageUrl, user);&#xA;&#x9;&#x9;return true;&#xA;&#x9;}&#xA;&#x9;Usage.FailedLogin(user);&#xA;&#x9;Context.SignOut();&#xA;&#x9;Scope.ErrorMessage = Resources.BadUserOrPassword;&#xA;&#x9;return false;&#xA;}&#xA;I think that I have done a moderately good job in making my recent projects maintainable without me, and I am trying to make sure that there won&#x27;t be many cases of &quot;This is Oren&#x27;s CodeTM, I can&#x27;t touch that&quot;. We aren&#x27;t there yet, but we are getting there. Another developer is going to take over a project that I have led, and I have confidence that after the initial panic, things would settle down.&#xA;My criteria for maintainability if that if you know X, Y and Z (usually technologies that I use in the project, mainly NHibernate), you should be able to get everything from the code.&#xA;Then again, my current project&#x27;s Guide to the New Developer does have two pages dedicated to dependencies and links to the documentation...</p>
         </article>
-        <article id="article-7534">
+        <article id="article-7539">
             <a href="https://ayende.com/blog/2782/line-count-complexity" target="_blank">
-                <h2 class="title mb-6" id="article-7534">Line count &amp; complexity</h2>
+                <h2 class="title mb-6" id="article-7539">Line count &amp; complexity</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Dave Laribee&#xA0;is talking about measuring line counts and code quality. He mentions that in the Ruby&#x27;s community is is considered a value to express yourself in fewer lines of code. Recently I had to do some statistics over my project, and I was astonished to discover that it was closing rapidly to the 150,000 lines of code. That made me wonder what another project line count was, I was pretty sure that it would be closer to half a million lines of code, but I was floored when I discovered that it barely reached the 30,000 lines of code. There is no comparison between the ease of working with both projects. The bigger one is a pleasure to work with, and the smaller is just plain hard. I was the main developer of the small project, and I have learn a lot from it (what not to do :-) ). I don&#x27;t think that a lower line count is really meaningful, unless you also have the context of how it is used. Here is another example, Rhino Mocks is at about ~25,000 lines of code, most of those are tests, the core library is about 10,000 lines, but only 4,801 lines of code (vs. xml comments, etc). To compare to that, I just check the most complex use case in my application, which is composed out of the following:  Controller: 400  Controller Finders: 531  Code Behind: 479  ASPX: 1,261 (roughly 500 of those are javascript) So a bit over 2,600 lines of code (not including infrastructure), for a single use case.&#xA0;  It is also the Murphy Zone in the application, the one we would rather not touch (it is about five times as large as any of the other use cases), because it touches so many other things. (And naturally, we had to fix a bug there yesterday :-), not liking to touch and afraid to of touching are two different things). So, I don&#x27;t want to agree with lower LOC is a good thing, and I do want to be more expressive when I write the code. I am not sure where it puts me. But I do know that the end result is that we want to be able to get simple code at all costs. (Not stupid code, simple code.) This means that reducing line count should be accompanied with increase in the code clarity. At any rate, just a bit of my own experience in this debate.</p>
         </article>
-        <article id="article-7535">
+        <article id="article-7540">
             <a href="https://ayende.com/blog/2781/per-application-database" target="_blank">
-                <h2 class="title mb-6" id="article-7535">Per Application Database</h2>
+                <h2 class="title mb-6" id="article-7540">Per Application Database</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -216,86 +296,6 @@
                 posted on: September 21, 2007
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Scott Bellware&#xA0;is talking about application embedded databases, an application that is the sole domain of the application that is using it. I don&#x27;t like the term, because embedded databases have another meaning, but I fully support the idea that the database should be an implementation detail of the applications. I had a project where we needed to use an existing database, and I want to cry when I think about the length and breath of of effort that we had to go through to get it to really work. In the last project, I have had at one time to change the DB password daily, to keep [Some Other Party] from trying to integrate with the application through the database. (In the end, we create a separate database, just for them, and they integrate through it). The problems with per application databases are silos and getting the data out to other applications. This bring us back to the data outlives the application, etc. I have a longer post in the pipeline that is going to talk about that.</p>
-        </article>
-        <article id="article-7536">
-            <a href="https://ayende.com/blog/2780/generated-code-quality" target="_blank">
-                <h2 class="title mb-6" id="article-7536">Generated Code Quality</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 21, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Jeremy Miller&#xA0;made the mistake of opening the DataSet.Designer.cs file&#xA0;and got:  You know the orange bars that ReSharper puts into the vertical scroll bar to denote warnings in the code?&#xA0; In the DataSet code it looked like a solid bar of orange sherbert.&#xA0; The discussion in the comments is about the quality of generated code, and it is fairly interesting. As someone who does quite a bit with code generation, I wanted to note two things:  The quality of the generated code is the result of the generator, with the qualification that the generated code may be used to off load nasty parts of the code base. The code generated by NHQG is doing some really crazy stuff with generics and operator overloading, and it is something that can get very hairy very fast. The other issue is that the use of CodeDOM means that you are often specifying redundant things. In this case, this this.myName and the fully qualified namespaces could go away, and this is something that ReSharper detects and warns against. public virtual Query_Post&lt;T1&gt; With() {&#xA;&#x9;Query_Post&lt;T1&gt; query = new Query_Post&lt;T1&gt;(this, this.myName, this.associationPath);&#xA;&#x9;query.joinType = NHibernate.SqlCommand.JoinType.InnerJoin;&#xA;&#x9;query.fetchMode = NHibernate.FetchMode.Default;&#xA;&#x9;return query;&#xA;}&#xA;It is not code generation in general that is problematic, in my view, it is the use of code generation to cover problems with the underlying platform that is usually what is causing the pain.</p>
-        </article>
-        <article id="article-7537">
-            <a href="https://ayende.com/blog/2779/a-most-applicable-approach-to-the-fertilizer-pattern" target="_blank">
-                <h2 class="title mb-6" id="article-7537">A most applicable approach to the Fertilizer pattern</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 21, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently had a chance to go through several legacy applications, bug spotting in one and evaluating the possibilities of code reuse in another. Stuff like &quot;a most applicable approach to the Fertilizer pattern&quot; began to run on my head as I read it, and at one point I had to go away to be able to curse in private (there were ladies present). Some of the things that I run into (across all the applications):  Goto inside a grid implementation, after a little fact finding, it was discovered that they lost the original source, and just copy / pasted the result of Reflector&#x27;s de-compilation and moved on. SQL Injection problems in stored procedures that were found by reading the documentation. Naming convention like bo_showinui, id_file, nm_folder, tx_folderpath We fixed the bug (which made me learn some stuff about double hop windows authentication and citrix, of all the things in the world, and we will not be reusing the code. In retrospect, I should have known, everyone else went to the far side of the room when I started reading the code...</p>
-        </article>
-        <article id="article-7538">
-            <a href="https://ayende.com/blog/2778/refactoring-monorail-views" target="_blank">
-                <h2 class="title mb-6" id="article-7538">Refactoring MonoRail Views</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 20, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As I mentioned, I build a very quick &amp; dirty solution to display a collection of scheduled task descriptions. The end result looked like this:  This works, and it should start producing value as of next week, but I didn&#x27;t really like the way I built it. Here is the original view code: &lt;table cellspacing=&quot;0&quot; cellpadding=&quot;0&quot;&gt;&#xA;&#x9;&lt;thead&gt;&#xA;&#x9;&#x9;&lt;tr&gt;&#xA;&#x9;&#x9;&#x9;&lt;th&gt;&#xA;&#x9;&#x9;&#x9;&#x9;Name:&lt;/th&gt;&#xA;&#x9;&#x9;&#x9;&lt;th&gt;&#xA;&#x9;&#x9;&#x9;&#x9;Occurances&lt;/th&gt;&#xA;&#x9;&#x9;&#x9;&lt;th&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&amp;nbsp;&lt;/th&gt;&#xA;&#x9;&#x9;&lt;/tr&gt;&#xA;&#x9;&lt;/thead&gt;&#xA;&#x9;&lt;tbody&gt;&#xA;&#x9;&#x9;&lt;% for task in tasks: %&gt;&#xA;&#x9;&#x9;&lt;tr&gt;&#xA;&#x9;&#x9;&#x9;&lt;td&gt;&#xA;&#x9;&#x9;&#x9;${Text.PascalCaseToWord(task.Name)}&#xA;&#x9;&#x9;&#x9;&lt;/td&gt;&#xA;&#x9;&#x9;&#x9;&lt;td&gt;&#xA;&#x9;&#x9;&#x9;Every ${task.OccuranceEvery}&#xA;&#x9;&#x9;&#x9;&lt;/td&gt;&#xA;&#x9;&#x9;&#x9;&lt;td&gt;&#xA;&#x9;&#x9;&#x9;${Html.LinkTo(&quot;Execute&quot;, &quot;ScheduledTasks&quot;, &quot;Execute&quot;, task.FullName)}&#xA;&#x9;&#x9;&#x9;&lt;/td&gt;&#xA;&#x9;&#x9;&lt;/tr&gt;&#xA;&#x9;&#x9;&lt;% end %&gt;&#xA;&#x9;&lt;/tbody&gt;&#xA;&lt;/table&gt;&#xA;This work, it is simple and easy to understand, but it still bothered me. So I replaced it with this:&#xA;&lt;% component SmartGrid, {@source: tasks}  %&gt;&#xA;&#xA;Well, that was much shorter, but the result was this...&#xA; &#xA;I am cropping things, because it is a fairly long picture, but it should be clear that this is not a really nice UI to use.&#xA;This was my second attempt;&#xA;&lt;% component SmartGrid, {@source: tasks, @columns: [@Name, @OccuranceEvery] }  %&gt;&#xA;&#xA;And it produced this:&#xA; &#xA;Better, but not really that much, let us try to have nicer names there, shall we?&#xA;&lt;% &#xA;component SmartGrid, {@source: tasks, @columns: [@Name, @OccuranceEvery] }:  &#xA;&#x9;section Name:&#xA;&#x9;%&gt;&#xA;&#x9;&lt;td&gt;${Text.PascalCaseToWord(value)}&lt;/td&gt;&#xA;&#x9;&lt;%&#xA;&#x9;end&#xA;end&#xA;%&gt;&#xA;And this produced:&#xA; &#xA;That is much better on the name side, but we still have the &quot;Occurance Every&quot; column to fix...&#xA;&lt;% &#xA;component SmartGrid, {@source: tasks, @columns: [@Name, @OccuranceEvery] }:  &#xA;&#x9;section OccuranceEveryHeader:&#xA;&#x9;%&gt;&#xA;&#x9;&lt;th&gt;Occurances&lt;/th&gt;&#xA;&#x9;&lt;%&#xA;&#x9;end&#xA;&#x9;section Name:&#xA;&#x9;%&gt;&#xA;&#x9;&lt;td&gt;${Text.PascalCaseToWord(value)}&lt;/td&gt;&#xA;&#x9;&lt;%&#xA;&#x9;end&#xA;&#x9;section OccuranceEvery:&#xA;&#x9;%&gt;&#xA;&#x9;&lt;td&gt;Every ${value}&lt;/td&gt;&#xA;&#x9;&lt;%&#xA;&#x9;end&#xA;end&#xA;%&gt;&#xA;With the result being:&#xA; &#xA;One last thing that we have left is the additional column at the end, we can manage it like this:&#xA;&lt;% &#xA;component SmartGrid, {@source: tasks, @columns: [@Name, @OccuranceEvery] }:  &#xA;&#x9;section OccuranceEveryHeader:&#xA;&#x9;%&gt;&#xA;&#x9;&lt;th&gt;Occurances&lt;/th&gt;&#xA;&#x9;&lt;%&#xA;&#x9;end&#xA;&#x9;section MoreHeader:&#xA;&#x9;%&gt;&#xA;&#x9;&lt;th&gt;&lt;/th&gt;&#xA;&#x9;&lt;%&#xA;&#x9;end&#xA;&#x9;section Name:&#xA;&#x9;%&gt;&#xA;&#x9;&lt;td&gt;${Text.PascalCaseToWord(value)}&lt;/td&gt;&#xA;&#x9;&lt;%&#xA;&#x9;end&#xA;&#x9;section OccuranceEvery:&#xA;&#x9;%&gt;&#xA;&#x9;&lt;td&gt;Every ${value}&lt;/td&gt;&#xA;&#x9;&lt;%&#xA;&#x9;end&#xA;&#x9;section More:&#xA;&#x9;%&gt;&#xA;&#x9;&lt;td&gt;${Html.LinkTo(&quot;Execute&quot;, &quot;ScheduledTasks&quot;, &quot;Execute&quot;, item.FullName)}&lt;/td&gt;&#xA;&#x9;&lt;%&#xA;&#x9;end&#xA;end&#xA;%&gt;&#xA;&#xA;So here is the final result:&#xA; &#xA;Now that I did that, I am looking at both pieces of code and wondering:&#xA;&#xA;What is the fuss about, anyway?&#xA;Which of those versions is more readable?&#xA;Granted, this is a fairly specialized case, but in terms of LoC, the second approach is actually longer, and the &quot;major&quot; benefit here is that I&#xA0;get less HTML in the view, but that is not a really major consideration.&#xA;The SmartGrid would produce a pager if needed, but that about it with regards to the differences in their abilities.</p>
-        </article>
-        <article id="article-7539">
-            <a href="https://ayende.com/blog/2777/convention-over-configuration-structured-approach" target="_blank">
-                <h2 class="title mb-6" id="article-7539">Convention over configuration: Structured approach</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 20, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Hammett has a post that made me think. He is talking about configuring Spring for Java and has this to comment:  I can&#x2019;t understand this uncontrolled passion that java programmers carry for xml. I can certainly agree with him about that, but I got to the same point a long time ago with Windsor. I had an application which was rife with components. I am talking about many dozens of generic (as in MyComponent&lt;T&gt;) components, all of which required registration in the config file, which got to be fairly annoying very fast. I solved that by creating Binsor, a Boo DSL for configuring an IoC container. Initially, it was very similar to the Batch Registration Facility, but I pushed it much further, until today I do all my Windsor configuration using Windsor.boo, and its existence is a core part of my application architecture. Why? Because I can do things like this: controllersAssemblies = (Assembly.Load(&quot;MyApp.Web&quot;), Assembly.Load(&quot;Castle.MonoRail.ViewComponents&quot;) )&#xA;for asm in controllersAssemblies:&#xA;&#x9;for type in asm.GetTypes():&#xA;&#x9;&#x9;continue if type.Name == &quot;ScheduledTasksController&quot;&#xA;&#x9;&#x9;if typeof(Controller).IsAssignableFrom(type):&#xA;&#x9;&#x9;&#x9;IoC.Container.AddComponent(type.FullName, type)&#xA;&#x9;&#x9;if not typeof(ViewComponent).IsAssignableFrom(type):&#xA;&#x9;&#x9;&#x9;IoC.Container.AddComponent(type.Name, type)&#xA;The immediate result of this type of behavior is that I don&#x27;t have any weight of the IoC, I just develop as I would normally would, and it catches up with everything that it needs to handle.&#xA;I recently had the chance to maintain a MonoRail application that used XML for configuring Windsor, and by the third time that I added a controller, I was pretty annoyed. Each and every time, I had an additional step to perform before I could run the code. Compared to the approach that I was using, it was hardly zero friction.&#xA;&#xA;Of course, my approach is not flawless in any mean, there is a bug in the configuration above, can you spot it?&#xA;The point of this post, which I have been trying to get to for a while, while random electrical pulses moved my fingers in interesting ways, is that I have began not only to use this to a great extent (all projects in the last year or so are based on this idea), but I have started to actually design with this in mind.&#xA;The end result right now is that I am relying a lot more on commands patterns and attributes for selections. This means that I often do things like:&#xA;[SelectionCriteria(Selection.FirstOption, Selection.SecondOption)]&#xA;public void SomeSpecficCommand : Command&lt;ObjectActingUpon&gt;&#xA;{&#xA;&#x9;public override void Execute()&#xA;&#x9;{&#xA;&#x9;}&#xA;}&#xA;&#xA;You can see a more real world sample here, but the idea is to declaratively express the intent, have the configuration figure out what I want, and make it happen. The nice thing, most of the time, It Just Works. And the nice thing about utilizing Binsor is that I can adapt the convention very easily. So I can have many nice conventions, each for a particular situation.</p>
-        </article>
-        <article id="article-7540">
-            <a href="https://ayende.com/blog/2776/development-platforms-again" target="_blank">
-                <h2 class="title mb-6" id="article-7540">Development Platforms, again</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 20, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Jeffery Pallermo&#xA0;commented about the applicability of SharePoint as a development platform, the conversation in the comments is fantastic. Sahil Malik&#xA0;replied to that in a post that says that SharePoint is a terrific development platform. I want to go through Sahil&#x27;s points for a moment:  I haven&#x27;t ever walked into a shop with a home grown ASP.NET app that was any easier to install than sharepoint is. Here are the steps to install (on a bare bone server) my current project:  Prerequisites:  IIS .Net&#xA0;2.0 &#x2B; 3.0 SQL Server DB&#xA0;&#xA0; Steps:  Open cmd.exe \\storage\tools\subversion\svn&#xA0;co svn://subversion/MyProject/trunk MyProject msbuild default.build /p:ConnectionString=&quot;database connection string&quot; /p:RebuildDatabase=True The whole thing takes about ten minutes, and that is from scratch. From a built environment, we can push an update by just executing the last command, and waiting for about 2 minutes. At last count I had four different environments that I had bumping around. Then there is the great fallacy of configuration by the UI:  You can configure the entire thing through a browser based UI. What else do ya want? Well, source control would be a nice thing to have, as well as a way to do search / replace on the configuration, as well as a way to quickly scan through everything that was done in the last three days and see what happened there. One thing that I really don&#x27;t agree with Jeffery is the XP/Vista limitations. I am running Win2003 on all my machines, from the production servers to the workstations to the laptop, and it has been more than pleasurable enough. There really isn&#x27;t any difference as far as I care. You might want to check my criteria for evaluating a development platform. A lot of the people on Jeffery&#x27;s comments thread repeated the ability to do anything in Share Point. The problem I have with that statement is the relative cost of doing it in and outside of the platform. And the platform fails as a development platform if it is significantly harder to do it under the platform than outside it.</p>
         </article>
         <div class="button flex justify-between">
             <a href="753.html"><span class="back arrow"></span></a>
