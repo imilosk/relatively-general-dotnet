@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-281">
+            <a href="https://ayende.com/blog/201665-A/debugging-the-linux-kernel-using-awesome-psychic-powers" target="_blank">
+                <h2 class="title mb-6" id="article-281">Debugging the Linux kernel using awesome psychic powers</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: September 17, 2024
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I wanted to test low-level file-system behavior in preparation for a new feature for RavenDB. Specifically, I wanted to look into hole punching - where you can give low-level instructions to the file system to indicate that you&#x2019;re giving up disk space, but without actually reducing the size of the file.This can be very helpful in space management. If I have a section in the file that is full of zeroes, I can just tell the file system that, and it can skip storing that range of zeros on the disk entirely. This is an advanced feature for file systems. I haven&#x27;t actually used that in the past, so I needed to gain some expertise with it.I wrote the following code for Linux:int fd = open(&quot;test.file&quot;, O_CREAT | O_WRONLY, 0644);&#xD;&#xA;lseek(fd, 128 * 1024 * 1024 - 1, SEEK_SET); // 128MB file&#xD;&#xA;write(fd, &quot;&quot;, 1);&#xD;&#xA;fallocate(fd, // 32 MB hole from the 16MB..48MB range&#xD;&#xA;    FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, &#xD;&#xA;    16 * 1024 * 1024, 32 * 1024 * 1024); &#xD;&#xA;close(fd);The code for Windows is here&#xA0;if you want to see it. I tested the feature on both Windows &amp; Linux, and it worked. I could see that while the file size was 128MB, I was able to give back 16MB to the operating system without any issues. I turned the code above into a test and called it a day. And then the CI build broke. But that wasn&#x2019;t possible since I tested&#xA0;that. And there had been CI runs that did work on Linux. So I did the obvious thing and started running the code above in a loop. I found something really&#xA0;annoying. This code worked, sometimes. And sometimes it just didn&#x2019;t. In order to get the size, I need to run this code:struct stat st;&#xD;&#xA;fstat(fd, &amp;st);&#xD;&#xA;printf(&quot;Total size: %lld bytes\n&quot;,&#xD;&#xA;    (long long)st.st_size);&#xD;&#xA;printf(&quot;Actual size on disk: %lld bytes\n&quot;, &#xD;&#xA;    (long long)st.st_blocks * 512);I&#x2019;m used to weirdness from file systems at this point, but this is really simple. All the data is 4KB aligned (in fact, all the data is 16MB aligned). There shouldn&#x2019;t be any weirdness here.As you can see, I&#x2019;m already working at the level of Linux syscalls, but I used strace&#xA0;to check if there is something funky going on. Nope, there was a 1:1 mapping between the code and the actual system calls issued.That means that I have to debug deeper if I want to understand what is going on. This involves debugging the Linux Kernel, which is a Big Task. Take a look at the code in the relevant link. I&#x2019;m fairly certain that the issue is in those lines. The problem is that this cannot be, since both offset &amp; length are aligned to 4KB.I got out my crystal ball and thinking hat and meditated on this. If you&#x2019;ll note, the difference between the expected and actual values is exactly 4KB. It almost looks like the file itself&#xA0;is not aligned on a 4KB boundary, but the holes must be. Given that I just want to release this space to the operating system and 4KB is really small, I can adjust that as a fudge factor for the test. I would love&#xA0;to understand exactly what is going on, but so far the &#x201C;file itself is not 4KB aligned, but holes are&#x201D; is a good working hypothesis (even though my gut tells me it might be wrong). If you know the actual reason for this, I would love to hear it. And don&#x27;t get me started on what happened with sparse files in macOS. There, the OS will randomly&#xA0;decide to mark some parts of your file as holes, making any deterministic testing really hard.</p>
+        </article>
+        <article id="article-282">
             <a href="https://andrewlock.net/fixing-max_path-issues-in-gitlab/" target="_blank">
-                <h2 class="title mb-6" id="article-281">Fixing MAX_PATH issues in GitLab</h2>
+                <h2 class="title mb-6" id="article-282">Fixing MAX_PATH issues in GitLab</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I show how you can enable Git&#x27;s long-path support in a GitLab job to override Window&#x27;s MAX_PATH limitations which can cause git clone failures&#x2026;</p>
         </article>
-        <article id="article-282">
+        <article id="article-283">
             <a href="https://www.meziantou.net/waiting-for-a-manualreseteventslim-to-be-set-asynchronously.htm" target="_blank">
-                <h2 class="title mb-6" id="article-282">Waiting for a ManualResetEventSlim to be set asynchronously</h2>
+                <h2 class="title mb-6" id="article-283">Waiting for a ManualResetEventSlim to be set asynchronously</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">ManualResetEventSlim represents a thread synchronization event that, when signaled, must be reset manually. This is a common synchronization primitive. However, it doesn&#x27;t expose a method to wait asynchronously. Hopefully, it&#x27;s not too complicated to create an extension method using ThreadPool.Regi</p>
         </article>
-        <article id="article-283">
+        <article id="article-284">
             <a href="https://devblogs.microsoft.com/dotnet/performance-improvements-in-net-9/" target="_blank">
-                <h2 class="title mb-6" id="article-283">Performance Improvements in .NET 9</h2>
+                <h2 class="title mb-6" id="article-284">Performance Improvements in .NET 9</h2>
             </a>
             <p class="mb-2">by Stephen Toub - MSFT</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Take an in-depth tour through hundreds of performance improvements in .NET 9.</p>
         </article>
-        <article id="article-284">
+        <article id="article-285">
             <a href="https://devblogs.microsoft.com/dotnet/dotnet-9-release-candidate-1-is-now-available/" target="_blank">
-                <h2 class="title mb-6" id="article-284">.NET 9 Release Candidate 1 is now available!</h2>
+                <h2 class="title mb-6" id="article-285">.NET 9 Release Candidate 1 is now available!</h2>
             </a>
             <p class="mb-2">by .NET Team</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Try out the latest features in .NET 9 Release Candidate 1 across the .NET SDK, libraries, ASP.NET Core, SignalR, .NET MAUI, and more!</p>
         </article>
-        <article id="article-285">
+        <article id="article-286">
             <a href="https://devblogs.microsoft.com/dotnet/using-github-models-and-dotnet-to-build-generative-ai-apps/" target="_blank">
-                <h2 class="title mb-6" id="article-285">GitHub Models and .NET: Building Generative AI apps for engineers</h2>
+                <h2 class="title mb-6" id="article-286">GitHub Models and .NET: Building Generative AI apps for engineers</h2>
             </a>
             <p class="mb-2">by April Yoho</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, you&#x27;ll learn how to use AI models on GitHub.</p>
         </article>
-        <article id="article-286">
+        <article id="article-287">
             <a href="https://andrewlock.net/preventing-breaking-changes-in-public-apis-with-publicapigenerator/" target="_blank">
-                <h2 class="title mb-6" id="article-286">Preventing breaking changes in public APIs with PublicApiGenerator</h2>
+                <h2 class="title mb-6" id="article-287">Preventing breaking changes in public APIs with PublicApiGenerator</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I show how you can use the PublicApiGenerator project to document your public API and build a snapshot unit test to prevent breaking changes&#x2026;</p>
         </article>
-        <article id="article-287">
+        <article id="article-288">
             <a href="https://devblogs.microsoft.com/dotnet/introducing-blazor-hybrid-workshop/" target="_blank">
-                <h2 class="title mb-6" id="article-287">Learn to Build Your First Blazor Hybrid App!</h2>
+                <h2 class="title mb-6" id="article-288">Learn to Build Your First Blazor Hybrid App!</h2>
             </a>
             <p class="mb-2">by Sweeky,Gerald</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Learn all about the Blazor Hybrid workshop that you can follow yourself or teach to others!</p>
         </article>
-        <article id="article-288">
+        <article id="article-289">
             <a href="https://www.meziantou.net/how-to-export-user-aliases-from-microsoft-entra-using-powershell.htm" target="_blank">
-                <h2 class="title mb-6" id="article-288">How to export user aliases from Microsoft Entra using PowerShell</h2>
+                <h2 class="title mb-6" id="article-289">How to export user aliases from Microsoft Entra using PowerShell</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Microsoft Graph is a REST API that allows you to interact with Microsoft 365 services. You can use it to automate tasks such as creating users, updating their properties, or exporting data. In this post, I&#x27;ll show you how to export user email addresses and aliases from Microsoft Entra using PowerSh</p>
         </article>
-        <article id="article-289">
+        <article id="article-290">
             <a href="https://devblogs.microsoft.com/dotnet/why-is-fsharp-code-so-robust-and-reliable/" target="_blank">
-                <h2 class="title mb-6" id="article-289">Why is F# code so robust and reliable?</h2>
+                <h2 class="title mb-6" id="article-290">Why is F# code so robust and reliable?</h2>
             </a>
             <p class="mb-2">by Vladimir Shchur</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: September 09, 2024
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">F# is not just for math and big data, it&#x27;s a general purpose language that will greatly reduce the amount of bugs in your code.</p>
-        </article>
-        <article id="article-290">
-            <a href="https://devblogs.microsoft.com/dotnet/discover-dotnet-at-dev-intersection-las-vegas-2024/" target="_blank">
-                <h2 class="title mb-6" id="article-290">Discover .NET at DEVintersection Las Vegas 2024</h2>
-            </a>
-            <p class="mb-2">by Mehul Harry</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 04, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Join us at DEVintersection Las Vegas from September 9-12, 2024, for an in-person event featuring the latest in .NET and Azure technologies. Connect with experts, dive into new advancements, and get your questions answered by the people who build the tools you use every day.</p>
         </article>
         <div class="button flex justify-between">
             <a href="28.html"><span class="back arrow"></span></a>
