@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6611">
+            <a href="https://ayende.com/blog/3559/primitive-contextual-intellisense" target="_blank">
+                <h2 class="title mb-6" id="article-6611">Primitive Contextual Intellisense</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 26, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The last time we looked at this issue, we built all the pieces that were required, except for the most important one, actually handling the contextual menu. I am going to be as open as possible, Intellisense is not a trivial task. Nevertheless, we can get pretty good results without investing too much time if we want to. As a reminder, here is the method that is actually responsible for the magic that is about to happen:     public ICompletionData[] GenerateCompletionData(string fileName, TextArea textArea, char charTyped)&#xA;{&#xA;        return new ICompletionData[] {&#xA;             new DefaultCompletionData(&quot;Text&quot;, &quot;Description&quot;, 0),&#xA;             new DefaultCompletionData(&quot;Text2&quot;, &quot;Description2&quot;, 1)&#xA;        };&#xA;}&#xA;&#xA;&#xA;Not terribly impressive yet, I know, but let us see what we can figure out now. First, we need to find what is the current expression that the caret is located on. That will give us the information that we need to make a decision. We could try to parse the text ourselves, or use the existing Boo Parser. However, the Boo Parser isn&#x27;t really suitable for the kind of precise UI work that we need here. There are various incompatibilities along the way ( from the way it handles tabs to the nesting of expressions ). None of them is a blocker, and using the Boo Parser is likely the way you want for the more advance scenarios.&#xA;&#xA;Reusing the #Develop parser gives us all the information we need, and we don&#x27;t need to define things twice. Because we are going to work on a simple language, this is actually the simplest solution. Let us see what is involved in this.&#xA;&#xA;&#xA;  public ICompletionData[] GenerateCompletionData(string fileName, TextArea textArea, char charTyped)&#xA;{&#xA;    TextWord prevNonWhitespaceTerm = FindPreviousMethod(textArea);&#xA;    if(prevNonWhitespaceTerm==null)&#xA;        return EmptySuggestion(textArea.Caret);&#xA;&#xA;    var name = prevNonWhitespaceTerm.Word;&#xA;    if (name == &quot;specification&quot; || name == &quot;requires&quot; || name == &quot;same_machine_as&quot; || name == &quot;@&quot;)&#xA;    {&#xA;        return ModulesSuggestions();&#xA;    }&#xA;    int temp;&#xA;    if (name == &quot;users_per_machine&quot; || int.TryParse(name, out temp))&#xA;    {&#xA;        return NumbersSuggestions();&#xA;    }&#xA;    return EmptySuggestion(textArea.Caret);&#xA;}&#xA;&#xA;private TextWord FindPreviousMethod(TextArea textArea)&#xA;{&#xA;    var lineSegment = textArea.Document.GetLineSegment(textArea.Caret.Line);&#xA;    var currentWord = lineSegment.GetWord(textArea.Caret.Column);&#xA;    if (currentWord == null &amp;&amp; lineSegment.Words.Count &gt; 1)&#xA;        currentWord = lineSegment.Words[lineSegment.Words.Count - 1];&#xA;    // we actually want the previous word, not the current one, in order to make decisions on it.&#xA;    var currentIndex = lineSegment.Words.IndexOf(currentWord);&#xA;    if (currentIndex == -1)&#xA;        return null;&#xA;&#xA;    return lineSegment.Words.GetRange(0, currentIndex).FindLast(word =&gt; word.Word.Trim() != &quot;&quot;) ;&#xA;}&#xA;&#xA;&#xA;Again, allow me to reiterate that this is a fairly primitive solution, but it is a good one for our current needs. I am not going to go over all the suggestion methods, but here is the ModulesSuggestion method, which is responsible for the screenshot below:&#xA;&#xA;&#xA;  private ICompletionData[] ModulesSuggestions()&#xA;{&#xA;    return new ICompletionData[]&#xA;    {&#xA;        new DefaultCompletionData(&quot;@vacations&quot;, null, 2),&#xA;        new DefaultCompletionData(&quot;@external_connections&quot;, null, 2),&#xA;        new DefaultCompletionData(&quot;@salary&quot;, null, 2),&#xA;        new DefaultCompletionData(&quot;@pension&quot;, null, 2),&#xA;        new DefaultCompletionData(&quot;@scheduling_work&quot;, null, 2),&#xA;        new DefaultCompletionData(&quot;@health_insurance&quot;, null, 2),&#xA;        new DefaultCompletionData(&quot;@taxes&quot;, null, 2),&#xA;    };&#xA;}&#xA;&#xA;&#xA;And this is how it looks like.&#xA;&#xA;&#xA;   &#xA;&#xA;&#xA;It works, it is simple, and it doesn&#x27;t take too much time to build. If we want to get more than this, we probably need to start utilizing the boo parser directly, which will give us a lot more context than the text tokenizer that #Develop is using for syntax highlighter. Nevertheless, I think this is good work.</p>
+        </article>
+        <article id="article-6612">
             <a href="https://ayende.com/blog/3558/sql-server-2008-table-value-parameters-and-nhibernate" target="_blank">
-                <h2 class="title mb-6" id="article-6611">SQL Server 2008 Table Value Parameters and NHibernate</h2>
+                <h2 class="title mb-6" id="article-6612">SQL Server 2008 Table Value Parameters and NHibernate</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just took a look at how this feature is exposed. I really wants this feature. I hit the 2,100 parameters limit of SQL Server too many times in the past, always when I had to do some large IN queries. So, I was very happy to hear about that feature, but I didn&#x27;t really take a look until now.  Unfortunately, the way they are implemented requires a hard reference to them. You have to create the type in the server,&#xA0; and then you have to reference it by name. Annoying, to say the least, and it looks like there isn&#x27;t any generic solution that I can accept. This is bad because I can think of quite a few uses for this feature, from applying batches to complex queries, it can be very useful, but it is looked in its own safe, statically typed, world. Urgh!</p>
         </article>
-        <article id="article-6612">
+        <article id="article-6613">
             <a href="https://ayende.com/blog/3557/nhibernate-2-0-wiki" target="_blank">
-                <h2 class="title mb-6" id="article-6612">NHibernate 2.0 Wiki</h2>
+                <h2 class="title mb-6" id="article-6613">NHibernate 2.0 Wiki</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">NHibernate 2.0 Wiki can be found here. This wiki already includes the entire NHibernate documentation, so you can head there and start learning.  Have fun...</p>
         </article>
-        <article id="article-6613">
+        <article id="article-6614">
             <a href="https://ayende.com/blog/3556/looking-for-a-wpf-dev" target="_blank">
-                <h2 class="title mb-6" id="article-6613">Looking for a WPF dev</h2>
+                <h2 class="title mb-6" id="article-6614">Looking for a WPF dev</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am currently working on an interesting application, basically, rule engine, data &#x2B; DSL, and other fun stuff. Unfortunately, here is how the UI is right now:     Yes, the disclaimer is in the UI.   Therefor, I currently looking for a WPF dev / designer. I am currently in New York, but there is no location limitation.   If you are interested, please contact me.</p>
         </article>
-        <article id="article-6614">
+        <article id="article-6615">
             <a href="https://ayende.com/blog/3555/code-or-data" target="_blank">
-                <h2 class="title mb-6" id="article-6614">Code or data?</h2>
+                <h2 class="title mb-6" id="article-6615">Code or data?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is a question that came up in the book&#x27;s forums:     I can&#x27;t figure out how to get the text of the expression from expression.ToCodeString() or better yet, the actual text from the .boo file.     It appears to automagically convert from type Expression to a delegate. What I want is to be able to when a condition is evaluated display the condition that was evaluated, so if when 1 &lt; 5 was evaluated I would be able to get the string &quot;when 1 &lt; 5&quot; - Any way to do this?    Let us see what the issue is. Given this code:     when order.Amount &gt; 10:&#xA;&#x9;print &quot;yeah!&quot;&#xA;&#xA;&#xA;&#xA;&#xA;We want to see the following printed:&#xA;&#xA;&#xA;  Because &#x27;order.Amount &gt; 10&#x27; evaluated to true, executing rule action.&#xA;    yeah!&#xA;&#xA;&#xA;The problem, of course, is how exactly to get the string that represent the rule. It is actually simple to do, we just need to ask the compiler nicely, like this:&#xA;&#xA;&#xA;  public abstract class OrderRule&#xA;{&#xA;    public Predicate&lt;Order&gt; Condition { get; set; }&#xA;    public string ConditionString { get; set; }&#xA;    public Action RuleAction { get; set; }&#xA;    protected Order order;&#xA;    public abstract void Build();&#xA;&#xA;    [Meta]&#xA;    public static Expression when(Expression expression, Expression action)&#xA;    {&#xA;        var condition = new BlockExpression();&#xA;        condition.Body.Add(new ReturnStatement(expression));&#xA;        return new MethodInvocationExpression(&#xA;            new ReferenceExpression(&quot;When&quot;),&#xA;            condition,&#xA;            new StringLiteralExpression(expression.ToCodeString()),&#xA;            action&#xA;            );&#xA;    }&#xA;&#xA;&#xA;    public void When(Predicate&lt;Order&gt; condition, string conditionAsString, Action action)&#xA;    {&#xA;        Condition = condition;&#xA;        ConditionString = conditionAsString;&#xA;        RuleAction = action;&#xA;    }&#xA;&#xA;    public void Evaluate(Order o)&#xA;    {&#xA;        order = o;&#xA;        if (Condition(o) == false)&#xA;            return;&#xA;        Console.WriteLine(&quot;Because &#x27;{0}&#x27; evaluated to true, running rule action&quot;,ConditionString);&#xA;        RuleAction();&#xA;    }&#xA;}&#xA;&#xA;&#xA;The key here happens in the when() static method. We translate the call to the when keyword to a call to the When() instance method. Along the way, we aren&#x27;t passing just the arguments that we got, we are also passing a string literal with the code that was extracted from the relevant expression.</p>
         </article>
-        <article id="article-6615">
+        <article id="article-6616">
             <a href="https://ayende.com/blog/3554/strategies-for-editing-dsl-scripts-in-production" target="_blank">
-                <h2 class="title mb-6" id="article-6615">Strategies for editing DSL scripts in production</h2>
+                <h2 class="title mb-6" id="article-6616">Strategies for editing DSL scripts in production</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Another interesting question from Chris Ortman:     So I write my dsl, and tell my customer to here edit this text file?      How do I tell them what the possible options are? Intellisense?       This is a web app, and my desire to build intellisense into a javascript rich text editor is very low.       It might be a good excuse to try out silverlight but even then it seems a large task.       Or I put express or #Develop on the server and make that the &#x27;admin&#x27; gui?   This is actually a question that comes up often. Yes, we have a DSL and now it is easy to change, how are we going to deal with changes that affect production?  There are actually several layers to this question. First, there is the practical matter of having some sort of a UI to enable this change. As Chris has noted, this is not something that can be trivially produced as part of the admin section. But the UI is only a tiny part of it. This is especially the case if you want to do things directly on production.   There is a whole host of challenges that come up in this scenario (error handling, handling frequent changes, cascading updates, debugging, invasive execution, etc) that needs to be dealt with. In development mode, there is no issue, because we can afford to be unsafe there. For production, that is not an option. Then you have to deal with issues such as providing auditing information, &quot;who did what, why and when&quot;. Another important consideration is the ability to safely roll back a change.  As you can imagine, this is not a simple matter.  My approach, usually, is to avoid this requirement as much as possible. That is, I do not allow to do such things on production. Oh, it is still possible, but it is a manual process that is there for emergency use only. Similar to the ability to log in to the production DB and run queries, is should be reserved, rare and avoided if possible.  However, this is not always possible. If the client needs the ability to do edit the DSL scripts on production, then we need to provide a way for them to do so. What I have found to be useful is to not provide a way to work directly on production. No, I am not being a smartass here, I actually have a point. Instead of working directly on the production scripts, we start, as part of the design, to store the scripts in an SVN server, which is part of the application itself.  If you want to access the scripts, you check them out of the SVN server. Now you can edit them with any tool you want, and finish by committing them back to the repository. The application monitors the repository and will update itself when a commit is done to the /production branch.  This has several big advantages. First, we don&#x27;t have the problem of partial updates, we have a pretty good audit trail and we have built in reversibility. In addition to that, we avoid the whole problem of having to build a UI for editing the scripts on production, we use the same tools that we use during development for that.  As a side benefit, this also means that pushing script changes to a farm is builtin.  And yes, this is basically continuous integration as part of the actual applicatio.</p>
         </article>
-        <article id="article-6616">
+        <article id="article-6617">
             <a href="https://ayende.com/blog/3553/a-new-meaning-to-async-communication" target="_blank">
-                <h2 class="title mb-6" id="article-6616">A new meaning to async communication</h2>
+                <h2 class="title mb-6" id="article-6617">A new meaning to async communication</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I took this picture about a year and a half ago on my phone, while visiting a client. I then email it to myself. I don&#x27;t think that it arrived, and I forgot about this.  This has just landed in my mailbox. It says, in Hebrew: &quot;Mommy said that you can&#x27;t put collections in the session on Hibernate will beat you up&quot;.  I don&#x27;t ever own the phone this picture was taken on. How the hell did it arrive?</p>
         </article>
-        <article id="article-6617">
+        <article id="article-6618">
             <a href="https://ayende.com/blog/3552/meaningless-code-quality-part-2" target="_blank">
-                <h2 class="title mb-6" id="article-6617">Meaningless code quality, part 2</h2>
+                <h2 class="title mb-6" id="article-6618">Meaningless code quality, part 2</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is the next slide in my presentation.    Code quality is a hard metric, it can be backed up by numbers, if you need to. Fairly often, it is measured by gut feeling and &quot;this is a mess&quot;.  One interesting problem with code quality is that you generally don&#x27;t have a good way to measure the maintainability of a particular solution, regardless of its current code quality.</p>
         </article>
-        <article id="article-6618">
+        <article id="article-6619">
             <a href="https://ayende.com/blog/3551/nhibernate-2-0-final-is-out" target="_blank">
-                <h2 class="title mb-6" id="article-6618">NHibernate 2.0 Final is out!</h2>
+                <h2 class="title mb-6" id="article-6619">NHibernate 2.0 Final is out!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Guys, gals and its. I am overjoyed to tell you that NHibernate 2.0 has been released.  You can get it directly from the download page.  I would like to thank to the NHibernate project lead, Fabio Maulo, for doing such an awesome amount of work, and getting this out.      Thanks, Fabio.   I am not going to list all the features, suffice to say that we are now in a comparable position to Hibernate 3.2.  Have fun!</p>
         </article>
-        <article id="article-6619">
+        <article id="article-6620">
             <a href="https://ayende.com/blog/3550/code-quality-is-meaningless" target="_blank">
-                <h2 class="title mb-6" id="article-6619">Code quality is meaningless</h2>
+                <h2 class="title mb-6" id="article-6620">Code quality is meaningless</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: August 23, 2008
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is part of a presentation that I am preparing:    What do you think about that?</p>
-        </article>
-        <article id="article-6620">
-            <a href="https://ayende.com/blog/3549/boo-lang-studio-1-0-alpha-it-out" target="_blank">
-                <h2 class="title mb-6" id="article-6620">Boo Lang Studio 1.0 Alpha it out!</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: August 22, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Jeffery Olson has just made the first release of Boo Lang Studio available.   This one comes with a &quot;Yes, Dear&quot; installer.     Yeah, we have Boo installed!     Let us create a new project:    And take a look at the code:     And intellisense works as well, whew!     Jeffery Olson and James Gregory: THANKS!</p>
         </article>
         <div class="button flex justify-between">
             <a href="661.html"><span class="back arrow"></span></a>
