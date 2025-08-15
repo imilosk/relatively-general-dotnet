@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1351">
+            <a href="https://andrewlock.net/using-action-results-and-content-negotiation-with-route-to-code/" target="_blank">
+                <h2 class="title mb-6" id="article-1351">Using action results and content negotiation with &quot;route-to-code&quot; APIs</h2>
+            </a>
+            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 08, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe how to use content negotiation with route-to-code by executing ActionResults.&#x2026;</p>
+        </article>
+        <article id="article-1352">
             <a href="https://ayende.com/blog/192577-A/ravendb-and-multi-region-setup" target="_blank">
-                <h2 class="title mb-6" id="article-1351">RavenDB and multi region setup</h2>
+                <h2 class="title mb-6" id="article-1352">RavenDB and multi region setup</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB is a distributed database. You can run it on a single node, in a cluster on a single data center on as a geo distributed cluster. Separately, you can also run RavenDB in a multi master configuration. In this case, you don&#x2019;t have a single cluster spanning the globe, but multiple cooperating clusters working together. The question is, when should I use a geo distributed cluster and when should I setup a multi master configuration with multiple coordinating clusters?Here is an example of a global cluster:As you can see, we have nodes all over the world, all joined into a single cluster. In this mode, the nodes will select a leader (denoted by the crown) which will manage all the behavior of the cluster. To ensure that we can properly detect failures, we setup a timeout interval that is appropriate for the distances involved.&#xA0; Note that even in this mode, most of the actual writes to RavenDB will be done on a pure node-local basis and gossiped between the nodes. You can select the appropriate level of write assurance that you want (confirm after it was written to two additional locations, for example). Such a setup suffer from one issue, coordinating across that distance (and latencies) means that we are need to account for the inherent delay in the decision loop. For most operations, this doesn&#x2019;t actually impact your system, since most of the work is done in the background and not user visible. It does mean that RavenDB is going to take longer to detect and recover from failures. In the case of the setup in the image, we are talking about the difference between less than 300ms (the default when running in a single data center) to detecting failure in around 5 seconds or so. Because RavenDB favors availability, it usually doesn&#x2019;t matter. But there are cases where it does. Any time that you have to wait for a cluster operation, you&#x2019;ll feel the additional latency. This applies not just to failure detection but when everything is running smoothly. A cluster operation in the above setup will require confirmation from two additional nodes aside from the leader. Ping time in this case would be 200 &#x2013; 300ms between the nodes, in most cases. That means that at best, any such operation would be completed in 750ms or so. What operations would this apply to? Creation of new databases and indexes is done as a cluster operation, but they are rarely latency sensitive. The primary issue for this sort of setup is if you are using:Cluster wide transactionsCompare exchange operationsIn those cases, you have to account for higher latency as part of your overall deployment. Such operations are inherently more expensive. If you are running in a single data center, with ping times that are usually &lt; 1 ms, that is not very noticeable. When you are running in a geo distributed environment, that matters a lot more.One consideration that we haven&#x2019;t yet taken into account is what happens during failure. Let&#x2019;s assume that I have a web application deployed in Brazil, which is aimed at the local RavenDB instance. If the Brazilian&#x2019;s RavenDB instance decide to visit the carnival and not respond, what is going to happen? On the one hand, the other nodes in the cluster will simply pick up the slack. But for the web application in Brazil, that means that instead of using the local instance, we need to go wide to reach the alternative nodes. GitHub had a similar issue, but between east and west coast and the additional latency inherent in such a setup took them down.To be honest, beyond the additional latency that you have with cluster wide operations in such a setup, I think that this is the biggest disadvantage of such a system. You can avoid that by running multiple nodes in each location, all joined into a big cluster, of course. Then you can set things up that each client will use the nearest nodes. That gives you local failover, but you still need to consider how to handle total outage in one location. There is another alternative, in which case you have separate clusters in each location (may be a single instance, but I&#x2019;m showing a cluster there because you&#x2019;ll want local high availability). Instead of having a single cluster, we set things up so there are multiple such clusters. Then we use RavenDB&#x2019;s multi-master capabilities to tie them all together.In this setup, the different clusters will gossip between themselves about the data, but that is the only thing that is truly shared. Each cluster will manage its own nodes and failover and work is done only on the local cluster level, not globally.Other things, indexes, ETL, subscriptions etc are all defined at the cluster level, and you&#x2019;ll need to consider whatever you&#x2019;ll have them in each cluster (likely for indexes, for example), or only on a single location. Something like ETL would probably have a designated location that would be pushing the data to its destination, rather than duplicated in each local cluster.The most interesting question, however, is how do you handle cluster wide transactions or compare exchange operation in such an environment?A cluster wide transaction is&#x2026; well, cluster wide. That means that if you have multiple clusters, your consistency scope is only within a single one. That is probably the major limit for breaking apart the cluster in such a system. There are ways to handle that, of course. You can split your compare exchanges so they will have a particular cluster that will own them, in this manner, you can direct certain operations to a particular cluster regardless of where the operation originated. In many environments, this is already something that will naturally happen. For example, if you are running in such an environment to deal with local clients, it is natural to hold their compare exchange values for the cluster they are using, even if the data is globally replicated.Another factor to consider is that RavenDB replicates documents&#xA0; and their data, but compare exchange values aren&#x2019;t considered in this case. They are global to the cluster, and as such aren&#x2019;t sent via replication. I&#x2019;m afraid that I don&#x2019;t have one answer to the question how to geo distribute your RavenDB based system. You need to account for several factors about your application, your needs and the system as a whole. But I hope that you&#x2019;ll now have the appropriate background to make an informed decision.</p>
         </article>
-        <article id="article-1352">
+        <article id="article-1353">
             <a href="https://www.meziantou.net/using-dotnet-and-powerpoint-to-generate-cover-images.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1352">Using .NET and PowerPoint to generate cover images</h2>
+                <h2 class="title mb-6" id="article-1353">Using .NET and PowerPoint to generate cover images</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you follow me on Twitter, you may have noticed that I use a cover image for the posts. This improves the visibility of the posts I write on people&#x27;s timelines.The image is composed of 3 parts:The post categoriesThe post titleThe author website and Twitter handleOf course, I do not want to create</p>
         </article>
-        <article id="article-1353">
+        <article id="article-1354">
             <a href="https://ayende.com/blog/192546-A/webinar-recording-ravendb-your-operations-team" target="_blank">
-                <h2 class="title mb-6" id="article-1353">Webinar recording</h2>
+                <h2 class="title mb-6" id="article-1354">Webinar recording</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20"></p>
         </article>
-        <article id="article-1354">
+        <article id="article-1355">
             <a href="https://ayende.com/blog/192545-A/interview-with-rodrigo-branas-on-ravendb" target="_blank">
-                <h2 class="title mb-6" id="article-1354">Interview with Rodrigo Branas on RavenDB</h2>
+                <h2 class="title mb-6" id="article-1355">Interview with Rodrigo Branas on RavenDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday I had a great chat with Rodrigo, it went on for almost two hours and I got to show off some cool features in RavenDB as well as to talk a little about my history and motivation.As usual, I would love your feedback.</p>
         </article>
-        <article id="article-1355">
+        <article id="article-1356">
             <a href="https://ardalis.com/avoid-wrapping-dbcontext-in-using/" target="_blank">
-                <h2 class="title mb-6" id="article-1355">Avoid Wrapping DbContext in Using (and other gotchas)</h2>
+                <h2 class="title mb-6" id="article-1356">Avoid Wrapping DbContext in Using (and other gotchas)</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">EF and EF Core DbContext types implement . As such, best practice programming suggests that you should wrap them in a  block (or new C#&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-1356">
+        <article id="article-1357">
             <a href="https://andrewlock.net/using-quartz-net-with-asp-net-core-and-worker-services/" target="_blank">
-                <h2 class="title mb-6" id="article-1356">Using Quartz.NET with ASP.NET Core and worker services</h2>
+                <h2 class="title mb-6" id="article-1357">Using Quartz.NET with ASP.NET Core and worker services</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I show how to run Quartz.NET jobs in ASP.NET Core and worker service apps using the Quartz.Extensions.Hosting package&#x2026;</p>
         </article>
-        <article id="article-1357">
+        <article id="article-1358">
             <a href="https://www.meziantou.net/investigating-a-performance-issue-with-a-regex.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1357">Investigating a performance issue with a regex</h2>
+                <h2 class="title mb-6" id="article-1358">Investigating a performance issue with a regex</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is part of the series &#x27;Crash investigations and code reviews&#x27;. Be sure to check out the rest of the blog posts of the series!Investigating a performance issue with a regex (this post)Investigating an infinite loop in Release configurationInvestigating a crash in Enumerable.LastOrDefault w</p>
         </article>
-        <article id="article-1358">
+        <article id="article-1359">
             <a href="https://ayende.com/blog/192513-A/surviving-black-friday-or-designing-for-failure" target="_blank">
-                <h2 class="title mb-6" id="article-1358">Surviving Black Friday: Or designing for failure</h2>
+                <h2 class="title mb-6" id="article-1359">Surviving Black Friday: Or designing for failure</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It&#x2019;s the end of November, so like almost every year around this time, we have the AWS outage impacting a lot of people. If past experience is any indication, we&#x2019;re likely to see higher failure rates in many instances, even if it doesn&#x2019;t qualify as an &#x201C;outage&#x201D;, per se. The image on the right shows the status of an instance of a RavenDB cluster running in useast-1. The additional load is sufficient to disrupt the connection between the members of the cluster. Note that this isn&#x2019;t load on the specific RavenDB cluster, this is the environment load. We are seeing busy neighbors and higher network latency in general, enough to cause a disruption of the connection between the nodes in the cluster.And yet, while the cluster connection is unstable, the&#xA0; individual nodes are continuing to operate normally and are able to continue to work with no issues. This is part of the multi layer design of RavenDB. The cluster is running using a consensus protocol, which is sensitive to network issues and require a quorum to progress. The databases, on the other hand, uses a separate, gossip based protocol to allow for multi master distributed work.What this means is that even in the presence of increased network disruption, we are able to run without needing to consult other nodes. As long as the client is able to reach any node in the database, we are able to serve reads and writes successfully. In RavenDB, both clients and servers understand the topology of the system and can independently fail over between nodes without any coordination. A client that can&#x2019;t reach a server will be able to consult the cached topology to know what is the next server in line. That server will be able to process the request (be it read or write) without consulting any other machine. The servers will gossip with one another about misplaced writes and set everything in order. RavenDB gives you a lot of knobs to control exactly this process works, but we have worked hard to ensure that by default, everything should Just Work.Since we released the 4.0 version of RavenDB, we have had multiple Black Fridays, Cyber Monday and Crazy Tuesdays go by peacefully. Planning, explicitly, for failures has proven to be a major advantage. When they happen, it isn&#x2019;t a big deal and the system know how to deal with them without scrambling the ready team. Just another (quite) day, with 1000% increase in load.</p>
         </article>
-        <article id="article-1359">
+        <article id="article-1360">
             <a href="https://enterprisecraftsmanship.com/posts/csharp-records-value-objects/" target="_blank">
-                <h2 class="title mb-6" id="article-1359">C# 9 Records as DDD Value Objects</h2>
+                <h2 class="title mb-6" id="article-1360">C# 9 Records as DDD Value Objects</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: November 24, 2020
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today, we&#x2019;ll talk about the new C# 9 feature, Records,  and whether or not they can be used as DDD value objects.</p>
-        </article>
-        <article id="article-1360">
-            <a href="https://ayende.com/blog/192481-A/working-for-free-and-other-desirable-behaviors" target="_blank">
-                <h2 class="title mb-6" id="article-1360">Working for free and other desirable behaviors</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 24, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I run into this link, which is Lambda school offering to place a student of theirs at your company for up to four weeks without having to pay them or the student. They market it as: Add talented software engineers to your team for a 4 week trial at no cost for your company if you do not hire the fellow.Just to point out, this is not relevant to me or mine, so I don&#x2019;t have a dog in this fight, but I run into this offer because of this: Scott then wrote: &#x201C;Pay people for their work. Pay interns.&#x201D;I think that this ties closely together with the previous posts on money and open source. On the one hand, I think that this is a pretty good offer for a student, because they are able to get over what is likely to be their biggest hurdle, actual experience in the field. It also lowers the bar on actually getting their foot in the door, after which the second step is likely to be much easier. On the other hand, for the company, it is a great way to do test runs for entry level positions. Hiring developers is hard, and being able to trial run for a few weeks is much better than trying to predict the candidate&#x2019;s ability based on a short interview. On the gripping hand, however, there are a bunch of issues here that are rife for abuse. This also means that the only people who&#x2019;ll get to this program are those who are able to actually go a month or so without pay. Or that they will need to do this and their regular work as well. An &#x201C;easy&#x201D; way to fix this would be to pay at least minimum wage to the students, of course. The problem is that this would curb a lot of the advantages of the program. I&#x2019;ll refer you to Dan Ariely and the FREE! experiments for the reasons why. From the company&#x2019;s perspective: Paying a minimum wage or getting an employee for free is pretty much the same thing. But there is a lot less process to getting someone for free. And once there is a foot in the door, it is a lot easier to convert internally. What I wish was possible was to be able to hire people (at or near market rate) for a short amount of time and then decide if you want to keep them on afterward. The idea is that actually seeing their work is a much better indication of their capabilities than the interview process. That reduce the pressure to perform during an interview, gives candidate far better chance to impress and show off, allow them to learn, etc.This is technically possible but not actually feasible in almost all situations. Leaving aside labor laws, consider the employee&#x2019;s perspective in this case. If they are already working, going to another company and doing a &#x201C;trial run&#x201D; which can be unsuccessful is a very powerful reason to not go there. A company with the kind of reputation of &#x201C;they hired me for a month and then fire me&#x201D; is going to have hard time getting more employees. In fact, being fired without a few weeks or months of getting hired is such a negative mark on the CV that most people would leave it all together. Because of this, any company that want to do such trail runs cannot actually do so. They have to make the effort to do all the filtering before actually hiring an employee and reserve firing someone after a short time for mostly egregious issues.The internship model neatly works around this issue, because you have a very clear boundaries. Making it an unpaid internship is a way to attract more interest from companies and reduce the barriers. For the student, even if they aren&#x2019;t hired at that place, it gives actual industry experience, which is usually a lot more valuable in the job market.&#xA0; Note that you can pay the grocery bill with Reputation bucks, it just takes a little longer to cash them out, usually.The unpaid internship here is the problem, for a bunch of reasons. The chief among them is that making this free for the companies open this up for abuse. You can put controls and safeguards in place, but the easiest way to handle that would be to make it so they pay at least minimum wage to avoid that. The moment that this is paid, a lot of the abuse potential go away. I can imagine that this would be a major hassle for the school (I assume that the companies would rather pay an invoice rather than hire someone on for a short while), but it is something that you can easily do with economies of scale. The chief issue then, however, would be that this is no longer free, so likely to subject the students to a much harsher scrutiny, which defeats the purpose of getting them out there in the field and gaining real experience.&#xA0; That is also a problem for the school, I think, since they would have to try to place the student and face a bigger barrier. Turning this around, however, consider that this was an offer made not for a company, but for open source projects? A lot of open source projects have a ton of work that needs to be done which gets deferred. This is the sort of &#x201C;weeding the garden&#x201D; that is usually within the capabilities of someone just starting out. The open source project will provide mentorship and guidance in return for this work. In terms of work experience, this is likely to be roughly on the same level, but without the option to being hired at the end of the four weeks. It also has the advantage of all the work being out there in the open, which allows potential future employers to inspect this. Note that this is roughly the same thing as the offer being made, but instead of a company doing this, there is an open source project. How would that change your evaluation? The other aspects are all the same. This is still something that is only available for those who can afford to take a month without pay and still make it. From the student&#x2019;s perspective, there is no major difference, except that there is far less likelihood for actually getting hired in the end.</p>
         </article>
         <div class="button flex justify-between">
             <a href="135.html"><span class="back arrow"></span></a>
