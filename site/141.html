@@ -138,8 +138,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1401">
+            <a href="https://ayende.com/blog/192257-B/fast-bitmap-iteration-in-c" target="_blank">
+                <h2 class="title mb-6" id="article-1401">Fast bitmap iteration in C#</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 26, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I had a task for which I need to track a union of documents and then iterate over them in order. It is actually easier to explain in code than in words. Here is the rough API:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          void Init(int maxId, IEnumerable&lt;IEnumerable&lt;int&gt;&gt; items);&#xA;        &#xA;        &#xA;          &#xA;          bool Exists(int id);&#xA;        &#xA;        &#xA;          &#xA;          int GetNextId(int id);&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          challenge.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;As you can see, we initialize the value with a list of streams of ints. Each of the streams can contain any number of values in the range [0 &#x2026; maxId). Different streams can the same or different ids. After initialization, we have to allow to query the result, to test whatever a particular id was stored, which is easy enough. If this was all I needed, we could make do with a simple HashSet&lt;int&gt; and mostly call it a day.&#xA0; However, we also need to support iteration, more interesting, we have to support sorted iteration. A quick solution would be to use something like SortedList&lt;int,int&gt;, but that is going to be massively expensive to do (O(N*logN) to insert). It is also going to waste a lot of memory, which is important. A better solution would be to use a bitmap, which will allow us to use a single bit per value. Given that we know the size of the data in advance, that is much cheaper, and the cost of insert is O(N) to the number of ids we want to store. Iteration, on the other hand, is a bit harder on a bitmap. Luckily, we have Lemire to provide a great solution. I have taken his C code and translated that to C#. Here is the result:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          public class FastBitArray : IDisposable&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              private ulong[] _bits;&#xA;        &#xA;        &#xA;          &#xA;              public FastBitArray(int countOfBits)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  _bits = ArrayPool&lt;ulong&gt;.Shared.Rent(countOfBits / 64 &#x2B; (countOfBits % 64 == 0 ? 0 : 1));&#xA;        &#xA;        &#xA;          &#xA;                  new Span&lt;ulong&gt;(_bits).Clear();&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              public void Set(int index)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  _bits[index / 64] |= 1UL &lt;&lt; index % 64;&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              public IEnumerable&lt;int&gt; Iterate(int from)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  // https://lemire.me/blog/2018/02/21/iterating-over-set-bits-quickly/&#xA;        &#xA;        &#xA;          &#xA;                  int i = from / 64;&#xA;        &#xA;        &#xA;          &#xA;                  if (i &gt;= _bits.Length)&#xA;        &#xA;        &#xA;          &#xA;                      yield break;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;                  ulong bitmap = _bits[i];&#xA;        &#xA;        &#xA;          &#xA;                  bitmap &amp;= ulong.MaxValue &lt;&lt; (from % 64);&#xA;        &#xA;        &#xA;          &#xA;                  while (true)&#xA;        &#xA;        &#xA;          &#xA;                  {&#xA;        &#xA;        &#xA;          &#xA;                      while (bitmap != 0)&#xA;        &#xA;        &#xA;          &#xA;                      {&#xA;        &#xA;        &#xA;          &#xA;                          ulong t = bitmap &amp; (ulong)-(long)bitmap;&#xA;        &#xA;        &#xA;          &#xA;                          int count = BitOperations.TrailingZeroCount(bitmap);&#xA;        &#xA;        &#xA;          &#xA;                          int setBitPos = i * 64 &#x2B; count;&#xA;        &#xA;        &#xA;          &#xA;                          if (setBitPos &gt;= from) &#xA;        &#xA;        &#xA;          &#xA;                              yield return setBitPos; &#xA;        &#xA;        &#xA;          &#xA;                          bitmap ^= t;&#xA;        &#xA;        &#xA;          &#xA;                      }&#xA;        &#xA;        &#xA;          &#xA;                      i&#x2B;&#x2B;;&#xA;        &#xA;        &#xA;          &#xA;                      if (i &gt;= _bits.Length)&#xA;        &#xA;        &#xA;          &#xA;                          break;&#xA;        &#xA;        &#xA;          &#xA;                      bitmap = _bits[i];&#xA;        &#xA;        &#xA;          &#xA;                  }&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              public void Dispose()&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  if (_bits == null)&#xA;        &#xA;        &#xA;          &#xA;                      return;&#xA;        &#xA;        &#xA;          &#xA;                  ArrayPool&lt;ulong&gt;.Shared.Return(_bits);&#xA;        &#xA;        &#xA;          &#xA;                  _bits = null;&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          FastBitArray.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;I&#x2019;m using BitOperations.TrailingZeroCount, which will use the compiler intrinsics to compile this to a very similar code to what Lemire wrote. This allows us to iterate over the bitmap in large chunks, so even for a large bitmap, if it is sparsely populated, we are going to get good results.Depending on the usage, a better option might be a Roaring Bitmap, but even there, dense sections will likely use something similar for optimal results.</p>
+        </article>
+        <article id="article-1402">
+            <a href="https://www.meziantou.net/enumerating-files-using-globbing-and-system-io-enumeration.htm" target="_blank">
+                <h2 class="title mb-6" id="article-1402">Enumerating files using Globbing and System.IO.Enumeration</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 26, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Glob patterns (Wikipedia) are a very common way to specify a list of files to include or exclude. For instance, **/*.csproj match any file with the .csproj extension. You can use glob patterns in many cases, such as in the .gitignore file, in bash, or PowerShell..NET Core 2.1 introduced a new API f</p>
+        </article>
+        <article id="article-1403">
             <a href="https://ayende.com/blog/192258-B/reminder-online-ravendb-in-action-workshop-tomorrow-via-ndc" target="_blank">
-                <h2 class="title mb-6" id="article-1401">Reminder</h2>
+                <h2 class="title mb-6" id="article-1403">Reminder</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ll be doing a two days RavenDB 5.0 workshop as part of the NDC conference. There are still open spots, you can go ahead and register.</p>
         </article>
-        <article id="article-1402">
+        <article id="article-1404">
             <a href="https://ayende.com/blog/192193-C/talking-on-emerging-code-about-ravendb" target="_blank">
-                <h2 class="title mb-6" id="article-1402">Talking on Emerging Code about RavenDB</h2>
+                <h2 class="title mb-6" id="article-1404">Talking on Emerging Code about RavenDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday I talked on Emerging Code about RavenDB. I think it went very well, and here is the video.</p>
         </article>
-        <article id="article-1403">
+        <article id="article-1405">
             <a href="https://ayende.com/blog/192161-C/ravendb-cloud-now-supports-hipaa-accounts" target="_blank">
-                <h2 class="title mb-6" id="article-1403">RavenDB Cloud now supports HIPAA accounts</h2>
+                <h2 class="title mb-6" id="article-1405">RavenDB Cloud now supports HIPAA accounts</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB Cloud is now offering HIPAA Compliant Accounts. HIPAA stands for Health Insurance Portability and Accountability Act and is a set of rules and regulations that health care providers and their business associates need to apply.That refers to strictly limiting access to Personal Health Information (PHI) and Personally Identifying Information (PII) as well as audit and security requirements. In short, if you deal with medical information in the states, this is something that you need to deal with. In the rest of the world, there are similar standards and requirements.With HIPAA compliant accounts, RavenDB Cloud takes on itself a lot of the details around ensuring that your data is stored in a safe environment and in a manner that match the HIPAA requirements. For example, the audit logs are maintained for a minimum of six years. In addition, there are further protections on accessing your cluster and we enforce a set of rules to ensure that you don&#x2019;t accidently expose private data. This feature ensures that you can easily run HIPAA compliant systems on top of RavenDB Cloud with a minimum of hassle.</p>
         </article>
-        <article id="article-1404">
+        <article id="article-1406">
             <a href="https://andrewlock.net/deploying-asp-net-core-applications-to-kubernetes-part-8-running-database-migrations-using-jobs-and-init-containers/" target="_blank">
-                <h2 class="title mb-6" id="article-1404">Running database migrations using jobs and init containers</h2>
+                <h2 class="title mb-6" id="article-1406">Running database migrations using jobs and init containers</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Deploying ASP.NET Core applications to Kubernetes - Part 8</p>
         </article>
-        <article id="article-1405">
+        <article id="article-1407">
             <a href="https://www.meziantou.net/publishing-a-self-contained-blazor-component-razor-css-js-as-a-nuget-package.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1405">Publishing a self-contained Blazor component (Razor &#x2B; CSS &#x2B; JS) as a NuGet package</h2>
+                <h2 class="title mb-6" id="article-1407">Publishing a self-contained Blazor component (Razor &#x2B; CSS &#x2B; JS) as a NuGet package</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I describe how to create and publish a self-contained Blazor component as a NuGet package. By self-contained I mean that the NuGet package will contain the Blazor component (Razor &#x2B; C#), the style (CSS) and the JavaScript code. Also, the consumer of the package only has to use the com</p>
         </article>
-        <article id="article-1406">
+        <article id="article-1408">
             <a href="https://ayende.com/blog/192129-B/looking-for-a-php-developer-to-build-a-php-ravendb-client" target="_blank">
-                <h2 class="title mb-6" id="article-1406">Looking for a PHP developer to build a PHP RavenDB client</h2>
+                <h2 class="title mb-6" id="article-1408">Looking for a PHP developer to build a PHP RavenDB client</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are looking to expand the number of top tier drivers and build a RavenDB client for PHP. We currently have 1st tier clients for .NET, JVM, Python, Go, C&#x2B;&#x2B; and Node.JS. There are also 2nd tier clients for Ruby, PHP, R and a bunch of other environments. We want to build a fully fledged client for RavenDB for PHP customers and I have had great success in the past in reaching awesome talent through this blog. Chris Kowalczyk had done our Go client and detailed the process in a great blog post. The project will involve building the RavenDB client for PHP, documenting it as well as building a small sample app or two. If you are interested or know someone who would be, I would very happy if you can send us details to jobs@ravendb.net.</p>
         </article>
-        <article id="article-1407">
+        <article id="article-1409">
             <a href="https://www.meziantou.net/capturing-unmatched-attributes-and-attribute-splatting-in-blazor.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1407">Capturing unmatched attributes and attribute splatting in Blazor</h2>
+                <h2 class="title mb-6" id="article-1409">Capturing unmatched attributes and attribute splatting in Blazor</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the previous posts on Blazor, we have seen how to create a component and define parameters. For instance, you can check the posts about the Modal component, the Repeater component, or the Enum Select component.Sometimes, you want to allow the user to add any arbitrary attributes to the component</p>
         </article>
-        <article id="article-1408">
+        <article id="article-1410">
             <a href="https://www.stevejgordon.co.uk/dotnet-internals-system-threading-channels-unboundedchannelt-part-3" target="_blank">
-                <h2 class="title mb-6" id="article-1408">.NET Internals: System.Threading.Channels &#x2013; UnboundedChannel&lt;T&gt; Part 3</h2>
+                <h2 class="title mb-6" id="article-1410">.NET Internals: System.Threading.Channels &#x2013; UnboundedChannel&lt;T&gt; Part 3</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,38 +296,6 @@
                 posted on: October 14, 2020
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the previous post in this mini-series, we learned how items are written to an UnboundedChannel&lt;T&gt;. We explored the UnboundedChannel&lt;T&gt; type itself in the first blog post. Today I will complete the series and focus on how items are read from an UnboundedChannel using its UnboundedChannelReader. Other Posts in Series Part 1 &#x2013; UnboundedChannel&lt;T&gt; Part [&#x2026;]</p>
-        </article>
-        <article id="article-1409">
-            <a href="https://ayende.com/blog/192097-C/getting-a-result-index-score-from-ravendb-map-reduce-results" target="_blank">
-                <h2 class="title mb-6" id="article-1409">Getting a result index score from RavenDB Map/Reduce results</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 14, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB has the concept of metadata, which is widely used for many reasons. One of the ways we use the metadata is to provide additional context about a document. This is useful for both the user and RavenDB. For example, when you query, RavenDB will store the index score (how well a particular document matched the query) in the metadata. You can access the document metadata using:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          var metadata = session.Advanced.GetMetadataFor(doc);&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          doc.metadata.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;This works great as long as we are dealing with documents. However, when you query a Map/Reduce index, you aren&#x2019;t going to get a document back. You are going to get a projection over the aggregated information. It turns out that in this case, there is no way to get the metadata of the instance. To be more exact, the metadata isn&#x2019;t managed by RavenDB, so it isn&#x2019;t keeping it around for the GetMetadataFor() call. However, you can just ask the metadata to be serialized with the rest of the projection&#x2019;s data, like so:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          public class Metadata&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              [JsonProperty(&quot;@index-score&quot;)]&#xA;        &#xA;        &#xA;          &#xA;              public double Score { get;set; }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          public class Result&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              [JsonProperty(&quot;@metadata&quot;)]&#xA;        &#xA;        &#xA;          &#xA;              public Metadata Metadata { get; set; }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              public List&lt;AllRatings&gt; AllRatings { get; set; }&#xA;        &#xA;        &#xA;          &#xA;              public string Name { get; set; }&#xA;        &#xA;        &#xA;          &#xA;              public float Rating { get; set; }&#xA;        &#xA;        &#xA;          &#xA;              public int TotalVotes { get; set; }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          public class AllRatings&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              public string Rating { get; set; }&#xA;        &#xA;        &#xA;          &#xA;              public int Votes { get; set; }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          projection.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;In other words, we embed the metadata directly into the projection. Now, when we query, we can get the data directly:</p>
-        </article>
-        <article id="article-1410">
-            <a href="https://ardalis.com/estimates-are-temporary/" target="_blank">
-                <h2 class="title mb-6" id="article-1410">Estimates Are Temporary</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 14, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is the fourth of the 5 Laws of Software Estimates. I expanded on the third law of software estimates in my previous article. Estimates&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="140.html"><span class="back arrow"></span></a>
