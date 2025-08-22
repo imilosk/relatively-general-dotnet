@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-731">
+            <a href="https://ayende.com/blog/198977-B/the-cost-of-timing-out" target="_blank">
+                <h2 class="title mb-6" id="article-731">The cost of timing out</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 07, 2023
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let&#x2019;s assume that you want to make a remote call to another server. Your code looks something like this:&#xA;var response = await httpClient.GetAsync(&quot;https://api.myservice.app/v1/create-snap&quot;, cancellationTokenSource.Token);&#xA;This is simple, and it works, until you realize that you have a problem. By default, this request will time out in 100 seconds. You can set it to a shorter timeout using HttpClient.Timeout property, but that will lead to other problems.&#xA;The problem is that internally, inside HttpClient, if you are using a Timeout, it will call CancellationTokenSource.CancelAfter(). That is... what we want to do, no?&#xA;Well, in theory, but there is a problem with this approach. Let&#x27;s sa look at how this actually works, shall we?&#xA;It ends up setting up a&#xA0;Timer instance, as you can see in the code. The problem is that this will modify a global value (well, one of them, there are by default N timers in the process, where N is the number of CPUs that you have on the machine.&#xA;What&#xA0;that&#xA0;means is that in order to register a timeout, you need to take a look. If you have a high concurrency situation, setting up the timeouts may be&#xA0;incredibly expensive.&#xA;Given that the timeout is usually a fixed value, within RavenDB we solved that using a different manner. We set up a set of timers that will go off periodically and then use this instead. We can request a task that will be completed on the next timeout duration. This way, we&#x27;ll not be contending on the global locks, and we&#x27;ll have a single value to set when the timeout happens.&#xA;The code we use ends up being somewhat more complex:&#xA;var sendTask = httpClient.GetAsync(&quot;https://api.myservice.app/v1/create-snap&quot;, cancellationTokenSource.Token);&#xA;var waitTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(15), cancellationTokenSource.Token);&#xA;&#xA;if (Task.WaitAny(sendTask, waitTask) == 1)&#xA;{&#xA;        throw new TimeoutException(&quot;The request to the service timed out.&quot;);&#xA;}&#xA;Because we aren&#x27;t spending a lot of time doing setup for a (rare) event, we can complete things a lot faster.&#xA;I don&#x27;t&#xA0;like this approach, to be honest. I would rather have a better system in place, but it is a good workaround for a serious problem when you are dealing with high-performance systems.&#xA;You can see how we implemented the TimeoutManager&#xA0;inside RavenDB, the goal was to get&#xA0;roughly the same time frame, but we are absolutely fine with doing&#xA0;roughly the right thing, rather than pay the full cost of doing this exactly as needed. For our scenario, roughly is more than accurate enough.</p>
+        </article>
+        <article id="article-732">
             <a href="https://andrewlock.net/behind-the-scenes-of-minimal-apis-6-generating-the-response-writing-expression/" target="_blank">
-                <h2 class="title mb-6" id="article-731">Generating the response writing expression for RequestDelegate</h2>
+                <h2 class="title mb-6" id="article-732">Generating the response writing expression for RequestDelegate</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Behind the scenes of minimal APIs - Part 6</p>
         </article>
-        <article id="article-732">
+        <article id="article-733">
             <a href="https://www.meziantou.net/using-source-generated-regex-in-asp-net-core-routing.htm" target="_blank">
-                <h2 class="title mb-6" id="article-732">Using source-generated regex in ASP.NET Core route constraints</h2>
+                <h2 class="title mb-6" id="article-733">Using source-generated regex in ASP.NET Core route constraints</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">To use the Regex source generator, you need to use .NET 7 and C# 11. Source Generated Regexes provide multiple advantages over traditional regexes:Faster startup time as all the code is generated at compile time. You don&#x27;t need to parse the regex pattern and generate an optimized code to execute th</p>
         </article>
-        <article id="article-733">
+        <article id="article-734">
             <a href="https://ayende.com/blog/198945-B/on-ai-gpt-and-the-future-of-developers" target="_blank">
-                <h2 class="title mb-6" id="article-733">On AI, GPT and the future of developers</h2>
+                <h2 class="title mb-6" id="article-734">On AI, GPT and the future of developers</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When I started using GitHub Copilot, I was quite amazed at how good it was. Sessions using ChatGPT can be jaw dropping in terms of the generated content.&#xA;The immediate reaction from many people is to consider what the impact of that would be on the humans who currently fill those roles. Surely, if we can get a machine to do the task of a human, we can all benefit (except for the person made redundant, I guess).&#xA;I had a long discussion on the topic recently and I think that it is a good topic for a blog post, given the current interest in the subject matter.&#xA;The history of replacing manual labor with automated machines goes back as far as you&#x2019;ll like to stretch it. I wouldn&#x2019;t go back to the horse &amp; plow, but certain the Luddites and their arguments about the impact of machinery on the populace will sound familiar to anyone today.&#xA;The standard answer is that some professions will go away, but new ones will pop up, instead. The classic example is the ice salesman. That used to be a function, a guy on a horse-drawn carriage that would sell you ice to keep your food cold. You can assume that this profession is no longer relevant, of course.&#xA;The difference here is that we now have computer programs and AI taking over what was classically thought impossible. You can ask Dall-E or Stable Diffusion for an image and in a few seconds, you&#x2019;ll have a beautiful render that may actually match what you requested.&#xA;You can start writing code with GitHub Copilot and it will predict what you want to do to an extent that is absolutely awe-inspiring.&#xA;So what is the role of the human in all of this? If I can ask ChatGPT or Copilot to write me an email validation function, what do I need a developer for?&#xA;Here is ChatGPT&#x2019;s output:&#xA;&#xA;&#xA;&#xA;And here is Copilot&#x2019;s output:&#xA;&#xA;&#xA;&#xA;I would rate the MailAddress version better, since I know that you can&#x2019;t actually manage emails via Regex. I tried to take this further and ask ChatGPT about the Regex, and got:&#xA;&#xA;&#xA;&#xA;ChatGPT is confused, and the answer doesn&#x2019;t make any sort of sense.&#xA;Most of the time spent on &#x201C;research&#x201D; for this post was waiting for ChatGPT to actually produce a result, but this post isn&#x2019;t about nitpicking, actually.&#xA;The whole premise around &#x201C;machines will make us redundant&#x201D; is that the sole role of a developer is taking a low-level requirement such as email validation and producing the code to match.&#xA;Writing such low-hanging fruit is not your job. For that matter, a function is not your job. Nor is writing code a significant portion of that. A developer needs to be able to build the system architecture and design the interaction between components and the overall system.&#xA;They need to make sure that the system is performant, meet the non-functional requirements, etc. A developer would spend a lot more time reading code than writing it.&#xA;Here is a more realistic example of using ChatGPT, asking it to write to a file using a write-ahead log. I am both amazed by the quality of the answer and find myself unable to use even a bit of the code in there. The scary thing is that this code looks correct at a glance. It is wrong, dangerously so, but you&#x2019;ll need to be a subject matter expert to know that. In this case, this doesn&#x2019;t meet the requirements, the provided solution has security issues and doesn&#x2019;t actually work.&#xA;On the other hand, I asked it about password hashing and I would give this answer a good mark.&#xA;I believe it will get better over time, but the overall context matters. We have a lot of experience in trying to get the secretary to write code. There have been many tools trying to do that, going all the way back to CASE in the 80s.&#xA;There used to be a profession called: &#x201C;computer&#x201D;, where you could hire a person to compute math for you. Pocket calculators didn&#x2019;t invalidate them, and Excel didn&#x2019;t make them redundant. They are now called accountants or data scientists, instead. And use the new tools (admittedly, calling calculators or Excel new feels very strange) to boost up their productivity enormously.&#xA;Developing with something like Copilot is a far easier task, since I can usually just tab complete a lot of the routine details. But having a tool to do some part of the job doesn&#x2019;t mean that there is no work to be done. It means that a developer can speed up the routine bits and get to grips faster / more easily with the other challenges it has, such as figuring out why the system doesn&#x2019;t do what it needs to, improving existing behavior, etc.&#xA;Here is a great way to use ChatGPT as part of your work, ask it to optimize a function. For this scenario, it did a great job. For more complex scenarios? There is too much context to express.&#xA;My final conclusion is that this is a really awesome tool to assist you. It can have a massive impact on productivity, especially for people working in an area that they aren&#x2019;t familiar with. The downside is that sometimes it will generate junk, then again, sometimes real people do that as well.&#xA;The next few years are going to be really interesting, since it provides a whole new level of capability for the industry at large, but I don&#x2019;t think that it would shake the reality on the ground.</p>
         </article>
-        <article id="article-734">
+        <article id="article-735">
             <a href="https://andrewlock.net/behind-the-scenes-of-minimal-apis-5-generating-argument-expressions-for-minimal-apis-continuted/" target="_blank">
-                <h2 class="title mb-6" id="article-734">Generating argument expressions for minimal APIs (continued)</h2>
+                <h2 class="title mb-6" id="article-735">Generating argument expressions for minimal APIs (continued)</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Behind the scenes of minimal APIs - Part 5</p>
         </article>
-        <article id="article-735">
+        <article id="article-736">
             <a href="https://www.meziantou.net/mocking-an-httpclient-using-asp-net-core-testserver.htm" target="_blank">
-                <h2 class="title mb-6" id="article-735">Mocking an HttpClient using ASP.NET Core TestServer</h2>
+                <h2 class="title mb-6" id="article-736">Mocking an HttpClient using ASP.NET Core TestServer</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve already written about mocking an HttpClient using an HttpClientHandler. You can write the HttpClientHandler yourself or use a mocking library. Multiple NuGet packages can help you write the HttpClientHandler such as Moq, RichardSzalay.MockHttp, HttpClientMockBuilder, SoloX.CodeQuality.Test.Hel</p>
         </article>
-        <article id="article-736">
+        <article id="article-737">
             <a href="https://ayende.com/blog/198913-C/production-postmortem-the-server-ate-all-my-memory" target="_blank">
-                <h2 class="title mb-6" id="article-736">Production postmortem</h2>
+                <h2 class="title mb-6" id="article-737">Production postmortem</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A customer reported a scenario where RavenDB was using stupendous amounts of memory. In the orders of tens of GB on a system that didn&#x2019;t have that much load.&#xA;Our first suspicion was that this is an issue with reading the metrics, since RavenDB will try to keep as much of the data in memory, which sometimes leads users to worry. I spoke about this at length in the past.&#xA;In this case, that wasn&#x2019;t the case. We were able to drill down into the exact cause of the memory usage and we found out that RavenDB was using an abnormally high amount of memory. The question was why that was, exactly.&#xA;We looked into the common operations on the server, and we found a suspicious query, it looked something like this:&#xA;&#xA;from index &#x27;Sales/Actions&#x27; where endsWith(WorkflowStage, &#x27;/Final&#x27;)&#xA;&#xA;The endsWith query was suspicious, so we looked into that further. In general, endsWith requires us to scan all the unique terms for a particular field, but in most cases, there aren&#x2019;t that many unique values for a field. In this case, however, that wasn&#x2019;t the case, here are some of the values for WorkflowStage:&#xA;&#xA;Workflows/3a1af12a-b5d2-4c96-9348-177ebaacab6c/Step-2&#xA;Workflows/6aacc86c-2f28-4b8b-8dee-1024314d5add/Final&#xA;&#xA;In total, there were about 250 million&#xA0;sales in the database, each one of them with a unique WorflowStage value.&#xA;What does this mean, in terms of RavenDB query execution? Well, the fields are indexed, but we need to effectively do:&#xA;&#xA;&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          public IEnumerable&lt;string&gt; EndsWith(string field, string endsWith)&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;            foreach((string term, string documentId) in GetFieldValues(field))&#xA;        &#xA;        &#xA;          &#xA;            {&#xA;        &#xA;        &#xA;          &#xA;              if(term.EndsWith(endsWith))&#xA;        &#xA;        &#xA;          &#xA;                yield return documentId;&#xA;        &#xA;        &#xA;          &#xA;            }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          query.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;&#xA;&#xA;This isn&#x2019;t the actual code, but it will show you what is going on.&#xA;In other words, in order to process this query, we have to scan (and materialize) all 250 million unique terms for this field. Obviously that is going to consume a lot of memory.&#xA;But what is the solution to that? Instead of doing an expensive endsWith query, we can move the computation from the query time to the index time.&#xA;In other words, instead of indexing the WorkflowStage field&#xA0; as is, we&#x2019;ll extract the information we want from it. The index would have one of those:&#xA;&#xA;IsFinalWorkFlowStage = doc.WorkflowStage.EndsWith(&#x201C;/Final&#x201D;),&#xA;WorkflowStagePostfix = doc.WorkflowStage.Split(&#x2018;/&#x2019;).Last()&#xA;&#xA;The first one will check whether&#xA0;the value is final or not, while the second just gets the (one of hopefully a few) postfixes for the field. We can then query using equality instead of endsWith, leading to far better performance and greatly reduced memory usage, since we don&#x2019;t need to materialize any values during the query.</p>
         </article>
-        <article id="article-737">
+        <article id="article-738">
             <a href="https://andrewlock.net/behind-the-scenes-of-minimal-apis-4-generating-argument-expressions-for-minimal-apis/" target="_blank">
-                <h2 class="title mb-6" id="article-737">Generating argument expressions for minimal APIs</h2>
+                <h2 class="title mb-6" id="article-738">Generating argument expressions for minimal APIs</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Behind the scenes of minimal APIs - Part 4</p>
         </article>
-        <article id="article-738">
+        <article id="article-739">
             <a href="https://enterprisecraftsmanship.com/posts/which-collection-interface-to-use/" target="_blank">
-                <h2 class="title mb-6" id="article-738">Which collection interface to use?</h2>
+                <h2 class="title mb-6" id="article-739">Which collection interface to use?</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let&#x2019;s talk about when to use which collection type and why.</p>
         </article>
-        <article id="article-739">
+        <article id="article-740">
             <a href="https://ayende.com/blog/198881-C/production-postmortem-the-big-server-that-couldnt-handle-the-load" target="_blank">
-                <h2 class="title mb-6" id="article-739">Production postmortem</h2>
+                <h2 class="title mb-6" id="article-740">Production postmortem</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: January 23, 2023
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A user of ours called us, quite frantic. They are running a lot of systems on RavenDB, and have been for quite some time.&#xA;However, very recently they started to run into severe issues. RavenDB would complain that there isn&#x2019;t sufficient memory to run.&#xA;The system metrics, however, said that there are still gobs of GBs available (I believe that this is the appropriate technical term).&#xA;After verifying the situation, the on-call engineer escalated the issue. The problem was weird. There was enough memory, for sure, but for some reason RavenDB would be unable to run properly.&#xA;An important aspect is that this user is running a multi-tenant system, with each tenant being served by its own database. Each database has a few indexes as well.&#xA;Once we figured that out, it was actually easy to understand what is going on.&#xA;There are actually quite a few limits that you have to take into account. I talked about them here. In that post, the issue was the maximum number of tasks defined by the system. After which, you can no longer create new threads.&#xA;In this case, the suspect was: vm.max_map_count.&#xA;Beyond just total memory, Linux has a limit on the number of memory mappings that a process may have. And RavenDB uses Voron, which is based on mmap(), and each database and each index typically have multiple maps going on.&#xA;Given the number of databases involved&#x2026;&#xA;The solution was to increase the max_map_count and add a task for us, to give a warning to the user ahead of time when they are approaching the system&#x27;s limits.</p>
-        </article>
-        <article id="article-740">
-            <a href="https://ardalis.com/chrome-browser-tabs-to-links/" target="_blank">
-                <h2 class="title mb-6" id="article-740">Chrome Browser Tabs to Links</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 23, 2023
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It often happens when you&#x27;re looking for a solution to a problem that you end up with a bunch of browser tabs open. Some were dead ends&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="73.html"><span class="back arrow"></span></a>

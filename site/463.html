@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4621">
+            <a href="https://ayende.com/blog/156513/assuming-that-the-laws-of-physics-no-longer-apply-we-can-build-this" target="_blank">
+                <h2 class="title mb-6" id="article-4621">Assuming that the laws of physics no longer apply, we can build this</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 08, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a reply to a post by Frans Bouma, in which he asks for:  &#x2026;loud vendors should offer simply one VM to me. On that VM I run the websites, store my DB and my files. As it&#x27;s a virtual machine, how this machine is actually ran on physical hardware (e.g. partitioned), I don&#x27;t care, as that&#x27;s the problem for the cloud vendor to solve. If I need more resources, e.g. I have more traffic to my server, way more visitors per day, the VM stretches, like I bought a bigger box. This frees me from the problem which comes with multiple VMs: I don&#x27;t have any refactoring to do at all: I can simply build my website as if it runs on my local hardware server, upload it to the VM offered by the cloud vendor, install it on the VM and I&#x27;m done. Um&#x2026; no.  Go ahead and read the whole post, it is interesting. But the underlying premise that is rely on is flawed. It is like starting out with assuming that since TCP/IP contains no built in prohibition to send data faster than light, the cloud providers can and should create networks that can send data faster than light. After all, I can show a clear business case for the reduced ping time, and that is certainly something that can be abstracted from my application. What aren&#x2019;t those bozos doing that? Well, the answer to that is that it just ain&#x2019;t possible. There are several minor problems along the way. The CAP theorem, to start with, but even if we ignore that aspect of the problem, there are also the fallacies of distributed computing. According to Frans&#x2019; premise, we can have a single VM that can scale up to as many machines as is needed, without any change required to the system. Let us start with Frans&#x2019; answer to the actual scope of the problem:  But what about memory replication and other problems? This environment isn&#x27;t simple, at least not for the cloud vendor. But it is simple for the customer who wants to run his sites in that cloud: no work needed. No refactoring needed of existing code. Upload it, run it. Um.. no.  Let us take a look at a few pieces of code, and see what is going to happen to then in Frans&#x2019; cloud environment. For example, let us take a look at this: var tax = 0;&#xA;foreach(var item in order.Items)&#xA;{&#xA;  tax &#x2B;= item.CalculateTax();   &#xA;}&#xA;order.Tax = tax;&#xA;&#xA;&#xA;Problem, because of the elasticity of the VM, we actually spread things around so each of the items in the order collection is located in another physical machine. This is, of course, completely transparent to the code. But that means that each loop iteration is actually doing a network call behind the scene.&#xA;OR/M users are familiar with this as the SELECT N&#x2B;1 problem, but in this case, you have a potential problem on every memory access. Network attached memory isn&#x2019;t new, you can read about it in OS books and it is a nice theoretical idea, but it is just isn&#x2019;t going to work, because you actually care about the speed of accessing the data.&#xA;In fact, we have many algorithms that were changed specifically to be able to take advantage of cache lines, L1 &amp; L2 cache, etc. Because that has a major increase in the system performance, and that is only on a single machine. Trying to imagine a transparent network memory is futile, you actually care about memory access speed, a lot.&#xA;But let us talk about another aspect, I want to make have an always incrementing order id number. So I do:&#xA;&#xA;Interlocked.Increment(ref lastOrderId);&#xA;All well and good when running on a single machine, but how should the VM make it work when running on multiple machines? &#xA;And remember, this call actually translate to a purpose built assembly instruction (XADD or one of its friends). In this case, you need to do this across the network, and touch as many machines as your system currently runs on.&#xA;But the whole point here is to allow us to rapidly generate a new number. This has now turned into a total mess in terms of performance.&#xA;What about parallel computing, for that matter?&#xA;var results = new Result[items.Length];&#xA;Parallel.For(items, (item, i) =&gt; &#xA;{&#xA;    results[i] = item.Calculate();&#xA;});&#xA;&#xA;&#xA;I have many items, and I want to be able to compute the result in parallel, so I run this fairly standard code. But we are actually going to execute this on multiple threads, so this get scheduled on several different machines. But now you have to copy the results buffer to all of those machines, as well as any related state that they have, then copy it back out when it is done, then somehow merge the different changes made by different systems into a coherent whole.&#xA;Good luck with that.&#xA;I could go on, but I think that you get the point by now.&#xA;And we haven&#x2019;t talked about the error condition yet. What happen if my system is running on 3 machines, and one of them goes down (power outage, hardware failure, etc)? 3rd of my memory, ongoing work and a lot of stuff just got lost. For that matter, I might have (actually, probably have) dangling references to memory that used to be on the failed machines, so the other two systems are likely to hit this inaccessible memory and fail themselves.&#xA;So.. no, this idea is a pipe dream, it isn&#x2019;t going to work, not because of some evil plot by dastardly folks conspiring to make your life harder, but for the simple reason that it is easier to fly by flapping your arms.</p>
+        </article>
+        <article id="article-4622">
             <a href="https://benfoster.io/blog/windows-azure-something-for-the-little-guy/" target="_blank">
-                <h2 class="title mb-6" id="article-4621">Windows Azure - Something for the little guy...almost.</h2>
+                <h2 class="title mb-6" id="article-4622">Windows Azure - Something for the little guy...almost.</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday Microsoft released some fantastic new features to the Azure platform. Azure is now more attractive than ever to smaller dev shops but is still not quite there.</p>
         </article>
-        <article id="article-4622">
+        <article id="article-4623">
             <a href="https://ayende.com/blog/156097/the-high-cost-of-concurrentbag-in-net-4-0" target="_blank">
-                <h2 class="title mb-6" id="article-4622">The HIGH cost of ConcurrentBag in .NET 4.0</h2>
+                <h2 class="title mb-6" id="article-4623">The HIGH cost of ConcurrentBag in .NET 4.0</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I got some strange results when using concurrent collections, so I decided to try to track it down, and wrote the following code: var count = ?;&#xA;var list = new List&lt;object&gt;(count);&#xA;var sp = Stopwatch.StartNew();&#xA;for (int i = 0; i &lt; count; i&#x2B;&#x2B;)&#xA;{&#xA;    list.Add(new ConcurrentBag&lt;int&gt;());&#xA;}&#xA;sp.Stop();&#xA;Console.WriteLine(&quot;{0} {2} items in {1:#,#;;0}ms = {3:#,#;;0}ms per item&quot;,&#xA;    sp.Elapsed, sp.ElapsedMilliseconds, count, sp.ElapsedMilliseconds / count);&#xA;&#xA;&#xA;&#xA;And then I started to play with the numbers, and it is not good.&#xA;&#xA;10 items in 2ms = 0ms per item&#xA;This is incredibly high number, you have to understand. Just to compare, List&lt;int&gt; takes 8 ms to create 100,000 items.&#xA;Let us see how it works when we use more of this.&#xA;&#xA;100 items in 5ms = 0ms per item &#xA;1,000 items in 37ms = 0ms per item &#xA;10,000 items in 2,319ms = 0ms per item&#xA;Note the numbers, will you?&#xA;1,000 items in 37 ms, but 10,000 items? 2.3 seconds!&#xA;&#xA;20,000 items in 21,331ms = 1ms per item&#xA;And doubling the amount took ten times as long?&#xA;&#xA;25,000 items in 32,588ms = 1ms per item&#xA;And at this point, I stopped trying, because I didn&#x2019;t have the patience.&#xA;Note that the other concurrent collection, ConcurrentStack, ConcurrentQueue and ConcurrentDictionary do not suffer from the same problem.&#xA;I contacted Microsoft about this, and this is already resolved in .NET 4.5. The underlying issue was that ThreadLocal, which ConcurrentBag uses, didn&#x2019;t expect to have a lot of instances. That has been fixed, and now can run fairly fast.</p>
         </article>
-        <article id="article-4623">
+        <article id="article-4624">
             <a href="https://ardalis.com/windows-azure-june-2012-update-required-reading/" target="_blank">
-                <h2 class="title mb-6" id="article-4623">Windows Azure June 2012 Update Required Reading</h2>
+                <h2 class="title mb-6" id="article-4624">Windows Azure June 2012 Update Required Reading</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today (right now as I type this) Microsoft has unveiled a TON of new features that are launching as part of Windows Azure. If you&#x2019;d like to&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4624">
+        <article id="article-4625">
             <a href="https://ardalis.com/view-network-status-and-listening-ports-on-windows-with-netstat/" target="_blank">
-                <h2 class="title mb-6" id="article-4624">View Network Status and Listening Ports on Windows with Netstat</h2>
+                <h2 class="title mb-6" id="article-4625">View Network Status and Listening Ports on Windows with Netstat</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There are plenty of times when you may need to know which applications are running on which ports on your machine. Some examples of&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4625">
+        <article id="article-4626">
             <a href="https://ayende.com/blog/153089/truth-in-advertising" target="_blank">
-                <h2 class="title mb-6" id="article-4625">Truth in advertising</h2>
+                <h2 class="title mb-6" id="article-4626">Truth in advertising</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So I am at a client site discussing things about their new version of the software. And while it is easy to promise things, we did a POC to make sure that things will work out. Because I know users, I made sure to have this ready:  I do software behavior, but I know my limitations, and doing good looking UI is one of them. I had too many software demos blow up because of silly UI issues.</p>
         </article>
-        <article id="article-4626">
+        <article id="article-4627">
             <a href="https://benfoster.io/blog/aspnet-mvc-helper-for-twitter-bootstraps-typeahead-plugin/" target="_blank">
-                <h2 class="title mb-6" id="article-4626">ASP.NET MVC Helper for Twitter Bootstrap&#x27;s Typeahead plugin</h2>
+                <h2 class="title mb-6" id="article-4627">ASP.NET MVC Helper for Twitter Bootstrap&#x27;s Typeahead plugin</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A ASP.NET MVC Helper for Twitter Bootstrap&#x2019;s Typeahead plugin</p>
         </article>
-        <article id="article-4627">
+        <article id="article-4628">
             <a href="https://ayende.com/blog/156001/an-entity-framework-profiler-user-story" target="_blank">
-                <h2 class="title mb-6" id="article-4627">An Entity Framework Profiler user story</h2>
+                <h2 class="title mb-6" id="article-4628">An Entity Framework Profiler user story</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that I really love about build things like the profilers and RavenDB is that it gives me the chance to really spread a lot of my experience in codified form. Occasionally, we get customer feedback to that effect, and I thought that I would share this one with you.  Jeremy Holt have been using the Entity Framework Profiler and has the following to say:  The biggest issue it has highlighted for me is the question of the Context being created on different threads (the N&#x2B;1 was easy to get my head around and resolve). The problem is the difficulty in finding definitive examples of how/when the Context should be created. (Also found my unbound queries &#x2013; thanks for that!!) It was working great (except for a couple of threading issues J) until I ran EFProf. I love the &#x201C;page of shame&#x201D; in EFProf &#x2013; I think you called it &#x201C;query analysis alerts&#x201D; or something pompous like that &#x2013; may I suggest you rename it to &#x201C;errors dumb programmers make&#x201D; J I don&#x2019;t think that this will be renamed, but this does point out something very important. What we are doing with the profilers is much more than simply show you what your application is doing. We are actually analyzing this data through a complex set of rules in order to find common pitfalls. In Jeremy&#x2019;s case, the common ones were cross thread usage and Select N&#x2B;1. And by highlighting those issues, the profiler make it easy to do so. More so, it make you feel good about doing this, in a way that you wouldn&#x2019;t get from standard analytics tools. By having thresholds that you can visibly see and avoid, you get to create better software.</p>
         </article>
-        <article id="article-4628">
+        <article id="article-4629">
             <a href="https://ayende.com/blog/155969/your-atm-doesnt-use-transactions" target="_blank">
-                <h2 class="title mb-6" id="article-4628">Your ATM doesn&#x2019;t use transactions</h2>
+                <h2 class="title mb-6" id="article-4629">Your ATM doesn&#x2019;t use transactions</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just got a series of SMSes from my back, saying that someone just made several withdrawals from my account. As I am currently sitting and watching TV, I was a bit concerned.  It appears that my wife withdrew some money, but there was an issue with one ATM machine, so she used another one.  The problem, I got 3 SMS messages, saying that the follow activities happened on my account:  ATM withdrawal for 2,000 NIS ATM withdrawal for 2,000 NIS ATM withdrawal for 2,900 NIS Checking with my wife, she had actually withdrawn only 2,900.  I was a bit concerned, so I logged into the bank and got this:  In English, this is:    Date Description Auth Code Debit Credit  10 Apr ATM withdrawal  00003581 2,000 &#xA0;  10 Apr ATM withdrawal  00003581 &#xA0; 2,000  10 Apr ATM withdrawal  00003581 2,900 &#xA0; This is actually interesting, because the way my wife described it, she wen to the ATM, punch the right codes, and went through the motions of everything. Then, just before it was about to give her the money, it failed.  What is really interesting? From my point of view, is that I can actually see this in my bank account. We didn&#x2019;t have a transaction rollback because of failure to dispense the money. That isn&#x2019;t how ATM works. We actually had a compensating action (that occurred as separate transaction) to show that the ATM refunded the money it wasn&#x2019;t able to give. So next time someone tries to quote you &#x201C;banks use transactions&#x201D;, you can tell them that the bank definition of what a transaction is would make any decent DTC cry with shame.</p>
         </article>
-        <article id="article-4629">
+        <article id="article-4630">
             <a href="https://ardalis.com/favor-privileges-over-role-checks/" target="_blank">
-                <h2 class="title mb-6" id="article-4629">Favor Privileges over Role Checks</h2>
+                <h2 class="title mb-6" id="article-4630">Favor Privileges over Role Checks</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: June 02, 2012
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A very common practice in web applications, especially those written using the ASP.NET built-in Role provider (circa ASP.NET 2.0 / 2005), is&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-4630">
-            <a href="https://ardalis.com/economics-of-software-quality/" target="_blank">
-                <h2 class="title mb-6" id="article-4630">Economics of Software Quality</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 01, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When we talk about the quality of software, we must refine the discussion to make it clear whether we are talking about internal or external&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="462.html"><span class="back arrow"></span></a>
