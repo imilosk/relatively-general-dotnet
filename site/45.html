@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-441">
+            <a href="https://www.meziantou.net/creating-ico-files-from-multiple-images-in-dotnet.htm" target="_blank">
+                <h2 class="title mb-6" id="article-441">Creating ico files from multiple images in .NET</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: April 08, 2024
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Ico files are old but still widely used. One specificity of the ico format is that it can contain multiple images of different sizes. The format is not very complicated but there are not a lot of free tools to create an ico file from a list of images. Let&#x27;s create one in .NET!The specification of t</p>
+        </article>
+        <article id="article-442">
             <a href="https://ardalis.com/5-rules-dtos/" target="_blank">
-                <h2 class="title mb-6" id="article-441">5 Rules for DTOs</h2>
+                <h2 class="title mb-6" id="article-442">5 Rules for DTOs</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you don&#x27;t like reading, here&#x27;s my YouTube video with samples that covers why these 5 rules will help you write better DTOs: What&#x27;s a DTO&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-442">
+        <article id="article-443">
             <a href="https://ayende.com/blog/200929-B/vacations-leaky-abstractions-and-modeling-concerns-oh-my" target="_blank">
-                <h2 class="title mb-6" id="article-442">Vacations, leaky abstractions, and modeling concerns, oh my!</h2>
+                <h2 class="title mb-6" id="article-443">Vacations, leaky abstractions, and modeling concerns, oh my!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Our task today is to request (and obtain approval for) a vacation. But before we can make that request, we need to handle the challenge of building &#xA0; the vacation requesting system. Along the way, I want to focus a little bit on how to deal with some of the technical issues that may arise, such as concurrency.In most organizations, the actual details of managing employee vacations are a mess of a truly complicated series of internal policies, labor laws, and individual contracts. For this post, I&#x2019;m going to ignore all of that in favor of a much simplified workflow. An employee may Request a Vacation, which will need to be approved by their manager. For the purpose of discussion, we&#x2019;ll ignore all other aspects and set out to figure out how we can create a backend for this system.I&#x2019;m going to use a relational database as the backend for now, using the following schema. Note that this is obviously a highly simplified model, ignoring many real-world requirements. But this is sufficient to talk about the actual issue.After looking at the table structure, let&#x2019;s look at the code (again, ignoring data validation, error handling, and other rather important concerns).app.post(&#x27;/api/vacations/request&#x27;, async (req, res) =&gt; {&#xA;    const { employeeId, dates, reason } = req.body;&#xA;&#xA;&#xA;    await pgsql.query(`BEGIN TRANSACTION;`);&#xA;    const managerId = await pgsql.query(&#xA;      `SELECT manager FROM Employees WHERE id = $1;`,&#xA;      [employeeId]).rows[0].id;&#xA;    const vacReqId = await pgsql.query(&#xA;      `INSERT INTO VacationRequests (empId,approver,reason,status)&#xA;       VALUES ($1,$2,$3,&#x27;Pending&#x27;) RETURNING id;`,&#xA;       [employeeId,managerId,reason]).rows[0].id;&#xA;&#xA;&#xA;    for(const date of date) {&#xA;        await pgsql.query(&#xA;          `INSERT INTO VacationRequestDates&#xA;           (vacReqId, date, mandatory ,notes)&#xA;           VALUES ($1, $2, $3, $4);`, &#xA;          [vacReqId, d.date, d.mandatory, d.notes]);&#xA;    }&#xA;     &#xA;    await pgsql.query(`COMMIT;`);&#xA;&#xA;&#xA;    res.status(201).json({ requestId: result.rows[0].id });&#xA;});We create a new transaction, find who the manager for the employee is, and register a new VacationRequest for the employee with all the dates for that vacation. Pretty simple and easy, right? Let&#x2019;s look at the other side of this, approving a request.Here is how a manager is able to get the vacation dates that they need to approve for their employees. app.get(&#x27;/api/vacations/approval&#x27;, async (req, res) =&gt; {&#xA;  const { whoAmI } = req.body;&#xA; &#xA;  const vacations = await pgsql.query(&#xA;    `SELECT VRD.id, VR.empId, VR.reason, VRD.date, E.name,&#xA;           VRD.mandatory, VRD.notes&#xA;    FROM VacationRequests VR&#xA;    JOIN VacationRequestDates VRD ON VR.id = VRD.vacReqId&#xA;    JOIN Employees E ON VR.empId = E.id&#xA;    WHERE VR.approver = $1 AND VR.status = &#x27;Pending&#x27;`,&#xA;    [whoAmI]);&#xA;&#xA;&#xA;  res.status(200).json({ vacations });&#xA;});As you can see, most of the code here consists of the SQL query itself. We join the three tables to find the dates that still require approval.I&#x2019;ll stop here for a second and let you look at the two previous pieces of code for a bit. I have to say, even though I&#x2019;m writing this code specifically to point out the problems, I had to force myself not to delete it. There was mental pressure behind my eyes as I wrote those lines. The issue isn&#x2019;t a problem with a lack of error handling or security. I&#x2019;m explicitly ignoring that for this sort of demo code. The actual problem that bugs me so much is modeling and behavior. Let&#x2019;s look at the output of the previous snippet, returning the vacation dates that we still need to approve. idempIdnamereasondate8483391Johnbirthday2024-08-018484321Janedentist2024-08-028484391Johnbirthday2024-08-02We have three separate entries that we need to approve, but notice that even though two of those vacation dates belong to the same employee (and are part of the same vacation request), they can be approved separately. In fact, it is likely that the manager will decide to approve John for the 1st of August and Jane for the 2nd, denying John&#x2019;s second vacation day. However, that isn&#x2019;t how it works. Since the actual approval is for the entire vacation request, approving one row in the table would approve all the related dates. When examining the model at the row level, it doesn&#x2019;t really work. The fact that the data is spread over multiple tables in the database is an immaterial issue related to the impedance mismatch between the document model and the relational model.Let&#x2019;s try and see if we can structure the query in a way that would make better sense from our perspective. Here is the new query (the rest of the code remains the same as the previous snippet).SELECT VRD.id, VR.empId, E.name, VR.reason,&#xA;    (&#xA;        SELECT json_agg(VRD)&#xA;        FROM VacationRequestDates VRD&#xA;        WHERE VR.id = VRD.vacReqId&#xA;    ) AS dates&#xA;FROM VacationRequests VR&#xA;JOIN Employees E ON VR.empId = E.id&#xA;WHERE VR.approver = $1 AND VR.status = &#x27;Pending&#x27;This is a little bit more complicated, and the output it gives is quite different. If we show the data in the same way as before, it is much easier to see that there is a single vacation request and that those dates are tied together.idempIdnamereasonstatusdate8483391JohnbirthdayPending2024-08-01and 2024-08-028484321JanedentistPending2024-08-02We are going to ignore the scenario of partial approval because it doesn&#x2019;t matter for the topic I&#x2019;m trying to cover. Let&#x2019;s discuss two other important features that we need to handle. How do we allow an employee to edit a vacation request, and how does the manager actually approve a request.Let&#x2019;s consider editing a vacation request by the employee. On the face of it, it&#x2019;s pretty simple. We show the vacation request to the employee and add the following endpoint to handle the update.app.post(&#x27;/api/vacation-request/date&#x27;, async (req, res) =&gt; {&#xA;  const { id, date, mandatory, notes, vacReqId } = req.body;&#xA; &#xA; if(id typeof == &#x27;number&#x27;) {&#xA;  await pgsql.query(&#xA;    `UPDATE VacationRequestDates&#xA;    SET date = $1, mandatory = $2, notes = $3&#xA;    WHERE id = $4`,&#xA;    [date, mandatory, notes, id]);&#xA; }&#xA; else {&#xA;  await pgsql.query(&#xA;    `INSERT INTO VacationRequestDates (date, mandatory, notes, vacReqId)&#xA;    VALUES ($1, $2, $3, $4)`,&#xA;    [date, mandatory, notes, vacReqId]);&#xA; }&#xA; &#xA;  res.status(200);&#xA;});&#xA;&#xA;&#xA;app.delete(&#x27;/api/vacation-request/date&#x27;, async (req, res) =&gt; {&#xA;  const { id } = req.query;&#xA; &#xA;  await pgsql.query(&#xA;    `DELETE FROM VacationRequestDates WHERE id = $1`,&#xA;    [id]);&#xA;&#xA;&#xA;  res.status(200);&#xA;});Again, this sort of code is like nails on board inside my head. I&#x2019;ll explain why in just a bit. For now, you can see that we actually need to handle three separate scenarios for editing an existing request date, adding a new one, or deleting it. I&#x2019;m now showing the code for updating the actual vacation request (such as the reason for the request) since that is pretty similar to the above snippet. The reason that this approach bugs me so much is because it violates transaction boundaries within the solution. Let&#x2019;s assume that I want to take Thursday off instead of Wednesday and add Friday as well. How would that be executed using the current API?I would need to send a request to update the date on one row in VacationRequestDates and another to add a new one. Each one of those operations would be its own independent transaction. That means that either one can fail. While I wanted to have both Thursday and Friday off, only the request for Friday may succeed, and the edit from Wednesday to Thursday might not.It also means that the approver may see a partial state of things, leading to an interesting problem and eventually an exploitable loophole in the system. Consider the scenario of the approver looking at vacation requests and approving them. I can arrange things so that while they are viewing the request, the employee will add additional dates. When the approver approves the request, they&#x2019;ll also approve the additional dates, unknowingly. Let&#x2019;s solve the problem with the transactional updates on the vacation request and see where that takes us:app.post(&#x27;/api/vacation-request/update&#x27;, async (req, res) =&gt; {&#xA;  const { varRecId, datesUpdates } = req.body;&#xA;  await pgsql.query(`BEGIN TRANSACTION;`);&#xA;&#xA;&#xA;  for (const { op, id, date, mandatory, notes } of datesUpdates) {&#xA;    if (op === &#x27;delete&#x27;) {&#xA;      await pgsql.query(`DELETE FROM VacationRequestDates&#xA;        WHERE id = $1;`,&#xA;        [id]);&#xA;    }&#xA;    else if (op === &#x27;insert&#x27;) {&#xA;      await pgsql.query(`INSERT INTO VacationRequestDates&#xA;        (varRecId, date, mandatory, notes)&#xA;        VALUES ($1, $2, $3, $4);`,&#xA;        [varRecId, date, mandatory, notes]);&#xA;     &#xA;    }&#xA;    else {&#xA;      await pgsql.query(`UPDATE VacationRequestDates&#xA;        SET date = $1, mandatory = $2, notes = $3&#xA;        WHERE id = $4;`,&#xA;        [date, mandatory, notes, id]);&#xA;    }&#xA;  }&#xA;&#xA;&#xA;  await pgsql.query(`COMMIT;`);&#xA;  res.status(200);&#xA;});That is&#x2026; a lot of code to go through. Note that I looked into Sequelize as well to see what kind of code that would produce when using an OR/M, it wasn&#x2019;t meaningfully simpler. There is a hidden bug in the code above. But you probably won&#x2019;t notice it no matter how much you&#x2019;ll look into it. The issue is code that isn&#x2019;t there. The API code above assumes that the caller will send us all&#xA0;the dates for the vacation requests, but it is easy to get into a situation where we may edit the same vacation requests from both the phone and the laptop, and get partial information. In other words, our vacation request on the database has four dates, but I just updated three of them. The last one is&#xA0;part of my vacation request, but since I didn&#x2019;t explicitly refer to that, the code above will ignore that. The end result is probably an inconsistent state.In other words, to reduce the impedance mismatch between my database and the way I work with the user, I leaned too much toward exposing the database to the callers. The fact that the underlying database is storing the data in multiple tables has leaked into the way I model my user interface and the wire API. That leads to a significant amount of complexity.Let&#x2019;s go back to the drawing board. Instead of trying to model the data as a set of rows that would be visually represented as a single unit, we need to actually think about a vacation request as a single unit. Take a look at this image, showing a vacation request form. That is how the business conceptualizes the problem: as a single cohesive unit encompassing all the necessary data for submitting and approving a vacation request.Note that for real systems, we&#x2019;ll require a lot more data, including details such as the actual vacation days taken, how they should be recorded against the employee&#x2019;s leave allowance, etc.The important aspect here is that instead of working with individual rows, we need to raise the bar and move to working with the entity as a whole. In modeling terms, this means that we won&#x2019;t work with rows but with Root Aggregate (from DDD terminology).But I already have all of this code written, so let&#x2019;s see how far I can push things before I even hit my own limits. Let&#x2019;s look at the code that is required to approve a vacation request. Here is the first draft I wrote to do so.app.post(&#x27;/api/vacation-request/approve&#x27;, async (req, res) =&gt; {&#xA;  const { varRecId, approver, status } = req.body;&#xA;&#xA;&#xA;  const res = await pgsql.query(`UPDATE VacationRequests&#xA;   SET status = $1 WHERE id = $2 and approver = $3;`,&#xA;    [status, varRecId, approver]);&#xA; &#xA;  if (res.rowCount == 0) {&#xA;    res.status(400)&#xA;      .send({ error: &#x27;No record found or wrong approver&#x27; });&#xA;  }&#xA;&#xA;&#xA;  res.status(200);&#xA;});Which will give me the vacation requests that I need to approve:idempIdnamereasonstatusdate8483391JohnbirthdayPending2024-08-01 and 2024-08-02And then I actually approve it using:POST /api/vacation-request/approve&#xA;{&quot;varRecId&quot;: 8483, &quot;approver&quot;: 9341, &quot;status&quot;: &quot;Approved&quot;}What is the problem now? Well, what happens if the employee modifies the vacation request between the two requests? The approver may end up approving the wrong details. How do we fix that?You may think that you can use locking on the approve operation, but we actually have just a single statement executed, so that doesn&#x2019;t matter. And given that we have two separate requests, with distinct database transactions between them, that isn&#x2019;t even possible.What we need to implement here is called Offline Optimistic Concurrency. In other words, we need to ensure that the version the manager approved is the same as the one that is currently in the database.In order to do that, we need to modify our schema and add a version&#xA0;column to the VacationRequests table, as you can see in the image.Now, any time that I make any modification on the VacationRequest, I must also increment the value of the Version field and check that it matches my expected value.Here is an example of how this looks like when the Employee is adding a new date to the vacation request. I shortened the code that we previously looked at to update a vacation request, so you can more clearly see the changes required to ensure that changes in the request will be detected between requests.app.post(&#x27;/api/vacation-request/insert-date&#x27;, async (req, res) =&gt; {&#xA;  const { varRecId, version,  } = req.body;&#xA;  await pgsql.query(`BEGIN TRANSACTION;`);&#xA;&#xA;&#xA;  const res = await pgsql.query(`UPDATE VacationRequests&#xA;   SET version = version &#x2B; 1&#xA;    WHERE id = $1 and version = $2;`,&#xA;    [varRecId, version]);&#xA;&#xA;&#xA;  if (res.rowCount == 0) {&#xA;    res.status(400)&#xA;      .send({ error: &#x27;No record found or wrong version&#x27; });&#xA;  }&#xA;&#xA;&#xA;  await pgsql.query(`INSERT INTO VacationRequestDates&#xA;        (varRecId, date, mandatory, notes)&#xA;        VALUES ($1, $2, $3, $4);`,&#xA;    [varRecId, date, mandatory, notes]);&#xA;&#xA;&#xA;  await pgsql.query(`COMMIT;`);&#xA;  res.status(200);&#xA;});And on the other side, approving the request is now:app.post(&#x27;/api/vacation-request/approve&#x27;, async (req, res) =&gt; {&#xA;  const { varRecId, approver, version, status } = req.body;&#xA;&#xA;&#xA;  const res = await pgsql.query(`UPDATE VacationRequests&#xA;   SET status = $1 and version = version &#x2B; 1&#xA;   WHERE id = $2 and approver = $3 and version = $4;`,&#xA;    [status, varRecId, approver, version]);&#xA; &#xA;  if (res.rowCount == 0) {&#xA;    res.status(400)&#xA;      .send({ &#xA;         error: &#x27;No record found or wrong approver or version&#x27;&#xA;       });&#xA;  }&#xA;&#xA;&#xA;  res.status(200);&#xA;});We need to send the version to the client when we read it, and when we approve it, we need to ensure that we send the version back, to verify that there have been no changes.I have to say, given that I set out to do something pretty simple, I&#x2019;m actually shocked at how complex this all turned out to be. The solution above also requires cooperation&#xA0;from all entities. If I&#x2019;m ever writing some code that modifies the vacation requests or manages them manually (for maintenance purposes, debugging, etc) I need to also remember to include the version updates.When I started writing this blog post, I intended to also show you how you can model the same situation differently. But I think that this is quite long enough already, and I&#x2019;ll complete the proper modeling concerns in the next post.</p>
         </article>
-        <article id="article-443">
+        <article id="article-444">
             <a href="https://devblogs.microsoft.com/dotnet/testing-your-native-aot-dotnet-apps/" target="_blank">
-                <h2 class="title mb-6" id="article-443">Testing Your Native AOT Applications</h2>
+                <h2 class="title mb-6" id="article-444">Testing Your Native AOT Applications</h2>
             </a>
             <p class="mb-2">by Marco Rossignoli</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">MSTest introduces a Native AOT compatible test runner and engine for testing your Native AOT applications.</p>
         </article>
-        <article id="article-444">
+        <article id="article-445">
             <a href="https://devblogs.microsoft.com/dotnet/redis-makes-intelligent-apps-smarter-and-consistent/" target="_blank">
-                <h2 class="title mb-6" id="article-444">Making AI powered .NET apps more consistent and intelligent with Redis</h2>
+                <h2 class="title mb-6" id="article-445">Making AI powered .NET apps more consistent and intelligent with Redis</h2>
             </a>
             <p class="mb-2">by Catherine Wang</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Redis makes intelligent apps smarter and consistent by serving as additional knowledge store, caching chat history, and semantically cache request and responses for an API. Combined with traditional caching scenarios, Redis is the multi-purpose data store for your intelligent apps.</p>
         </article>
-        <article id="article-445">
+        <article id="article-446">
             <a href="https://andrewlock.net/working-on-a-git-branch-in-two-different-folders-concurrently/" target="_blank">
-                <h2 class="title mb-6" id="article-445">Syncing a git branch between Windows and WSL filesystems</h2>
+                <h2 class="title mb-6" id="article-446">Syncing a git branch between Windows and WSL filesystems</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I show how you can work on a git branch with a repository checked out in Windows, and then sync that to another git folder in WSL&#x2026;</p>
         </article>
-        <article id="article-446">
+        <article id="article-447">
             <a href="https://www.meziantou.net/json-schema-validation-in-dotnet.htm" target="_blank">
-                <h2 class="title mb-6" id="article-446">Json schema validation in .NET</h2>
+                <h2 class="title mb-6" id="article-447">Json schema validation in .NET</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It is often useful to validate JSON documents against a JSON schema. For example, you may want to validate the JSON document that you receive from a REST API or a configuration file written by a user. In this post, I describe how to validate JSON data against a JSON schema in .NET.TipUsing PowerShe</p>
         </article>
-        <article id="article-447">
+        <article id="article-448">
             <a href="https://devblogs.microsoft.com/dotnet/bing-on-dotnet-8-the-impact-of-dynamic-pgo/" target="_blank">
-                <h2 class="title mb-6" id="article-447">Bing on .NET 8: The Impact of Dynamic PGO</h2>
+                <h2 class="title mb-6" id="article-448">Bing on .NET 8: The Impact of Dynamic PGO</h2>
             </a>
             <p class="mb-2">by Ben Watson</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Bing Extensible Application Platform&#x27;s upgrade to .NET 8 and how dynamic profile guided optimization continues to deliver performance gains</p>
         </article>
-        <article id="article-448">
+        <article id="article-449">
             <a href="https://ayende.com/blog/200898-A/ravendbs-storage-engine-voron-unlocking-the-secret" target="_blank">
-                <h2 class="title mb-6" id="article-448">RavenDB&#x2019;s storage engine: Voron&#x2013;unlocking the secret</h2>
+                <h2 class="title mb-6" id="article-449">RavenDB&#x2019;s storage engine: Voron&#x2013;unlocking the secret</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A couple of months ago I had the joy of giving an internal lecture to our developer group about Voron, RavenDB&#x2019;s dedicated storage engine. In the lecture, I&#x2019;m going over the design and implementation of our storage engine.If you ever had an interest on how RavenDB&#x2019;s transactional and high performance storage works, that is the lecture for you. Note that this is aimed at our developers, so we are going deep. You can find the slides here and here is the full video.</p>
         </article>
-        <article id="article-449">
+        <article id="article-450">
             <a href="https://ayende.com/blog/200897-A/certificates-from-the-ground-up" target="_blank">
-                <h2 class="title mb-6" id="article-449">Certificates from the Ground Up</h2>
+                <h2 class="title mb-6" id="article-450">Certificates from the Ground Up</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: March 27, 2024
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the most fun things that I do at work is share knowledge about how various things work. A few months ago I talked internally about how Certificates work. Instead of just describing the mechanism of that, I decided to actually walk our developers through the process of building the certificate infrastructure from scratch.You can find the slides here and the full video is available online, it&#x2019;s just over an hour of both lecture and discussion.</p>
-        </article>
-        <article id="article-450">
-            <a href="https://devblogs.microsoft.com/dotnet/dotnet-7-end-of-support/" target="_blank">
-                <h2 class="title mb-6" id="article-450">.NET 7 will reach End of Support on May 14, 2024</h2>
-            </a>
-            <p class="mb-2">by Rahul Bhandari (MSFT)</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 27, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">.NET 7 will reach end of support on May 14, 2024, this blog breaks down all the valuable information you need to know and how to update to .NET 8.</p>
         </article>
         <div class="button flex justify-between">
             <a href="44.html"><span class="back arrow"></span></a>
