@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6291">
+            <a href="https://ayende.com/blog/3812/opinionated-api" target="_blank">
+                <h2 class="title mb-6" id="article-6291">Opinionated API</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 16, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently I found myself doing a lot more API design that use the following method. A method that takes a delegate which accepts a parameter that allow you to perform the actual operations that are required.  This is very good for things like handling semantics, and since we only allow access to the desired operation through the parameter to the delegate, we can be pretty sure that we will have a consistent operation experience. Let us take the following example:                    1: table.Batch(actions =&gt;&#xA;&#xA;         2: {&#xA;&#xA;         3:     actions.Put(&quot;test&quot;, new int[0], new byte[] { 1 });&#xA;&#xA;         4:     actions.Put(&quot;test&quot;, new int[0], new byte[] { 2 });&#xA;&#xA;         5:     var values = actions.Get(&quot;test&quot;);&#xA;&#xA;         6:     Assert.Equal(2, values.Length);&#xA;&#xA;         7:&#xA0; &#xA;&#xA;         8:     Assert.Equal(1, values[0].Version);&#xA;&#xA;         9:     Assert.Equal(new byte[] { 1 }, values[0].Data);&#xA;&#xA;        10:&#xA0; &#xA;&#xA;        11:     Assert.Equal(2, values[1].Version);&#xA;&#xA;        12:     Assert.Equal(new byte[] { 2 }, values[1].Data);&#xA;&#xA;        13: });&#xA;    &#xA;  &#xA;&#xA;&#xA;As an aside, it is 3 AM now and I have been coding almost non stop since 9AM yesterday. I hate it when I have idea rush.</p>
+        </article>
+        <article id="article-6292">
             <a href="https://ayende.com/blog/3811/rhino-service-bus-saga-and-state" target="_blank">
-                <h2 class="title mb-6" id="article-6291">Rhino Service Bus</h2>
+                <h2 class="title mb-6" id="article-6292">Rhino Service Bus</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In a messaging system, a saga orchestrate a set of messages. The main benefit of using a saga is that it allows us to manage the interaction in a stateful manner (easy to think and reason about) while actually working in a distributed and asynchronous environment.  In Rhino Service Bus, I built the notion of sagas from the beginning. And I initially went with the approach that mix the saga&#x2019;s behavior and the saga state in the same class. That did not turn out so well. While it works for simple matters, anything of sufficient complexity started to bring issue. Mainly, it was an issue of managing dependencies and managing state. It is possible to get this worked out, but I decided to follow Udi&#x2019;s footsteps and create an explicit separation between the two.  Here is how it works, we have the state class:                    1: public class BaristaState&#xA;&#xA;         2: {&#xA;&#xA;         3:     public bool DrinkIsReady { get; set; }&#xA;&#xA;         4:&#xA0; &#xA;&#xA;         5:     public bool GotPayment { get; set; }&#xA;&#xA;         6:&#xA0; &#xA;&#xA;         7:     public string Drink { get; set; }&#xA;&#xA;         8: }&#xA;    &#xA;  &#xA;&#xA;&#xA;This is just a standard class, nothing special here. But here is the actual saga class. This contains the behavior for the saga, with the state being maintained in the state class.&#xA;&#xA;&#xA;  &#xA;    &#xA;         1: public class BaristaSaga :&#xA;&#xA;         2:     ISaga&lt;BaristaState&gt;,&#xA;&#xA;         3:     InitiatedBy&lt;PrepareDrink&gt;,&#xA;&#xA;         4:     Orchestrates&lt;PaymentComplete&gt;&#xA;&#xA;         5: {&#xA;&#xA;         6:     private readonly IServiceBus bus;&#xA;&#xA;         7:&#xA0; &#xA;&#xA;         8:     public BaristaState State { get; set; }&#xA;&#xA;         9:&#xA0; &#xA;&#xA;        10:     public Guid Id { get; set; }&#xA;&#xA;        11:&#xA0; &#xA;&#xA;        12:     public bool IsCompleted { get; set; }&#xA;&#xA;        13:&#xA0; &#xA;&#xA;        14:     public BaristaSaga(IServiceBus bus)&#xA;&#xA;        15:     {&#xA;&#xA;        16:         this.bus = bus;&#xA;&#xA;        17:         State = new BaristaState();&#xA;&#xA;        18:     }&#xA;&#xA;        19:&#xA0; &#xA;&#xA;        20:     public void Consume(PrepareDrink message)&#xA;&#xA;        21:     {&#xA;&#xA;        22:         State.Drink = message.DrinkName;&#xA;&#xA;        23:&#xA0; &#xA;&#xA;        24:         for (int i = 0; i &lt; 10; i&#x2B;&#x2B;)&#xA;&#xA;        25:         {&#xA;&#xA;        26:             Console.WriteLine(&quot;Barista: preparing drink: &quot; &#x2B; drink);&#xA;&#xA;        27:             Thread.Sleep(500);&#xA;&#xA;        28:         }&#xA;&#xA;        29:         State.DrinkIsReady = true;&#xA;&#xA;        30:         SubmitOrderIfDone();&#xA;&#xA;        31:     }&#xA;&#xA;        32:&#xA0; &#xA;&#xA;        33:     public void Consume(PaymentComplete message)&#xA;&#xA;        34:     {&#xA;&#xA;        35:         Console.WriteLine(&quot;Barista: got payment notification&quot;);&#xA;&#xA;        36:         State.GotPayment = true;&#xA;&#xA;        37:         SubmitOrderIfDone();&#xA;&#xA;        38:     }&#xA;&#xA;        39:&#xA0; &#xA;&#xA;        40:     private void SubmitOrderIfDone()&#xA;&#xA;        41:     {&#xA;&#xA;        42:         if (State.GotPayment &amp;&amp; State.DrinkIsReady)&#xA;&#xA;        43:         {&#xA;&#xA;        44:             Console.WriteLine(&quot;Barista: drink is ready&quot;);&#xA;&#xA;        45:             bus.Publish(new DrinkReady&#xA;&#xA;        46:             {&#xA;&#xA;        47:                 CorrelationId = Id,&#xA;&#xA;        48:                 Drink = State.Drink&#xA;&#xA;        49:             });&#xA;&#xA;        50:             IsCompleted = true;&#xA;&#xA;        51:         }&#xA;&#xA;        52:     }&#xA;&#xA;        53: }&#xA;    &#xA;  &#xA;&#xA;&#xA;There are a few things to notice in here. The saga class is a standard component, we use DI to inject dependencies to the class so it can perform whatever it is that it wants. The state property is used to maintain the state of the saga between message invocations.&#xA;&#xA;This results in a simpler design for some parts of the code, and I think that overall it is a very simple model to talk and reason about.</p>
         </article>
-        <article id="article-6292">
+        <article id="article-6293">
             <a href="https://ayende.com/blog/3810/avoid-object-initializers-the-using-statement" target="_blank">
-                <h2 class="title mb-6" id="article-6292">Avoid object initializers &amp; the using statement</h2>
+                <h2 class="title mb-6" id="article-6293">Avoid object initializers &amp; the using statement</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This piece of code has a huge bug in it. Can you see it?     I&#x2019;ll give you a hint, what is going to happen if Key, IV or Mode are going to throw an exception? Well, let us check the actual generated code from Reflector.     As you can see, we first set the value to a local variable, we set the properties and only then we enter the using clause. If any of the properties will throw out an exception, we will never enter the using block, and the object will never be disposed.  Personally, I think that this is an issue with the compiler, that it should be able to generate safe code for this scenario. As it is, the code looks fine, but the subtle bug can come and bite you.  Beware.</p>
         </article>
-        <article id="article-6293">
+        <article id="article-6294">
             <a href="https://ayende.com/blog/3809/rhino-service-bus-field-level-security" target="_blank">
-                <h2 class="title mb-6" id="article-6293">Rhino Service Bus</h2>
+                <h2 class="title mb-6" id="article-6294">Rhino Service Bus</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the requirements that came up on my current project was the need to secure specific fields in a message during transit. I thought about it a while before I decided that this is something that should be made explicit in the message contract.   Here is an example from the tests:                    1: public class ClassWithSecretField&#xA;&#xA;         2: {&#xA;&#xA;         3:     public WireEcryptedString ShouldBeEncrypted&#xA;&#xA;         4:     {&#xA;&#xA;         5:         get; set;&#xA;&#xA;         6:     }&#xA;&#xA;         7: }&#xA;    &#xA;  &#xA;&#xA;&#xA;WireEncryptedString is a type that would be encrypted on the wire, as the name suggest.&#xA;&#xA;And defining the keys in the configuration is done in this way:&#xA;&#xA;&#xA;  &#xA;    &#xA;         1: &lt;facility id=&quot;rhino.esb&quot; &gt;&#xA;&#xA;         2:   &lt;bus threadCount=&quot;1&quot;&#xA;&#xA;         3:        numberOfRetries=&quot;5&quot;&#xA;&#xA;         4:        endpoint=&quot;msmq://localhost/test_queue2&quot;&#xA;&#xA;         5:          /&gt;&#xA;&#xA;         6:   &lt;messages&gt;&#xA;&#xA;         7:     &lt;add name=&quot;Rhino.ServiceBus.Tests&quot;&#xA;&#xA;         8:          endpoint=&quot;msmq://localhost/test_queue&quot;/&gt;&#xA;&#xA;         9:     &lt;add name=&quot;Rhino.ServiceBus.Tests&quot;&#xA;&#xA;        10:          endpoint=&quot;msmq://localhost/test_queue2&quot;/&gt;&#xA;&#xA;        11:   &lt;/messages&gt;&#xA;&#xA;        12:   &lt;security&gt;&#xA;&#xA;        13:     &lt;key&gt;f/gdDWbDqHRvpqdRbTs3mxhGdZh9qCaDrasxJGXl&#x2B;5s=&lt;/key&gt;&#xA;&#xA;        14:   &lt;/security&gt;&#xA;&#xA;        15: &lt;/facility&gt;&#xA;    &#xA;  &#xA;&#xA;&#xA;On the wire, it has the following format:&#xA;&#xA;&#xA;  &#xA;    &#xA;         1: &lt;?xml version=&#x27;1.0&#x27; encoding=&#x27;utf-8&#x27;?&gt;&#xA;&#xA;         2: &lt;esb:messages &#xA;&#xA;         3:   xmlns:esb=&#x27;http://servicebus.hibernatingrhinos.com/2008/12/20/esb&#x27; &#xA;&#xA;         4:   xmlns:tests.classwithsecretfield=&#x27;Rhino.ServiceBus.Tests.When_Security_Is_Specified_In_Config&#x2B;ClassWithSecretField, Rhino.ServiceBus.Tests&#x27;&#xA;&#xA;         5:   xmlns:datastructures.wireecryptedstring=&#x27;Rhino.ServiceBus.DataStructures.WireEcryptedString, Rhino.ServiceBus&#x27; xmlns:string=&#x27;string&#x27;&gt;&#xA;&#xA;         6:   &lt;tests.classwithsecretfield:ClassWithSecretField&gt;&#xA;&#xA;         7:     &lt;datastructures.wireecryptedstring:ShouldBeEncrypted&gt;&#xA;&#xA;         8:       &lt;string:Value iv=&#x27;0yL9&#x2B;t0uyDy9NeP7CU1Wow==&#x27;&gt;q9a10IFuRxrzFoZewfdOyg==&lt;/string:Value&gt;&#xA;&#xA;         9:     &lt;/datastructures.wireecryptedstring:ShouldBeEncrypted&gt;&#xA;&#xA;        10:   &lt;/tests.classwithsecretfield:ClassWithSecretField&gt;&#xA;&#xA;        11: &lt;/esb:messages&gt;&#xA;    &#xA;  &#xA;&#xA;&#xA;Following the Rhino Service Bus philosophy, it is quite a neat solution.&#xA;&#xA;The actual encryption is doing using 256 bits key with Rijndael (AES). I considered other approaches, but all of them had quite a big overhead from manageability perspective.&#xA;&#xA;There are some interesting implications for the implementation, that deserve some discussion. Let us assume that you send such a message to another end point.&#xA;&#xA;If the endpoint&#x2026;&#xA;&#xA;&#xA;  has the same key as us, the message will be decrypted and everything works. &#xA;&#xA;  doesn&#x2019;t have any security defined. At that point, the message will successfully deserialize. Any WireEncryptedString field will contain the encrypted value. &#xA;&#xA;  has a different key defined. Message serialization will fail. &#xA;&#xA;&#xA;Trying to send a message that contains WireEncryptedString will throw, we do not allow such an action.&#xA;&#xA;And now you can tell me how many holes there are in my system :-)</p>
         </article>
-        <article id="article-6294">
+        <article id="article-6295">
             <a href="https://ayende.com/blog/3808/there-is-no-database" target="_blank">
-                <h2 class="title mb-6" id="article-6294">There is no database</h2>
+                <h2 class="title mb-6" id="article-6295">There is no database</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just noticed that for the last few months I have been consistently denying the existence of a database. I use the term persistent storage when asked, and when asked I usually say: &#x201C;There is no database&#x201D;.  It has gotten to the point that this is how I draw the DB on most whiteboard sessions:</p>
         </article>
-        <article id="article-6295">
+        <article id="article-6296">
             <a href="https://ayende.com/blog/3807/system-security-securestring-annoyances" target="_blank">
-                <h2 class="title mb-6" id="article-6295">System.Security.SecureString annoyances</h2>
+                <h2 class="title mb-6" id="article-6296">System.Security.SecureString annoyances</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">SecureString has exactly one purpose. Take information from the user and pass it to unmanaged function. anything else that you would try to do with it seems to be incredibly hard to do.  I wanted to extend Rhino Service Bus so a message that contained SecureString members would be automatically encrypted on the wire. It seemed like a nice &amp; easy option to provide field level security for messages. However, it doesn&#x2019;t seem to be a viable option, because working with SecureString is such an awkward task. I have created a WireEncryptedString class and I&#x2019;ll just use that instead. Grr&#x2026;.</p>
         </article>
-        <article id="article-6296">
+        <article id="article-6297">
             <a href="https://ayende.com/blog/3806/i-need-some-advice-about-the-book" target="_blank">
-                <h2 class="title mb-6" id="article-6296">I need some advice about the book</h2>
+                <h2 class="title mb-6" id="article-6297">I need some advice about the book</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have got the final reviews about the book (Building Domain Specific Languages with Boo), and a few of them talk about a problem in the book that I am not sure how to solve.  The problem is, quite simply, the book talks about Boo a lot. I see the book not as a academic topic, but as something that would give the reader actionable knowledge. At the same time, I try to cover the entire life cycle of a DSL. So the book covers things like how to design a good syntax, documenting DSLs, how to structure them, versioning issues and other aspects that are mostly agnostic to the actual tool that we use to build the DSL.  On the other hand, things like integrating with a unit testing framework, or building UI, or the exact particulars about how to build certain aspects of the DSL and common recipes for frequent problems are strongly tied to the actual technology that we are using. Oh, we can probably discuss some of them in abstract, but I don&#x2019;t think it would be nearly as valuable.  One of the goals that I have when writing this book is to create an actionable document, one that you can use to start working on a DSL right away. There are several DSLs out there that I can directly trace to the book (Simple State Machine and Horn), so I think that I did a good job there.  The problem, as reflected in the reviews, that people expected to see much more about DSLs and maybe get some brief discussion about the actual implementation in Boo.  I think that the main issue is different expectations that they had, and I am wondering what we can do about it. One of the options that we consider is to rename the book to reflect what it actually contain better. However, I don&#x2019;t know what name would suit it better, and I don&#x2019;t even know if that is the best solutions.  Can you offer some suggestions?</p>
         </article>
-        <article id="article-6297">
+        <article id="article-6298">
             <a href="https://ayende.com/blog/3805/rhino-service-bus-understanding-a-distributed-system" target="_blank">
-                <h2 class="title mb-6" id="article-6297">Rhino Service Bus</h2>
+                <h2 class="title mb-6" id="article-6298">Rhino Service Bus</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the major hurdles in distributes systems is trying to understand how they work. Different parts are running at different places and sometimes at different times. Standard debugging usually breaks down at this point, because no one has even invented a non sequential debugger that would make sense to humans.  We are left with trying to understand what is going on in the system based on a pretty old notion, the system logs. With Rhino Service Bus, this was one of the things that I really cared about, so I made this into a first class concept. And no, you don&#x2019;t get to hunt through a 3GB text file. The idea is that each message (and message interaction) in the system can be captured.  The configuration for this is quite simple:                    1: &lt;bus threadCount=&quot;1&quot;&#xA;&#xA;         2:          numberOfRetries=&quot;5&quot;&#xA;&#xA;         3:          logEndpoint=&quot;msmq://localhost/starbucks.log&quot;&#xA;&#xA;         4:          endpoint=&quot;msmq://localhost/starbucks.backend&quot;&#xA;&#xA;         5:          /&gt;&#xA;    &#xA;  &#xA;&#xA;&#xA;And once we have done that, we copy each message to the log queue. But it is not just the arrived messages. It is also when a message arrived, how long it took to process it, why it failed, etc.&#xA;&#xA;Using this approach, you can build tools that listen to the log queue and display the information in ways that makes sense to humans. For example, we can create a flow of a saga or conversation, or start getting input about the time it takes to process certain messages or detect SLA violations.</p>
         </article>
-        <article id="article-6298">
+        <article id="article-6299">
             <a href="https://ayende.com/blog/3804/rhino-service-bus-the-starbucks-example" target="_blank">
-                <h2 class="title mb-6" id="article-6298">Rhino Service Bus</h2>
+                <h2 class="title mb-6" id="article-6299">Rhino Service Bus</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,24 +281,8 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday I finally completed the Starbucks sample for Rhino Service Bus. It is surprising to see how many aspects that little sample required.  There are several of highlights in the sample.      There are three actors in the application:         Barista      Cashier      Customer       There is zero setup necessary, Rhino Service Bus will create the queues if they don&#x2019;t already exists. Again, the idea of reducing moving parts.    All three actors are running in the same process &#x2013; but each is running in a different AppDomain.      Note that this is a common deployment choice for development, but not one that I would use for production.       The idea is that this make it significantly easier to debug &amp; develop a distributed application.    There is very little configuration whatsoever. And a lot of conventions about how to figure out what consumers to use and how to build it.    The use of sagas &amp; conversations is demoed. The entire buying process is a single conversation composed of several sagas.    The customer actor is showing how we can create instance &amp; temporary subscriptions.</p>
         </article>
-        <article id="article-6299">
-            <a href="https://ayende.com/blog/3803/rhino-service-bus-locality-and-independence" target="_blank">
-                <h2 class="title mb-6" id="article-6299">Rhino Service Bus</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 14, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the main design goals for Rhino Service Bus was locality and independence of the end point. What do I mean by that?  Well, a Rhino ESB endpoint should have no dependency on any external service in order to operate. Examples of common external services are things like subscription services, timeout managers and error reporting. I already discussed how I handle errors, timeouts and subscriptions with Rhino Service Bus. So the question is why independence is such an important concept.  The answer is quite simple: reduce the number of moving parts. If I need to have a timeout service running to have my timeouts running, this is a problem. If subscriptions don&#x2019;t work because I didn&#x2019;t started the subscription service, that is a problem. Thos are problems because those things will happen, and figuring out what exactly is going on is hard, painful and not really recommended. Well, the first time you run into this, at least. As such, I sought to make sure that there would be only a single place that you would have to look in order to get things working.  There are other aspects of this as well, frankly. Less moving parts usually equal to less complexity, but the most important issue is that we have much better options for debugging.  The only place that you need to check for anything is the endpoint.   We currently don&#x2019;t have tooling (because we rely of the default MSMQ ones to do a fairly adequate job for now), but a few spikes that I run has turned out some really nice tooling is quite simple, and the approach is the same for everything.</p>
-        </article>
         <article id="article-6300">
-            <a href="https://ayende.com/blog/3802/rhino-service-bus-managing-timeouts" target="_blank">
+            <a href="https://ayende.com/blog/3803/rhino-service-bus-locality-and-independence" target="_blank">
                 <h2 class="title mb-6" id="article-6300">Rhino Service Bus</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
@@ -295,7 +295,7 @@
                     </span>
                 posted on: January 14, 2009
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was first introduced to the notion of time as an explicit concept in Udi&#x2019;s writing. The notion of being able to send a message in the future was, like most of the things that Udi talks about, simple in terms of implementation, but profound in conceptual terms.  Rhino Service Bus supports this explicitly by specifying a time in which a message will be received. The implementation for that is quite interesting, I think.  Again, we are making use of a subqueue to minimize the additional requirements that RSB has. So when we send a message to the RSB with a delay in it, we move it to the timeout subquque are record that fact internally. We have a timer going off every second that check for expiry of the messages and dispatch them when their time arrives. If the system crash at any point, all the timeouts are stored in the subqueue, and on startup, we are going to read the timeout messages and reconstruct our internal representation of them.  The API is quite simple:             1: bus.DelaySend(bus.Endpoint, &#xA;&#xA;       2:     DateTime.Now.AddMilliseconds(250), &#xA;&#xA;       3:     msg);&#xA;  &#xA;&#xA;&#xA;We might need to make some changes to support extremely large queues and extremely long duration for delayed messages, but for now, it is doing quite well.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the main design goals for Rhino Service Bus was locality and independence of the end point. What do I mean by that?  Well, a Rhino ESB endpoint should have no dependency on any external service in order to operate. Examples of common external services are things like subscription services, timeout managers and error reporting. I already discussed how I handle errors, timeouts and subscriptions with Rhino Service Bus. So the question is why independence is such an important concept.  The answer is quite simple: reduce the number of moving parts. If I need to have a timeout service running to have my timeouts running, this is a problem. If subscriptions don&#x2019;t work because I didn&#x2019;t started the subscription service, that is a problem. Thos are problems because those things will happen, and figuring out what exactly is going on is hard, painful and not really recommended. Well, the first time you run into this, at least. As such, I sought to make sure that there would be only a single place that you would have to look in order to get things working.  There are other aspects of this as well, frankly. Less moving parts usually equal to less complexity, but the most important issue is that we have much better options for debugging.  The only place that you need to check for anything is the endpoint.   We currently don&#x2019;t have tooling (because we rely of the default MSMQ ones to do a fairly adequate job for now), but a few spikes that I run has turned out some really nice tooling is quite simple, and the approach is the same for everything.</p>
         </article>
         <div class="button flex justify-between">
             <a href="629.html"><span class="back arrow"></span></a>
