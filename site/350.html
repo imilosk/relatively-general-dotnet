@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3491">
-            <a href="https://ayende.com/blog/172641/find-the-bug-the-case-of-the-degrading-system" target="_blank">
+            <a href="https://ayende.com/blog/172642/find-the-bug-the-case-of-the-degrading-system-answer" target="_blank">
                 <h2 class="title mb-6" id="article-3491">Find the bug</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 05, 2016
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my previous post I showed the following code, and asked what the bug was, and what the implications of that would be.  class Program&#xA;{&#xA;    private Timer nextcheck;&#xA;    public event EventHandler ServerSigFailed;&#xA;    static void Main(string[] args)&#xA;    {&#xA;        var program = new Program();&#xA;        if(program.ValidateServerSig() == false) &#xA;            return;&#xA;        program.DoOtherStuff();&#xA;    }&#xA;&#xA;    public bool ValidateServerSig()&#xA;    {&#xA;        nextcheck = new Timer(state =&gt; ValidateServerSig());&#xA;&#xA;        var response = DoRequest(&quot;http://remote-srv/signature&quot;);&#xA;        if(response.Failed)&#xA;        {&#xA;            var copy = ServerSigFailed;&#xA;            if(copy!=null) copy(this, EventArgs.Empty);&#xA;            return false;&#xA;        }&#xA;        var result = Utils.CheckPublic KeySignatureMatches(response);&#xA;        if(result.Valid)&#xA;        if(response.Failed)&#xA;        {&#xA;            var copy = ServerSigFailed;&#xA;            if(copy!=null) copy(this, EventArgs.Empty);&#xA;            return false;&#xA;        }&#xA;        &#xA;        // setup next check&#xA;        nextcheck.Change(TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));&#xA;        return true;&#xA;    }&#xA;}&#xA;&#xA;The answer is quite simple, look at the first line of the ValidateServerSig function. It setups a new timer that recursively call this function. So every 15 seconds, we are going to have a new timer to run this function.&#xA;And 15 seconds after that, we are going to have 4 timers, and 15 seconds after that&#x2026;&#xA;But the interesting thing here that those are timers, so they get scheduled on the thread pool. So while the growth rate of the number of tasks is phenomenal, in practice, they don&#x27;t get run all together.So after 20 minutes of this, it will only run about 800 times. Because the thread pool is growing slowly, we&#x27;ll end up with a much slower growth rate, but eventually the thread pool queues are going to be filled with nothing but this task. And since we typically also process requests on the thread pool, eventually requests cannot be handled, because the threads are always busy running the validation code.&#xA;In the real codebase, the timing was 5 minutes, and this issue typically manifested itself only after several weeks of continuous running.</p>
+        </article>
+        <article id="article-3492">
+            <a href="https://ayende.com/blog/172641/find-the-bug-the-case-of-the-degrading-system" target="_blank">
+                <h2 class="title mb-6" id="article-3492">Find the bug</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The following code contains a bug, can you spot it?&#xA0;   class Program&#xA;{&#xA;    private Timer nextcheck;&#xA;    public event EventHandler ServerSigFailed;&#xA;    static void Main(string[] args)&#xA;    {&#xA;        var program = new Program();&#xA;        if(program.ValidateServerSig() == false) &#xA;            return;&#xA;        program.DoOtherStuff();&#xA;    }&#xA;&#xA;    public bool ValidateServerSig()&#xA;    {&#xA;        nextcheck = new Timer(state =&gt; ValidateServerSig());&#xA;&#xA;        var response = DoRequest(&quot;http://remote-srv/signature&quot;);&#xA;        if(response.Failed)&#xA;        {&#xA;            var copy = ServerSigFailed;&#xA;            if(copy!=null) copy(this, EventArgs.Empty);&#xA;            return false;&#xA;        }&#xA;        var result = Utils.CheckPublic KeySignatureMatches(response);&#xA;        if(result.Valid)&#xA;        if(response.Failed)&#xA;        {&#xA;            var copy = ServerSigFailed;&#xA;            if(copy!=null) copy(this, EventArgs.Empty);&#xA;            return false;&#xA;        }&#xA;        &#xA;        // setup next check&#xA;        nextcheck.Change(TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));&#xA;        return true;&#xA;    }&#xA;}&#xA;&#xA;What are the implications of this bug?</p>
         </article>
-        <article id="article-3492">
+        <article id="article-3493">
             <a href="https://ayende.com/blog/172611/elemar-junior-is-joining-our-latin-america-ravendb-team" target="_blank">
-                <h2 class="title mb-6" id="article-3492">Elemar Junior is joining our Latin America RavenDB team</h2>
+                <h2 class="title mb-6" id="article-3493">Elemar Junior is joining our Latin America RavenDB team</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today is a great plus one news day to RavenDB Latin America. Elemar Junior is joining our team as official RavenDB consultant, on January 1st.  Elemar will work helping our customers, writing a lot of code, producing demos, videos and tutorials and in general focus on the getting started process easier as well as faster and smoother process for developers and operations people to get familiar and accustomed to getting the best out of RavenDB.  Elemar is well known for writing and speaking about advanced topics on development, design and software architecture. If you aren&#x2019;t familiar with him, feel free to check his blog (pt-br only), or linkedin but the short gist of it is that he started to write computer code when he was nine years old and still love it. He has over seventeen years of professional experience developing software (used in over thirty countries) for manufacturing furniture and to design and planning of residential and commercial spaces.  With a strong focus on the Microsoft ecosystem, he has been awarded as Microsoft MVP since 2011. Elemar is the author of FluentIL, an emitting library for .NET platform, and leading figure of CodeCracker, a popular analyzer library for C# and VB that uses Roslyn to produce refactoring, code analysis, and other niceties.  Elemar can be reached via elemarjr@ravendb.net and is currently looking for someone that would Photoshop this image with a cat or ask him tough questions about RavenDB. On a more serious note, this represent a bigger focus on having dedicated people to handle just working with customers, providing guidance and support and writing tutorials, sample applications and in general just making everything that much easier.</p>
         </article>
-        <article id="article-3493">
+        <article id="article-3494">
             <a href="https://ayende.com/blog/172579/code-review-challenge-the-concurrent-dictionary-refactoring-answer" target="_blank">
-                <h2 class="title mb-6" id="article-3493">Code review challenge</h2>
+                <h2 class="title mb-6" id="article-3494">Code review challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is the full method that we refactored:  public void ReturnMemory(byte* pointer)&#xA; {&#xA;     var memoryDataForPointer = GetMemoryDataForPointer(pointer);&#xA;&#xA;     _freeSegments.AddOrUpdate(memoryDataForPointer.SizeInBytes, x =&gt;&#xA;     {&#xA;         var newQueue = new ConcurrentStack&lt;AllocatedMemoryData&gt;();&#xA;         newQueue.Push(memoryDataForPointer);&#xA;         return newQueue;&#xA;     }, (x, queue) =&gt;&#xA;     {&#xA;         queue.Push(memoryDataForPointer);&#xA;         return queue;&#xA;     });&#xA; }&#xA;&#xA;&#xA;&#xA;And here is the allocation map for this method:&#xA;public unsafe void ReturnMemory(byte* pointer)&#xA;{&#xA;    &lt;&gt;c__DisplayClass9_0 CS$&lt;&gt;8__locals0 = new &lt;&gt;c__DisplayClass9_0();&#xA;    CS$&lt;&gt;8__locals0.memoryDataForPointer = this.GetMemoryDataForPointer(pointer);&#xA;    this._freeSegments.AddOrUpdate(CS$&lt;&gt;8__locals0.memoryDataForPointer.SizeInBytes,           new Func&lt;int, ConcurrentStack&lt;AllocatedMemoryData&gt;&gt;(CS$&lt;&gt;8__locals0.&lt;ReturnMemory&gt;b__0),           new Func&lt;int, ConcurrentStack&lt;AllocatedMemoryData&gt;, ConcurrentStack&lt;AllocatedMemoryData&gt;&gt;(CS$&lt;&gt;8__locals0.&lt;ReturnMemory&gt;b__1));&#xA;}&#xA;&#xA;&#xA;As you can see, we are actually allocating three objects here. One is the captured variables class generated by the compiler (&lt;&gt;c__DisplayClass9_0) and two delegate instances. We do this regardless of if we need to add or update.&#xA;The refactored code looks like this:&#xA; public void ReturnMemory(byte* pointer)&#xA; {&#xA;     var memoryDataForPointer = GetMemoryDataForPointer(pointer);&#xA;&#xA;     var q = _freeSegments.GetOrAdd(memoryDataForPointer.SizeInBytes, size =&gt; new ConcurrentStack&lt;AllocatedMemoryData&gt;());&#xA;     q.Push(memoryDataForPointer);&#xA;&#xA; }&#xA;&#xA;&#xA;And what actually gets called is:&#xA;public unsafe void ReturnMemory(byte* pointer)&#xA;{&#xA;    Interlocked.Increment(ref this._returnMemoryCalls);&#xA;    AllocatedMemoryData memoryDataForPointer = this.GetMemoryDataForPointer(pointer);&#xA;    if(&lt;&gt;c.&lt;&gt;9__9_0 == null)&#xA;    {&#xA;        &lt;&gt;c.&lt;&gt;9__9_0 = new Func&lt;int, ConcurrentStack&lt;AllocatedMemoryData&gt;&gt;(this.&lt;ReturnMemory&gt;b__9_0);&#xA;    }&#xA;    this._freeSegments.GetOrAdd(memoryDataForPointer.SizeInBytes, &lt;&gt;c.&lt;&gt;9__9_0).Push(memoryDataForPointer);&#xA;}&#xA;&#xA;&#xA;&#xA;The field (&lt;&gt;c.&lt;&gt;9__9_0) is actually a static field, so it is only allocated once. Now we have a zero allocation method.</p>
         </article>
-        <article id="article-3494">
+        <article id="article-3495">
             <a href="https://ayende.com/blog/172578/code-review-challenge-the-concurrent-dictionary-refactoring" target="_blank">
-                <h2 class="title mb-6" id="article-3494">Code review challenge</h2>
+                <h2 class="title mb-6" id="article-3495">Code review challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In a recent code review, I had modified the following code: _freeSegments.AddOrUpdate(memoryDataForPointer.SizeInBytes, x =&gt;&#xA;{&#xA;   var newQueue = new ConcurrentQueue&lt;AllocatedMemoryData&gt;();&#xA;   newQueue.Enqueue(memoryDataForPointer);&#xA;   return newQueue;&#xA;}, (x, queue) =&gt;&#xA;{&#xA;   queue.Enqueue(memoryDataForPointer);&#xA;   return queue;&#xA;});&#xA;&#xA;&#xA;Into this code:&#xA;var q = _freeSegments.GetOrAdd(memoryDataForPointer.SizeInBytes, &#xA;                         size =&gt; new ConcurrentQueue&lt;AllocatedMemoryData&gt;());&#xA;q.Enqueue(memoryDataForPointer);&#xA;&#xA;&#xA;&#xA;Can you tell me why?</p>
         </article>
-        <article id="article-3495">
+        <article id="article-3496">
             <a href="https://enterprisecraftsmanship.com/posts/2015-retrospective/" target="_blank">
-                <h2 class="title mb-6" id="article-3495">2015 retrospective</h2>
+                <h2 class="title mb-6" id="article-3496">2015 retrospective</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It&#x2019;s a small post with an overview of the articles I wrote during this year.</p>
         </article>
-        <article id="article-3496">
+        <article id="article-3497">
             <a href="https://www.meziantou.net/the-keynote-introduction-to-r-at-devintersection.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3496">The Keynote &#x27;Introduction to R&#x27; at DEVIntersection</h2>
+                <h2 class="title mb-6" id="article-3497">The Keynote &#x27;Introduction to R&#x27; at DEVIntersection</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">During this presentation, James McCaffrey tried to make us understand what is the language R.You can find the webcast of the session on Channel9 but the content can be summarized with its first slide:In summary, it is a simple language (it is subjective) with a large framework containing mathematic</p>
         </article>
-        <article id="article-3497">
+        <article id="article-3498">
             <a href="https://www.meziantou.net/the-keynote-windows-server-nano-aka-tuva-at-devintersection.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3497">The Keynote &#x27;Windows Server Nano (aka TUVA)&#x27; at DEVIntersection</h2>
+                <h2 class="title mb-6" id="article-3498">The Keynote &#x27;Windows Server Nano (aka TUVA)&#x27; at DEVIntersection</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This keynote was presented by Jeffrey Snover. You can find the webcast of this conference on Channel9.Users of Windows Server, including Microsoft itself with Azure, complain:Reboot mandatory due to updates for components they do not useWindows image too big &#x21D2; Request more disk space (including for</p>
         </article>
-        <article id="article-3498">
+        <article id="article-3499">
             <a href="https://ayende.com/blog/172610/stories-from-the-interview-room-should-your-code-be-doing-that" target="_blank">
-                <h2 class="title mb-6" id="article-3498">Stories from the interview room: Should your code be doing THAT?</h2>
+                <h2 class="title mb-6" id="article-3499">Stories from the interview room: Should your code be doing THAT?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We require all candidates to do a coding test before we invite them to an interview.  The purpose of the coding test is to get some idea about the way the person thinks, and to see what they can do. Often, we don&#x2019;t really care about the actual solution that was sent, because the point isn&#x2019;t to solve the problem in the &#x201C;best&#x201D; way. The &#x201C;best&#x201D; way is highly dependent on many factors (are we trying to optimize for readability, speed, memory consumption, for example)?  But what I find most interesting is when we confront a candidate with their own code. Typically we have certain remarks, because even if the code is great, we can change whatever it is that we are trying to get (this is highly readable code, but we care about perf here, what would you do if we wanted&#x2026;). A really fun exercise is to invalidate a certain assumption, and see how the candidate handle that. This is typically done on:  You called int Read(byte[] buffer, int start, int count) and you assumed that it will fill the entire buffer, but it will give you only as much as it has available right now. Your code needs to handle that. What needs to be changed? Seeing a candidate interacts with code is much more enlightening, especially&#xA0; because this is code that the candidate wrote, so they are familiar with it.</p>
         </article>
-        <article id="article-3499">
+        <article id="article-3500">
             <a href="https://benfoster.io/blog/using-gulp-to-install-from-multiple-bower-config-files/" target="_blank">
-                <h2 class="title mb-6" id="article-3499">Using gulp to install from multiple bower config files</h2>
+                <h2 class="title mb-6" id="article-3500">Using gulp to install from multiple bower config files</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: December 17, 2015
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How to use gulp to install from multiple bower.json configuration files.</p>
-        </article>
-        <article id="article-3500">
-            <a href="https://ardalis.com/asp-net-5-migration-to-rc1-notes/" target="_blank">
-                <h2 class="title mb-6" id="article-3500">ASP.NET 5 Migration to RC1 Notes</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 16, 2015
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ve been migrating a number of articles from docs.asp.net to RC1 from beta8 (and earlier) and these are some of my notes. You may also find&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="349.html"><span class="back arrow"></span></a>

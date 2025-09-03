@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-2601">
+            <a href="https://andrewlock.net/fixing-the-error-program-has-more-than-one-entry-point-defined-for-console-apps-containing-xunit-tests/" target="_blank">
+                <h2 class="title mb-6" id="article-2601">Fixing the error &quot;Program has more than one entry point defined&quot; for console apps containing xUnit tests</h2>
+            </a>
+            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 31, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I&#x27;ll describe how to fix the error &quot;Program has more than one entry point defined&quot; when you try and make a .NET Core test project a console app&#x2026;</p>
+        </article>
+        <article id="article-2602">
             <a href="https://ayende.com/blog/180323/ravendb-4-0-unsung-heroes-automatic-conflict-resolution" target="_blank">
-                <h2 class="title mb-6" id="article-2601">RavenDB 4.0 Unsung Heroes</h2>
+                <h2 class="title mb-6" id="article-2602">RavenDB 4.0 Unsung Heroes</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB is a distributed database, it has been a distributed database since pretty much the very start, although over time we have been making the distribution part easier and easier. You might be able to tell that the design of RavenDB was heavily influenced by the Dynamo paper and RavenDB implements a multi master system that allow every node to accept writes and disseminate them across the network.This is great, because it ensure that we have a high stability in the face of error, but this also opens us up to some interesting failure modes. In particular, if a document is modified in two nodes at the same time, there is no way to immediately detect that. Unlike a single master system, where such a thing would be detected, but requires at least a majority of the nodes to be up. A scenario where we have concurrent modifications on the same document on different server is called a conflict, and is something that RavenDB is quite able to detect and handle. For a very long time, we had multiple mechanism to handle such conflicts. You could specify that RavenDB would resolve them automatically, in favor of a particular node, or using the latest or specifying a resolution strategy on the server or the client.&#xA0; But by default, if you did nothing, a conflict would cause an exception and require you to resolve it. No one ever handled that exception, and very few users set the conflict resolution or did something meaningful with it. We typically heard about it as support calls about &#x201C;this document is not accessible and the sky has just fallen&#x201D;. Which is perfectly understandable from the point of view of the user, but incredibly frustrating from ours. Here we are, careful to account for correctness in behavior in a distributed system, properly detecting conflicts and brining them up to the attention of the user and the result is&#x2026; they just want the error to go away.In the vast majority of the cases, the user didn&#x2019;t care about the conflict at all. It wasn&#x2019;t important and any version would do. And that is after we went to all the trouble of making sure that you have a powerful conflict resolution option and allow you to do some really fun things. The overwhelming response we got was &#x201C;make this go away&#x201D;. The problem is that we can&#x2019;t really make such a thing go away, this is a fundamentally an issue a multi master distributed system must handle. And just throwing one of the conflicted versions under the bus didn&#x2019;t sit right with us.RavenDB is an ACID database because I strongly believe that transactions matters, that you data is important and should be respected, not shredded to pieces on a moments notice in fear of someone figuring out that there has been a conflict. I wrote about another aspect of this issue previously what the user expects and the right things are decidedly at odds here. In particular because the right thing (handling conflicts) can be hard for the user, and something that you would typically do only on some parts of your domain model. Because of this,&#xA0; with RavenDB 4.0 we moved to automatic conflict resolution. Unless configured outside, whenever RavenDB discover a conflict, it will automatically resolve it (in an arbitrary but consistent manner across the cluster). Here is what this looks like:Notice the flags? This document is the resolve of conflict resolution. In this case, we had both 1st and 2nd as conflicting versions, and we chose one of them.But didn&#x2019;t I just finished telling you that RavenDB doesn&#x2019;t shred your data? The key here is that in addition to the Resolved flag, we also have the HasRevisions flag. In this case, the database doesn&#x2019;t have revisions defined, but even so, we have revisions for this document. Let us look at them, shall we?We have three of them:&#xA;&#xA;&#xA;Created on Node A&#xA;Created on Node B&#xA;Resolved&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;&#xA;Pay special attention to the flags. You can see that we have here three revisions. The conflicted versions as well as the resolved document. We&#x2019;ll be reporting these documents in the studio, so an admin can go and take a look and verify that nothing was missed and this also applies to conflict resolution that wasn&#x2019;t done by arbitrarily choosing a winner. Remember, this is the default configuration, so you can set RavenDB to manual mode, in which case you&#x2019;ll get an error on access a conflict and will need to resolve it manually, or you can define a script that would resolve the conflict. This can be defined on a per collection basis or globally for the database. Here is an example of how you can handle conflicts using a script:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          function resolveShoppingCartsConflicts(docs) {&#xA;        &#xA;        &#xA;          &#xA;            var final = docs[0];&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;            for(var i = 1; i &lt; docs.length; i&#x2B;&#x2B;)&#xA;        &#xA;        &#xA;          &#xA;            {&#xA;        &#xA;        &#xA;          &#xA;              var currentCart = docs[i];&#xA;        &#xA;        &#xA;          &#xA;              for(var j = 0; j &lt; currentCart.Items.length; j&#x2B;&#x2B;)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                var item = currentCart.Items[j];&#xA;        &#xA;        &#xA;          &#xA;                var match = final.Items&#xA;        &#xA;        &#xA;          &#xA;                  .find( i =&gt; i.ProductId == item.ProductId);&#xA;        &#xA;        &#xA;          &#xA;                if(!match)&#xA;        &#xA;        &#xA;          &#xA;                {&#xA;        &#xA;        &#xA;          &#xA;                  // not in cart, add&#xA;        &#xA;        &#xA;          &#xA;                  final.Items.push(item);&#xA;        &#xA;        &#xA;          &#xA;                }&#xA;        &#xA;        &#xA;          &#xA;                else&#xA;        &#xA;        &#xA;          &#xA;                {&#xA;        &#xA;        &#xA;          &#xA;                  match.Quantity = Math.max(&#xA;        &#xA;        &#xA;          &#xA;                    item.Quantity,&#xA;        &#xA;        &#xA;          &#xA;                    match.Quantity);&#xA;        &#xA;        &#xA;          &#xA;                }&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;            }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;            return final;&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          conflict.resolver.js&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;Regardless of the way you chose to resolve the conflict, you will still have all the conflicting versions available after the resolution, so if your script missed something, no data has been lost. The idea is that we want to enable you to deploy a distributed system without too much hassle, but without taking undue risks or running in a configuration that is only suitable for demos. I think that this is the kind of features that you would never really notice, until you really notice that it just saved you a bunch of sleepless nights. And as this is written at 00:12 AM, I think that I&#x2019;ll listen to my own advice, hit the post button and head to bed.Update: Here is how you configure this in the studio:</p>
         </article>
-        <article id="article-2602">
+        <article id="article-2603">
             <a href="https://www.meziantou.net/quickly-test-sql-server-using-docker.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2602">Quickly test SQL Server using Docker</h2>
+                <h2 class="title mb-6" id="article-2603">Quickly test SQL Server using Docker</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">SQL Server is a large application. The installation copies lots of files and creates new services. If you want to test a version of SQL Server, you may not want to install it on your computer. Instead of creating a virtual machine, you can get a ready-to-run image from docker. This is much easier t</p>
         </article>
-        <article id="article-2603">
+        <article id="article-2604">
             <a href="https://ayende.com/blog/180322/ravendb-4-0-the-server-dashboard" target="_blank">
-                <h2 class="title mb-6" id="article-2603">RavenDB 4.0</h2>
+                <h2 class="title mb-6" id="article-2604">RavenDB 4.0</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that we have been saving is the hooking together of all the work we have ben doing to expose how RavenDB works into the operations dashboard. This has just landed in the nightly and can give you a lot of insight into exactly what is going on inside your server.You can see some of the screenshots below. The idea is that in addition to exposing all of these metrics over dedicated endpoints and SNMP, we will also save users the trouble of setting up monitoring and just show them what is going on directly. Operators can just head to this page and see what is going on, and it is meant to be put as a background for users to observe this during routine operations.</p>
         </article>
-        <article id="article-2604">
+        <article id="article-2605">
             <a href="https://ayende.com/blog/180321/centralized-temporal-history-for-the-ages" target="_blank">
-                <h2 class="title mb-6" id="article-2604">Centralized temporal history for the ages</h2>
+                <h2 class="title mb-6" id="article-2605">Centralized temporal history for the ages</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post isn&#x2019;t about RavenDB, at least not directly. In Hibernating Rhinos, we use all sorts of tools to communicate. It moves from email (direct,groups and mailing lists), Slack, Skype, bug tracking and the odd face to face interaction thingie. The problem is that some of these discussion happen in different circles, for example, a few devs working on the UI might talk with each other and make decisions about what we need to do, and then later a bug pops up with a &#x201C;fix the interaction of the replication components&#x201D;. This is particularly bad when we are doing this face to face, but it can also be something like: &#x201C;Optimize the process as per the slack discussion&#x201D; or &#x201C;The example that led to this bug is a perfect model of Foobarizm&#x201D;.There are two problems with this approach. First, if you weren&#x2019;t part of the discussion, and usually you wouldn&#x2019;t be, this is like sitting in a cafe with your parents and their high school friends, listening to them talking about other high school friends. It is both a pain and utterly incomprehensible. The other problem is that even if you were part of the conversation, you might not be able to connect the dots to this particular bug report. Or worse, it might be you a few weeks or months later, looking at the bug report and wondering what was going on there.This is especially the case when we investigate something a few months or years after the change was made, and we do some archaeology to figure out what is actually going on there. At that time, you might look at a piece of code, run blame to see where it came from, track down the specific commit and issue number that were responsible for the change and end up scratching your head and trying to figure out what was meant there, because the text assume context not in evidence.The other side here is that we can create dozens of issues per week, and they range from &#x201C;move the text so it will align in this view&#x201D; to &#x201C;fix the race condition on failure of recovering node on the cusp of promotion&#x201D;. Some of them are worth further treatment, with full explanation and discussion, but a three days chase to resolve an issue that ended up needing to move a piece of code three lines higher isn&#x2019;t going to get a good description.What we do need to pay attention to is that we leave enough information to figure out what the story was behind the issue, without making it a chore to actually create issues.</p>
         </article>
-        <article id="article-2605">
+        <article id="article-2606">
             <a href="https://ardalis.com/recent-talks-and-interviews-at-dogfoodcon/" target="_blank">
-                <h2 class="title mb-6" id="article-2605">Recent Talks and Interviews at DogfoodCon</h2>
+                <h2 class="title mb-6" id="article-2606">Recent Talks and Interviews at DogfoodCon</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Earlier this month I presented a couple of talks at DogfoodConin Columbus, Ohio. Sorry it&#x2019;s taken me so long to share my presentations, but&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-2606">
+        <article id="article-2607">
             <a href="https://andrewlock.net/migrating-passwords-in-asp-net-core-identity-with-a-custom-passwordhasher/" target="_blank">
-                <h2 class="title mb-6" id="article-2606">Migrating passwords in ASP.NET Core Identity with a custom PasswordHasher</h2>
+                <h2 class="title mb-6" id="article-2607">Migrating passwords in ASP.NET Core Identity with a custom PasswordHasher</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I create a custom IPasswordHasher&lt;&gt; implementation that can be used in ASP.NET Core Identity to support other hashing formats, such as BCrypt.&#x2026;</p>
         </article>
-        <article id="article-2607">
+        <article id="article-2608">
             <a href="https://ayende.com/blog/180289/pr-review-its-the-error-handling-again" target="_blank">
-                <h2 class="title mb-6" id="article-2607">PR Review</h2>
+                <h2 class="title mb-6" id="article-2608">PR Review</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is part of a PR related to making sure that disposing once works. It contains this code:This loses critically important information. Namely, the stack trace of the original exception. &#xA;That leaves aside the issue that an aggregate exception may contain multiple exceptions as well.In general, and I know this is old hat, whenever you see &#x201C;throw e;&#x201D; or &#x201C;throw e.InnerException;&#x201D; of any kind, you should always treat it as a bug.</p>
         </article>
-        <article id="article-2608">
+        <article id="article-2609">
             <a href="https://ayende.com/blog/180257/the-right-thing-and-what-the-user-expect-to-happen-are-completely-unrelated" target="_blank">
-                <h2 class="title mb-6" id="article-2608">The right thing and what the user expect to happen are completely unrelated</h2>
+                <h2 class="title mb-6" id="article-2609">The right thing and what the user expect to happen are completely unrelated</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">&#x201C;In theory, there is no difference between theory and the real world.&#x201D;&#xA;One of the more annoying things to learn was that the kind of things that you worry about from inside the product are almost never the kind of things that your users worry about. Case in point, we spend an amazing amount of time making sure that RavenDB is crash proof, that you will not have data corruption and that transactions are atomic and durable in the face of what is sometimes horribly broken environments.&#xA0; Users often just assume &#x201C;this must work&#x201D; and move along, having no idea how hard some of these things are.&#xA;But that much, I get. It make sense that you would just assume that things should work this way. In fact, one of the reason that RavenDB exists is that none of the NoSQL products at the time didn&#x2019;t provide what I considered to be basic functionality. Since then I learned that what a user consider basic functionality and what a database consider basic functionality are two very distinct things.&#xA;But I think that the most shocking thing was that users tend to not care about data consistency anyway near the level you would expect them to. We spend time and effort and a whole lot of coding to ensure that it would be possible to reason about the behavior of a distributed and concurrent system in an fairly predictable manner, that data is never lost or misplaced, and no one notices. What is worse, when you get things right, and another database engine gets it clearly wrong, users will sometimes want to use the other guy (wrong) implementation, because doing the clearly wrong thing is easier for them.&#xA;For example, consider the case of two concurrent modifications to the same document. If you do nothing, you&#x2019;ll get a Last Write Wins scenario. You can also do the proper thing and error when the second write comes, because it is based of a now out of date version of the document. A few weeks ago I got a frantic call from one of the marketing &amp; sales people about &#x201C;I broke our database&#x201D; and &#x201C;found a major issue&#x201D;. That was quite strange, given that the person talking to me wasn&#x2019;t a developer, instead, she was using one of our internal systems to update a customer purchase and got an error. She then proceeded to figure out that she could reproduce this error at will. All she had to do was edit the same customer record at the same time as a colleague was also editing it. Whoever saved the record first would work, and the second would get an error.&#xA;For the developers among you, that is Optimistic Concurrency in action, absolutely expected and what we want in this scenario. But I had to give a full explanation of how this is not a bug, tell the marketing guys to put down the &#x201C;Serious Bug Fixed, Upgrade Immediately&#x201D; email template down and that this is how it is meant to work. The problem, by the way, wasn&#x2019;t that they couldn&#x2019;t understand the issue. They just couldn&#x2019;t figure out why they got an error in the first place, surely the &#x201C;system&#x201D; was supposed to figure out what to do there and not given them an error.&#xA;I&#x2019;ll freely admit that we skimp on the UX of our internal systems because&#x2026; well, they are internal, and it is easier to train a few dozen people on how the systems work than to train the systems how people work at that scale. But this really hit home because even after I explained the issue, asked them what they expected to happen and how this is supposed to work, I couldn&#x2019;t get through. An error shown to them is obviously something that is wrong in the system. And being able to generate an error by their own actions means that the system is broken.&#xA;It took showing the same exact behavior in the accounting software (made by an external company) before they were half convinced that this isn&#x2019;t actually an issue.&#xA;Now, to be fair, our marketing people aren&#x2019;t technical, so they aren&#x2019;t expected to understand concurrency and handling thereof, and typically any error by the internal system means that something is broken in the infrastructure level so I can absolutely understand where they are coming from.&#xA;The sad thing is, this isn&#x2019;t isolated to non technical people and we have to be careful to design things in such a manner that they match what the user expect. And user in this case is the developers working with RavenDB and the ops teams responsible for its care and feeding. I&#x2019;ll talk about one such decision in the next post.</p>
         </article>
-        <article id="article-2609">
+        <article id="article-2610">
             <a href="https://andrewlock.net/exploring-the-asp-net-core-identity-passwordhasher/" target="_blank">
-                <h2 class="title mb-6" id="article-2609">Exploring the ASP.NET Core Identity PasswordHasher</h2>
+                <h2 class="title mb-6" id="article-2610">Exploring the ASP.NET Core Identity PasswordHasher</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: October 24, 2017
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I take a look at the PasswordHasher&lt;&gt; implementation from the ASP.NET Core Identity framework, and how it supports multiple hashing algorithms.&#x2026;</p>
-        </article>
-        <article id="article-2610">
-            <a href="https://enterprisecraftsmanship.com/posts/unit-testing-private-methods/" target="_blank">
-                <h2 class="title mb-6" id="article-2610">Unit testing private methods</h2>
-            </a>
-            <p class="mb-2">by Vladimir Khorikov</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 23, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m starting a new series about unit testing anti-patterns. This post is the first article in that series.&#xA;&#xA;&#xA;When it comes to unit testing, one of the most commonly asked questions is: how to test a private method?</p>
         </article>
         <div class="button flex justify-between">
             <a href="260.html"><span class="back arrow"></span></a>
