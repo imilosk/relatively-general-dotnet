@@ -138,8 +138,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6721">
+            <a href="https://ayende.com/blog/3472/entities-dependencies-best-practices" target="_blank">
+                <h2 class="title mb-6" id="article-6721">Entities dependencies best practices</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 31, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The question came up in the ALT.Net list, and it is fairly common in the DDD circles as well.     I have an User with Email address, which I want to keep encrypted in the database, but visible to the application. How do I handle this scenario in the entity?   We can do it in our service layer, and encrypt / decrypt that outside the entity, but that has two issues. It couple the entity to the service and it means that we can forget to encrypt the email at some point.It also smells.  Another option, which I call the brute force option, is to pass the dependency to the entity and let it handle its own concerns. Here is implementation:     Yes, it is ugly, and even using this approach you can improve upon it, but let us focus on the interesting tidbits. First, not only does our entity know about an infrastructure service, it is also aware of how to create it. It has to do so, because we have to provide an empty ctor for NHibernate to use.  We can generalize this a bit, leading us to this scenario:     This piece of code is akin to nails on board to me. It isn&#x27;t how I want to see code written.  A better way exists. We will start by making a slight modification to the User class, we remove the empty ctor. Well, we can&#x27;t remove it at the moment, there is check in NHibernate for this, which I need to find and remove, so for now, we have this:     Note that this also requires that you&#x27;ll specify the unsaved value of the identifier in the configuration.  Now that we have established that we have no way of creating the User using the empty ctor, we let NHibernate know how it can create it:     public class EntityDependenciesInterceptor : EmptyInterceptor&#xA;{&#xA;    public override object Instantiate(string clazz, EntityMode entityMode, object id)&#xA;    {&#xA;        if(entityMode!=EntityMode.Poco)&#xA;            return base.Instantiate(clazz, entityMode, id);&#xA;        if(clazz != typeof(User).FullName)&#xA;            return base.Instantiate(clazz, entityMode, id);&#xA;        return new User(CryptoProvider.Instance);&#xA;    }&#xA;}&#xA;&#xA;&#xA;Just for User, we override the way NHibernate create entities. Now we can register it in the session, and we are done:&#xA;&#xA;&#xA;  using (ISession session = sessionFactory.OpenSession(new EntityDependenciesInterceptor()))&#xA;{&#xA;    IList list = session.CreateCriteria(typeof(User)).List();&#xA;}&#xA;&#xA;&#xA;This is still not something that I particularly like. I don&#x27;t see encryption as part of the responsibilities of the entity. It is just something we need in order to save encrypted values to the DB. So let make it explicit.&#xA;&#xA;NHibernate has the notion of IUserType, which let you take actions on save / load of values from the DB.&#xA;&#xA;First, we make User POCO again, remove all traces of the previous ugliness. Now, we change the mapping for User so the email property is defined so:&#xA;&#xA;&#xA;  &lt;property name=&quot;Email&quot; type=&quot;Samples.EncryptedStringUserType, Samples&quot; /&gt;&#x9;&#x9;&#xA;&#xA;&#xA;And now we need to create the user type:&#xA;&#xA;&#xA;  public class EncryptedStringUserType : IUserType&#xA;{&#xA;    public bool Equals(object x, object y)&#xA;    {&#xA;        return object.Equals(x, y);&#xA;    }&#xA;&#xA;    public int GetHashCode(object x)&#xA;    {&#xA;        return x.GetHashCode();&#xA;    }&#xA;&#xA;    public object NullSafeGet(IDataReader rs, string[] names, object owner)&#xA;    {&#xA;        object r = rs[names[0]];&#xA;        if (r == DBNull.Value)&#xA;            return null;&#xA;        return CryptoProvider.Instance.Decrypt((string) r);&#xA;    }&#xA;&#xA;    public void NullSafeSet(IDbCommand cmd, object value, int index)&#xA;    {&#xA;        object paramVal = DBNull.Value;&#xA;        if (value != null)&#xA;            paramVal = CryptoProvider.Instance.Encrypt((string) value);&#xA;        IDataParameter parameter = (IDataParameter)cmd.Parameters[index];&#xA;        parameter.Value = paramVal;&#xA;    }&#xA;&#xA;    public object DeepCopy(object value)&#xA;    {&#xA;        return value;&#xA;    }&#xA;&#xA;    public object Replace(object original, object target, object owner)&#xA;    {&#xA;        return original;&#xA;    }&#xA;&#xA;    public object Assemble(object cached, object owner)&#xA;    {&#xA;        return cached;&#xA;    }&#xA;&#xA;    public object Disassemble(object value)&#xA;    {&#xA;        return value;&#xA;    }&#xA;&#xA;    public SqlType[] SqlTypes&#xA;    {&#xA;        get { return new SqlType[]{new StringSqlType()}; }&#xA;    }&#xA;&#xA;    public Type ReturnedType&#xA;    {&#xA;        get { return typeof(string); }&#xA;    }&#xA;&#xA;    public bool IsMutable&#xA;    {&#xA;        get { return false; }&#xA;    }&#xA;}&#xA;&#xA;&#xA;And that is it, you can now get transparent encryption / decryption when you are going to the DB, at no cost to the application design.</p>
+        </article>
+        <article id="article-6722">
+            <a href="https://ayende.com/blog/3471/the-secret-of-pretty-diagrams" target="_blank">
+                <h2 class="title mb-6" id="article-6722">The secret of pretty diagrams</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 31, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Is not really such a big secret...</p>
+        </article>
+        <article id="article-6723">
             <a href="https://ayende.com/blog/3470/there-are-some-things-a-good-developer-should-know" target="_blank">
-                <h2 class="title mb-6" id="article-6721">There are some things a good developer SHOULD know</h2>
+                <h2 class="title mb-6" id="article-6723">There are some things a good developer SHOULD know</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Adi has posted a post that I am not in agreement with: there are some things a good developer is NOT required to know.          [Quoting Jeff Atwood and Peter Norvig] Know how long it takes your computer to execute an instruction, fetch a word from memory (with and without a cache miss), read consecutive words from disk, and seek to a new location on disk       I did learn these things, but after reading Jeff&#x27;s post I have been trying to remember a project I worked on during the past 10 years which required this type of knowledge - and I got nothing.   Well, I used knowledge about reading &amp; seeking to / from disks the last two weeks. They are extremely important when you are thinking about high perf large I/O. Fetching words from memory, and the implications of ensuring good locality have huge affects on the type of performance that you are getting to get. As a simple example, a large part of the reason that thread switching is slow is that the CPU cache is mostly misses when you switch a thread.  You should know those things, and you should know how to apply them. No, they don&#x27;t come often, and I can think of a lot more things that I would like a developer to know (OO, to start with) more than those low level details, but those are important to know.</p>
         </article>
-        <article id="article-6722">
+        <article id="article-6724">
             <a href="https://ayende.com/blog/3469/from-annoyance-to-laugher-in-two-seconds" target="_blank">
-                <h2 class="title mb-6" id="article-6722">From annoyance to laugher in two seconds</h2>
+                <h2 class="title mb-6" id="article-6724">From annoyance to laugher in two seconds</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a screen shot from NDepend (I have a review forthcoming), I run it on a code base, and I went through the issues it found.   These rules are things that I disagree with.     So I clicked to modify it, and I got this, which had me laughing.     I like the spirit.</p>
         </article>
-        <article id="article-6723">
+        <article id="article-6725">
             <a href="https://ayende.com/blog/3468/useless-java" target="_blank">
-                <h2 class="title mb-6" id="article-6723">Useless Java</h2>
+                <h2 class="title mb-6" id="article-6725">Useless Java</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This article (The &#x27;Anti-Java&#x27; Professor and the Jobless Programmers) has really annoyed me. Not because of its content, but because the professor being interview is so narrowly focused that he is completely out of it.  Let us take this quote:     &#x201C;Furthermore, Java is mainly used in Web applications that are mostly fairly trivial,&#x201D; Dewar says, with his characteristic candor. &#x201C;If all we do is train students to be able to do simple Web programming in Java, they won&#x27;t get jobs, since those are the jobs that can be easily outsourced. What we need are software engineers who understand how to build complex systems.&#x201D;    You know what, I might agree with this, trivial web programming is something that doesn&#x27;t require highly skilled worker. But the context in which he says this makes all the difference in the world. Here is the next statement:     &#x201C;By the way Java has almost no presence in such systems. At least as of a few months ago, there was not a single line of safety-critical Java flying in commercial or military aircraft. I recently talked to a customer who had a medium-sized application in Java, which was to be adapted to be part of a safety-critical avionics system. They immediately decided that this meant it would have to be recoded in a suitable language, probably either C or Ada.&#x201D;    So, if it is not aircraft code, it is &quot;simple Web programming&quot;? Excuse me?!  Leaving aside the part about Java&#x27;s license not being suitable for life critical systems, it annoys me that this is the only criteria that he think is worth mentioning. His bank is running Java, as well as the stock exchange, it is likely that the payroll system in his university as well. Relegating Java to &quot;simple Web programming&quot; is a huge mistake. Java sweet spot is building complex systems, where a lot of the design decisions that make it hard to do the simple stuff pay off tremendously.  I can think of quite a few mission critical (people life on the balance) that are written in C# (for the purpose of this post, equivalent to Java). That is not to say that aircraft systems shouldn&#x27;t be written in Ada or C, I never written one, so I won&#x27;t comment, but to say that this is the only field of any complexity is showing a remarkable amount of ignorance and bigotry.  There was another part that caught my eye, this professor interviewing&#x27;s technique:     Dewar says that if he were interviewing applicants for a development job, he would quickly eliminate the under-trained by asking the following questions:     1.) You begin to suspect that a problem you are having is due to the compiler generating incorrect code. How would you track this down? How would you prepare a bug report for the compiler vendor? How would you work around the problem?     2.) You begin to suspect that a problem you are having is due to a hardware problem, where the processor is not conforming to its specification. How would you track this down? How would you prepare a bug report for the chip manufacturer, and how would you work around the problem?     &#x201C;I am afraid I would be met by blank stares from most recent CS graduates, many of whom have never seen assembly or machine language!&#x201D; he says   I can tell quite a lot about what he is doing, just by the questions he ask, but let me try answering them.  1) Well, I would start by creating an isolated test case, seeing if I can still see the odd behavior. I would remove all code that is even half way smart, trying to reduce the amount of work that the compiler has to do. I would get the language spec and pore over it, trying to make sure that I am not relying on unspecified behavior or misunderstanding the spec. Hopefully, I have a decompiler as well, since that would be an independent corroboration that there is or isn&#x27;t an issue. Then I would take the output and verify disassemble it, comparing it to what is supposed to happen. I will take that info and submit to the compiler vendor. Working around this issue... by now I have some understanding on what triggers it, so I would change the code accordingly, simplifying it, removing any smart tricks, etc. I&#x27;ll also leave a big comment about why this is done.  2) Try it on a different machine with the same processor, try it on another machine with a different processor. That rules problems with a specific machine and problems with my code, respectively. Reduce the problem to the smallest thing that can repro it, go over the spec, verify understanding. Eventually I should have a small program that demonstrate the issue. This can be incredibly hard to do if you run into something like memory barriers do not work in some scenario on SMP machines, for example. Work around it... depending on context...</p>
         </article>
-        <article id="article-6724">
+        <article id="article-6726">
             <a href="https://ayende.com/blog/3467/in-belgium-next-week" target="_blank">
-                <h2 class="title mb-6" id="article-6724">In Belgium Next week</h2>
+                <h2 class="title mb-6" id="article-6726">In Belgium Next week</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am going over to Belgium next week, to do some work. Bart Reyserhove is organizing a beers night there.  Where: Sint-Gorikshallen: Sint-Goriksplein 1, 1000 Brussel     When: Tuesday august 5th @ 21:00 hours.</p>
         </article>
-        <article id="article-6725">
+        <article id="article-6727">
             <a href="https://ayende.com/blog/3466/writing-begets-writing" target="_blank">
-                <h2 class="title mb-6" id="article-6725">Writing begets writing</h2>
+                <h2 class="title mb-6" id="article-6727">Writing begets writing</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am working on the versioning chapter for the DSL book, and it is going amazingly well. When I started it I had only the vaguest of idea how to go about writing it, but I wrote 10 pages today, and it is going very fast, and the flow seems to be good. What creeps me out is that I spent months thinking about this, without getting any concrete idea about how to express myself, and than it all flow at once.  The problem, of course, is that it doesn&#x27;t really flow into the book, here is my current blogging queue (unordered):     NHibernate Interception with Post Sharp    Entities dependencies best practices    Creating logging interceptor with Castle Windsor    Evaluating Prism    Usage scenarios for Cloud Computing    Evaluating Kym    Distributed Hash Tables: Locks usage best practices    Distributed Hash Tables: Locality    Distributed Hash Tables: Namespaces    Distributed Hash Tables: Time sensitive updates    Distributed Hash Tables: Lookup by property    Distributed Hash Tables: Lookup by range    Code Critique: Transactional Queue    Rhino Queues    Useless Java    A DSL trip to the Zoo    I&#x27;ll get to your application in a week- First, we need to build the framework    Production Quality: A DSL Sample   And I am probably forgetting a few along the way. Just getting this turned around would be hard enough, but I also have three webcasts that I need to record &amp; edit:     First Steps With Rhino Commons    Building Domain Specific Language with Boo    Production Quality Software   Way too much on my plate, I am going to bed.</p>
         </article>
-        <article id="article-6726">
+        <article id="article-6728">
             <a href="https://ardalis.com/there-are-no-single-developer-projects/" target="_blank">
-                <h2 class="title mb-6" id="article-6726">There are no single developer projects</h2>
+                <h2 class="title mb-6" id="article-6728">There are no single developer projects</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Oren wrote today, There is no such thing as a single developer project. At first this sounds like an obviously false statement, but read on&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6727">
+        <article id="article-6729">
             <a href="https://ayende.com/blog/3465/building-domain-specific-languages-in-boo-chapter-9-toc" target="_blank">
-                <h2 class="title mb-6" id="article-6727">Building Domain Specific Languages in Boo</h2>
+                <h2 class="title mb-6" id="article-6729">Building Domain Specific Languages in Boo</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Thoughts?     Starting from a stable origin    Planning our DSL&#x27;s versioning story         Implications of modifying the DSL Engine      Implications of modifying the DSL API and Model      Implications of modifying the DSL Syntax      Implications of modifying the DSL Environment       Regression Test Suite    Versioning cut off point - where to apply versioning concerns    Versioning strategies:         Abandon Ship Strategy      Glacial Change Strategy      Additive Change Strategy      Tower of Babel Strategy      Runtime Adapter Strategy      Compilation Adapter Strategy      Auto Modification Strategy      Self Modification Strategy       Versioning best practices:     # actual content         Closed world      Regression test suite</p>
         </article>
-        <article id="article-6728">
+        <article id="article-6730">
             <a href="https://ayende.com/blog/3464/onion-architecture" target="_blank">
-                <h2 class="title mb-6" id="article-6728">Onion Architecture</h2>
+                <h2 class="title mb-6" id="article-6730">Onion Architecture</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,38 +296,6 @@
                 posted on: July 29, 2008
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post from Jeffrey Palermo has managed to distilled the reasons for a lot of things that I consider important.  From persistence ignorance to dependency injection.   To be rather more exact, Jeffrey has managed to put it in words in a way that I don&#x27;t think that I would have ever could.  Go and read it.  The concepts will probably not be earth shattering, but the ability to communicate clearly about this is very important.  &#xA0;  &#xA0;  &#xA0;  &#xA0;  .</p>
-        </article>
-        <article id="article-6729">
-            <a href="https://ayende.com/blog/3463/a-dsl-is-also-its-usage" target="_blank">
-                <h2 class="title mb-6" id="article-6729">A DSL is also its usage</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 29, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The title says it all, I think. Okay, it doesn&#x27;t, I admit.  There is a lot of focus with DSL about the syntax. And there is some focus on the engine. There is very little focus about how both the environment and the usage of the DSL affect the DSL itself. Here are a few examples:     Naming convention    Script ordering    Execution location (when you are running the scripts)   All of those are of particular importance in many DSL, not only for the actual execution, but for how the DSL itself is written.</p>
-        </article>
-        <article id="article-6730">
-            <a href="https://ayende.com/blog/3462/there-is-no-such-thing-as-a-single-developer-project" target="_blank">
-                <h2 class="title mb-6" id="article-6730">There is no such thing as a single developer project</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 29, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There are always at least two people in any software project:     The developer who wrote the code.    The developer who read the code.   They are never the same person, even if just by temporal dissonance.</p>
         </article>
         <div class="button flex justify-between">
             <a href="672.html"><span class="back arrow"></span></a>

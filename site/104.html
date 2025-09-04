@@ -138,8 +138,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1031">
+            <a href="https://ayende.com/blog/195778-C/optimizing-local-and-distributed-transactions-with-batching" target="_blank">
+                <h2 class="title mb-6" id="article-1031">Optimizing local and distributed transactions with batching</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 22, 2021
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I got into a&#xA0;good discussion about how RavenDB implements some optimizations with transaction handling. The details got big enough (and hopefully interesting enough) that they warrant their own post.&#xA;When we are talking about transactions, one of the key factors in the cost of a transaction is the amount of time that it takes to persist that. This is different for local and distributed transactions.&#xA;For a local transaction, we can consider the transaction committed if it is durably stored on the disk.&#xA;For a distributed transaction, we can consider the transaction committed if it is durably stored on a majority of the disks in the cluster.&#xA;That factor right there is the primary reason why a distributed transaction is more expensive. For a local transaction, you are waiting for the disk. For a distributed transaction, you are waiting for multiple disks and the network.&#xA;One of the core optimizations for speeding up transactions is the ability to batch things. The cost of writing to the disk is more or less the same, regardless of how much you write (within an order of magnitude or so). In other words, writing 8 KB and writing 32 KB has pretty much the same cost. Writing 1 MB and writing 100 MB does not, but writing 1 MB vs 4 MB isn&#x2019;t meaningfully different (sequential durable write, which is what we care for in the case of transactions).&#xA;The point of this post is how this is actually handled. RavenDB utilizes a process called transaction merging to reduce the number of times that we have to go to the disk. Concurrent transactions will be bundled into the same write call, massively increasing our throughput. To give you some context, without transaction merging, you can peak at a few hundreds transactions per second. With transaction merging, you can jump to high thousands of transactions per second. Here is how this works:&#xA;&#xA;RavenDB actually takes this further, in addition to transaction merging, we also apply something we call async commit. Take a look at the following timeline:&#xA;&#xA;A transaction is actually composed of two separate steps. First we need to execute whatever commands we have in the transaction, then we have to write the transaction changes to disk.&#xA;RavenDB is able to start processing the next transaction as soon as the previous one started the write to the disk. The idea is to parallelize compute and I/O, and we are able to benefit greatly as a result. Note that this is safe to do, since the next transaction won&#x2019;t be committed until the prior transaction has been durably stored.&#xA;How does this work in practice? Whenever we have a new transaction, we add it to a queue. A dedicated thread will merge those transactions and pull them from the queue, running the separate transactions as one big operation. When we run out of pending transactions or hit certain size / timing limits, we&#x2019;ll commit the merged transaction and start working on the next one while the commit is completing in the background.&#xA;There are certain algorithms that try to maximize throughput, such as Nagle. They do that by waiting for additional transactions to arrive before actually going to the disk. RavenDB doesn&#x2019;t use that approach. If a system is idle and we get a single transaction, we&#x2019;ll immediately execute and commit it.&#xA;But the fact that we don&#x2019;t explicitly do Nagle doesn&#x2019;t mean that it isn&#x2019;t useful. Because we have to wait for the disk, what ends up happening is that under load, we start getting more pending transactions in the queue. Which will then be executed as a merged unit. In other words, RavenDB implements a dynamic batching approach, affected by the actual I/O constraints and the load on the system. If we have independent transactions, we&#x2019;ll execute them immediately. As the load increases, we&#x2019;ll start making more merged transactions. This way we can keep a fairly consistent response time even when the load of the system grows by leaps and bounds.&#xA;The situation is similar when we are talking about distributed transactions. RavenDB uses the Raft protocol for managing its distributed behavior. I&#x2019;m going to focus just on the batching aspect of the behavior. RavenDB will send an AppendEntries message to the other members in the cluster every 200 ms or so. However, if we have a new command to send to the cluster, it will go out immediately over the network. An&#xA0; important factor here is that we are using TCP, and we require acknowledgment from the other side before we send the next message. As a result of those behaviors, we have pretty much the same situation. Depending on the network latency and the processing time, we&#x2019;ll send more entries in a single roundtrip.&#xA;In short, the overall behavior for RavenDB is that we&#x2019;ll start the operation immediately on the first action (both for disk and network), and then we&#x2019;ll batch anything that happens while the first operation is in flight and send that as a result.&#xA;After over a decade of working in this manner, I can tell that this has proven to be a highly adaptable system that results in the minimum number of knobs to mess with. It favors latency over throughput when there isn&#x2019;t a lot of activity and shifts toward favoring throughput over latency as the load grows.</p>
+        </article>
+        <article id="article-1032">
+            <a href="https://ayende.com/blog/195841-B/work-well-under-pressure-is-a-safety-valve-not-sop" target="_blank">
+                <h2 class="title mb-6" id="article-1032">&#x201C;Work well under pressure&#x201D; is a safety valve, not SOP</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 21, 2021
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The phrase &#x201C;work well under pressure&#x201D; is something that I consider to be a red flag in a professional environment. My company builds a database that is used as the backend of business critical systems. If something breaks, there is a need to fix it. It costs money (sometimes a lot of money) for every minute of downtime.&#xA;Under such a scenario, I absolutely want the people handling the issue to remain calm, collected and analytical. In such a case, being able to work well under pressure is a huge benefit.&#xA;That is not how this term is typically used, however. The typical manner you&#x2019;ll hear this phrase is to refer to the usual working environment. For example, working under time pressure to deliver certain functionality. That sort of pressure is toxic over time.&#xA;Excess stress is a well known contributor to health issues (mental and physical ones), it will cause you to make mistakes and it adds frictions all around.&#xA;From my perspective, the ability to work well under pressure is an absolutely important quality, which should be hoarded. You may need to utilize this ability in order to deal with a blocking customer issue, but should be careful not to spend that on non-critical stuff.&#xA;And by definition, most things are not critical. If everything is critical, you have a different problem.&#xA;That means that part of the task of the manager is to identify the places where pressure is applied and remove that. In the context of software, that may be delaying a release date or removing features to reduce the amount of work.&#xA;When working with technology, the most valuable asset you have is the people and the knowledge they have. And one of the easiest ways to lose that is to burn the candle at both ends. You get more light, sure, but you also get no candle.</p>
+        </article>
+        <article id="article-1033">
             <a href="https://andrewlock.net/creating-a-source-generator-part-3-integration-testing-and-packaging/" target="_blank">
-                <h2 class="title mb-6" id="article-1031">Integration testing and NuGet packaging</h2>
+                <h2 class="title mb-6" id="article-1033">Integration testing and NuGet packaging</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Creating a source generator - Part 3</p>
         </article>
-        <article id="article-1032">
+        <article id="article-1034">
             <a href="https://ayende.com/blog/195809-C/negative-feature-response-protect-the-user-from-accidental-collection-deletion" target="_blank">
-                <h2 class="title mb-6" id="article-1032">Negative feature response</h2>
+                <h2 class="title mb-6" id="article-1034">Negative feature response</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A RavenDB user has accidentally deleted a collection. They intended to do something else, probably, but&#x2026;&#xA0; They have a backup, but as you can imagine, this is a bad place to be in.&#xA;They talked to us and mentioned that they want a feature where deletion in the studio can be locked by a password or even two factor authentication, to prevent such a scenario.&#xA;We are not going to implement such a feature. From a technical perspective, this is a pretty easy thing to do, of course. My issue is that it doesn&#x2019;t make sense for such a feature to exist. Let me dig into the details and explain what the problem is.&#xA;Locking deletes behind a password or two factor authentication is a security feature. That has a major impact on all aspects of the design. However, this is about preventing mistakes on the part of the user, not another security capability (this user can do deletes, this one cannot).&#xA;As such, this isn&#x2019;t a security feature, but a UX one. The delete is already asking for confirmation, but it is the sort of thing that you rarely read,&#xA0; as we all know.&#xA;The distinction between a security feature and a UX feature is important. If this is a security feature, that means that I need to prevent doing mass deletes everywhere. As the result of queries, iterating over ids, in patch operations, etc. If this is a UX issue, that is a whole different level.&#xA;Looking at other such destructive operations, where the user is allowed to do the operation, but we want to prevent accidents leads me to consider something like this:&#xA;&#xA;Where we require the user to perform some action if there is a major risk. That shifts the burden to the user, but it means that we now need to consider how to apply this.&#xA;Are we dealing with just mass deletes? What about update queries?&#xA;The purpose here isn&#x2019;t to prevent the user from making the operation, but to have them stop and consider for a moment. The problem is that for common operations, that is something that you would add a significant amount of friction to your daily work.&#xA;When working on importing data, for example, it is common to delete the previous run each time that you run (think, development time, every 3 minutes). Adding hurdles along the way is a PITA.</p>
         </article>
-        <article id="article-1033">
+        <article id="article-1035">
             <a href="https://www.meziantou.net/getting-roslyn-csharp-compiler-and-language-versions.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1033">Getting Roslyn (C# compiler) and Language versions</h2>
+                <h2 class="title mb-6" id="article-1035">Getting Roslyn (C# compiler) and Language versions</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When a user reports an error in a Roslyn Analyzer or a Source Generator, you may need to know the version of Roslyn and the language version that are currently being used. The compiler provides everything needed. Indeed, you simply need to add #error version to any source file and check the compile</p>
         </article>
-        <article id="article-1034">
+        <article id="article-1036">
             <a href="https://ayende.com/blog/195777-C/in-short-acid" target="_blank">
-                <h2 class="title mb-6" id="article-1034">In Short: ACID</h2>
+                <h2 class="title mb-6" id="article-1036">In Short: ACID</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20"></p>
         </article>
-        <article id="article-1035">
+        <article id="article-1037">
             <a href="https://ayende.com/blog/195650-B/challenge-find-the-slow-down-answer" target="_blank">
-                <h2 class="title mb-6" id="article-1035">Challenge</h2>
+                <h2 class="title mb-6" id="article-1037">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I asked about a slow piece of code and why it is so slow. The answer is pretty simple, I messed up, take a look at this piece of code:When the Value is an int, I&#x2019;m creating a span from the address of a long variable (initialized to zero). That means that I have a lot of hash collisions, which means that adding to the dictionary turned into a sequential operation, which means that the actual cost here is O(N**2).Interestingly enough, you can&#x2019;t write this code without the use of unsafe. I actually didn&#x2019;t know that the scope of the variable was even valid here to have its address taken. That was very hard to debug, because the problem was hidden away somewhere very far from where we looked at.</p>
         </article>
-        <article id="article-1036">
+        <article id="article-1038">
             <a href="https://enterprisecraftsmanship.com/posts/how-to-assert-database-state/" target="_blank">
-                <h2 class="title mb-6" id="article-1036">How to Assert Database State?</h2>
+                <h2 class="title mb-6" id="article-1038">How to Assert Database State?</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today, we&#x2019;ll discuss a question that relates to my Unit Testing book: how to assert the state of the database?</p>
         </article>
-        <article id="article-1037">
+        <article id="article-1039">
             <a href="https://ayende.com/blog/195649-B/challenge-find-the-slow-down" target="_blank">
-                <h2 class="title mb-6" id="article-1037">Challenge</h2>
+                <h2 class="title mb-6" id="article-1039">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The following code takes a long time to run. In fact, I&#x2019;m writing this blog post while this is running, and I&#x2019;m not sure how long that will take.&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          unsafe class Program&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              public class NumericValue&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  public string Name;&#xA;        &#xA;        &#xA;          &#xA;                  public object Value;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;                  public override bool Equals(object obj)&#xA;        &#xA;        &#xA;          &#xA;                  {&#xA;        &#xA;        &#xA;          &#xA;                      return obj is NumericValue value &amp;&amp;&#xA;        &#xA;        &#xA;          &#xA;                              Name == value.Name &amp;&amp;&#xA;        &#xA;        &#xA;          &#xA;                              Equals(Value, value.Value);&#xA;        &#xA;        &#xA;          &#xA;                  }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;                  public unsafe override int GetHashCode()&#xA;        &#xA;        &#xA;          &#xA;                  {&#xA;        &#xA;        &#xA;          &#xA;                      Span&lt;byte&gt; span;&#xA;        &#xA;        &#xA;          &#xA;                      if (Value is long l)&#xA;        &#xA;        &#xA;          &#xA;                      {&#xA;        &#xA;        &#xA;          &#xA;                          span = new Span&lt;byte&gt;(&amp;l, sizeof(long));&#xA;        &#xA;        &#xA;          &#xA;                      }&#xA;        &#xA;        &#xA;          &#xA;                      else if (Value is int i)&#xA;        &#xA;        &#xA;          &#xA;                      {&#xA;        &#xA;        &#xA;          &#xA;                          span = new Span&lt;byte&gt;(&amp;l, sizeof(int));&#xA;        &#xA;        &#xA;          &#xA;                      }&#xA;        &#xA;        &#xA;          &#xA;                      else&#xA;        &#xA;        &#xA;          &#xA;                      {&#xA;        &#xA;        &#xA;          &#xA;                          throw new NotSupportedException(&quot;Unknown value&quot;);&#xA;        &#xA;        &#xA;          &#xA;                      }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;                      return (int)Standart.Hash.xxHash.xxHash32.ComputeHash(span, &#xA;        &#xA;        &#xA;          &#xA;                                          span.Length, (uint)Name.GetHashCode());&#xA;        &#xA;        &#xA;          &#xA;                  }&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              static void Main(string[] args)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  var dic = new Dictionary&lt;NumericValue, int&gt;();&#xA;        &#xA;        &#xA;          &#xA;                  var sp = Stopwatch.StartNew();&#xA;        &#xA;        &#xA;          &#xA;                  for (int i = 0; i &lt; 100_000; i&#x2B;&#x2B;)&#xA;        &#xA;        &#xA;          &#xA;                  {&#xA;        &#xA;        &#xA;          &#xA;                      dic.Add(new NumericValue&#xA;        &#xA;        &#xA;          &#xA;                      {&#xA;        &#xA;        &#xA;          &#xA;                          Name = &quot;test&quot;,&#xA;        &#xA;        &#xA;          &#xA;                          Value = i&#xA;        &#xA;        &#xA;          &#xA;                      }, i);&#xA;        &#xA;        &#xA;          &#xA;                  }&#xA;        &#xA;        &#xA;          &#xA;                  Console.WriteLine(sp.ElapsedMilliseconds);&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          slow.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;Update: This took over a minute to complete on my machine (which is pretty nice).The killer is that this code is correct, it does the right thing, but it can be slow. I stripped a much larger scenario to ~50 lines of code, can you see what is going on? And why?</p>
         </article>
-        <article id="article-1038">
+        <article id="article-1040">
             <a href="https://ayende.com/blog/195617-A/talk-scalable-architecture-from-the-ground-up" target="_blank">
-                <h2 class="title mb-6" id="article-1038">Talk</h2>
+                <h2 class="title mb-6" id="article-1040">Talk</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,38 +296,6 @@
                 posted on: December 14, 2021
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this talk, Oren Eini, founder of the RavenDB NoSQL database, will speak about how you can design and architect software systems that can easily scale to stupendous sizes, without causing either headache or pinching your wallet. It is obvious that if you chose the right algorithm for a particular task, you can gain tremendous benefits in terms of efficiency. What isn&#x27;t as obvious is that the same apply to the global system architecture. In this talk, we aren&#x27;t going to cover specific products or implementation. Rather, we&#x27;ll cover architectural styles and approaches that withstood the test of time and allow you to create systems that are simple and cheap to operate while giving you the flexibility to grow. Arguably even more important, large complex systems require ongoing maintenance and care. We&#x27;ll look into how we can provide insight and visibility into the innards of the system without putting too much of a strain on the development team. How we can enable operations features such as rolling deployment, recovery and audits at ease.</p>
-        </article>
-        <article id="article-1039">
-            <a href="https://andrewlock.net/creating-a-source-generator-part-2-testing-an-incremental-generator-with-snapshot-testing/" target="_blank">
-                <h2 class="title mb-6" id="article-1039">Testing an incremental generator with snapshot testing</h2>
-            </a>
-            <p class="mb-2">by Andrew Lock</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 14, 2021
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Creating a source generator - Part 2</p>
-        </article>
-        <article id="article-1040">
-            <a href="https://ayende.com/blog/195681-B/production-postmortem-the-memory-leak-that-only-happened-on-linux" target="_blank">
-                <h2 class="title mb-6" id="article-1040">Production postmortem</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 13, 2021
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Our monitoring system pinged us about a problem with a RavenDB cluster running in production. The problem was simple, we saw quite a bit of server restarts for that particular cluster. Looking deeper, it was obvious that the RavenDB instances for the cluster would occasionally run out of memory and crash. The customer, by the way, was unaware of this issue. From their perspective, the RavenDB cluster would switch the primary node for the database in question on a regular basis. On our end, we could see that each node would start using higher and higher memory and end up dying because of that. They would be restarted, of course, and the primacy of the cluster would switch automatically, but that is not a proper way to run.&#xA;The problem was figuring out what was going on. It took some time to figure out what exactly was going on. We didn&#x2019;t see any such behavior on any other customer, but this customer had two factors that affected the outcome. The first is that the database in question is encrypted, which means that RavenDB will need some place to put the decrypted values. The second is that the user is issuing streaming queries that have a lot of results. We were able to reproduce the high memory usage when issuing the same queries, however, we were utterly unable to reproduce the problem when trying to run it on our own machines.&#xA;That was&#x2026; strange, and it took a while to figure out that we need to run on Linux to get the issue. We subjected the system to a very high load on Windows, with no issue. On Linux, it would be quickly apparent that we are consuming more and more memory. We were able to narrow things down to this call:&#xA;&#xA;posix_memalign(&amp;ptr, 4096, 8192);&#xA;&#xA;What we are asking here is an 8KB buffer aligned on 4KB boundary. And we were leaking those like crazy but we&#xA0;couldn&#x2019;t figure out how. We are pretty careful with manual memory management and we have the tools around to detect leaks. Each and every call to allocate was also freed. The problem is that we aren&#x2019;t the only ones using the system. Basically, posix_memalign will use the same memory pool as malloc(). The problem is memory fragmentation, basically. The way posix_memalign() works is to issue:&#xA;&#xA;&#xA;&#xA;Where nb is 8192 bytes, alignment is 4096 bytes and MINSIZE is 32 bytes. We then release the end of the buffer, which ends up being ~4KB or so in most cases. Along with other allocations, that created severe fragmentation in our memory.&#xA;We need the memory to be page aligned, because we use that for direct memory access. The memory is typically pooled, so we won&#x2019;t be allocating and freeing it all the time, but when you use streaming queries, you may be running through a lot of data, so we exceeded the size of the pool. At that point, we would allocate (and free), but we&#x2019;ll also fragment the memory.&#xA;We fixed the issue by using mmap() directly, which will give us page aligned memory and won&#x2019;t cause us to use more memory than needed. Given that we get page aligned memory with is a multiple of page size, we can be sure that we&#x2019;ll get reuse of the memory, instead of having to deal with internal fragmentation inside the malloc implementation. With this change, there are no issues, and we are actually slightly faster than before.&#xA;The reason we didn&#x2019;t run into the same problem on Windows, by the way? There we called VirtualAlloc() from the get-go, which will ensure that we have page aligned memory, so no need to deal with fragmentation.</p>
         </article>
         <div class="button flex justify-between">
             <a href="103.html"><span class="back arrow"></span></a>
