@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6651">
+            <a href="https://ayende.com/blog/3544/basic-intellisense" target="_blank">
+                <h2 class="title mb-6" id="article-6651">Basic intellisense</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 21, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In many cases, intellisense is the killer feature that will make all the difference in using a language. However, it is significantly harder than just defining the syntax rules. The main problem is that we need to deal with the current context. Let us take a look at what we would like our intellisense to do for the Quote Generation DSL.        On empty line, show &quot;specification&quot;    On specification parameter, show all available modules.    On empty line inside specification block, show all actions (requires, users_per_machine, same_machine_as)    On action parameter, find appropriate value (available modules for the requires and same_machine_as actions, pre-specified user counts for the users_per_machine)   And this is for a scenario when we don&#x27;t even want to deal with intellisense for the CLR API that we can use&#x2026;   #Develop will give us the facilities, but it can&#x27;t give us the context, this is something that we need to provide.Let us see how this works, shall we?  First, we need to decide what will invoke the intellisense. In this case, I decided to use the typical ctrl&#x2B;space, so I added this:     this.editorControl.ActiveTextAreaControl.TextArea.KeyDown&#x2B;=delegate(object sender, KeyEventArgs e)&#xA;{&#xA;    if (e.Control == false)&#xA;        return;&#xA;    if (e.KeyCode != Keys.Space)&#xA;        return;&#xA;    e.SuppressKeyPress = true;&#xA;    ShowIntellisense((char)e.KeyValue);&#xA;};&#xA;&#xA;&#xA;I don&#x27;t think that this code requires any explanation, so we will move directly to the ShowIntellisense method:&#xA;&#xA;&#xA;  private void ShowIntellisense(char value)&#xA;{&#xA;    ICompletionDataProvider completionDataProvider = new CodeCompletionProvider(this.imageList1);&#xA;&#xA;    codeCompletionWindow = CodeCompletionWindow.ShowCompletionWindow(&#xA;        this,                // The parent window for the completion window&#xA;        editorControl, &#x9;     // The text editor to show the window for&#xA;        &quot;&quot;,&#x9;       &#x9;     // Filename - will be passed back to the provider&#xA;        completionDataProvider,// Provider to get the list of possible completions&#xA;        value&#x9;&#x9;     // Key pressed - will be passed to the provider&#xA;        );&#xA;    if (this.codeCompletionWindow != null)&#xA;    {&#xA;        // ShowCompletionWindow can return null when the provider returns an empty list&#xA;        this.codeCompletionWindow.Closed &#x2B;= CloseCodeCompletionWindow;&#xA;    }&#xA;}&#xA;&#xA;&#xA;We aren&#x27;t doing much here, simply invoking the facilities that #Develop gives us for intellisense. The interesting bit of work all happen in CodeCompletionProvider. There is a lot of boiler plate code there, so we will scan it shortly, and then arrive to the real interesting part:&#xA;&#xA;&#xA;  public class CodeCompletionProvider : ICompletionDataProvider&#xA;{&#xA;    private ImageList imageList;&#xA;&#xA;    public CodeCompletionProvider(ImageList imageList)&#xA;    {&#xA;        this.imageList = imageList;&#xA;    }&#xA;&#xA;    public ImageList ImageList&#xA;    {&#xA;        get&#xA;        {&#xA;            return imageList;&#xA;        }&#xA;    }&#xA;&#xA;    public string PreSelection&#xA;    {&#xA;        get&#xA;        {&#xA;            return null;&#xA;        }&#xA;    }&#xA;&#xA;    public int DefaultIndex&#xA;    {&#xA;        get&#xA;        {&#xA;            return -1;&#xA;        }&#xA;    }&#xA;&#xA;    public CompletionDataProviderKeyResult ProcessKey(char key)&#xA;    {&#xA;        if (char.IsLetterOrDigit(key) || key == &#x27;_&#x27;)&#xA;        {&#xA;            return CompletionDataProviderKeyResult.NormalKey;&#xA;        }&#xA;        return CompletionDataProviderKeyResult.InsertionKey;&#xA;    }&#xA;&#xA;    /// &lt;summary&gt;&#xA;    /// Called when entry should be inserted. Forward to the insertion action of the completion data.&#xA;    /// &lt;/summary&gt;&#xA;    public bool InsertAction(ICompletionData data, TextArea textArea, int insertionOffset, char key)&#xA;    {&#xA;        textArea.Caret.Position = textArea.Document.OffsetToPosition(&#xA;            Math.Min(insertionOffset, textArea.Document.TextLength)&#xA;            );&#xA;        return data.InsertAction(textArea, key);&#xA;    }&#xA;&#xA;    public ICompletionData[] GenerateCompletionData(string fileName, TextArea textArea, char charTyped)&#xA;    {&#xA;        return new ICompletionData[] {&#xA;             new DefaultCompletionData(&quot;Text&quot;, &quot;Description&quot;, 0),&#xA;             new DefaultCompletionData(&quot;Text2&quot;, &quot;Description2&quot;, 1)&#xA;        };&#xA;    }&#xA;}&#xA;&#xA;&#xA;The properties should be self explanatory. ProcessKey allows you decide how to handle the current keypress. Here, you get to see only normal keys (send to the actual text control) and insertion (add the current text to the text control). Another is CompletionDataProviderKeyResult.BeforeStartKey, which tells the control to ignore this key. That is important when you want to narrow the selection choice based on what the user it typing.&#xA;&#xA;InsertAction simply instructs the editor in where to place the newly added text. This is important if the user enabled intellisense in the middle of a term, and you want to fix that term.&#xA;&#xA;GenerateCompletionData is where the real interest lies. Everything else is just user experience, a very important detail, but basically just a detail. GenerateComletionData is where the power lies. (note, this is the appropriate Muhahaha! moment).&#xA;&#xA;The current implementation isn&#x27;t doing much, just returning a hard coded list of values. Note that even this trivial implementation, without any context whatsoever will give you a lot of value. Just because you can now expose more easily the DSL structure. And let us not forget the marketing side of that, if you have intellsense, even if none too intelligent one, you are already way ahead of the game. And here is out result:&#xA;&#xA;&#xA0;&#xA;&#xA;I&#x27;ll go over providing the actual context for the code in another post.</p>
+        </article>
+        <article id="article-6652">
             <a href="https://ayende.com/blog/3543/enabling-change-by-hard-coding-everything" target="_blank">
-                <h2 class="title mb-6" id="article-6651">Enabling change by hard coding everything</h2>
+                <h2 class="title mb-6" id="article-6652">Enabling change by hard coding everything</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I had a discussion today about how to make change easier. My take on that was a bit of a surprise to the other guy, &quot;Just hard code everything&quot;.  Yes, I consider hard coding as much as possible as a key concept in enabling change.  I am going to leave this as is for now, and post a continuation for that tomorrow, just to see what kind of response this has.</p>
         </article>
-        <article id="article-6652">
+        <article id="article-6653">
             <a href="https://ayende.com/blog/3542/custom-syntax-highlighting" target="_blank">
-                <h2 class="title mb-6" id="article-6652">Custom Syntax Highlighting</h2>
+                <h2 class="title mb-6" id="article-6653">Custom Syntax Highlighting</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Just using the Boo syntax isn&#x27;t really enough in many cases, you want to handle your own custom keywords, behaviors, etc.  #Develop make this a piece of cake, since it defines the syntax highlighting using an XML file, and handles the actual parsing and coloring on its on. Here is the overall structure of such a file:     &lt;?xml version=&quot;1.0&quot;?&gt;&#xA;&lt;SyntaxDefinition name=&quot;Boo&quot; &#xA;                  extensions=&quot;.boo&quot;&gt;&#xA;  &lt;Environment&gt;&#xA;    &lt;Default bold=&quot;false&quot;&#xA;             italic=&quot;false&quot;&#xA;             color=&quot;SystemColors.WindowText&quot;&#xA;             bgcolor=&quot;SystemColors.Window&quot; /&gt;&#xA;    &lt;Selection bold=&quot;false&quot;&#xA;               italic=&quot;false&quot;&#xA;               color=&quot;SystemColors.HighlightText&quot;&#xA;               bgcolor=&quot;SystemColors.Highlight&quot; /&gt;&#xA;  &lt;/Environment&gt;&#xA;&#xA;  &lt;Digits name=&quot;Digits&quot;&#xA;          bold=&quot;false&quot;&#xA;          italic=&quot;false&quot;&#xA;          color=&quot;DarkBlue&quot; /&gt;&#xA;&#xA;  &lt;RuleSets&gt;&#xA;    &lt;RuleSet ignorecase=&quot;false&quot; &gt;&#xA;      &lt;Delimiters&gt;&amp;amp;&amp;lt;&amp;gt;~!@$%^*()-&#x2B;=|\#/{}[]:;&quot;&#x27; ,&#x9;.?&lt;/Delimiters&gt;&#xA;&#xA;      &lt;Span name=&quot;LineComment&quot;&#xA;            stopateol=&quot;true&quot;&#xA;            bold=&quot;false&quot;&#xA;            italic=&quot;false&quot;&#xA;            color=&quot;Gray&quot; &gt;&#xA;        &lt;Begin &gt;#&lt;/Begin&gt;&#xA;      &lt;/Span&gt;&#xA;&#xA;      &lt;KeyWords name=&quot;JumpStatements&quot;&#xA;                bold=&quot;false&quot;&#xA;                italic=&quot;false&quot;&#xA;                color=&quot;Navy&quot; &gt;&#xA;        &lt;Key word=&quot;break&quot;/&gt;&#xA;        &lt;Key word=&quot;continue&quot;/&gt;&#xA;        &lt;Key word=&quot;return&quot;/&gt;&#xA;        &lt;Key word=&quot;yield&quot;/&gt;&#xA;        &lt;Key word=&quot;goto&quot; /&gt;&#xA;      &lt;/KeyWords&gt;&#xA;&#xA;    &lt;/RuleSet&gt;&#xA;  &lt;/RuleSets&gt;&#xA;&lt;/SyntaxDefinition&gt;&#xA;&#xA;&#xA;As you can see, this is pretty easy to work with. Now let us add our own keywords:&#xA;&#xA;&#xA;  &lt;KeyWords name=&quot;DslKeywords&quot;&#xA;          bold=&quot;false&quot;&#xA;          italic=&quot;false&quot;&#xA;          color=&quot;DarkOrange&quot; &gt;&#xA;  &lt;Key word=&quot;specification&quot;/&gt;&#xA;  &lt;Key word=&quot;users_per_machine&quot;/&gt;&#xA;  &lt;Key word=&quot;requires&quot;/&gt;&#xA;  &lt;Key word=&quot;same_machine_as&quot;/&gt;&#xA;&lt;/KeyWords&gt;&#xA;&#xA;&#xA;Now we need to load the new language definition (don&#x27;t forget to change the name, I changed it to &quot;dsl&quot;) to the editor an select it:&#xA;&#xA;&#xA;  HighlightingManager.Manager.AddSyntaxModeFileProvider(&#xA;    new FileSyntaxModeProvider(@&quot;C:\Path\to\language\definition&quot;));&#xA;//.. setup text editor&#xA;editorControl.SetHighlighting(&quot;dsl&quot;);&#xA;&#xA;&#xA;The result?</p>
         </article>
-        <article id="article-6653">
+        <article id="article-6654">
             <a href="https://ardalis.com/recent-podcasts/" target="_blank">
-                <h2 class="title mb-6" id="article-6653">Recent Podcasts</h2>
+                <h2 class="title mb-6" id="article-6654">Recent Podcasts</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My recent DotNetRocks interview with Carl Franklin and Mark Dunn is live now. The three of us discuss our experiences as small business&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6654">
+        <article id="article-6655">
             <a href="https://ayende.com/blog/3541/smarter-syntax-highlighting" target="_blank">
-                <h2 class="title mb-6" id="article-6654">Smarter Syntax Highlighting</h2>
+                <h2 class="title mb-6" id="article-6655">Smarter Syntax Highlighting</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My previous approach isn&#x27;t really suited to anything but the most trivial of tasks. What we can do, however, is to utilize existing components that already built this functionality. Let us say that we want to embed a Boo&#x27;s code editor in our application. Here is what we need to do:     public class TextEditorForm : Form&#xA;{&#xA;    public TextEditorForm()&#xA;    {&#xA;        var editorControl = new TextEditorControl&#xA;        {&#xA;            Dock = DockStyle.Fill&#xA;        };&#xA;        Controls.Add(editorControl);&#xA;        editorControl.Document.FormattingStrategy = new BooFormattingStrategy();&#xA;        editorControl.SetHighlighting(&quot;Boo&quot;);&#xA;    }&#xA;}&#xA;public class BooFormattingStrategy : DefaultFormattingStrategy&#xA;{&#xA;    public override void IndentLines(TextArea textArea, int begin, int end)&#xA;    {&#xA;    }&#xA;&#xA;    protected override int SmartIndentLine(TextArea area, int line)&#xA;    {&#xA;        IDocument document = area.Document;&#xA;        LineSegment lineSegment = document.GetLineSegment(line - 1);&#xA;        if (document.GetText(lineSegment).EndsWith(&quot;:&quot;))&#xA;        {&#xA;            LineSegment segment = document.GetLineSegment(line);&#xA;            string str = base.GetIndentation(area, line - 1) &#x2B; Tab.GetIndentationString(document);&#xA;            document.Replace(segment.Offset, segment.Length, str &#x2B; document.GetText(segment));&#xA;            return str.Length;&#xA;        }&#xA;        return base.SmartIndentLine(area, line);&#xA;    }&#xA;}&#xA;&#xA;&#xA;And that gives us this:&#xA;&#xA; &#xA;&#xA;Nice :-)</p>
         </article>
-        <article id="article-6655">
+        <article id="article-6656">
             <a href="https://ayende.com/blog/3540/poor-mans-syntax-highlighting" target="_blank">
-                <h2 class="title mb-6" id="article-6655">Poor man&#x27;s syntax highlighting</h2>
+                <h2 class="title mb-6" id="article-6656">Poor man&#x27;s syntax highlighting</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Before getting to the more complex scenarios of creating professional DSL, I wanted to start by showing how you can easily create your own syntax highlighting.  This was the result:    And this is the actual code that makes this happens:     private void codeTextBox_TextChanged(object sender, EventArgs e)&#xA;{&#xA;    int prevSelectionStart = codeTextBox.SelectionStart;&#xA;    int prevSelectionLength = codeTextBox.SelectionLength;&#xA;    codeTextBox.SelectionStart = 0;&#xA;    codeTextBox.SelectionLength = codeTextBox.TextLength;&#xA;    codeTextBox.SelectionColor = DefaultForeColor;&#xA;&#xA;    var keyWords = new[] { &quot;specification&quot;, &quot;requires&quot;, &quot;users_per_machine&quot;, &quot;same_machine_as&quot; };&#xA;    foreach (string keyWord in keyWords)&#xA;    {&#xA;        MatchCollection matches = Regex.Matches(codeTextBox.Text, keyWord);&#xA;        foreach (Match match in matches)&#xA;        {&#xA;            codeTextBox.SelectionStart = match.Index;&#xA;            codeTextBox.SelectionLength = match.Length;&#xA;            codeTextBox.SelectionColor = Color.DarkOrchid;&#xA;        }&#xA;    }&#xA;    foreach (Match match in Regex.Matches(codeTextBox.Text, @&quot;@[\w\d_]&#x2B;&quot;))&#xA;    {&#xA;        codeTextBox.SelectionStart = match.Index;&#xA;        codeTextBox.SelectionLength = match.Length;&#xA;        codeTextBox.SelectionColor = Color.DarkSeaGreen;&#xA;    }&#xA;    foreach (Match match in Regex.Matches(codeTextBox.Text, @&quot; \d&#x2B;&quot;))&#xA;    {&#xA;        codeTextBox.SelectionStart = match.Index;&#xA;        codeTextBox.SelectionLength = match.Length;&#xA;        codeTextBox.SelectionColor = Color.DarkRed;&#xA;    }&#xA;&#xA;    codeTextBox.SelectionStart = prevSelectionStart;&#xA;    codeTextBox.SelectionLength = prevSelectionLength;&#xA;}&#xA;&#xA;&#xA;The code in the book comes with the following warning:&#xA;&#xA;&#xA;  The code suffers from multiple bugs, issues and is generally not suited for anything but the simplest scenarios.</p>
         </article>
-        <article id="article-6656">
+        <article id="article-6657">
             <a href="https://ayende.com/blog/3539/help-can-you-think-about-a-ui-representation" target="_blank">
-                <h2 class="title mb-6" id="article-6656">Help: Can you think about a UI representation?</h2>
+                <h2 class="title mb-6" id="article-6657">Help: Can you think about a UI representation?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am currently writing the chapter about creating professional DSL. One of the subjects that I am dealing with is creating graphical representations of a textual DSL.  Here is the DSL script in question:     specification @vacations:&#xA;&#x9;requires @scheduling_work&#xA;&#x9;requires @external_connections&#xA;&#x9;&#xA;specification @salary:&#xA;&#x9;users_per_machine 150&#xA;&#x9;&#xA;specification @taxes:&#xA;&#x9;users_per_machine 50&#xA;&#xA;specification @pension:&#xA;&#x9;same_machine_as @health_insurance&#xA;&#xA;&#xA;I am not sure what kind of UI representation this should have.&#xA;&#xA;For that matter, let us take the example that I commonly use, of a rule engine for an ordering system:&#xA;&#xA;&#xA;  when order.total &gt; 1000 and order.payment_method = &#x27;CreditCard&#x27;:&#xA;&#x9;apply_discout_of 5.precent&#xA;&#xA;&#xA;How would you visualize that?</p>
         </article>
-        <article id="article-6657">
+        <article id="article-6658">
             <a href="https://ayende.com/blog/3538/hibernatingrhinos-com-status" target="_blank">
-                <h2 class="title mb-6" id="article-6657">HibernatingRhinos.com status</h2>
+                <h2 class="title mb-6" id="article-6658">HibernatingRhinos.com status</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As you know, I had a server crash, that took down the server, and result in a very trying times trying to contact support. VPSLand support insisted repeatedly that all the data was lost and that there isn&#x27;t anything to be done about it.&#xA;Somehow, however, a technical person got involved. The first time I heard about that was when I got an alert for a full disk in the hosted server, which made me hopeful. A few hours later it was up again. I hurriedly logged in and backed up everything that I cared about to both S3 and locally. It went down a few more times, but at this point, I am past caring.&#xA;The server will move to a different host as soon as I have the time for that. That old adage about the customer being right? It might not always be right, but I am not going to do business with a place that isn&#x27;t going to do the most they can do to help me.</p>
         </article>
-        <article id="article-6658">
+        <article id="article-6659">
             <a href="https://ayende.com/blog/3537/heading-to-new-york" target="_blank">
-                <h2 class="title mb-6" id="article-6658">Heading to New York</h2>
+                <h2 class="title mb-6" id="article-6659">Heading to New York</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I intend to arrive to New York today, and stay there until Sep 5th or so.   As usual, if anyone wants to meet for drinks, talks and bits, I am game.</p>
         </article>
-        <article id="article-6659">
+        <article id="article-6660">
             <a href="https://ayende.com/blog/3536/re-mvc-storefront-part-19-processing-orders-with-windows-workflow" target="_blank">
-                <h2 class="title mb-6" id="article-6659">re</h2>
+                <h2 class="title mb-6" id="article-6660">re</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: August 17, 2008
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Rob Conery has another MVC Storefront post, this time focusing on using Windows Workflow.  Those are my random impressions:     You probably do want to test your work flow. In the same way you want to have an integration test for the system.    The sequence work flow seems to be a very heavy weight approach to just orchestrating actions in the application.    I wonder what the perf implications of creating a workflow here would be. My gut feeling is that this is not good, but I don&#x27;t really have data for that.    There is probably an issue here with the WF being run in async, I am not sure where it is getting its threads, but if it is from the thread pool, then it is consuming request handling threads, which can kill a site.   As an aside, here is the checkout workflow:     And here is how I would write this:     ValidateOrder()&#xA;AuthorizePayment()&#xA;order.Status = OrderStatus.Verified&#xA;SaveOrder()&#xA;&#xA;&#xA;Much easier, I think :-) And even more flexible.</p>
-        </article>
-        <article id="article-6660">
-            <a href="https://ayende.com/blog/3535/an-example-of-bad-test-part-2" target="_blank">
-                <h2 class="title mb-6" id="article-6660">An example of bad test, part 2</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: August 17, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let us take a look at this test. When I saw it, the code under test called to me: &quot;Help me, I being intimately harassed here!&quot;     The problem is that this tests knows all sorts of unrelated things about the code under test. It knows that it should redirect, it knows where it should redirect, etc.  What is the relation between kicking off the checkout process and redirecting? Orthogonal concerns should be in different tests. I may want to send the users to Promotions, instead of Receipt, in the future. Should this test break?  So let us try this one:  &#xA0;  We removed the obvious cases of too-intimate tests. But we still have very bad behavior in the test. Specifically, there is a big issue with how we are asserting that the pipeline was kicked off.  On the surface, it may appear that we are doing state based testing, but what we are actually testing is the behavior of the checkout process itself. This is not something that we want to test in this test. In this test, we just want to verify that the checkout process is started.  This test will fail when we change the checkout process, even though the behavior that we intended to test remained the same.</p>
         </article>
         <div class="button flex justify-between">
             <a href="665.html"><span class="back arrow"></span></a>
