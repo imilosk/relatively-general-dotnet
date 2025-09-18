@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-7231">
+            <a href="https://ayende.com/blog/3087/erlang-processes-on-the-clr" target="_blank">
+                <h2 class="title mb-6" id="article-7231">Erlang processes on the CLR</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 07, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned that getting to Erlang like processes is something that I really want to get to. I started thinking about how I can make it work with the IEnumerable&lt;T&gt; implementation.  As it turned out, that was fairly simple, once I got the idea. Take a look at this class diagram:   We have tasks, and we register them in the scheduler. We can also wait for them without blocking the thread. Check out this trivial example. We have the following long running task: public class MultiplicationTask : AbstractTask&#xA;{&#xA;    private readonly int value;&#xA;&#xA;    public MultiplicationTask(int value)&#xA;    {&#xA;        this.value = value;&#xA;    }&#xA;&#xA;    protected override IEnumerable&lt;Condition&gt; Execute()&#xA;    {&#xA;        Thread.Sleep(1000);&#xA;        SetResult(value * 2);&#xA;        yield break;&#xA;    }&#xA;}&#xA;&#xA;And the code that want to call it:&#xA;public class UseMultiplicationTask : AbstractTask&#xA;{&#xA;    protected override IEnumerable&lt;Condition&gt; Execute()&#xA;    {&#xA;        Future future1 = Spawn(new MultiplicationTask(15));&#xA;        Future future2 = Spawn(new MultiplicationTask(23));&#xA;&#xA;        yield return delegate { return future1.HasValue &amp;&amp; future2.HasValue; };&#xA;&#xA;        System.Console.WriteLine(future1.GetValue&lt;int&gt;() &#x2B; future2.GetValue&lt;int&gt;());&#xA;    }&#xA;}&#xA;&#xA;We yield a condition that tell us when we can be executed again. From then, it is just a matter of properly scheduling the different tasks.&#xA;We can probably pretty it up a bit with lambdas, but this works. &#xA;No, instead of listing all the code here, you can browse it here:https://rhino-tools.svn.sourceforge.net/svnroot/rhino-tools/trunk/SampleApplications/BlogCode/BlogCode/ErlangTasks&#xA;I really like this approach</p>
+        </article>
+        <article id="article-7232">
             <a href="https://ayende.com/blog/3086/i-yield-i-yield" target="_blank">
-                <h2 class="title mb-6" id="article-7231">I Yield, I Yield</h2>
+                <h2 class="title mb-6" id="article-7232">I Yield, I Yield</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am going over the ParallelFX code at the moment, and I run into this interesting method. Platform.Yield(), which turn out to be a call to SwitchToThread(), which is a method I really should have known about. Turn out that this is a way to explicitly give up the current time-slice that the thread is executing (for the current CPU only). This lead me to do some more discovery, and I found this, managed fibers implementations (I can&#x27;t find the source for this, however, and I have the SDK). This is all part of my quest to get Erlang-like support for concurrency. By that I mean that I can do things like: public void Process()&#xA;{&#xA;   var dbFuture = Spawn( AquireDataFromDB );&#xA;   var wsFuture = Spawn( AquureDataFromWS );&#xA;&#xA;   YieldUntil(dbFuture, wsFuture);&#xA;&#xA;   // do real processing here.&#xA;}&#xA;The key point is that the call to YieldUntil does not block the current thread, instead, it frees it to do start executing additional processing.&#xA;We can keep abusing the yield return approach, but that is starting to get old.</p>
         </article>
-        <article id="article-7232">
+        <article id="article-7233">
             <a href="https://ayende.com/blog/3085/fluent-pipelines" target="_blank">
-                <h2 class="title mb-6" id="article-7232">Fluent Pipelines</h2>
+                <h2 class="title mb-6" id="article-7233">Fluent Pipelines</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am having a discussion with Jon Skeet about the merits of using Linq for pipelines and delegates/lambda instead of classes. I kept saying that I don&#x27;t really see the point, so I went ahead and implemented this: GenerateData(10000)//enumerator from 0 .. 10000&#xA;&#x9;.Where(i =&gt; i % 3 == 0)&#xA;&#x9;.Transform(i =&gt; (i * 2).ToString() )&#xA;&#x9;.Act(i =&gt; Console.WriteLine(i))&#xA;&#x9;.Execute();&#xA;&#xA;This uses the same approach as my previous pipeline, but it does it in C# 3.0, so it can use things like extension methods, which make this nicer. The same in C# 2.0 is possible, but take some ridiculous amount of code to do.&#xA;This code is much simpler than the code I have shown here, no?&#xA;Why do I use the first approach then?&#xA;Scalability.&#xA;What we are seeing here is about as trivial as it can get. What happens when we have more complex semantics?&#xA;Let us take writing to the database as an example. We need to do quite a bit there, more than we would put in the lambda expression, certainly. We can extract to a method, but then we run into another problem, we can&#x27;t do method inheritance. This means that I have no easy way of abstracting the common stuff outside. Well, I can use template method, but that works if and only if I have a single place I want to change behavior.&#xA;As an example of scaling, let us take this piece of code:&#xA;public class FibonacciBulkInsert : SqlBulkInsertOperation&#xA;{&#xA;&#x9;public FibonacciBulkInsert() : base(&quot;test&quot;, &quot;Fibonacci&quot;)&#xA;&#x9;{&#xA;&#x9;}&#xA;&#xA;&#x9;protected override void PrepareSchema()&#xA;&#x9;{&#xA;&#x9;&#x9;Schema[&quot;id&quot;] = typeof (int);&#xA;&#x9;}&#xA;}&#xA;Which uses this base class to handle the bulk of the work.&#xA;One thing that Jon mentioned that was interesting was the ability to take advantage of Linq specific improvements, such as PLinq. This is indeed a consideration, but upon some reflection on it, I realized that the two are not mutually exclusive. If I want to take advantage of any of that, all I need is to modify the pipeline to iterate using PLinq rather than foreach.</p>
         </article>
-        <article id="article-7233">
+        <article id="article-7234">
             <a href="https://ayende.com/blog/3084/asp-net-ajax-error-handling-and-wtf" target="_blank">
-                <h2 class="title mb-6" id="article-7233">ASP.Net Ajax, Error Handling and WTF</h2>
+                <h2 class="title mb-6" id="article-7234">ASP.Net Ajax, Error Handling and WTF</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am facing some really unpleasant choices at the moment. And I thought it would be so easy.&#xA;I wanted to add global error handling to all the web services that we expose as [ScriptService].&#xA;For some reason, they didn&#x27;t show up in the Application_Error event, and that caused the exception details to be sent to the client.&#xA;It looks like for some strange reasons, web services exceptions don&#x27;t go through the Application_Error, so I implemented a SoapExtension to handle that, but ScriptService doesn&#x27;t go through the Soap layers, so it obviously doesn&#x27;t work.&#xA;Then I went and looked at the code.&#xA;The whole thing is _hard coded_ inside, and there is no way in.&#xA;No way to globally capture exception being raised from script services.&#xA;No way in to add this ability.&#xA;Urgh! Argh!&#xA;&#xA;I mean, it is not like I want something very special, it sounds to me like a reasonable request.&#xA;Yes, I know you can turn off the error in the config, but I would like, you know, to log this. &#xA;&#xA;Of course, everything is internal in there, so I can&#x27;t just go and override the RestHandler. ExecuteWebServiceCall(), I would have to have a private build of this stuff.&#xA;Just to be able to log exceptions.</p>
         </article>
-        <article id="article-7234">
+        <article id="article-7235">
             <a href="https://ayende.com/blog/3083/pipes-and-filters-the-multi-threaded-version" target="_blank">
-                <h2 class="title mb-6" id="article-7234">Pipes and filters</h2>
+                <h2 class="title mb-6" id="article-7235">Pipes and filters</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Another advantage of using the pipes and filters approach is that it is naturally thread safe. Only a single filter is handling an item at a given time, even if the pipes are all running on multiply threads. This means that we have an very simple way to introduce threading into the system, without any hassle whatsoever. Let us take a look at the single threaded pipeline: public class SingleThreadedPipeline&lt;T&gt;&#xA;{&#xA;    private readonly List&lt;IOperation&lt;T&gt;&gt; operations = new List&lt;IOperation&lt;T&gt;&gt;();&#xA;&#xA;    public SingleThreadedPipeline&lt;T&gt; Register(IOperation&lt;T&gt; operation)&#xA;    {&#xA;        operations.Add(operation);&#xA;        return this;&#xA;    }&#xA;&#xA;    public void Execute()&#xA;    {&#xA;        IEnumerable&lt;T&gt; current = new List&lt;T&gt;();&#xA;        foreach (IOperation&lt;T&gt; operation in operations)&#xA;        {&#xA;            current = operation.Execute(current);&#xA;        }&#xA;        IEnumerator&lt;T&gt; enumerator = current.GetEnumerator();&#xA;        while (enumerator.MoveNext()) ;&#xA;    }&#xA;}&#xA;Very simple, except the last line, which is what push the entire pipeline along. Now, what do we need in order to make this multi threaded?&#xA;Well, what do I mean when we talk about multi threaded? I mean that we will execute all the operations concurrently, so they can process different parts of the pipeline at the same time. This allows us to make better use of our computing resources, etc.&#xA;Here is the code:&#xA;public class ThreadPoolPipeline&lt;T&gt;&#xA;{&#xA;    private readonly List&lt;IOperation&lt;T&gt;&gt; operations = new List&lt;IOperation&lt;T&gt;&gt;();&#xA;&#xA;    public ThreadPoolPipeline&lt;T&gt; Register(IOperation&lt;T&gt; operation)&#xA;    {&#xA;        operations.Add(operation);&#xA;        return this;&#xA;    }&#xA;&#xA;    public void Execute()&#xA;    {&#xA;        IEnumerable&lt;T&gt; current = new List&lt;T&gt;();&#xA;        foreach (IOperation&lt;T&gt; operation in operations)&#xA;        {&#xA;            IEnumerable&lt;T&gt; execute = operation.Execute(current);&#xA;            current = StartConsuming(execute);&#xA;        }&#xA;        IEnumerator&lt;T&gt; enumerator = current.GetEnumerator();&#xA;        while (enumerator.MoveNext()) ;&#xA;    }    private ThreadSafeEnumerator&lt;T&gt; StartConsuming(IEnumerable&lt;T&gt; enumerable)&#xA;    {&#xA;        ThreadSafeEnumerator&lt;T&gt; threadSafeEnumerator = new ThreadSafeEnumerator&lt;T&gt;();&#xA;        ThreadPool.QueueUserWorkItem(delegate&#xA;        {&#xA;            try&#xA;            {&#xA;                foreach (T t in enumerable)&#xA;                {&#xA;                    threadSafeEnumerator.AddItem(t);&#xA;                }&#xA;            }&#xA;            catch (Exception e)&#xA;            {&#xA;                Console.WriteLine(e);&#xA;            }&#xA;            finally&#xA;            {&#xA;                threadSafeEnumerator.MarkAsFinished();&#xA;            }&#xA;        });&#xA;        return threadSafeEnumerator;&#xA;    }}&#xA;We are using ThreadSafeEnumerate here, and pass a callback to the thread pool which will execute the pervious part of the pipeline and push them into the current pipeline.&#xA;This is just an advance version of decorators.&#xA;The implementation of ThreadSafeEnumerator is about as simple as multi threaded code can be:&#xA;public class ThreadSafeEnumerator&lt;T&gt; : IEnumerable&lt;T&gt;, IEnumerator&lt;T&gt;&#xA;{&#xA;    private bool active = true;&#xA;    private readonly Queue&lt;T&gt; cached = new Queue&lt;T&gt;();&#xA;    private T current;&#xA;&#xA;    public IEnumerator&lt;T&gt; GetEnumerator()&#xA;    {&#xA;        return this;&#xA;    }&#xA;&#xA;    IEnumerator IEnumerable.GetEnumerator()&#xA;    {&#xA;        return ((IEnumerable&lt;T&gt;)this).GetEnumerator();&#xA;    }&#xA;&#xA;    public T Current&#xA;    {&#xA;        get { return current; }&#xA;    }&#xA;&#xA;    public void Dispose()&#xA;    {&#xA;        cached.Clear();&#xA;    }&#xA;&#xA;    public bool MoveNext()&#xA;    {&#xA;        lock (cached)&#xA;        {&#xA;            while (cached.Count == 0 &amp;&amp; active)&#xA;                Monitor.Wait(cached);&#xA;&#xA;            if (active == false &amp;&amp; cached.Count == 0)&#xA;                return false;&#xA;&#xA;            current = cached.Dequeue();&#xA;&#xA;            return true;&#xA;        }&#xA;    }&#xA;&#xA;    public void Reset()&#xA;    {&#xA;        throw new NotSupportedException();&#xA;    }&#xA;&#xA;    object IEnumerator.Current&#xA;    {&#xA;        get { return Current; }&#xA;    }&#xA;&#xA;    public void AddItem(T item)&#xA;    {&#xA;        lock (cached)&#xA;        {&#xA;            cached.Enqueue(item);&#xA;            Monitor.Pulse(cached);&#xA;        }&#xA;    }&#xA;&#xA;    public void MarkAsFinished()&#xA;    {&#xA;        lock(cached)&#xA;        {&#xA;            active = false;&#xA;            Monitor.Pulse(cached);&#xA;        }&#xA;        &#xA;    }&#xA;}&#xA;The real magic happens in MoveNext(), with support from AddItem() and MarkAsFinished().&#xA;This is it, these two classes are all we need to make everything else multi threaded.&#xA;Note that this version assumes that you can execute all the operations concurrently, which may not be the can if you have a lot of them (over 25/CPU by default). At that point, we would need to implement coroutines for the ThreadSafeEnumearator, instead of just blocking the thread.</p>
         </article>
-        <article id="article-7235">
+        <article id="article-7236">
             <a href="https://ayende.com/blog/3082/pipes-and-filters-the-ienumerable-appraoch" target="_blank">
-                <h2 class="title mb-6" id="article-7235">Pipes and filters</h2>
+                <h2 class="title mb-6" id="article-7236">Pipes and filters</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Pipes are very common in computing. It is a very good way to turn a complex problem to a set of small problems. You are probably familiar with the pattern, even if not explicitly.  The ASP.Net Http Pipeline (Begin_Request, Authorize_Request, etc  Compiler Pipelines (Parse, ProcessTypes, SaveAssembly, etc)  Command Line piping (ps -ax | grep Finder) What I wanted to talk about today was how to implement this in code. I did several implementation of pipes and filters in the past, and they all were overly complex. I took this weekend to look at the problem again, and I came up with a ridiculously simple solution. In a nutshell, here it is:   We have a pipeline, that is composed of operations. Each operation accepts an input and return an output. The use of IEnumerable&lt;T&gt; means that we can streamline the entire process without any effort whatsoever. Most problems that calls for the pipeline approach are fairly complex, so picking a simple example means that it is trivial to implement it otherwise. Let us go to the really trivial sample of printing all the processes whose working set is greater than 50 MB. We have three stages in the pipeline, the first, get processes: public class GetAllProcesses : IOperation&lt;Process&gt;&#xA;{&#xA;    public IEnumerable&lt;Process&gt; Execute(IEnumerable&lt;Process&gt; input)&#xA;    {&#xA;        return Process.GetProcesses();&#xA;    }&#xA;}&#xA;The second, limit by working set size:&#xA;public class LimitByWorkingSetSize : IOperation&lt;Process&gt;&#xA;{&#xA;    public IEnumerable&lt;Process&gt; Execute(IEnumerable&lt;Process&gt; input)&#xA;    {&#xA;        int maxSizeBytes = 50 * 1024 * 1024;&#xA;        foreach (Process process in input)&#xA;        {&#xA;            if (process.WorkingSet64 &gt; maxSizeBytes)&#xA;                yield return process;&#xA;        }&#xA;    }&#xA;}&#xA;The third, print process name:&#xA;public class PrintProcessName : IOperation&lt;Process&gt;&#xA;{&#xA;    public IEnumerable&lt;Process&gt; Execute(IEnumerable&lt;Process&gt; input)&#xA;    {&#xA;        foreach (Process process in input)&#xA;        {&#xA;            System.Console.WriteLine(process.ProcessName);&#xA;        }&#xA;        yield break;&#xA;    }&#xA;}&#xA;&#xA;All of those are very trivial implementation. You can see that the GetAllProcesses class doesn&#x27;t care about its input, it is the source. The LimitByWorkingSetSize iterate over the input and use the &quot;yield return&quot; keywords to stream the results to the next step, PrintProcessesName. Since this step is the final one, we use the &quot;yield break&quot; keywords to make it compile without returning anything. (We could return null, but that would be rude).&#xA;It is important to note that the second stage uses the if to control what get pass downstream. &#xA;Now we only have to bring them together, right?&#xA;public class TrivialProcessesPipeline : Pipeline&lt;Process&gt;&#xA;{&#xA;    public TrivialProcessesPipeline()&#xA;    {&#xA;        Register(new GetAllProcesses());&#xA;        Register(new LimitByWorkingSetSize());&#xA;        Register(new PrintProcessName());&#xA;    }&#xA;}&#xA;&#xA;Now, executing this pipeline will execute all three steps, in a streaming fashion.&#xA;Okay, this is a lot of code that we can replace with the following snippet:&#xA;int maxSizeBytes = 50 * 1024 * 1024;&#xA;foreach (Process process in Process.GetProcesses())&#xA;{&#xA;     if (process.WorkingSet64 &gt; maxSizeBytes)&#xA;         System.Console.WriteLine(process.ProcessName);&#xA;}&#xA;&#xA;What are we getting from this?&#xA;Composability and streaming. When we execute the pipeline, we are not executing each step in turn, we are executing them all in parallel. (Well, not in parallel, but together.)&#xA;Hey, I didn&#x27;t show you how the Pipeline&lt;T&gt; was implemented, right?&#xA;public class Pipeline&lt;T&gt;&#xA;{&#xA;    private readonly List&lt;IOperation&lt;T&gt;&gt; operations = new List&lt;IOperation&lt;T&gt;&gt;();&#xA;&#xA;    public Pipeline&lt;T&gt; Register(IOperation&lt;T&gt; operation)&#xA;    {&#xA;        operations.Add(operation);&#xA;        return this;&#xA;    }&#xA;&#xA;    public void Execute()&#xA;    {&#xA;        IEnumerable&lt;T&gt; current = new List&lt;T&gt;();&#xA;        foreach (IOperation&lt;T&gt; operation in operations)&#xA;        {&#xA;            current = operation.Execute(current);&#xA;        }&#xA;        IEnumerator&lt;T&gt; enumerator = current.GetEnumerator();&#xA;        while (enumerator.MoveNext()) ;&#xA;    }&#xA;}&#xA;&#xA;I&#x27;ll leave you to ponder that.</p>
         </article>
-        <article id="article-7236">
+        <article id="article-7237">
             <a href="https://ayende.com/blog/3081/mutli-mocks-and-verifying-behavior" target="_blank">
-                <h2 class="title mb-6" id="article-7236">Mutli Mocks and verifying behavior</h2>
+                <h2 class="title mb-6" id="article-7237">Mutli Mocks and verifying behavior</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have the following piece of code: protected override void DoClose()&#xA;{&#xA;    IDisposable dispoable = enumerator as IDisposable;&#xA;    if (dispoable != null)&#xA;        dispoable.Dispose();&#xA;&#xA;    dispoable = enumerable as IDisposable;&#xA;    if(dispoable != null)&#xA;        dispoable.Dispose();&#xA;}&#xA;&#xA;How do I verify that it correctly disposes both enumerator and enumerable when the method is called?&#xA;Here is the test that I wrote, it is using Rhino Mocks&#x27; Multi Mocks feature to generate a proxy that has more than a single implementation.&#xA;[Test]&#xA;public void WillDisposeInternalEnumeratorAndEnumerableWhenDisposed()&#xA;{&#xA;    MockRepository mocks = new MockRepository();&#xA;    IEnumerable&lt;Row&gt; enumerable = mocks.DynamicMultiMock&lt;IEnumerable&lt;Row&gt;&gt;(typeof(IDisposable));&#xA;    IEnumerator&lt;Row&gt; enumerator = mocks.DynamicMock&lt;IEnumerator&lt;Row&gt;&gt;();&#xA;    using(mocks.Record())&#xA;    {&#xA;        SetupResult.For(enumerable.GetEnumerator()).Return(enumerator);&#xA;        enumerator.Dispose();&#xA;        ((IDisposable)enumerable).Dispose();&#xA;    }&#xA;    using (mocks.Playback())&#xA;    {&#xA;        DictionaryEnumeratorDataReader reader =&#xA;            new DictionaryEnumeratorDataReader(new Dictionary&lt;string, Type&gt;(), enumerable);&#xA;        reader.Dispose();&#xA;    }&#xA;}&#xA;&#xA;Simple, and to the point.</p>
         </article>
-        <article id="article-7237">
+        <article id="article-7238">
             <a href="https://ardalis.com/facebook-and-scoble-square-off/" target="_blank">
-                <h2 class="title mb-6" id="article-7237">Facebook and Scoble Square Off</h2>
+                <h2 class="title mb-6" id="article-7238">Facebook and Scoble Square Off</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Like so many others have noted, I think 2008 and the next few years will see a shakeup in some of the &#x201C;web 2.0&#x201D; and social networking&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-7238">
+        <article id="article-7239">
             <a href="https://ardalis.com/attending-codemash-2008/" target="_blank">
-                <h2 class="title mb-6" id="article-7238">Attending CodeMash 2008</h2>
+                <h2 class="title mb-6" id="article-7239">Attending CodeMash 2008</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ll be attending CodeMash again for its second year, at the Kalahari Resort in Ohio. Last year it was a great local conference and this&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-7239">
+        <article id="article-7240">
             <a href="https://ardalis.com/simplecms-for-iis7/" target="_blank">
-                <h2 class="title mb-6" id="article-7239">SimpleCMS for IIS7</h2>
+                <h2 class="title mb-6" id="article-7240">SimpleCMS for IIS7</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: January 04, 2008
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">SimpleCMSis a (very) simple content management system I developed with Brendan for ASPAlliance.com and which is now available from CodePlex&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-7240">
-            <a href="https://ayende.com/blog/3080/my-code-sucks" target="_blank">
-                <h2 class="title mb-6" id="article-7240">My Code Sucks</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 04, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There is a point where a project goes beyond the pale, where the complexity goes so far out of line that it is simply ludicrous. I had such a point today. I had enough with SSIS and decided that I want to replace it with something better. I wrote an ETL tool to handle that in a few hours.  Why is this relevant? Because I have already build an ETL tool. Rhino ETL. It is quite telling when the author of a tool decide that he doesn&#x27;t want to use it. I was decidedly proud of Rhino ETL for a while, then the problems started to creep in. The problems were not in the code per se, the entire architecture of the code was overly complex. In order to handle this complexity, I had resorted to throwing code at the problem, and then more code, and more code yet again.  At the moment, the current code base has two &quot;minor&quot; problems, exception handling and threading. The bigger problem is that I don&#x27;t want to have to wade into this stinking pile and try to figure out what is going on there. I tried to be clever, and it is clever, in a horrible sort of way. I don&#x27;t have the time or patience to decipher code at the best of time, and at this point, it has gotten simply too complex. The project right now is at ~9,000 lines of code, so it is not that it is big, it is simply complex.  From the architecture perspective, I have made one huge mistake, I exposed the threading model to the application code. You can say that this stand in the root of my problems. I actually re-wrote this once already, moving from a home grown threading solution to using Retlang for threading. I made the same mistake and exposed the threading model to the application itself. Can you say: Big mistake! From the point of view of the project itself, I started by defining the DSL syntax, and then built the project around that. It turns out that this has the usual &quot;let us build the whole layer at a time&quot;. It also meant that a lot of the code had deep assumptions about the way it is called, making it unusable for using in other ways. This is excusable if we are talking about the DSL mapping layer, but not for the core code base itself. Anyway, I am ranting and I should stop. I spend six to eight hours today rewriting it from scratch.&#xA0; It doesn&#x27;t do threading, and it doesn&#x27;t have a DSL interface yet, but it does pretty much everything that the old project did, in a quarter of the lines of code, and in a way that is much safer and easier to handle than what we are using currently.</p>
         </article>
         <div class="button flex justify-between">
             <a href="723.html"><span class="back arrow"></span></a>
