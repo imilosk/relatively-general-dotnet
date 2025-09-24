@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5901">
+            <a href="https://ayende.com/blog/4169/planning-for-rhino-mocks-4-0" target="_blank">
+                <h2 class="title mb-6" id="article-5901">Planning for Rhino Mocks 4.0</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: September 03, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, now that Rhino Mocks 3.6 is out of the way, we need to think about what the next version will look like.  Initially, I thought to match Rhino Mocks 4.0 to the .NET 4.0 release and support mocking dynamic variables, but while this is still on the planning board, I think that it is much more important to stop and take a look at where Rhino Mocks is now and where we would like it to be.  I started Rhino Mocks about 5 years ago, and the codebase has stood well in the test of time. There aren&#x2019;t any nasty places and we can keep releasing new features with no major issues.  However, 5 years ago the community perception of mocking was different than what it is now. Rhino Mocks hasn&#x2019;t really changed significantly since it 1.1 days, for that matter, you can take a code base using Rhino Mocks for .Net 1.1 and move it to Rhino Mocks 3.6 with no issues.  But one of the most frequent complaints that I have heard is that Rhino Mocks API has became too complex over the years, there are too many options and knobs that you can turn. I know that my own style of interaction testing has changed as well.   The current plan for Rhino Mocks 4.0 is that we will break backward compatibility in a big way. That means that we are going to drastically simplify everything in the framework.   We are still discussing this in the mailing list, but currently it looks like we will go with the following route:     Kill the dynamic, strict, partial and stub terminology. No one cares. It is a fake.    Remove the record / playback API. The AAA method is much simpler.    Simplify mocking options, aiming at moving as much as possible from expectation style to assert style.    Keep as much of the current capabilities as we can. That means that if Rhino Mocks was able to support a scenario, it should still support it for the 4.0 version, hopefully in a simpler fashion.   The end result is putting Rhino Mocks on an API diet. I am looking for help in doing this, both in terms of suggested syntax and in terms of actual patches.  You are welcome to contribute&#x2026;</p>
+        </article>
+        <article id="article-5902">
             <a href="https://ayende.com/blog/4168/answer-the-lazy-loaded-inheritance-many-to-one-association-or-m-conundrum" target="_blank">
-                <h2 class="title mb-6" id="article-5901">Answer</h2>
+                <h2 class="title mb-6" id="article-5902">Answer</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Update: It appears that I am wrong, and NHibernate can support this functionality by eagerly loading the association at load time. You can do by specifying lazy=&quot;false&quot; (and optionally, outer-join=&quot;true&quot;) on the many to one association.&#xA;&#xA;&#xA;Yesterday I presented an interesting problem that pop up with any OR/M that supports inheritance and lazy loading.  Let us say that we have the following entity model:     Backed by the following data model:     As you can see, we map the Animal hierarchy to the Animals table, and we have a polymorphic association between Animal Lover and his/her animal. Where does the problem starts?  Well, let us say that we want to load the animal lover. We do that using the following SQL:     SELECT Name,&#xA;&#x9; Animal,&#xA;&#x9; Id&#xA;FROM AnimalLover&#xA;WHERE Id = 1 /* @p0 */&#xA;&#xA;&#xA;And now we have an animal lover instance:&#xA;&#xA;&#xA;  var animalLover = GetAnimalLoverById(1);&#xA;var isDog = animalLover.Animal is Dog;&#xA;var isCat = animalLover.Animal is Cat;&#xA;&#xA;&#xA;Can you guess what would be the result of this code?&#xA;&#xA;The answer is that both isDog nor isCat would be&#x2026; false.&#xA;&#xA;But how is that?&#xA;&#xA;To answer that question, let us take a look at the SQL that was used to load the animal lover, and let us take a look at a typical example of hydrating entities. I am using Davy&#x2019;s DAL here to show off the problem, because the code is simple and it demonstrate that the problem is not unique to a particular OR/M, but is shared among all of them (Davy&#x2019;s DAL doesn&#x2019;t even support inheritance, for example).&#xA;&#xA;&#xA;  private void SetReferenceProperties&lt;TEntity&gt;(&#xA;&#x9;TableInfo tableInfo, &#xA;&#x9;TEntity entity, &#xA;&#x9;IDictionary&lt;string, object&gt; values)&#xA;{&#xA;&#x9;foreach (var referenceInfo in tableInfo.References)&#xA;&#x9;{&#xA;&#x9;&#x9;if (referenceInfo.PropertyInfo.CanWrite == false)&#xA;&#x9;&#x9;&#x9;continue;&#xA;&#x9;&#x9;&#xA;&#x9;&#x9;object foreignKeyValue = values[referenceInfo.Name];&#xA;&#xA;&#x9;&#x9;if (foreignKeyValue is DBNull)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;referenceInfo.PropertyInfo.SetValue(entity, null, null);&#xA;&#x9;&#x9;&#x9;continue;&#xA;&#x9;&#x9;}&#xA;&#xA;&#x9;&#x9;var referencedEntity = sessionLevelCache.TryToFind(&#xA;&#x9;&#x9;&#x9;referenceInfo.ReferenceType, foreignKeyValue);&#xA;&#x9;&#x9;&#x9;&#xA;&#x9;&#x9;if(referencedEntity == null)&#xA;&#x9;&#x9;&#x9;referencedEntity = CreateProxy(tableInfo, referenceInfo, foreignKeyValue);&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;   &#xA;&#x9;&#x9;referenceInfo.PropertyInfo.SetValue(entity, referencedEntity, null);&#xA;&#x9;}&#xA;}&#xA;&#xA;&#xA;Take a look at what the code is doing, we are currently processing the Aminal property on the AnimalLover class. And we try to find an Animal that was loaded with a primary key matching to the value of the Animal column in the AnimalLovers table.&#xA;&#xA;When we can&#x2019;t find it, we have to create a lazy loading proxy for the referenced entity. And here is where the conundrum kicks into play. When we have inheritance, we have a real problem here. What is the type of the referenced entity? &#xA;&#xA;From the model, we know that it must be a derivation of Animal of some sort, and we have its PK, but we have no way of knowing which without going to the database for it.&#xA;&#xA;So what are we going to do? Because we don&#x2019;t have enough information to create a lazy loading proxy of the appropriate type, we actually generate a lazy loading proxy of the type that we do know about, Animal.&#xA;&#xA;But what about when it is being loaded?&#xA;&#xA;Well, that is where the lack of #become in .NET becomes painful, we already have an instance, and we can&#x2019;t change its types. And we can&#x2019;t replace the reference on the AnimalLover because someone might have grab a reference to the animal before the lazy load.&#xA;&#xA;The way to handle it is by turning the lazy loading proxy into a real one. We load a new instance that represent the entity, now with the correct type, since we query the DB to find out what it is (along with the rest of the entity&#x2019;s data).&#xA;&#xA;And the lazy loading proxy that we originally used is now loaded, and any call made on it will be forwarded to the new instance that was loaded.&#xA;&#xA;animalLover.Animal stays an AnimalProxy, and cannot be cast to a Dog or a Cat, even if the actual row it is pointing to is a Dog or a Cat.</p>
         </article>
-        <article id="article-5902">
+        <article id="article-5903">
             <a href="https://ayende.com/blog/4167/rhino-divan-db-consideration" target="_blank">
-                <h2 class="title mb-6" id="article-5902">Rhino Divan DB &#x2013; Consideration</h2>
+                <h2 class="title mb-6" id="article-5903">Rhino Divan DB &#x2013; Consideration</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It is interesting, I have been thinking about Divan DB for a long time now, and tonight I decided to give it some love and finally try to see exactly how hard it is going to be to write it.  It turns out that it isn&#x2019;t really hard at all. You can see my progress here (http://github.com/ayende/rhino-divandb/tree/master). It now supports adding and retrieving documents, defining views, view caching, and (very simple) view application.  So you can now push a bunch of views and documents to the database and get the result back. There is a lot more to do (for example, handling edits with the views), but it seems to be fairly straight forward so far.</p>
         </article>
-        <article id="article-5903">
+        <article id="article-5904">
             <a href="https://ayende.com/blog/4166/rhino-divan-db-repository-is-now-available" target="_blank">
-                <h2 class="title mb-6" id="article-5903">Rhino Divan DB repository is now available</h2>
+                <h2 class="title mb-6" id="article-5904">Rhino Divan DB repository is now available</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It is not real yet, it is not even the bare bones, but the repository is up and open for comments:  http://github.com/ayende/rhino-divandb/tree/master</p>
         </article>
-        <article id="article-5904">
+        <article id="article-5905">
             <a href="https://ayende.com/blog/4165/challenge-the-lazy-loaded-inheritance-many-to-one-association-or-m-conundrum" target="_blank">
-                <h2 class="title mb-6" id="article-5904">Challenge</h2>
+                <h2 class="title mb-6" id="article-5905">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is an interesting problem that pop up with any OR/M that supports inheritance and lazy loading.  Let us say that we have the following entity model:     Backed by the following data model:     As you can see, we map the Animal hierarchy to the Animals table, and we have a polymorphic association between Animal Lover and his/her animal. Where does the problem starts?  Well, let us say that we want to load the animal lover. We do that using the following SQL:     SELECT Name,&#xA;&#x9; Animal,&#xA;&#x9; Id&#xA;FROM AnimalLover&#xA;WHERE Id = 1 /* @p0 */&#xA;&#xA;&#xA;And now we have an animal lover instance:&#xA;&#xA;&#xA;  var animalLover = GetAnimalLoverById(1);&#xA;var isDog = animalLover.Animal is Dog;&#xA;var isCat = animalLover.Animal is Cat;&#xA;&#xA;&#xA;Can you guess what would be the result of this code?&#xA;&#xA;&#xA;&#xA;I&#x2019;ll post the actual answer tomorrow&#x2026;</p>
         </article>
-        <article id="article-5905">
+        <article id="article-5906">
             <a href="https://ardalis.com/pdc-2009-sessions-posted/" target="_blank">
-                <h2 class="title mb-6" id="article-5905">PDC 2009 Sessions Posted</h2>
+                <h2 class="title mb-6" id="article-5906">PDC 2009 Sessions Posted</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">They&#x2019;ve recently updated the list of sessions for PDC09. You can read the full list of PDC sessions here. A few highlights include: Scrum&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5906">
+        <article id="article-5907">
             <a href="https://ardalis.com/sql-azure-database-deployment-tool/" target="_blank">
-                <h2 class="title mb-6" id="article-5906">SQL Azure Database Deployment Tool</h2>
+                <h2 class="title mb-6" id="article-5907">SQL Azure Database Deployment Tool</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x2019;re playing with SQL Azure, the current (pre-release) process of moving an existing local SQL Server to SQL Azure can be greatly&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5907">
+        <article id="article-5908">
             <a href="https://ayende.com/blog/4164/challenge-why-isnt-select-broken" target="_blank">
-                <h2 class="title mb-6" id="article-5907">Challenge</h2>
+                <h2 class="title mb-6" id="article-5908">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is a crash report that I got.      System.ArgumentException: Destination array was not long enough. Check destIndex and length, and the array&#x27;s lower bounds.     &#xA0; at System.Array.Copy(Array sourceArray, Int32 sourceIndex, Array destinationArray, Int32 destinationIndex, Int32 length, Boolean reliable)      &#xA0; at System.Collections.Generic.List`1.CopyTo(T[] array, Int32 arrayIndex)      &#xA0; at System.Collections.ObjectModel.Collection`1.CopyTo(T[] array, Int32 index)      &#xA0; at System.Linq.Buffer`1..ctor(IEnumerable`1 source)      &#xA0; at System.Linq.Enumerable.ToArray[TSource](IEnumerable`1 source)   Now, it is tempting to blame Microsoft for this, but it is actually my fault.  Care to guess why?</p>
         </article>
-        <article id="article-5908">
+        <article id="article-5909">
             <a href="https://ayende.com/blog/4163/rhino-mocks-3-6" target="_blank">
-                <h2 class="title mb-6" id="article-5908">Rhino Mocks 3.6</h2>
+                <h2 class="title mb-6" id="article-5909">Rhino Mocks 3.6</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This release is mostly to put out all the patches &amp; fixes that went into Rhino Mocks since the 3.5 release, almost a year ago.  The changes from the previous version are:     Dynamic mocks and stubs will now assume that a call is match by any number of expectation.     Recursive mocks (with help from webpaul)     Fixing an issue with ArgManager in multi threaded scenarios (patch from Stefan Steinegger)     Fixing problem with IgnoreArguments() after Do() erasing the Do()     Fixing an issue with SetPropertyWithArgument improperly using LastCall.     Allowing Rhino Mocks to raise events on VB6 dlls.     Adding support for AssertWasCalled for getters (patch from robin clowers)     Adding remoting mocks as static methods (patch from Peter Mounce)     Adding a way to access the method from MethodInvocation     Fixing an issue with recursive return types when making a call to record an event more than once.     Various spelling &amp; grammar issues (patch from Peter van der Woude)     Fixing an issue with stubbing MarshalByReferenceObjects     Better integration with Pex     Making LambdaConstraint work better with polymorphic args     Better feature parity for AAA with Record &amp; Playback: Partials, Multis, and Stricts     Fixing an issue with stubbing properties of generic interfaces implemented twice using different generic parameters (Alexander Gro&#xDF;)   As usual, the download is here.</p>
         </article>
-        <article id="article-5909">
+        <article id="article-5910">
             <a href="https://ayende.com/blog/4162/that-is-not-the-way-to-inspire-confidence" target="_blank">
-                <h2 class="title mb-6" id="article-5909">That is not the way to inspire confidence</h2>
+                <h2 class="title mb-6" id="article-5910">That is not the way to inspire confidence</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: September 01, 2009
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am trying to install SQL Server 2008 SP1 on my Win 7 machine, it doesn&#x2019;t like it:</p>
-        </article>
-        <article id="article-5910">
-            <a href="https://ayende.com/blog/4161/is-blogging-dead" target="_blank">
-                <h2 class="title mb-6" id="article-5910">Is blogging dead?</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 01, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a reply to Chad Myers post about this question.  My answer: No.</p>
         </article>
         <div class="button flex justify-between">
             <a href="590.html"><span class="back arrow"></span></a>

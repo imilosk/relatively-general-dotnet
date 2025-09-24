@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-2411">
+            <a href="https://ayende.com/blog/182337-C/ravendb-security-review-non-constant-time-secret-comparison" target="_blank">
+                <h2 class="title mb-6" id="article-2411">RavenDB Security Review</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 27, 2018
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This issue was the simplest to fix in the RavenDB security report finding. Here is what the code looks like:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          [DllImport(&quot;msvcrt.dll&quot;, EntryPoint = &quot;memcmp&quot;)]&#xA;        &#xA;        &#xA;          &#xA;          [SecurityCritical]&#xA;        &#xA;        &#xA;          &#xA;          public static extern int Compare(byte* b1, byte* b2, long count);&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          fixed (byte* pExistingKey = existingKey)&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;            bool areEqual = Compare(pKey, pExistingKey, key.Length) == 0;&#xA;        &#xA;        &#xA;          &#xA;            Sodium.ZeroMemory(pExistingKey, key.Length);&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          insecure-compare.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;And once it was pointed out, I was cringing inside because it was both obvious what was wrong and I knew it was wrong, and we still had this in the code (which is why audits are great). What is the problem here? Conceptually, this is what this method does:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          while (last &gt; 0)&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              if (*((byte*)bpx) != *((byte*)bpy))&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  return false;&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;              &#xA;        &#xA;        &#xA;          &#xA;              bpx&#x2B;&#x2B;;&#xA;        &#xA;        &#xA;          &#xA;              bpy&#x2B;&#x2B;;&#xA;        &#xA;        &#xA;          &#xA;              last--;&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          memcmp.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;This works perfectly. Except that it leaks information to a potential attack. In particular, it leaks timing data. You might expect that the time spent comparing a couple of 32 bytes values wouldn&#x2019;t matter, given that an attack is probably over a network connection, but it does. There is a great paper that shows how you can use such timing attacks to get private keys information.In short, anything that uses security needs to use constant time comparisons. Again, conceptually, this means changing the code to be:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          bool match = true;&#xA;        &#xA;        &#xA;          &#xA;          while (last &gt; 0)&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              if (*((byte*)bpx) != *((byte*)bpy))&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  match = false;&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;              &#xA;        &#xA;        &#xA;          &#xA;              bpx&#x2B;&#x2B;;&#xA;        &#xA;        &#xA;          &#xA;              bpy&#x2B;&#x2B;;&#xA;        &#xA;        &#xA;          &#xA;              last--;&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;        &#xA;          &#xA;          return match;&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          better-compare.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;So regardless of the result, we&#x2019;ll always do the same amount of work and won&#x2019;t expose details through different processing times. In general, by the way, algorithms and execution of code in cryptography attempt to avoid anything that branches on the secret information, because that leaks details to attackers. This is also why AES cannot be securely implemented in software, you always leak in that mode.The fix, by the way, was to use the sodium_memcmp, which ensures constant time operation.</p>
+        </article>
+        <article id="article-2412">
             <a href="https://andrewlock.net/how-to-create-a-helm-chart-repository-using-amazon-s3/" target="_blank">
-                <h2 class="title mb-6" id="article-2411">How to create a Helm chart repository using Amazon S3</h2>
+                <h2 class="title mb-6" id="article-2412">How to create a Helm chart repository using Amazon S3</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I&#x27;ll show how you can use an AWS S3 bucket to host a Helm chart repository, how to push charts to it, and how to install charts from it.&#x2026;</p>
         </article>
-        <article id="article-2412">
+        <article id="article-2413">
             <a href="https://enterprisecraftsmanship.com/posts/nhibernate-now-supports-net-core-2-0/" target="_blank">
-                <h2 class="title mb-6" id="article-2412">NHibernate supports .NET Core 2.0</h2>
+                <h2 class="title mb-6" id="article-2413">NHibernate supports .NET Core 2.0</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Good news everyone! NHibernate 5.1 is released with the support of .NET Core 2.0 and .NET Standard 2.0.</p>
         </article>
-        <article id="article-2413">
+        <article id="article-2414">
             <a href="https://ayende.com/blog/182276-C/ravendb-security-review-encrypt-dont-obfuscate" target="_blank">
-                <h2 class="title mb-6" id="article-2413">RavenDB Security Review</h2>
+                <h2 class="title mb-6" id="article-2414">RavenDB Security Review</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The second finding in the security report was Inaccurate Key Size. Basically, we initialized a 512 bytes buffer as the master key we will use if the user didn&#x2019;t give us one. The problem is that our encryption algorithms were using 256 bits out of this range.The 512 bytes value wasn&#x2019;t selected at random. This is the minimum sector size on all hard disks that you are likely to encountered and it was chosen to ensure that writing this value to disk would be atomic. Fortunately, nothing in the code actually depended on that atomic property and it was fairly misleading. While it isn&#x2019;t as if we are likely to run out of random numbers, reading the code and understanding that you use a 4096 bits buffer as the encryption key but only expect the first 256 bits to be used (note the difference between bits &amp; bytes in this post, they matter) is confusing.Another issue was that we reused this value to several different encryption algorithms, all of them were taking the same size key, but while that works, for code clarity and ensuring the longevity of the code, it is better to explicitly separate them.In this case, it was very much the case of premature planning causing us to use something that was a fair bit more complex in practice than what we needed. The solution there was to be explicit and separate the requirements, even if we had to write a bit more code, the cost over time would be much lower because it is not clearer what is going on and you don&#x2019;t have to guess from prior knowledge.</p>
         </article>
-        <article id="article-2414">
+        <article id="article-2415">
             <a href="https://www.meziantou.net/load-native-libraries-from-a-dynamic-location.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2414">Load native libraries from a dynamic location</h2>
+                <h2 class="title mb-6" id="article-2415">Load native libraries from a dynamic location</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today, I had to deal with an uncommon need. In short, the idea is to download a native library (DLL) into a temporary directory (not in the application folder), and use its methods. The content of the DLL is known, so I want to use the DllImport attribute to easily call the methods of the DLL.The a</p>
         </article>
-        <article id="article-2415">
+        <article id="article-2416">
             <a href="https://ayende.com/blog/182275-C/ravendb-security-review-encrypting-data-on-disk" target="_blank">
-                <h2 class="title mb-6" id="article-2415">RavenDB Security Review</h2>
+                <h2 class="title mb-6" id="article-2416">RavenDB Security Review</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Continuing our discussion on nonce reuse issues that were raised in the security report, I want to talk about the way we encrypt the most important thing, your data.RavenDB uses an algorithm called XChaCha20Poly1305 with 256 bits key to encrypt the data. But as we have learned, just using a key is not good enough, we need to use a nonce as well. This is easy when you need to encrypt a message in one go, but the way encryption in RavenDB works, we need to encrypt pieces of the data (randomly, depending on the way users are accessing the system).In order to do that, RavenDB encrypt each page (usually 8KB in size) independently of each other. We actually use a different key for each page, derived from the master key, but I&#x2019;ll touch on that in a different post. Here, I want to talk about nonce.Encryption today is not just about hiding data, it is also about being able to detect if the value has been tampered with, typically called authenticated encryption (AEAD). The algorithm we use requires 16 bytes for the message authentication code (MAC). The problem is that we need to store that MAC somewhere, and the nonce as well. And that value cannot be in the page itself, since that is encrypted. Luckily for us, we have the page header, a 64 bytes that are reserved at the beginning of each page. And we planned things accordingly to ensure that RavenDB will use only 32 bytes out of the header, giving us 32 bytes free for the encryption to use. The problem is that the XChaCha20Poly1305 algorithm uses a 16 bytes MAC and a 24 bytes nonce. And that is a bit too much to fit in 32 bytes, as you can imagine. Here is the kind of space allocation we have:Increasing the size of the page header will have repercussions throughout our system, very late in the game, so we didn&#x2019;t want to do that. Instead, we cheated. The 16 bytes of the nonce are generated using a cryptographic random number generator, but we pass a pointer to the page header 8 bytes before the nonce, so the encryption algorithm also takes the last 8 bytes of the page header itself into account in the nonce. We are guaranteed at least 128 bits of strong randomness there, and the page header itself will change from time to time, obviously, but we rely on the nonce random bytes to ensure uniqueness.In this manner, we are able to fit the encryption requirements into our existing file structure and have strong encryption without uprooting everything.</p>
         </article>
-        <article id="article-2416">
+        <article id="article-2417">
             <a href="https://ayende.com/blog/182274-C/ravendb-security-review-nonce-reuse" target="_blank">
-                <h2 class="title mb-6" id="article-2416">RavenDB Security Review</h2>
+                <h2 class="title mb-6" id="article-2417">RavenDB Security Review</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Nonce reuse was an issue in four separate locations in the RavenDB security report. But what is a nonce? And what does this matter? A cryptographic nonce is a number that can only be used once. Let&#x2019;s consider what encryption does. Given some initial state (a key, for example) it takes an input and outputs what to an outside observe should look like completely random noise. Let&#x2019;s assume that I have the following secret message that I want to send: &#x201C;Attack at dawn&#x201D;. I run it through my most sophisticated encryption algorithm (with a pre-shared key) and get the following secret message:&#x270F;Assume that I have an adversary that is capable of intercepting such messages, even if they don&#x2019;t have the key. What can do with this knowledge? Well, if I&#x2019;m always using the same key, and encryption is a pure mathematical computation, that means that encrypting the same string twice with the same key is going to result in the same encrypted output. Now, assume that I have some way to get you to encrypt a message of my choosing. For example, if I know that in reaction to something that I will do you&#x2019;ll send a message saying &#x201C;Attack imminent&#x201D;, I can move some troops and then watch for a message to go by:&#x270F;By comparing the two messages I can deduce that this: &#x201C;&#x270F;&#x201D; = &#x201C;Attack&#x201D;. From there, I can probably crack everything else in a short order. Now, to be fair, anything above is very far from how things actually behave, but it should allow you to build a mental model of what it going on and why this is important. If you are interested in learning cryptography, I highly recommend the book Serious Cryptography.One way of avoid these issues to to not generate the same output for the same input each time. In order to do that we need to add something to the mix, and that is the nonce. The nonce is some number that is added to the state of the encryption / decryption and will ensure that two identical messages are not going to generate the same output (because they aren&#x2019;t going to use the same nonce). It&#x2019;s important to understand that without a nonce, you don&#x2019;t actually need to have identical inputs. In fact, the risk is that an attacked will get two different encrypted messages with the same key. At which point, depending on the exact encryption algorithm used, the attacker can get quite far into breaking the encryption. Again, I&#x2019;m skipping over a lot of details here, trying to give you the general idea rather than the details.Pretty much all cryptographic protocol have the notion of a nonce. Something it is called IV, but that generally has the same purpose and it seems like nonce is a more popular term these days. That leads to an interesting issue, if you reuse the same (key, nonce) pair to encrypt two different messages, it is game over, from a cryptographic point of view. So you really want to avoid that. In general, there are two ways to do that. Either use a counter and increment that each time you encrypt a message or generate a random number that is big enough that collisions don&#x2019;t matter (usually, 192 bits number).The first finding in the report was the use of a 64 bits randomly generated nonce. The problem is that this is suspect to a birthday attack and a 64 bits value gives us only 232 level of security, and that is low, given today&#x2019;s standards. A proper way to handle that is to use a 192 bits number. In order to attack that you&#x2019;ll need 296 attempts, and that is 79,228,162,514,264,300,000,000,000,000 attempts, which is safe. The answer here was to change the encryption algorithm to one that indeed uses a 192 bits nonce and generate that using a cryptographically secured random number generator. The third finding in the report had the same issue of 64 bits value, but in a somewhat nastier form. We were accepting the secret and entropy from our callers, and that gave them too much control over what we can do. We changed the code so we&#x2019;ll only accept the secret to be encrypted and handled all the cryptographic details (now using 192 bits randomly generated nonce) directly, instead of exposing details that can be incorrectly used.The final nonce reuse is a bit more complex to explain, and I&#x2019;ll dedicate a post just for that.</p>
         </article>
-        <article id="article-2417">
+        <article id="article-2418">
             <a href="https://ayende.com/blog/182305-C/inside-ravendb-4-0-chapters-12-13-are-done" target="_blank">
-                <h2 class="title mb-6" id="article-2417">Inside RavenDB 4.0</h2>
+                <h2 class="title mb-6" id="article-2418">Inside RavenDB 4.0</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just released another update to Inside RavenDB book, with chapter discussing advanced indexing scenarios and how RavenDB handles security, encryption in transit and authentication.</p>
         </article>
-        <article id="article-2418">
+        <article id="article-2419">
             <a href="https://ayende.com/blog/182306-C/more-ravendb-workshops" target="_blank">
-                <h2 class="title mb-6" id="article-2418">More RavenDB Workshops</h2>
+                <h2 class="title mb-6" id="article-2419">More RavenDB Workshops</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are running another set of full day RavenDB Workshops.&#xA;During the month of June we&#x2019;ll run workshop in:&#xA;&#xA;London, UK&#xA;S&#xE3;o Paolo, Brazil&#xA;Chicago, USA&#xA;&#xA;We are now running with the early bird discount, so I suggest early registration.&#xA;We will dive deeply into RavenDB 4.0, and all the new and exciting things it can do for you. This workshop is for developers and their operations teams who want to know RavenDB better.</p>
         </article>
-        <article id="article-2419">
+        <article id="article-2420">
             <a href="https://ardalis.com/positive-reinforcement-in-code-reviews/" target="_blank">
-                <h2 class="title mb-6" id="article-2419">Positive Reinforcement in Code Reviews</h2>
+                <h2 class="title mb-6" id="article-2420">Positive Reinforcement in Code Reviews</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: March 21, 2018
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Many developers dread reviews of their code, and one reason for this is probably that most reviewers only offer criticism rather than&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-2420">
-            <a href="https://www.stevejgordon.co.uk/asp-net-core-dependency-injection-how-to-register-generic-types" target="_blank">
-                <h2 class="title mb-6" id="article-2420">ASP.NET Core Dependency Injection &#x2013; How to Register Generic Types</h2>
-            </a>
-            <p class="mb-2">by Steve Gordon</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 20, 2018
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you find the information in this post useful and want to learn more about dependency injection, may I suggest viewing my new course on Pluralsight &#x2013; &#x201C;Dependency Injection in ASP.NET Core&#x201C;? I dive deeply the Microsoft DI container and how to use all of its features in your applications. Since its release, ASP.NET Core [&#x2026;]</p>
         </article>
         <div class="button flex justify-between">
             <a href="241.html"><span class="back arrow"></span></a>
