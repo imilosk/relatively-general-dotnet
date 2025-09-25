@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3441">
+            <a href="https://ayende.com/blog/173601/the-case-of-the-queue-in-the-pool" target="_blank">
+                <h2 class="title mb-6" id="article-3441">The case of the queue in the pool</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 04, 2016
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today we found a bug in the way our connection pool.&#xA0; The code in question?   public HttpClient GetClient(TimeSpan timeout, OperationCredentials credentials, Func&lt;HttpMessageHandler&gt; handlerFactory)&#xA;{&#xA;    var key = new HttpClientCacheKey(timeout, credentials);&#xA;    var queue = cache.GetOrAdd(key, i =&gt; new ConcurrentQueue&lt;Tuple&lt;long, HttpClient&gt;&gt;());&#xA;&#xA;    Tuple&lt;long, HttpClient&gt; client;&#xA;    while (queue.TryDequeue(out client))&#xA;    {&#xA;        if (Stopwatch.GetTimestamp() - client.Item1 &gt;= _maxIdleTimeInStopwatchTicks)&#xA;        {&#xA;            client.Item2.Dispose();&#xA;            continue;&#xA;        }&#xA;        client.Item2.CancelPendingRequests();&#xA;        client.Item2.DefaultRequestHeaders.Clear();&#xA;        return client.Item2;&#xA;    }&#xA;&#xA;    return new HttpClient(handlerFactory())&#xA;    {&#xA;        Timeout = timeout&#xA;    };&#xA;}&#xA;public void ReleaseClient(HttpClient client, OperationCredentials credentials)&#xA;{&#xA;    var key = new HttpClientCacheKey(client.Timeout, credentials);&#xA;    var queue = cache.GetOrAdd(key, i =&gt; new ConcurrentQueue&lt;Tuple&lt;long, HttpClient&gt;&gt;());&#xA;    queue.Enqueue(Tuple.Create(Stopwatch.GetTimestamp(), client));&#xA;}&#xA;&#xA;Can you see the bug?&#xA;I&#x27;ll let you think about it for a while.&#xA;&#xA0;&#xA;&#xA0;&#xA;&#xA0;&#xA;&#xA0;&#xA;Done?&#xA;Okay, here we go!&#xA;The basic idea is that we&#x27;ll keep a bunch of client connected, and free them if they are too old.&#xA;The issue is with the use of the concurrent queue. Consider the case of having a sudden spike in traffic, and we suddenly need 100 connections. This code will generate them, and then put them back in the pool.&#xA;We then go back to normal level, only handle 20 concurrent requests, but because we are using a queue, we&#x27;ll actually cycle all the 100 requests we have through the queue all the time, keeping all of them opened.</p>
+        </article>
+        <article id="article-3442">
             <a href="https://ayende.com/blog/173570/rate-limiting-fun" target="_blank">
-                <h2 class="title mb-6" id="article-3441">Rate limiting fun</h2>
+                <h2 class="title mb-6" id="article-3442">Rate limiting fun</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was talking with a few of the guys at work, and the concept of rate limiting came up. In particular, being able to limit the number of operations a particular user can do against the system. The actual scenario isn&#x27;t really important, but the idea kept bouncing in my head, so I sat down and wrote a quick test case.  Nitpicker corner: This is scratchpad code, it isn&#x27;t production worthy, tested or validated. The idea is probably best explained in code, like so:  private SemaphoreSlim _rateLimit = new SemaphoreSlim(10);&#xA;&#xA;public async Task HandlePath(HttpContext context, string method, string path)&#xA;{&#xA;    if (await _rateLimit.WaitAsync(3000) == false)&#xA;    {&#xA;        context.Response.StatusCode = 429; // Too many requests&#xA;        return;&#xA;    }&#xA;&#xA;    // actually process requests&#xA;&#xA;}&#xA;&#xA;Basically, we define a semaphore, with the maximum number of operations that we want to allow, and we wait on the semaphore when we are starting the operation.&#xA;However, there is nothing that actually releases the semaphore. Here we get into design choices.&#xA;We can release the semaphore when the request is over, which effectively gives us rate limiting in terms of concurrent requests. &#xA;The more interesting approach from my perspective was to use this:&#xA;&#xA; _timer = new Timer(state =&gt;&#xA; {&#xA;     var currentCount = 10 - _rateLimit.CurrentCount;&#xA;     if (currentCount == 0)&#xA;         return;&#xA;     _rateLimit.Release(currentCount);&#xA; }, null, 1000, 1000);&#xA;&#xA;&#xA;Using this approach, we are actually limited to 10 requests a second.&#xA;And yes, this actually allows more concurrent requests than the previous option, because if a request takes more than one second, we&#x27;ll reset its count on the timer&#x27;s tick.&#xA;I actually tested this using gobench, and it confirmed that this is actually serving exactly 10 requests / second.</p>
         </article>
-        <article id="article-3442">
+        <article id="article-3443">
             <a href="https://benfoster.io/blog/aspnet-core-multi-tenant-middleware-pipelines/" target="_blank">
-                <h2 class="title mb-6" id="article-3442">Multi-tenant middleware pipelines in ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-3443">Multi-tenant middleware pipelines in ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Ben Foster</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This article looks at how to create forked request pipelines so that ASP.NET Core Authentication Middleware can be used in multi-tenant applications.</p>
         </article>
-        <article id="article-3443">
+        <article id="article-3444">
             <a href="https://ayende.com/blog/173569/ravendb-at-the-basta-conference" target="_blank">
-                <h2 class="title mb-6" id="article-3443">RavenDB at the Basta Conference</h2>
+                <h2 class="title mb-6" id="article-3444">RavenDB at the Basta Conference</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is from today, at the RavenDB booth in the Basta conference.</p>
         </article>
-        <article id="article-3444">
+        <article id="article-3445">
             <a href="https://ayende.com/blog/173537/the-cost-of-dog-fooding" target="_blank">
-                <h2 class="title mb-6" id="article-3444">The cost of dog fooding</h2>
+                <h2 class="title mb-6" id="article-3445">The cost of dog fooding</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You might have noticed that there we a few errors on the blog recently.  That is related to a testing strategy that we employ for RavenDB. In particular, part of our test scenario is to shove a RavenDB build to our own production system, to see how it works in a live production system with real workloads. Our production systems are entirely running on RavenDB, and we have been playing with all sort of configuration and deployment options recently. The general idea is to give us good indication about the performance of RavenDB and make sure that we don&#x2019;t have any performance regression. Here is an example taken from our tracking system, for this blog:  You can see that we had a few periods with longer than usual response times. The actual reason for that was that we had some code that was throwing tremendous amount of work to RavenDB, and this is actually exhibiting noisy neighbor syndrome in this case (that is, the blog is behaving fine, but the machine it is on is very busy). That gave us indication about a possible optimization and some better internal metrics. At any rate, the downside of living on the bleeding edge in production is that we sometimes get a lemon build. That is the cost of dog fooding, something you need to clean up the results.</p>
         </article>
-        <article id="article-3445">
+        <article id="article-3446">
             <a href="https://www.stevejgordon.co.uk/contributing-to-allready" target="_blank">
-                <h2 class="title mb-6" id="article-3445">Contributing to allReady</h2>
+                <h2 class="title mb-6" id="article-3446">Contributing to allReady</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I want to discuss a fantastic open source project called allReady that I highly encourage all ASP.NET developers to check out. I want to share my early experience with allReady and how I got started with contributing to an open source project for the first time. What is allReady? allReady is project [&#x2026;]</p>
         </article>
-        <article id="article-3446">
+        <article id="article-3447">
             <a href="https://enterprisecraftsmanship.com/posts/mechanical-approach-to-domain-modeling/" target="_blank">
-                <h2 class="title mb-6" id="article-3446">Mechanical approach to domain modeling</h2>
+                <h2 class="title mb-6" id="article-3447">Mechanical approach to domain modeling</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I&#x2019;d like to talk about a mechanical approach to domain modeling. It sometimes arises when teams start applying Domain-Driven Design (DDD) principles to their projects and when they don&#x2019;t have enough experience with it yet.</p>
         </article>
-        <article id="article-3447">
+        <article id="article-3448">
             <a href="https://ayende.com/blog/173505/find-the-bug-when-you-cant-rely-on-your-own-identity" target="_blank">
-                <h2 class="title mb-6" id="article-3447">Find the bug</h2>
+                <h2 class="title mb-6" id="article-3448">Find the bug</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We had a need to generate unique ids for connections in our db. We used the following code:  public class NotificationsClientConnection : IDisposable&#xA;{&#xA;    private static int _counter = 0;&#xA;&#xA;    private readonly WebSocket _webSocket;&#xA;    private readonly DocumentDatabase _documentDatabase;&#xA;    private readonly DateTime _startedAt;&#xA;&#xA;&#xA;    public NotificationsClientConnection(WebSocket webSocket, DocumentDatabase documentDatabase)&#xA;    {&#xA;        _webSocket = webSocket;&#xA;        _documentDatabase = documentDatabase;&#xA;        _startedAt = SystemTime.UtcNow;&#xA;    }&#xA;&#xA;    public int Id =&gt; Interlocked.Increment(ref _counter);&#xA;&#xA;    public TimeSpan Age =&gt; SystemTime.UtcNow - _startedAt;&#xA;}&#xA;&#xA;Do you see the bug? It is a subtle one.&#xA;When you are ready, peek below.&#xA;&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;.&#xA;The issue is in the following line:&#xA;&#xA;    public int Id =&gt; Interlocked.Increment(ref _counter);&#xA;&#xA;&#xA;The intent was to create a field that would be initialized on startup. Unfortunately, the usage of the lambda symbol &quot;=&gt;&quot; instead of assignment &quot;=&quot; turned that into a computed property, which will return a new value on every call.</p>
         </article>
-        <article id="article-3448">
+        <article id="article-3449">
             <a href="https://ardalis.com/custom-software-craftsmanship-workshop/" target="_blank">
-                <h2 class="title mb-6" id="article-3448">Custom Software Craftsmanship Workshop</h2>
+                <h2 class="title mb-6" id="article-3449">Custom Software Craftsmanship Workshop</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last month I was invited to put on a customized workshop for one of my mentoring clients. The group included developers, testers, and&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3449">
+        <article id="article-3450">
             <a href="https://ayende.com/blog/173474/optimal-compression-rate" target="_blank">
-                <h2 class="title mb-6" id="article-3449">Optimal compression rate</h2>
+                <h2 class="title mb-6" id="article-3450">Optimal compression rate</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: February 26, 2016
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In the new blittable format we use in RavenDB, we make heavy use of compression to reduce the size of documents.  Compression has an unfortunate problem, though. It doesn&#x27;t work for all inputs. The proof of that is a very neat one:  We have a set of compression / decompression function: compress(plainText) &#x2013;&gt; compressedText and decompress(compressedText) &#x2013;&gt; plainText.  Those are lossless functions, that is, for any input decompress( compress(X) ) == X Let us assume that for any input, size(plainText) &gt; size(compressedText) But that causes a problem. Let us assume that our plain text size is N, and that the compression algorithm reduce that size by just one bit, so the size of the compressedText is N-1. We&#x27;ll compress all possible permutations of N bits using this algorithm. Given that the compression results in at least N-1&#xA0; bits, there must now be two different values of the plainText that result in the same compressedText. That breaks the ability to decompress them successfully. Because there isn&#x27;t a one to one mapping between them. Common compression algorithms rely on the source data to either have repetitions (LZ derivatives) or are based on shared dictionaries that match a particular set of data.  In practice, this has real world implications when you are designing a data format. For example, the blittable format compress strings using two different algorithms. For large strings, we use LZ4, because it has much higher compression rate and doesn&#x27;t require any special knowledge of the data. For small strings, we use a Smaz variants, which is a shared dictionary of common terms. Because the dictionary is small, we can&#x27;t put a lot of data into it, so we concentrated on common Latin character sequences. That means that if you are trying to compress a Unicode string like:   &#x5E8;&#x5D5;&#x5D7; &#x5E6;&#x5E4;&#x5D5;&#x5E0;&#x5D9;&#x5EA; You are going to use up more bytes than the original plain text. This is easy to experiment with using Smaz variant, because it is very simple. But it also happens using LZ4 for certain inputs.  That causes a problem for the blittable format, because we want to compress the data, but for certain inputs, that means that we are going to get more data. We solved that by doing conditional compression. We designate a buffer that is smaller than the plain text that we are compressing (this reflect the maximum amount of compression that is valuable for us), and compress to that buffer. If the compression routine was unable to compress to that buffer (because it needed more space), we fail the compression, and just store the plain text. Now we have an optimal compression rate, this is going to always be equal to or (hopefully usually) smaller than the original text.</p>
-        </article>
-        <article id="article-3450">
-            <a href="https://ayende.com/blog/173473/fun-async-tricks-for-getting-better-performance" target="_blank">
-                <h2 class="title mb-6" id="article-3450">Fun async tricks for getting better performance</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 25, 2016
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I got into a discussion with Mark about the usefulness of async. In particular, Mark said:  Sync will always have less CPU usage because of less kernel transitions, less allocation, less synchronization. &#x2026; This effect only comes into play when after issuing the IO the thread pool can immediately process a queued task. This is only the case when the CPU is highly saturated. At 90% saturation you have a good chance that this is happening. But nobody runs their production systems that way. And while this is sort of correct, in the sense that a major benefit of async is that you free the working thread for someone else to work on, and that this is typically mostly useful under very high load, async is most certainly not useful just for high throughput situations. The fun part about having async I/O is the notion of interleaving both I/O and computation together. Mark assumes that this is only relevant if you have high rate of work, because if you are starting async I/O, you have to wait for it to complete before you can do something interesting, and if there isn&#x27;t any other task waiting, you are effectively blocked.  But that doesn&#x27;t have to be the case. Let us take the following simple code. It isn&#x27;t really doing something amazing, it is just filtering a text file:  public void FilterBadWords(string intputFile, string outputFile)&#xA;{&#xA;    var badWords = new[] { &quot;opps&quot;, &quot;blah&quot;, &quot;dang&quot; };&#xA;&#xA;    using (var reader = File.OpenText(intputFile))&#xA;    using (var writer = File.AppendText(outputFile))&#xA;    {&#xA;        string line;&#xA;        while ((line = reader.ReadLine()) != null)&#xA;        {&#xA;            bool hasBadWord = false;&#xA;            foreach (var word in badWords)&#xA;            {&#xA;                if (line.IndexOf(word, StringComparison.OrdinalIgnoreCase) != -1)&#xA;                {&#xA;                    hasBadWord = true;&#xA;                    break;&#xA;                }&#xA;            }&#xA;&#xA;            if(hasBadWord == false)&#xA;                writer.WriteLine(line);&#xA;        }&#xA;    }&#xA;}&#xA;&#xA;&#xA;Here is the async version of the same code:&#xA;&#xA;public async Task FilterBadWords(string intputFile, string outputFile)&#xA;{&#xA;    var badWords = new[] { &quot;opps&quot;, &quot;blah&quot;, &quot;dang&quot; };&#xA;&#xA;    using (var reader = File.OpenText(intputFile))&#xA;    using (var writer = File.AppendText(outputFile))&#xA;    {&#xA;        string line;&#xA;        while ((line = await reader.ReadLineAsync()) != null)&#xA;        {&#xA;            bool hasBadWord = false;&#xA;            foreach (var word in badWords)&#xA;            {&#xA;                if (line.IndexOf(word, StringComparison.OrdinalIgnoreCase) != -1)&#xA;                {&#xA;                    hasBadWord = true;&#xA;                    break;&#xA;                }&#xA;            }&#xA;&#xA;            if(hasBadWord == false)&#xA;                await writer.WriteLineAsync(line);&#xA;        }&#xA;    }&#xA;}&#xA;&#xA;&#xA;If we&#x27;ll assume that we are running on a slow I/O system (maybe large remote file), in both version of the code, we&#x27;ll see execution pattern like so:&#xA;&#xA;&#xA;In the sync case, the I/O is done in a blocking fashion, in the async case, we aren&#x27;t holding up a thread ,but the async version need to do a more complex setup, so it is likely to be somewhat slower.&#xA;But the key is, we don&#x27;t have to write the async version in this manner. Consider the following code:&#xA;&#xA; public async Task FilterBadWords(string intputFile, string outputFile)&#xA; {&#xA;     var badWords = new[] { &quot;opps&quot;, &quot;blah&quot;, &quot;dang&quot; };&#xA;&#xA;     using (var reader = File.OpenText(intputFile))&#xA;     using (var writer = File.AppendText(outputFile))&#xA;     {&#xA;         var lineTask = reader.ReadLineAsync();&#xA;         Task writeTask = Task.CompletedTask;&#xA;         while (true)&#xA;         {&#xA;             var currentLine = await lineTask;&#xA;             await writeTask;&#xA;             if (currentLine == null)&#xA;                 break;&#xA;             lineTask = reader.ReadLineAsync();&#xA;&#xA;             bool hasBadWord = false;&#xA;             foreach (var word in badWords)&#xA;             {&#xA;                 if (currentLine.IndexOf(word, StringComparison.OrdinalIgnoreCase) != -1)&#xA;                 {&#xA;                     hasBadWord = true;&#xA;                     break;&#xA;                 }&#xA;             }&#xA;&#xA;             if(hasBadWord == false)&#xA;                 writeTask = writer.WriteLineAsync(currentLine);&#xA;         }&#xA;     }&#xA; }&#xA;The execution pattern of this code is going to be:&#xA;&#xA;&#xA;The key point is that we start async I/O, but we aren&#x27;t going to await of it immediately. Instead, we are going to do some other work first (processing the current line while we fetch &amp; write the next line). &#xA;In other words, when we schedule the next bit of I/O to be done, we aren&#x27;t going to ask the system to find us some other piece of work to execute, we are the next piece of work to execute. &#xA;&#xA;Nitpicker corner: This code isn&#x27;t actually likely to have this usage pattern, this code is meant to illustrate a point.</p>
         </article>
         <div class="button flex justify-between">
             <a href="344.html"><span class="back arrow"></span></a>
