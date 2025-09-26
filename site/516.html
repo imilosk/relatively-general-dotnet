@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5151">
+            <a href="https://ayende.com/blog/4782/code-review-ranking-methods" target="_blank">
+                <h2 class="title mb-6" id="article-5151">Code review ranking methods</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 14, 2011
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 3/8/2011I use a sort of a ranking sheet when I am doing code reviews. I recently run into one that was really horrible&#x2026;</p>
+        </article>
+        <article id="article-5152">
             <a href="https://ayende.com/blog/4780/nhibernate-profiler-update-client-profile-nhibernate-3-x-updates" target="_blank">
-                <h2 class="title mb-6" id="article-5151">NHibernate Profiler update: Client Profile &amp; NHibernate 3.x updates</h2>
+                <h2 class="title mb-6" id="article-5152">NHibernate Profiler update: Client Profile &amp; NHibernate 3.x updates</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We just finished a pretty major change to how the NHibernate Profiler interacts with NHibernate. That change was mostly driven out of the desire to fully support running under the client profile and to allow us to support the new logging infrastructure in NHibernate 3.x.  The good news, this is done , you can now use NH Prof from the client profile, and you don&#x2019;t need to do anything to make it work for NHibernate 3.x.  The slightly bad news is that if you were relying on log4net conifguration to configure NH Prof, there is a breaking change that affects you. Basically, you need to update your configuration. You can find the full details on how to do this in the documentation.</p>
         </article>
-        <article id="article-5152">
+        <article id="article-5153">
             <a href="https://ayende.com/blog/4779/reviewing-oss-project-whiteboard-chat-setup-belongs-in-the-initializer" target="_blank">
-                <h2 class="title mb-6" id="article-5152">Reviewing OSS Project</h2>
+                <h2 class="title mb-6" id="article-5153">Reviewing OSS Project</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Originally posted at 3/8/2011As a reminder, I am reviewing the problems that I found while reviewing the Whiteboard Chat project during one of my NHibernate&#x2019;s Courses. Here is the method:     [Transaction]&#xA;[Authorize]&#xA;[HttpPost]&#xA;public ActionResult GetLatestPost(int boardId, string lastPost)&#xA;{&#xA;    DateTime lastPostDateTime = DateTime.Parse(lastPost);&#xA;    &#xA;    IList&lt;Post&gt; posts = &#xA;        _postRepository&#xA;        .FindAll(new GetPostLastestForBoardById(lastPostDateTime, boardId))&#xA;        .OrderBy(x=&gt;x.Id).ToList();&#xA;&#xA;    //update the latest known post&#xA;    string lastKnownPost = posts.Count &gt; 0 ? &#xA;        posts.Max(x =&gt; x.Time).ToString()&#xA;        : lastPost; //no updates&#xA;    &#xA;    Mapper.CreateMap&lt;Post, PostViewModel&gt;()&#xA;        .ForMember(dest =&gt; dest.Time, opt =&gt; opt.MapFrom(src =&gt; src.Time.ToString()))&#xA;        .ForMember(dest =&gt; dest.Owner, opt =&gt; opt.MapFrom(src =&gt; src.Owner.Name));&#xA;&#xA;    UpdatePostViewModel update = new UpdatePostViewModel();&#xA;    update.Time = lastKnownPost; &#xA;    Mapper.Map(posts, update.Posts);&#xA;&#xA;    return Json(update);&#xA;}&#xA;  &#xA;&#xA;In this post, I want to focus on the usage of AutoMapper, in the form of Mapper.CreateMap() call.&#xA;&#xA;It was fairly confusing to figure out why that was going on there. In fact, since I am not a regular user of AutoMapper, I assumed that this was the correct way of doing things, which bothered me. And then I looked deeper, and figured out just how troubling this thing is.&#xA;&#xA;Usage of Mapper.CreateMap is part of the system initialization, in general. Putting it inside the controller method result in quite a few problems&#x2026;&#xA;&#xA;To start with, we are drastically violating the Single Responsibility Principle, since configuring the Auto Mapper really have very little to do with serving the latest posts. &#xA;&#xA;But it actually gets worse, Auto Mapper assumes that you&#x2019;ll make those calls at system initialization, and there is no attempt to make sure that those static method calls are thread safe. &#xA;&#xA;In other words, you can only run the code in this action in a single thread. Once you start running it on multiple thread, you are open to race conditions, undefined behavior and plain out weirdness.&#xA;&#xA;On the next post, I&#x2019;ll focus on the security vulnerability that exists in this method, can you find it?</p>
         </article>
-        <article id="article-5153">
+        <article id="article-5154">
             <a href="https://ayende.com/blog/4778/reviewing-oss-project-whitboard-chat-overall-design" target="_blank">
-                <h2 class="title mb-6" id="article-5153">Reviewing OSS Project</h2>
+                <h2 class="title mb-6" id="article-5154">Reviewing OSS Project</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As a reminder, I am reviewing the problems that I found while reviewing the Whiteboard Chat project during one of my NHibernate&#x2019;s Courses. Here is the method:     [Transaction]&#xA;[Authorize]&#xA;[HttpPost]&#xA;public ActionResult GetLatestPost(int boardId, string lastPost)&#xA;{&#xA;    DateTime lastPostDateTime = DateTime.Parse(lastPost);&#xA;    &#xA;    IList&lt;Post&gt; posts = &#xA;        _postRepository&#xA;        .FindAll(new GetPostLastestForBoardById(lastPostDateTime, boardId))&#xA;        .OrderBy(x=&gt;x.Id).ToList();&#xA;&#xA;    //update the latest known post&#xA;    string lastKnownPost = posts.Count &gt; 0 ? &#xA;        posts.Max(x =&gt; x.Time).ToString()&#xA;        : lastPost; //no updates&#xA;    &#xA;    Mapper.CreateMap&lt;Post, PostViewModel&gt;()&#xA;        .ForMember(dest =&gt; dest.Time, opt =&gt; opt.MapFrom(src =&gt; src.Time.ToString()))&#xA;        .ForMember(dest =&gt; dest.Owner, opt =&gt; opt.MapFrom(src =&gt; src.Owner.Name));&#xA;&#xA;    UpdatePostViewModel update = new UpdatePostViewModel();&#xA;    update.Time = lastKnownPost; &#xA;    Mapper.Map(posts, update.Posts);&#xA;&#xA;    return Json(update);&#xA;}&#xA;  &#xA;&#xA;In this post, I&#x2019;ll just cover some of the easy to notice issues:&#xA;&#xA;The method name is GetLatestPost, but it is actually getting the latest posts (plural). Yes, it is minor, but it is annoying.&#xA;&#xA;Action filter attributes for authorization or transactions shouldn&#x2019;t be there. To be rather more exact, the [Authorize] filter attribute shows up on all the methods, and transactions with NHibernate should always be used.&#xA;&#xA;Using them as attributes means that you can select to use them or not (and indeed, there are some actions where the [Transaction] attribute is not found).&#xA;&#xA;Stuff that is everywhere should be defined once, and you don&#x2019;t have to re-define it all over the place.</p>
         </article>
-        <article id="article-5154">
+        <article id="article-5155">
             <a href="https://ayende.com/blog/4777/reviewing-oss-project-whiteboard-chat" target="_blank">
-                <h2 class="title mb-6" id="article-5154">Reviewing OSS Project</h2>
+                <h2 class="title mb-6" id="article-5155">Reviewing OSS Project</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am currently giving a course, and one of the things that we do during the course is put an OSS project on the board and analyze it. The project for this course is Whiteboard Chat Project.  Overall, it seems to be a nice project, there are some problems, but most of them are &#x201C;rich men&#x2019;s problems&#x201D;, the kind of problems that are sort of good to have. That said, I intend to write a series of blog posts on the following method:     [Transaction]&#xA;[Authorize]&#xA;[HttpPost]&#xA;public ActionResult GetLatestPost(int boardId, string lastPost)&#xA;{&#xA;    DateTime lastPostDateTime = DateTime.Parse(lastPost);&#xA;    &#xA;    IList&lt;Post&gt; posts = &#xA;        _postRepository&#xA;        .FindAll(new GetPostLastestForBoardById(lastPostDateTime, boardId))&#xA;        .OrderBy(x=&gt;x.Id).ToList();&#xA;&#xA;    //update the latest known post&#xA;    string lastKnownPost = posts.Count &gt; 0 ? &#xA;        posts.Max(x =&gt; x.Time).ToString()&#xA;        : lastPost; //no updates&#xA;    &#xA;    Mapper.CreateMap&lt;Post, PostViewModel&gt;()&#xA;        .ForMember(dest =&gt; dest.Time, opt =&gt; opt.MapFrom(src =&gt; src.Time.ToString()))&#xA;        .ForMember(dest =&gt; dest.Owner, opt =&gt; opt.MapFrom(src =&gt; src.Owner.Name));&#xA;&#xA;    UpdatePostViewModel update = new UpdatePostViewModel();&#xA;    update.Time = lastKnownPost; &#xA;    Mapper.Map(posts, update.Posts);&#xA;&#xA;    return Json(update);&#xA;}&#xA;  &#xA;&#xA;This method is a pretty good example of a multitude of anti patterns and other issues that annoys me.&#xA;&#xA;That said, I would like to clarify that I am merely using this method as an example of some bad issues, I wouldn&#x2019;t want to give the impression that this is any sort of attack of the project or its authors. I have literally looked at the project for the first time today, and I haven&#x2019;t even checked who the authors are.&#xA;&#xA;More on that, in the next posts, and in the meantime, I&#x2019;ll let you figure out how many issues there are there that I am going to talk about&#x2026;</p>
         </article>
-        <article id="article-5155">
+        <article id="article-5156">
             <a href="https://ardalis.com/code-analysis-atomiq/" target="_blank">
-                <h2 class="title mb-6" id="article-5155">Code Analysis Using Atomiq</h2>
+                <h2 class="title mb-6" id="article-5156">Code Analysis Using Atomiq</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Introduction Atomiq is a code analysis tool that quickly locates duplicate code within software applications by analyzing the source code&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5156">
+        <article id="article-5157">
             <a href="https://ayende.com/blog/4776/support-dynamic-fields-with-nhibernate-and-net-4-0" target="_blank">
-                <h2 class="title mb-6" id="article-5156">Support dynamic fields with NHibernate and .NET 4.0</h2>
+                <h2 class="title mb-6" id="article-5157">Support dynamic fields with NHibernate and .NET 4.0</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A common theme in many application is the need to support custom / dynamic fields. In other words, the system admin may decide that the Customer needs to have a few additional fields that aren&#x2019;t part of the mainline development.  In general, there are a few ways of handling that:     DateField1, DateField2, StringField1, StringField2, etc, etc &#x2013; And heaven helps if you need more than 2 string fields.    Entity Attribute Value &#x2013; store everything in a n EAV model, which basically means that you are going to have tables named: Tables, Rows, Attributes and Values.    Dynamically updating the schema.   In general, I would recommend anyone that needs dynamic fields to work with a data storage solution that supports it (like RavenDB , for example). But sometimes you have to use a relational database, and NHibernate has some really sweet solution.  First, let us consider versioning. We are going to move all of the user&#x2019;s custom fields to its own table. So we will have the Customers table and Customers_Extensions table. That way we are free to modify our own entity however we like it. Next, we want to allow nice syntax both for querying and for using it, even if there is custom code written against our code.   We can do it using the following code:     public class Customer&#xA;{&#xA;    private readonly IDictionary attributes = new Hashtable();&#xA;    public virtual int Id { get; set; }&#xA;    public virtual string Name { get; set; }&#xA;&#xA;    public virtual dynamic Attributes&#xA;    {&#xA;        get { return new HashtableDynamicObject(attributes);}&#xA;    }&#xA;}&#xA;  &#xA;&#xA;Where HashtableDynamicObject is implemented as:&#xA;&#xA;&#xA;  public class HashtableDynamicObject : DynamicObject&#xA;{&#xA;    private readonly IDictionary dictionary;&#xA;&#xA;    public HashtableDynamicObject(IDictionary dictionary)&#xA;    {&#xA;        this.dictionary = dictionary;&#xA;    }&#xA;&#xA;    public override bool  TryGetMember(GetMemberBinder binder, out object result)&#xA;    {&#xA;        result = dictionary[binder.Name];&#xA;        return dictionary.Contains(binder.Name);&#xA;    }&#xA;&#xA;    public override bool TrySetMember(SetMemberBinder binder, object value)&#xA;    {&#xA;        dictionary[binder.Name] = value;&#xA;        return true;&#xA;    }&#xA;&#xA;    public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)&#xA;    {&#xA;        if (indexes == null)&#xA;            throw new ArgumentNullException(&quot;indexes&quot;);&#xA;        if (indexes.Length != 1)&#xA;            throw new ArgumentException(&quot;Only support a single indexer parameter&quot;, &quot;indexes&quot;);&#xA;        result = dictionary[indexes[0]];&#xA;        return dictionary.Contains(indexes[0]);&#xA;    }&#xA;&#xA;    public override bool TrySetIndex(SetIndexBinder binder, object[] indexes, object value)&#xA;    {&#xA;&#xA;        if (indexes == null)&#xA;            throw new ArgumentNullException(&quot;indexes&quot;);&#xA;        if (indexes.Length != 1)&#xA;            throw new ArgumentException(&quot;Only support a single indexer parameter&quot;, &quot;indexes&quot;);&#xA;        dictionary[indexes[0]] = value;&#xA;        return true;&#xA;    }&#xA;}&#xA;  &#xA;&#xA;This is fairly basic so far, and not really interesting. We expose a hashtable as the entry point for a dynamic object that exposes all the dynamic fields. The really interesting part happens in the NHibernate mapping:&#xA;&#xA;&#xA;  &lt;class name=&quot;Customer&quot;&#xA;             table=&quot;Customers&quot;&gt;&#xA;&#xA;    &lt;id name=&quot;Id&quot;&gt;&#xA;        &lt;generator class=&quot;identity&quot;/&gt;&#xA;    &lt;/id&gt;&#xA;    &lt;property name=&quot;Name&quot; /&gt;&#xA;&#xA;    &lt;join table=&quot;Customers_Extensions&quot; optional=&quot;false&quot;&gt;&#xA;        &lt;key column=&quot;CustomerId&quot;/&gt;&#xA;        &lt;dynamic-component name=&quot;Attributes&quot; access=&quot;field.lowercase&quot;&gt;&#xA;            &lt;property name=&quot;EyeColor&quot; type=&quot;System.String&quot;/&gt;&#xA;        &lt;/dynamic-component&gt;&#xA;    &lt;/join&gt;&#xA;&lt;/class&gt;&#xA;  &#xA;&#xA;As you can see, we used both a &lt;join/&gt; and a &lt;dynamic-component/&gt; to do the work. We used the &lt;join/&gt; to move the fields to a separate table, and then mapped those fields via a &lt;dynamic-component/&gt;, which is exposed an IDictionary.&#xA;&#xA;Since we want to allow nicer API usage, we don&#x2019;t expose the IDictionary directly, but rather expose a dynamic object that provides us with a nicer syntax.&#xA;&#xA;The following code:&#xA;&#xA;&#xA;  using (var session = sessionFactory.OpenSession())&#xA;using (var tx = session.BeginTransaction())&#xA;{&#xA;    session.Save(&#xA;        new Customer&#xA;        {&#xA;            Name = &quot;Ayende&quot;,&#xA;            Attributes =&#xA;            {&#xA;                EyeColor = &quot;Brown&quot;&#xA;            }&#xA;        });&#xA;    &#xA;    tx.Commit();&#xA;}&#xA;  &#xA;&#xA;Will produce the following SQL:&#xA;&#xA;&#xA;&#xA;And that is quite a nice solution all around</p>
         </article>
-        <article id="article-5157">
+        <article id="article-5158">
             <a href="https://www.meziantou.net/subscribe-to-events-launched-by-children-of-an-itemscontrol.htm" target="_blank">
-                <h2 class="title mb-6" id="article-5157">Subscribe to events launched by children of an ItemsControl</h2>
+                <h2 class="title mb-6" id="article-5158">Subscribe to events launched by children of an ItemsControl</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The ItemsControls (Listbox, Treeview, Menu, &#x2026;) are often used. Sometimes you want to subscribe to the events of all their children. However this can be hard to set up especially when using binding. Fortunately there is a very easy solution (you could suspect it &#x1F603;). Simply change the style of the c</p>
         </article>
-        <article id="article-5158">
+        <article id="article-5159">
             <a href="https://www.meziantou.net/how-to-enable-concurrent-sessions-in-windows-7.htm" target="_blank">
-                <h2 class="title mb-6" id="article-5158">How to enable concurrent sessions in Windows 7?</h2>
+                <h2 class="title mb-6" id="article-5159">How to enable concurrent sessions in Windows 7?</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The procedure below works for Windows 7 Ultimate and Professional x86 and x64. This procedure may involve risks.For those who do not know what concurrent sessions are, it allows you to remotely control your computer while another user is using it, without it being disconnected. By default Windows 7</p>
         </article>
-        <article id="article-5159">
+        <article id="article-5160">
             <a href="https://ardalis.com/complex-technical-demos-using-local-source-control/" target="_blank">
-                <h2 class="title mb-6" id="article-5159">Complex Technical Demos Using Local Source Control</h2>
+                <h2 class="title mb-6" id="article-5160">Complex Technical Demos Using Local Source Control</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: March 01, 2011
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last summer at the Software Engineering 101 event put on by NimblePros in Cleveland, I saw Kevin Kuebler do a demo using git or Mercurial to&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-5160">
-            <a href="https://ayende.com/blog/4775/new-profiler-feature-avoid-writes-from-multiple-sessions-in-the-same-request" target="_blank">
-                <h2 class="title mb-6" id="article-5160">New Profiler Feature: Avoid Writes from Multiple Sessions In The Same Request</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 01, 2011
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Because I keep getting asked, this feature is available for the following profilers:     NHibernate Profiler    Entity Framework Profiler    Linq to SQL Profiler    LLBLGen Profiler    Hibernate Profiler   This new feature detects a very interesting bad practice, write to the database from multiple session in the same web request.  For example, consider the following code:     public void SaveAccount(Account account)&#xA;{&#xA;    using(var session = sessionFactory.OpenSession())&#xA;    using(session.BeginTransaction())&#xA;    {&#xA;           session.SaveOrUpdate(account);&#xA;           session.Transaction.Commit();    &#xA;    }&#xA;}&#xA;&#xA;  public Account GetAccount(int id)&#xA;{&#xA;    using(var session = sessionFactory.OpenSession())&#xA;    {&#xA;        return session.Get&lt;Account&gt;(id);&#xA;    }&#xA;}&#xA;  &#xA;&#xA;It is bad for several reasons, micro managing the session is just one of them, but the worst part is yet to come&#x2026;&#xA;&#xA;&#xA;  public void MakePayment(int fromAccount, int toAccount, decimal ammount)&#xA;{&#xA;    var from = Dao.GetAccount(fromAccount);&#xA;    var to = Dao.GetAccount(toAccount);&#xA;    from.Total -= amount;&#xA;    to.Total &#x2B;= amount;&#xA;    Dao.SaveAccount(from);&#xA;    Dao.SaveAccount(to);&#xA;}&#xA;  &#xA;&#xA;Do you see the error here? There are actually several, let me count them:&#xA;&#xA;&#xA;  We are using 4 different connections to the database in a single method.&#xA;&#xA;  We don&#x2019;t have transactional safety!!!!&#xA;&#xA;&#xA;Think about it, if the server crashed between the fifth and sixth lines of this method, where would we be? &#xA;&#xA;We would be in that wonderful land where money disappear into thin air and we stare at that lovely lawsuit folder and then jump from a high window to a stormy sea.&#xA;&#xA;Or, of course, you could use the profiler, which will tell you that you are doing something which should be avoided:&#xA;&#xA;&#xA;&#xA;Isn&#x2019;t that better than swimming with the sharks?</p>
         </article>
         <div class="button flex justify-between">
             <a href="515.html"><span class="back arrow"></span></a>

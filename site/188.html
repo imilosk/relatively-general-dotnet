@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1871">
+            <a href="https://ayende.com/blog/188291-B/product-recommendations-in-ravendb" target="_blank">
+                <h2 class="title mb-6" id="article-1871">Product recommendations in RavenDB</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: September 10, 2019
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Product recommendations is a Big Thing. The underlying assumption is that there are patterns in the sales of products, so we can detect and recommend what products usually go together. That gives us a very nice way to give accurate recommendations to users about products that they might want to purchase. Here is a great example of how this may look like, from Amazon:As an aside, I&#x2019;m really happy to see the grouping of my book with Release It~ and Writing High Performance .Net Core books.&#xA0; An interesting question is can we get this kind of behavior in RavenDB? If we were using SQL, we could probably write some queries to handle this. I wrote about this a decade ago with NHiberante, and the queries are&#x2026; complex. They also have non trivial amount of runtime costs. With RavenDB, however, we can do things differently. We can use RavenDB&#x2019;s map/reduce feature to handle this.The key observation is that we want to gather, for each product, the products that were also purchased with it. We&#x2019;ll use the sample dataset to test things out. There, we have an Orders collection and each order has a list of Lines that were purchased in the order. Given that information, we can use the following index definition:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          // map&#xA;        &#xA;        &#xA;          &#xA;          from o in docs.Orders&#xA;        &#xA;        &#xA;          &#xA;          from l in o.Lines&#xA;        &#xA;        &#xA;          &#xA;          select new&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              l.Product,&#xA;        &#xA;        &#xA;          &#xA;              Count = 1,&#xA;        &#xA;        &#xA;          &#xA;              AlsoBought = o.Lines&#xA;        &#xA;        &#xA;          &#xA;                  .Where(x =&gt; x.Product != l.Product)&#xA;        &#xA;        &#xA;          &#xA;                  .Select(x =&gt; new&#xA;        &#xA;        &#xA;          &#xA;                  {&#xA;        &#xA;        &#xA;          &#xA;                      Count = 1,&#xA;        &#xA;        &#xA;          &#xA;                      x.Product&#xA;        &#xA;        &#xA;          &#xA;                  })&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          //reduce&#xA;        &#xA;        &#xA;          &#xA;          from result in results&#xA;        &#xA;        &#xA;          &#xA;          group result by result.Product into g&#xA;        &#xA;        &#xA;          &#xA;          select new&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              Product = g.Key,&#xA;        &#xA;        &#xA;          &#xA;              Count = g.Sum(x =&gt; x.Count),&#xA;        &#xA;        &#xA;          &#xA;              AlsoBought = g.SelectMany(x =&gt; x.AlsoBought)&#xA;        &#xA;        &#xA;          &#xA;                            .GroupBy(x =&gt; x.Product)&#xA;        &#xA;        &#xA;          &#xA;                            .Select(x =&gt; new&#xA;        &#xA;        &#xA;          &#xA;                            {&#xA;        &#xA;        &#xA;          &#xA;                                Product = x.Key, &#xA;        &#xA;        &#xA;          &#xA;                                Count = x.Sum(a =&gt; a.Count)&#xA;        &#xA;        &#xA;          &#xA;                            })&#xA;        &#xA;        &#xA;          &#xA;                            .OrderByDescending(x=&gt;x.Count)&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          recommendations.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;Let&#x2019;s break this index apart to its constituent parts. In the map, we project an entry for each line, which has the Product that is being purchased as well as all the other products that were purchased in the same order. We use this to create a link between the various products that are sold together. In the reduce, we group by the product that was sold, and aggregate the sales of related products to get the final tally.The end result will looks like so:You can see some interesting design decisions in how I built this index. We keep track of the number of orders for each product, as well as the number of times it was purchased along side each related product. This means that we can very easily implement related products, but also filter outliers. If someone purchased the &#x201C;Inside RavenDB&#x201D; book to learn RavenDB, but at the same time also bought the Hungry Caterpillar for their child, you probably don&#x2019;t want to put recommend each other. The audiences are quite different (even though telling my own 4 years old daughter about RavenDB usually puts her to sleep pretty quickly ).We can use the number of joint sales as a good indication of whatever the products are truly related, all the while using the users tell us what matter. And the best part, you don&#x2019;t have to go out of your way to get this information. This is based on pretty much just the data that you are already collecting. Because this is a map/reduce index in RavenDB, the computation happens at indexing time, not at runtime. This means that the cost of querying this information is minimal, and RavenDB will make sure that it is always up to do.In fact, we can go to the Map/Reduce Visualizer page in RavenDB to see how this works. Let&#x2019;s take a peek, shall we?Here we can see a visual representation of two orders for the same product, as well as a few others. This is exactly the kind of thing we want to explore. Let&#x2019;s look a bit deeper, just for products/51-A:You can see how for the first order (bottom left), we have just one additional product, (products/14-A) while the second has a couple of them. We aggregate that information (Page #593) for all the 490 orders that fit there. There is also the top level (Page #1275) which aggregate the data from all the leaves. When we query, we will get the data from the top, so even if we have a lot of orders, we don&#x2019;t actually need to run any costly computation. The data is already pre-chewed for us and immediately (and cheaply) available.</p>
+        </article>
+        <article id="article-1872">
             <a href="https://andrewlock.net/new-in-asp-net-core-3-service-provider-validation/" target="_blank">
-                <h2 class="title mb-6" id="article-1871">New in ASP.NET Core 3: Service provider validation</h2>
+                <h2 class="title mb-6" id="article-1872">New in ASP.NET Core 3: Service provider validation</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Exploring ASP.NET Core 3.0 - Part 3</p>
         </article>
-        <article id="article-1872">
+        <article id="article-1873">
             <a href="https://ayende.com/blog/188290-B/speaking-at-progressive-net-2019-when-select-is-broken" target="_blank">
-                <h2 class="title mb-6" id="article-1872">Speaking at Progressive.NET 2019: When Select() is Broken</h2>
+                <h2 class="title mb-6" id="article-1873">Speaking at Progressive.NET 2019: When Select() is Broken</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ll be speaking at the Progressive.NET conference later this week. I&#x2019;ll be speaking about the nastiest bugs that weren&#x2019;t my fault. This is a very cathartic talk to give, because I get to go in depth into all the ways I tripped and fell.&#xA;This is based on a decade of running RavenDB in production and running into the strangest situations that you can think of.&#xA;On the menu:&#xA;&#xA;Linux and memory management&#xA;Windows and the printer&#xA;The mysterious crash on the ARM robot&#xA;The GC that smacked me&#xA;&#xA;And much more&#x2026;</p>
         </article>
-        <article id="article-1873">
+        <article id="article-1874">
             <a href="https://www.meziantou.net/stringbuilder-performance-pitfalls.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1873">StringBuilder performance best practices</h2>
+                <h2 class="title mb-6" id="article-1874">StringBuilder performance best practices</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In .NET, strings are immutable. Each operation that appears to modify a string object creates a new string. When you are using a loop to concatenate a random number of strings, you should use a StringBuilder to improve the performance. StringBuilder represents a mutable string of characters. So, yo</p>
         </article>
-        <article id="article-1874">
+        <article id="article-1875">
             <a href="https://www.stevejgordon.co.uk/an-introduction-to-sequencereader" target="_blank">
-                <h2 class="title mb-6" id="article-1874">An Introduction to SequenceReader</h2>
+                <h2 class="title mb-6" id="article-1875">An Introduction to SequenceReader</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I want to explore a new feature of .NET Core 3.0, which simplifies working with a ReadOnlySequence. You may find yourself using a ReadOnlySequence if you work with a PipeReader from System.IO.Pipelines. Before .NET Core 3.0, one would need to manually slice through the ReadOnlySequence from the Buffer property on the ReadResult. [&#x2026;]</p>
         </article>
-        <article id="article-1875">
+        <article id="article-1876">
             <a href="https://ardalis.com/git-graph-visualizes-branches-in-vs-code-for-free/" target="_blank">
-                <h2 class="title mb-6" id="article-1875">Git Graph Visualizes Branches in VS Code for Free</h2>
+                <h2 class="title mb-6" id="article-1876">Git Graph Visualizes Branches in VS Code for Free</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently discovered a very nice VS Code extension to use with git. You can view my full list of tools and extensions I use here if you&#x27;re&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-1876">
+        <article id="article-1877">
             <a href="https://andrewlock.net/comparing-startup-between-the-asp-net-core-3-templates/" target="_blank">
-                <h2 class="title mb-6" id="article-1876">Comparing Startup.cs between the ASP.NET Core 3.0 templates</h2>
+                <h2 class="title mb-6" id="article-1877">Comparing Startup.cs between the ASP.NET Core 3.0 templates</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Exploring ASP.NET Core 3.0 - Part 2</p>
         </article>
-        <article id="article-1877">
+        <article id="article-1878">
             <a href="https://www.meziantou.net/website-performance-how-i-ve-improved-the-performance-of-this-website.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1877">Website performance: How I&#x27;ve improved the performance of this website?</h2>
+                <h2 class="title mb-6" id="article-1878">Website performance: How I&#x27;ve improved the performance of this website?</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is part of the series &#x27;Web Performance&#x27;. Be sure to check out the rest of the blog posts of the series!Website performance: Why and how to measure?Website performance: How I&#x27;ve improved the performance of this website? (this post)Using AV1 video codec to reduce web page sizeUsing Avif cod</p>
         </article>
-        <article id="article-1878">
+        <article id="article-1879">
             <a href="https://ayende.com/blog/188258-B/the-cost-difference-of-1-vs-0" target="_blank">
-                <h2 class="title mb-6" id="article-1878">The cost difference of 1$ vs. 0$</h2>
+                <h2 class="title mb-6" id="article-1879">The cost difference of 1$ vs. 0$</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Hadi&#x2019;s had an interesting Tweet: This sounds reasonable on the surface, but it runs into hard issues with the vast differences between any amount of money vs. free. There have been quite a few studies on this. A good reading on the subject can be found here. Take a note of the Amazon experience. Shipping that is free increases sales. Shipping that is 0.2$ does not increase sales. Note that from a practical standpoint, there is no real difference between the prices, but it matters, quite a lot.Leaving aside the psychology of free, there are also other issues. Let&#x2019;s say that there is a tool that can save someone on my team 10 minutes a day, it is priced at 1$ / year. By any measure you care to name, that is more than worth it.But the process of actually getting this purchased is likely to be more expensive than the actual cost of the tool. In my case, the process is &#x201C;go talk to Oren&#x201D;. In other environments, that may involve &#x201C;talk to your boss, that will submit it to accounts payable, which will pay it in 60 days&#x201D;. And at that point, charging 1$ just doesn&#x2019;t matter. You could charge 50$, and the &#x201C;cost&#x201D; for the person making the purchase would be pretty much the same. Note that this is for corporate environment, the situation is (slightly) different for sales directly to consumers, but not significantly so. Free stills trumps everything.When talking about freemium models, you hear quotes that are bad. For example, Evernote had a &lt; 2% conversion rate, and that is a wildly successful example. Dropbox has a rate of about 4%, and the average seems to be 1%. And that is for businesses who are focused on optimizing the freemium funnel. That takes a lot of time and effort, mind you.I don&#x2019;t think that there is a practical option for turning this around, and I say that as someone who would love it if that were at all possible.</p>
         </article>
-        <article id="article-1879">
+        <article id="article-1880">
             <a href="https://ayende.com/blog/188257-B/avoiding-non-string-identifiers-in-ravendb" target="_blank">
-                <h2 class="title mb-6" id="article-1879">Avoiding non string identifiers in RavenDB</h2>
+                <h2 class="title mb-6" id="article-1880">Avoiding non string identifiers in RavenDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: August 27, 2019
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB, as of 4.0, requires that the document identifier will be a string. In fact, that has always been the requirement, but in previous versions, we allowed you to pretend that this isn&#x2019;t the case. That has led to&#x2026; some complexities, because people had a number id in their model, but inside RavenDB that was represented as a string, always.&#xA;I just got the following question:&#xA;&#xA;In my entities, can I have the Id property of any type instead string to avoid primitive obsession? I would use a generic Id&lt;tentity&gt; type for ids. This type can be converted into string before saving in DB by calling ToString() and transformed from string into Id&lt;tentity&gt; (when fetching from DB) by invocation of static method like public Id&lt;tentity&gt; FromString(string id).&#xA;&#xA;The short answer for this is that no, there is no way to do this. A document id in your model has to be a string.&#xA;The longer answer is that you can absolutely do this, but you have to understand the divergence of your entity model vs. the document model. The key is that RavenDB doesn&#x2019;t actually require that your model would have an Id property. It is usually defined, because it makes things easier, but that isn&#x2019;t required. RavenDB is perfectly happy managing the document key internally. Combine that with the ability to modify how documents are converted to entities, and you have a solution. Let&#x2019;s look at the code&#x2026;&#xA;&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          public class User&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              public string Name { get; set; }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              [JsonIgnore]&#xA;        &#xA;        &#xA;          &#xA;              public UserId Id { get; set; }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          public class UserId&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              public readonly string User;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              public UserId(string user)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  User = user;&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          documentStore.OnAfterConversionToEntity &#x2B;= (sender, args) =&gt;&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              if (args.Entity is User u)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  u.Id = new UserId(args.Id);&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          };&#xA;        &#xA;        &#xA;          &#xA;          documentStore.OnBeforeStore &#x2B;= (sender, args) =&gt;&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              if (args.Entity is User u)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  u.Id = new UserId(args.DocumentId);&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          };&#xA;        &#xA;        &#xA;          &#xA;          var defaultDocumentIdGenerator = documentStore.Conventions.AsyncDocumentIdGenerator;&#xA;        &#xA;        &#xA;          &#xA;          documentStore.Conventions.AsyncDocumentIdGenerator = (dbName, entity) =&gt;&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              if (entity is User u)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  u.Id = new UserId(&quot;users/&quot;&#x2B; u.Name);&#xA;        &#xA;        &#xA;          &#xA;                  return Task.FromResult(u.Id.User);&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;        &#xA;        &#xA;          &#xA;              return defaultDocumentIdGenerator(dbName, entity);&#xA;        &#xA;        &#xA;          &#xA;          };&#xA;        &#xA;        &#xA;          &#xA;          var defaultIdentityProperty = documentStore.Conventions.FindIdentityProperty;&#xA;        &#xA;        &#xA;          &#xA;          documentStore.Conventions.FindIdentityProperty = info =&gt;&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              if (info.DeclaringType == typeof(User))&#xA;        &#xA;        &#xA;          &#xA;                  return false;&#xA;        &#xA;        &#xA;          &#xA;              return defaultIdentityProperty(info);&#xA;        &#xA;        &#xA;          &#xA;          };&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          customize.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;&#xA;And here is how it looks like:&#xA;&#xA;The idea is that we customize a few things inside of RavenDB.&#xA;&#xA;We tell the serializer that it should ignore the UserId property&#xA;We tell RavenDB that after creating an entity from the server, we should setup the Id property as we want it.&#xA;We do the same just before we store the entity in the server, just to be sure that we got the complete package.&#xA;We disable the usual identity generation logic for the documents we care about and tell RavenDB that it should ignore trying to set the identity property on the document on its own.&#xA;&#xA;The end result is that we have an entity with a strongly typed identifier in our model. It took a bit of work, but not overly so.&#xA;That said, I would suggest that you should either have a string identifier property in your model or not have one at all (either option takes no code in RavenDB). Having an identifier and jumping through hoops like that tend to make for awkward experience. For example, RavenDB has no idea about this property, so if you need to support queries as well, you&#x2019;ll need to extend the query support. It&#x2019;s possible, but shows that there is additional complexity that can be avoided.</p>
-        </article>
-        <article id="article-1880">
-            <a href="https://ardalis.com/which-is-more-important-line-coverage-or-branch-coverage/" target="_blank">
-                <h2 class="title mb-6" id="article-1880">Which is more important, line coverage or branch coverage?</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: August 27, 2019
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve been setting up code coverage for some of my clients&#x27; projects and some of my own open source projects, like Clean Architecture and&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="187.html"><span class="back arrow"></span></a>

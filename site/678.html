@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6771">
+            <a href="https://ayende.com/blog/3446/the-importance-of-context" target="_blank">
+                <h2 class="title mb-6" id="article-6771">The importance of context</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 26, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Brian Chavez&#xA0;asks about adding multi tenancy using contextual sessions:     A topic for a future post perhaps, it would be really interesting to see how you would architect a web application with a contextual session management that supports multi tenancy that is a scalable keeping in mind the possibility of web farms / load balancers.   I spoke about this in my DevTeach talks about advanced OR/M and IoC. Let us start by defining multi tenancy. It is the ability to serve several customers on the same installed application. What do I mean by that?   Wikipedia defines Multitenancy as:     Multitenancy refers to the architectural principle, where a single instance of the software runs on a software-as-a-service (SaaS) vendor&#x27;s servers, serving multiple client organizations (tenants). Multitenancy is contrasted with a multi-instance architecture where separate software instances (or hardware systems) are set up for different client organizations. With a multitenant architecture, a software application is designed to virtually partition its data and configuration so that each client organization works with a customized virtual application instance.   Broadly, there are three major challenges for multi tenant applications:     Ensuring separation between the data of each client.    Allowing customization of the data for each client.    Allowing customization of behavior for each client.   For the first point, I tend to use a separate database per client, this make it significantly easier to deal with a lot of tasks, chief among them is that you literally can&#x27;t accidentally expose another client data and letting the client access his own data is trivial (especially important if client want to get backups of his data).  For the second and third, I use the idea of the context.   The context is just that, the current context of whatever work we are performing. As a simple example, the context will contain the current user, how to access the database, the relevant services, etc. The context is an important concept, although I tend to favor implicit context rather than the explicit one.  An explicit context is something like this:     Or perhaps using an IContext with the same approach. It explicitly wraps all the contextual parts of the application.  As I said, I prefer to have an implicit context, where I don&#x27;t explicitly need to deal with the context, rather, each of the service and data items that are present in the context. Rather, I deal with the contextual issue by extending the container to understand how it should deal with the context. That is, resolving the IAuthenticationService is an operation that is based on the business logic related to the current context.  This allows me more freedom overall and ensure that I don&#x27;t have such things as DoSomething(IContext context), which doesn&#x27;t really give me any hint about what it is doing.  Now, how does the idea of context allow me to deal with multi tenancy?  Quite simply, actually. For data customization, I simply create a separate session factory per each client, they can make whatever changes they want, and I can create a derived model on top of the default one, to match their needs. The usage of the base model means that I can still work with all the default services, and let NHibernate take the brunt of dealing with the modified schema and data.  For behavior customization, I have two options. If the behavior is part of the model, than obvious it should go in the derived model. If it is part of the services that we built for the application, we can simple build a derived service with the requested behavior and add it as part of the specified customer context.  This approach hugely simplify the need to deal with complex requirements such as multi tenancy. The real secret, I must confess, is that from the point of view of the application, this multi tenancy is not really felt. It just happens.</p>
+        </article>
+        <article id="article-6772">
             <a href="https://ayende.com/blog/3445/the-scope-of-an-application" target="_blank">
-                <h2 class="title mb-6" id="article-6771">The scope of an application</h2>
+                <h2 class="title mb-6" id="article-6772">The scope of an application</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am using the term &quot;application private scope&quot; quite often, and it seems that I need to make this clear.&#xA0; Note that I am talking about logical layout here, physical layout doesn&#x27;t really matter here (except with rolling updates, which are beside the point).   An application is all the code and functionality that is required to perform a specific task.   Let us take a recent project of mine, which dealt with scheduling people to do work. The Application consisted of two different web UI, one that was based on MS CRM, the other that was based on MonoRail, a set of reports, ETL processes from backend systems, service interface to integrate with data exposed by the Internet site of the customer, a smart client application that allowed easy and flexible editing of particular parts of the systems that were data entry heavy.  All of that, to me, is an application. A better name might be the System, but the concept is the same.  Inside this application, we are free to expose implementation details (there still may be design reasons not to want to do that, of course, but that is an internal decision).   All of those are within the scope of a single team, as such, changing the DB in one place may necessitate a change in other places, but that is all right, it is in the same application.  The application explicitly did not contain the processes that took the amount of time worked per time period and performed the necessary payroll processes, nor was it responsible for the external website, which needed data from the application.  Both of those (and several other systems that we integrated into), used well defined integration points. Those integration points were parts of the application.</p>
         </article>
-        <article id="article-6772">
+        <article id="article-6773">
             <a href="https://ayende.com/blog/3444/default-architecture-layers" target="_blank">
-                <h2 class="title mb-6" id="article-6772">Default Architecture: Layers</h2>
+                <h2 class="title mb-6" id="article-6773">Default Architecture: Layers</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The question came up in the ALT.Net group, and it seems like a good idea to post my thought about it.  You can see my overall default design for most just about any system. No, this isn&#x27;t the end all be all design dogma, it is just something that has served me well in a wide number of applications.  This architecture has only one thing at its code, it is focused on clearly defining responsibilities between different parts of the application.  On the face of it, this looks like the traditional Model View Controller approach, but while there is some relation (specifically, the idea of controllers is shared), there aren&#x27;t a lot of similarities between how I applied this in many cases.  Let us get to the specific, and see what we have.     External Interface    The external interface is the entry point to the system. It can be the UI, a service call, a message handler, a scheduled task or anything that is executing as a result of external input. The external interface is where you establish your current context. In general, it is strongly recommended to put as much as possible into the external interface context rather than the global context. This allows you more control overall.    Note that we explicitly recognize that we may have more than a single external interface into our application. Each of those external interfaces can be simple (Service Call) or complex (non trivial User Interface), but what is important is that it is mainly dealing with the issues of the external interface, not with the actual application. That is the responsibility of the controllers.    Controllers    The controllers (which is a generic term, in the past I have used commands, handlers and tasks to name the part of the application that perform this duty) are responsible of taking a particular use case and making it happen. This is the place where you start the unit of work and the transaction, this is the scope of what you are doing.     However, the controller is only dealing with the Core API to invoke domain behaviors. It is responsible for aggregating those behavior into the particular use case, but that about it. It is in the core that you actually perform the business behavior.    Core    The core is where your real business logic lives. This is where you define your domain model, define the operations and services that deal with it, etc. I&#x27;ll not touch on how to structure the core here, there is enough material elsewhere for this. I&#x27;ll say that the core exposes the complete set of operations that can be perform by the application.    In fact, one major rule to observe in this scenario is that the controllers layer should not add any higher level operations on top of what the core already has. Its responsibility is merely to coordinate.    Infrastructure    The infrastructure layer contains... well, the infrastructure. The OR/M, the container, the works. Note that unlike traditional layering, we don&#x27;t have just the core touch the infrastructure, rather, we have the infrastructure used by all parts of the application. And no, the infrastructure is not merely a set of of utility methods and classes.   What do we gain by using this approach?  First, we have a clearer separation of concerns, which is always good. But more to the point, we avoid the case where the external interface is taking over the entire design of all the lower layers. I distinctly remember seeing 3 tiers applications where it was abundantly clear that the design process was primarily focused on the UI functionality. To the point where a functionality change in the application was much harder to deal with, because everything was so focused on the UI.  This approach allow us to offer a rich set of operation on the domain, allow us to contain the logic for use cases in a well defined locations and reuse them as needed, in matching use cases across different external interfaces. It also tend to make new development far easier in the long run.  A note about controllers, however. While they can and should be shared if you are using the same use case in several external interfaces, note that this should not bleed into the controller itself. If it does, it might be a good idea to create two controllers, and declare this as two separate use cases, because the requirements of the external interfaces are different enough even though the underlying business scenario is the same.</p>
         </article>
-        <article id="article-6773">
+        <article id="article-6774">
             <a href="https://ayende.com/blog/3443/impedance-mismatch-and-system-evolution" target="_blank">
-                <h2 class="title mb-6" id="article-6773">Impedance Mismatch and System Evolution</h2>
+                <h2 class="title mb-6" id="article-6774">Impedance Mismatch and System Evolution</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Greg Young is talking about the Impedance Mismatch, replying to Stephen Fortes post about Impedance Mismatch from a while back.   Greg and I have a slightly different views regarding the details of many of the things he is talking about, but we are in agreement overall. You might say we take different approaches to the problem, but with the same overall direction.  What I would like to talk about in this post is specifically this statement from Stephen:     My first problem with ORMs in general is that they force you into a &quot;objects first&quot; box. Design your application and then click a button and magically all the data modeling and data access code will work itself out. This is wrong because it makes you very application centric and a lot of times a database model is going to support far more than your application.   Let me start by saying that I absolutely reject this statement:     [The] database model is going to support far more than your application   The database model is private to the application, and is never shared with the outside world. If you need to access to my data, here is the service URL, have fun reading from it.  However, one point that does make sense to deal with is dealing with the data model that is designed using objects first approach, and the implications from the point of view of good DB design.  I have stated many times before that the way I tend to work is by just writing my domain model in my language of choice, and than asking NHibernate to generate the database for me. This is a really good way to get an environment where changing the model has a very rapid feedback cycle, but it doesn&#x27;t create an optimized data model.  In does tend to create a good / reasonable data models, and I went to production with such models many times. But it is not the best model that you can have. There are cases where you can see that the one to one mapping that this approach use will generate sub optimal solution, and you need to take steps to deal with it.  This tend to be split into a couple of refactoring options:     Non schema breaking changes - this include such things as adding indexes, jobs for applying statistics, and general maintenance and tweaking.    Schema breaking changes - this tends to include denormalization, splitting tables, merging tables and in general moving things around.   In most cases, the first option is a mandatory one. I don&#x27;t add speculative indexes into my model. I only add them as a result of a performance test that shows an indication of a problem in a particular area. I would strongly suggest not going to production without doing this kind of review and applying the appropriate indexes.  The second option is a more interesting one, because it means that you have recognized a better way to model the data in a way that allows better read/write/query. This is also something that most people are extremely reluctant to do.   I have found that in most cases (by no means all, but a decided majority), I can deal with this issue in the mapping layer, and not touch the domain model itself.  End result is that I still get a good model in both the domain model and the data model, but my focus is on the functionality and the business requirement, which tend to speed things up significantly.</p>
         </article>
-        <article id="article-6774">
+        <article id="article-6775">
             <a href="https://ayende.com/blog/3442/how-to-review-nhibernate-application" target="_blank">
-                <h2 class="title mb-6" id="article-6774">How to review NHibernate application</h2>
+                <h2 class="title mb-6" id="article-6775">How to review NHibernate application</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A few hours ago I completed a code review of an application using NHibernate. This is not the first time I am doing such a thing, of course, and I noticed that there are quite a few areas where I tend to have comments in such code reviews.  The following is based on several such code bases that I went through, and contains a partial list of things that you need to watch for.  Mapping     The recommended practice is to have each mapping file contain a single class. Having a single mapping file contain multiple classes make it harder to find the matching file, make source control harder to deal with and means that you have to wade through a lot more XML than is healthy for you.    Do not specify things in the mapping that you don&#x27;t have to. Let NHibernate figure out what it can. When you need to change things, you&#x27;ll be able to do so more easily.    If you have logic for selecting which mapping files goes to which session factory, base this logic on easy to follow conventions, such as directory structure, not things that are hard to follow (like processor directives in the XML). In general, avoid having a whole pile of mapping in a single directory, it makes it confusing to deal with.   Session Management     If you need to call sessionFactory.OpenSession(), stop and rethink what you are doing. In most scenarios, what you should prefer is a contextual session. This allows you to play some very interesting games (such as multi tenanting the application without letting the application know about it).    Be aware of the session that you have. If you do have manual session management, just about the worst thing you can do is to open &amp; close the session per method call.      In particular, this is a worst practice, in my eyes.    public void Save(Customer customer)&#xA;{&#xA;&#x9;using(var session = SessionFactory.OpenSession())&#xA;&#x9;using(var tx = session.BeginTransaction())&#xA;&#x9;{&#xA;&#x9;&#x9;session.Save(customer);&#xA;&#x9;&#x9;tx.Commit();&#xA;&#x9;}&#xA;&#xA;}&#xA;&#xA;&#xA;Transaction Management&#xA;&#xA;&#xA;  Use transactions, always.&#xA;&#xA;  Set the Session Flush Mode to Commit, in order to help enforce that.&#xA;&#xA;  When you are using a transaction, always wrap it in a using statement.&#xA;&#xA;  Don&#x27;t forget to commit :-)&#xA;&#xA;  Transactions should be opened at the service boundary.&#xA;&#xA;&#xA;NHibernate Internals Usage&#xA;&#xA;&#xA;  Make use of the facilities that NHibernate gives you, but ensure that they are encapsulated well. For example, if you are using IUserType, neither the entity where it is used or the calling code should be aware of that in any way.&#xA;&#xA;  NHibernate has quite a few extension points that you can use, be aware of them, and the freedom that they give you. However, you should also consider that they are there for special cases, and it is usually better if you can avoid being a special case. I am not saying that you should not extend NHibernate or use the facilities that it gives you to do so. What I am saying is that anything that I have to dive deeply into NHibernate from the application code, I stop and rethink the problem.&#xA;&#xA;  In particular, you entities should never make any call to the session that created them in order to modify their own state.&#xA;&#xA;&#xA;Set based thinking&#xA;&#xA;&#xA;  NHibernate is OR/M - That is, it bridge between a database and the domain model. There is no good reason to forget that the database is there, and not use it.&#xA;&#xA;  In particular, things such as filtering and ordering are generally best done at the database level.&#xA;&#xA;  Overall, remember that the DB is well suited for such tasks, and that doing them at the application level will be a major pain and a hot spot for maintainability issues.&#xA;&#xA;&#xA;Select N&#x2B;1&#xA;&#xA;&#xA;  Be aware for what is the access pattern of your code, and take measures to reduce the amount of calls to the database.&#xA;&#xA;&#xA;&#xA;  There is no way NHibernate can be fast if you make it call the DB in a loop, where N is any significant number.</p>
         </article>
-        <article id="article-6775">
+        <article id="article-6776">
             <a href="https://ayende.com/blog/3441/book-review-by-schism-rent-asunder" target="_blank">
-                <h2 class="title mb-6" id="article-6775">Book Review</h2>
+                <h2 class="title mb-6" id="article-6776">Book Review</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Okay, I just finished listening to this book. It was... hard to describe. The book itself is excellent, the sheer quality of the world that Weber paints is flat out amazing.  I really liked the amount of sheer magnificence that is going on there. The number of balls that Weber manages to keep in the air is impressive.  There is just one issue with this book. It is a setup.  That is, it lay down the ground for the next book, By Heresies Distressed. Which sounds like it would be action filled. I hoped for a more interesting ending, because it feels like the story just hit its stride and is ready for action when it is over.  By Heresies Distressed, the next book, is supposed to be released in early 2009, which supports my assumption that this a case where we have a single story, but in two books.  Highly recommended, and I am going to re-read it now in text format, to give you an idea of high high the quality of the book is.</p>
         </article>
-        <article id="article-6776">
+        <article id="article-6777">
             <a href="https://ayende.com/blog/3440/annoying-anomalies" target="_blank">
-                <h2 class="title mb-6" id="article-6776">Annoying Anomalies</h2>
+                <h2 class="title mb-6" id="article-6777">Annoying Anomalies</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Currently listening the By Schism Reapt Asunder   The hero ask a computer to find anomalies between two sets of records. Specifically, finding records of people who are assigned to different to several enclaves at the same time.  The quote that annoyed me was:      OWL was a fast computer, and it only took him two minutes to find the answer, even though there were millions of people in those records.   I just winced hearing that, I felt like shouting, that is not the way it works at all.</p>
         </article>
-        <article id="article-6777">
+        <article id="article-6778">
             <a href="https://ardalis.com/travel-gadget-&#x2013;-power-splitter/" target="_blank">
-                <h2 class="title mb-6" id="article-6777">Travel Gadget &#x2013; Power Splitter</h2>
+                <h2 class="title mb-6" id="article-6778">Travel Gadget &#x2013; Power Splitter</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">power splitter Something I always keep in my laptop bag is a Liberator power splitter. All this does is split one power outlet into two&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6778">
+        <article id="article-6779">
             <a href="https://ardalis.com/vs-tip-&#x2013;-incremental-search-in-visual-studio/" target="_blank">
-                <h2 class="title mb-6" id="article-6778">VS Tip &#x2013; Incremental Search in Visual Studio</h2>
+                <h2 class="title mb-6" id="article-6779">VS Tip &#x2013; Incremental Search in Visual Studio</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">[find replace file If you&#x27;re looking to navigate through the current file in Visual Studio, the typical approach is ctrl-F, which is the&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6779">
+        <article id="article-6780">
             <a href="https://ayende.com/blog/3439/by-schism-rent-asunder" target="_blank">
-                <h2 class="title mb-6" id="article-6779">By Schism Rent Asunder</h2>
+                <h2 class="title mb-6" id="article-6780">By Schism Rent Asunder</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: July 22, 2008
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is the deal, I got the book shipped to me, and I am currently buying the audio book. Yes, I expect it to be that good.     Don&#x27;t expect to hear much from me in the near future...</p>
-        </article>
-        <article id="article-6780">
-            <a href="https://ayende.com/blog/3438/meta-blog-data-sheet-jul-2008-version" target="_blank">
-                <h2 class="title mb-6" id="article-6780">[meta] Blog Data Sheet - Jul 2008 Version</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 21, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I did this a year and a half ago, so it probably about time to do it again. I am using the same approach I outlined in this post.     Active since: April 2004 ( I am doing this for 4 years! Wow! )    Number of Posts: 3,437 (was 2196)    Number of Comments: 12,958 (was 3030)    Avg. Comments Per Post:&#xA0; 6 (was 3)    Avg. Posts per Month: 71 (was 60)    Avg. Posts per Month Last Year: 51 (was 82)     Avg. Posts per Week Last Year: 11 (was 19)     Avg. Comments per Month Last Year: 550 (was 108)   Posts to comments, over time. I actually got to the point where I can&#x27;t fit everything in a single graph, so I split them by year. Note that the scale for each graph is different!  2004     2005     2006     2007     2008     It is especially interesting if you look at the amount of posts per month over the entire period:     And now compare this to the number of comments per month over the entire period:     I thought about putting the most popular posts here, like in last year, but I find the list depressing.</p>
         </article>
         <div class="button flex justify-between">
             <a href="677.html"><span class="back arrow"></span></a>
