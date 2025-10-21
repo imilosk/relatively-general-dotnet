@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5651">
+            <a href="https://ayende.com/blog/4402/my-new-laptop-2010-edition" target="_blank">
+                <h2 class="title mb-6" id="article-5651">My new laptop &#x2013; 2010 edition</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 17, 2010
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, it arrived two days ago, but I only just finished doing the bare bones installation. My new laptop is a Lenovo Thinkpad W510 (4319-29G, if anyone really cares). I have been a happy Thinkpad user for a long time, so it seems to be a natural choice. One think that I did directly off the bat, though, was to replace the HD that it came with with an SSD one.   It seems to be a pretty nice machine, so far.     I find it highly amusing that the slowest part here is actually the memory.  One thing that i do find unforgivable, however, is the install from scratch experience. Since i replaced the HD, I installed the machine using Win7, and after a successful installation, the computer could neither connect to the internet or use USB. That meant that in order to get drivers (you know, so I can connect to the internet or use USB) I had to burn a CD. It felt so 90s.  Even more unforgivable?   &#xA0;   After being able to go on the net and download all the drivers for my machine, I still can&#x2019;t get USB to work. There doesn&#x2019;t seem to be any USB drivers for my model, which I find extremely puzzling.   At a minimum, I would expect Lenovo to include a drivers disk.</p>
+        </article>
+        <article id="article-5652">
             <a href="https://ayende.com/blog/4401/challenge-premature-optimization-and-all-of-that" target="_blank">
-                <h2 class="title mb-6" id="article-5651">Challenge</h2>
+                <h2 class="title mb-6" id="article-5652">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let us look at the following pieces of code:     public void Consume(MyBooksRequest message)&#xA;{&#xA;    var user = session.Get&lt;User&gt;(message.UserId);&#xA;    &#xA;    bus.Reply(new MyBooksResponse&#xA;    {&#xA;        UserId = message.UserId,&#xA;        Timestamp = DateTime.Now,&#xA;        Books = user.CurrentlyReading.ToBookDtoArray()&#xA;    });&#xA;}&#xA;&#xA;public void Consume(MyQueueRequest message)&#xA;{&#xA;    var user = session.Get&lt;User&gt;(message.UserId);&#xA;&#xA;    bus.Reply(new MyQueueResponse&#xA;    {&#xA;        UserId = message.UserId,&#xA;        Timestamp = DateTime.Now,&#xA;        Queue = user.Queue.ToBookDtoArray()&#xA;    });&#xA;}&#xA;&#xA;public void Consume(MyRecommendationsRequest message)&#xA;{&#xA;    var user = session.Get&lt;User&gt;(message.UserId);&#xA;&#xA;    bus.Reply(new MyRecommendationsResponse&#xA;    {&#xA;        UserId = message.UserId,&#xA;        Timestamp = DateTime.Now,&#xA;        Recommendations = user.Recommendations.ToBookDtoArray()&#xA;    });&#xA;}&#xA;  &#xA;&#xA;Looking at this, I see that I have a requirement to getting my books, my queues and my recommendations. It appears that getting each datum is going to result in 2 queries, the first to load the User, and the second to lazy load the actual collection that we want to return.&#xA;&#xA;An almost trivial optimization would be to eliminate the lazy loading, right? That would reduce the cost from 6 queries to just 3.&#xA;&#xA;However, that assumption would be wrong. The following client code:&#xA;&#xA;&#xA;  bus.Send(&#xA;    new MyBooksRequest&#xA;    {&#xA;        UserId = userId&#xA;    },&#xA;    new MyQueueRequest&#xA;    {&#xA;        UserId = userId&#xA;    },&#xA;    new MyRecommendationsRequest&#xA;    {&#xA;        UserId = userId&#xA;    });&#xA;  &#xA;&#xA;Produces this SQL:&#xA;&#xA;&#xA;  -- statement #1&#xA;enlisted session in distributed transaction with isolation level: Serializable&#xA;&#xA;-- statement #2&#xA;SELECT user0_.Id          as Id2_0_,&#xA;       user0_.Name        as Name2_0_,&#xA;       user0_.Street      as Street2_0_,&#xA;       user0_.Country     as Country2_0_,&#xA;       user0_.City        as City2_0_,&#xA;       user0_.ZipCode     as ZipCode2_0_,&#xA;       user0_.HouseNumber as HouseNum7_2_0_&#xA;FROM   Users user0_&#xA;WHERE  user0_.Id = 1 /* @p0 */&#xA;&#xA;-- statement #3&#xA;SELECT currentlyr0_.[User] as User1_1_,&#xA;       currentlyr0_.Book   as Book1_,&#xA;       book1_.Id           as Id0_0_,&#xA;       book1_.Name         as Name0_0_,&#xA;       book1_.ImageUrl     as ImageUrl0_0_,&#xA;       book1_.Image        as Image0_0_,&#xA;       book1_.Author       as Author0_0_&#xA;FROM   UsersReadingBooks currentlyr0_&#xA;       left outer join Books book1_&#xA;         on currentlyr0_.Book = book1_.Id&#xA;WHERE  currentlyr0_.[User] = 1 /* @p0 */&#xA;&#xA;-- statement #4&#xA;SELECT queue0_.[User]  as User1_1_,&#xA;       queue0_.Book    as Book1_,&#xA;       queue0_.[Index] as Index3_1_,&#xA;       book1_.Id       as Id0_0_,&#xA;       book1_.Name     as Name0_0_,&#xA;       book1_.ImageUrl as ImageUrl0_0_,&#xA;       book1_.Image    as Image0_0_,&#xA;       book1_.Author   as Author0_0_&#xA;FROM   UsersWaitingBooks queue0_&#xA;       left outer join Books book1_&#xA;         on queue0_.Book = book1_.Id&#xA;WHERE  queue0_.[User] = 1 /* @p0 */&#xA;&#xA;-- statement #5&#xA;SELECT recommenda0_.[User]  as User1_1_,&#xA;       recommenda0_.Book    as Book1_,&#xA;       recommenda0_.[Index] as Index3_1_,&#xA;       book1_.Id            as Id0_0_,&#xA;       book1_.Name          as Name0_0_,&#xA;       book1_.ImageUrl      as ImageUrl0_0_,&#xA;       book1_.Image         as Image0_0_,&#xA;       book1_.Author        as Author0_0_&#xA;FROM   UsersRecommendedBooks recommenda0_&#xA;       left outer join Books book1_&#xA;         on recommenda0_.Book = book1_.Id&#xA;WHERE  recommenda0_.[User] = 1 /* @p0 */&#xA;&#xA;&#xA;-- statement #7&#xA;commit transaction&#xA;  &#xA;&#xA;That seems strange, can you figure out why?&#xA;&#xA;Bonus points for figuring out whatever it would be worth it to do the eager load optimization or not.</p>
         </article>
-        <article id="article-5652">
+        <article id="article-5653">
             <a href="https://ayende.com/blog/4400/challenges-where-is-the-optimization" target="_blank">
-                <h2 class="title mb-6" id="article-5652">Challenges</h2>
+                <h2 class="title mb-6" id="article-5653">Challenges</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let us look at the following pieces of code:     public void Consume(MyBooksRequest message)&#xA;{&#xA;    var user = session.Get&lt;User&gt;(message.UserId);&#xA;    &#xA;    bus.Reply(new MyBooksResponse&#xA;    {&#xA;        UserId = message.UserId,&#xA;        Timestamp = DateTime.Now,&#xA;        Books = user.CurrentlyReading.ToBookDtoArray()&#xA;    });&#xA;}&#xA;&#xA;public void Consume(MyQueueRequest message)&#xA;{&#xA;    var user = session.Get&lt;User&gt;(message.UserId);&#xA;&#xA;    bus.Reply(new MyQueueResponse&#xA;    {&#xA;        UserId = message.UserId,&#xA;        Timestamp = DateTime.Now,&#xA;        Queue = user.Queue.ToBookDtoArray()&#xA;    });&#xA;}&#xA;&#xA;public void Consume(MyRecommendationsRequest message)&#xA;{&#xA;    var user = session.Get&lt;User&gt;(message.UserId);&#xA;&#xA;    bus.Reply(new MyRecommendationsResponse&#xA;    {&#xA;        UserId = message.UserId,&#xA;        Timestamp = DateTime.Now,&#xA;        Recommendations = user.Recommendations.ToBookDtoArray()&#xA;    });&#xA;}&#xA;  &#xA;&#xA;Looking at this, I see that I have a requirement to getting my books, my queues and my recommendations. Looking at the code, can you guess how many queries are being generated to get those?&#xA;&#xA;And can you suggest an optimization?</p>
         </article>
-        <article id="article-5653">
+        <article id="article-5654">
             <a href="https://ayende.com/blog/4399/profiler-new-feature-integrating-with-application-frameworks" target="_blank">
-                <h2 class="title mb-6" id="article-5653">Profiler new feature</h2>
+                <h2 class="title mb-6" id="article-5654">Profiler new feature</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that makes working with the profiler easier is the fact that it gives you not just information, but information in context.   I was working with an app using Rhino Service Bus, and it really bothered me that I couldn&#x2019;t immediately figure out what was the trigger for a session. When using ASP.Net or WCF, the profiler can show the URL that triggered the request, but when we are not using a url based mechanism, that turns out to be much harder.  So I set out to fix that, you can see the results below:       This session was generated by a message batch containing messages for MyBooks, MyQueue, etc.  The integration is composed of two parts, first, from the profiler perspective, you now have the ProfilerIntegration.CurrentSessionContext property, which allows you to customize how the profiler detects the current context.  The second part is the integration from the application framework itself, you can see how I did that for Rhino Service Bus, which will dynamically detect the presence of the profiler and fill the appropriate values. The result makes it a lot easier to track down what is going on.</p>
         </article>
-        <article id="article-5654">
+        <article id="article-5655">
             <a href="https://ayende.com/blog/4398/resolution-efficient-querying" target="_blank">
-                <h2 class="title mb-6" id="article-5654">Resolution: Efficient Querying</h2>
+                <h2 class="title mb-6" id="article-5655">Resolution: Efficient Querying</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, I already covered how you can handle this challenge several times in the past, so I&#x2019;ll not do that again. What I actually did is quite different. Instead of having to deal with the complexity (which is possible) I decided to remove it entirely.  The solution to my problem is to simplify the model:     Which is represented as the following physical data model:     Now, querying for this is about as simple as you can get:     select user0_.Id          as Id2_0_,&#xA;       book2_.Id          as Id0_1_,&#xA;       user0_.Name        as Name2_0_,&#xA;       user0_.Street      as Street2_0_,&#xA;       user0_.Country     as Country2_0_,&#xA;       user0_.City        as City2_0_,&#xA;       user0_.ZipCode     as ZipCode2_0_,&#xA;       user0_.HouseNumber as HouseNum7_2_0_,&#xA;       book2_.Name        as Name0_1_,&#xA;       book2_.ImageUrl    as ImageUrl0_1_,&#xA;       book2_.Image       as Image0_1_,&#xA;       book2_.Author      as Author0_1_,&#xA;       queue1_.[User]     as User1_0__,&#xA;       queue1_.Book       as Book0__,&#xA;       queue1_.[Index]    as Index3_0__&#xA;from   Users user0_&#xA;       inner join UsersWaitingBooks queue1_&#xA;         on user0_.Id = queue1_.[User]&#xA;       inner join Books book2_&#xA;         on queue1_.Book = book2_.Id&#xA;where  user0_.Id = 1 /* @p0 */&#xA;  &#xA;&#xA;De-normalizing the model has significantly improved my ability to work with it.</p>
         </article>
-        <article id="article-5655">
+        <article id="article-5656">
             <a href="https://ardalis.com/silverlight-tools/" target="_blank">
-                <h2 class="title mb-6" id="article-5655">Silverlight Tools</h2>
+                <h2 class="title mb-6" id="article-5656">Silverlight Tools</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As we approach the launch of Silverlight 4 and today the 2010 Winter Olympics begin (which are streaming via Silverlight!) I thought I&#x2019;d&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5656">
+        <article id="article-5657">
             <a href="https://ardalis.com/moving-svn-repositories-to-new-server/" target="_blank">
-                <h2 class="title mb-6" id="article-5656">Moving SVN Repositories to new Server</h2>
+                <h2 class="title mb-6" id="article-5657">Moving SVN Repositories to new Server</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently I had to move some SVN repositories from one server to another. Here are the steps that worked for me, courtesy of Pete Freitag&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5657">
+        <article id="article-5658">
             <a href="https://ayende.com/blog/4397/challenge-efficient-querying" target="_blank">
-                <h2 class="title mb-6" id="article-5657">Challenge</h2>
+                <h2 class="title mb-6" id="article-5658">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This issue came out in my Alexandria sample app. I wanted to have a Queue of books for each user, and each book has a collection of its authors. The model looks something like this:     And the physical data model:     So far, so good, and relatively simple and straightforward to work with, right?  Except, what kind of a query would you want to make to get all the books in the user&#x2019;s queue? Here is the code that uses your results:     bus.Reply(new MyQueueResponse&#xA;{&#xA;    UserId = message.UserId,&#xA;    Timestamp = DateTime.Now,&#xA;    Queue = books.Select(book =&gt; new BookDTO&#xA;    {&#xA;        Id = book.Id,&#xA;        Image = book.Image,&#xA;        Name = book.Name,&#xA;        Authors = book.Authors.Select(x =&gt; x.Name).ToArray()&#xA;    }).ToArray()&#xA;});&#xA;  &#xA;&#xA;Hint, note that we need to bring the Book&#x2019;s image as well, and pay attention to the number of joins you require as well as the number of queries.</p>
         </article>
-        <article id="article-5658">
+        <article id="article-5659">
             <a href="https://ayende.com/blog/4396/suggestions-for-a-new-laptop" target="_blank">
-                <h2 class="title mb-6" id="article-5658">Suggestions for a new laptop?</h2>
+                <h2 class="title mb-6" id="article-5659">Suggestions for a new laptop?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Okay, the previous time I asked this question, I decided that buying a big desktop machine would be preferable, but I am currently traveling and I am pained at the speed of my current laptop.  Therefore, I am going to need a new one. I am the happy owner of a Mac Book Pro, but I can&#x2019;t really justify purchasing a new Mac given the cost of a new Mac vs. a comparable PC. The Mac tax just doesn&#x2019;t pay for itself at those levels for me.  Any recommendations? I want something 15&#x201D; with enough horsepower to be a major development machine. If there is something like the Mac&#x2019;s touchpad, I would love that.   Any ideas?</p>
         </article>
-        <article id="article-5659">
+        <article id="article-5660">
             <a href="https://ardalis.com/tight-coupling-legos-and-super-glue/" target="_blank">
-                <h2 class="title mb-6" id="article-5659">Tight Coupling, Legos, and Super Glue</h2>
+                <h2 class="title mb-6" id="article-5660">Tight Coupling, Legos, and Super Glue</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: February 07, 2010
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Building software applications is sometimes compared with building structures out of smaller components. The children&#x27;s toys, Legos (and&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-5660">
-            <a href="https://ardalis.com/hiring-inbound-marketing-score-card/" target="_blank">
-                <h2 class="title mb-6" id="article-5660">Hiring Inbound Marketing Score CARD</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 05, 2010
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In their book, Inbound Marketing(review), authors Shah and Halligan use a couple of acronyms that, maybe due to my military background, I&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="565.html"><span class="back arrow"></span></a>
