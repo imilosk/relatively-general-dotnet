@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-8101">
+            <a href="https://ayende.com/blog/2335/a-developer-so-retarded" target="_blank">
+                <h2 class="title mb-6" id="article-8101">A developer so retarded</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: April 28, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just run into this post, that talks about a presentation about mocking, and included this statement (about using Rhino Mocks):I once heard a story about a developer so retarded that he and his team spent a good amount of time trying to debug a mock only to find out that he forgot about ReplayAll()*.&#xA0; Who hires guys like that anyway?    That developer, it would be me, and it can happens quite often. And I wrote the tool, so I should know what I am doing when I am using it.     Stuff happens, it is easy to forget a line of code and waste some time as a consequences. The most common sentence from me when I am developing is &quot;Oh, man, I am so stupid that I did that&quot;.    To give an example that would be a bit easier to grok, what is wrong with this code:            using(TransactionScope&#xA0;scope&#xA0;=&#xA0;new&#xA0;TransactionScope())        {        &#xA0;&#xA0;&#xA0;Appointment[]&#xA0;appointments&#xA0;=&#xA0;SpanOnCalendar(appointmentSepc,&#xA0;DateTime.Today,&#xA0;DateTime.Today.AddDays(7));        &#xA0;&#xA0;&#xA0;foreach(Appointment&#xA0;appointment&#xA0;in&#xA0;appointments)        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;appointment.Save();        }</p>
+        </article>
+        <article id="article-8102">
             <a href="https://ayende.com/blog/2334/paged-data-count-with-nhibernate-the-really-easy-way" target="_blank">
-                <h2 class="title mb-6" id="article-8101">Paged data &#x2B; Count(*) with NHibernate: The really easy way!</h2>
+                <h2 class="title mb-6" id="article-8102">Paged data &#x2B; Count(*) with NHibernate: The really easy way!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Christian Maslen ping me about this article, which shows how to use NHibernate to execute multiply statements in a single round trip. Christian suggest a much neater solution:            SELECT&#xA0; C.*,                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; COUNT(*) OVER() AS TotalRows                        FROM&#xA0;&#xA0;&#xA0; Customers AS C        I was sure that it wouldn&#x27;t work, but it does, and I consider this extremely cool. So, now I needed to figure out how to make NHibernate understand this. There are several options, but extending HQL is simplest one in this case.    NHibernate uses a dialect to let bridge the gap between Hibernate Query Language with is a database agnostics relational/object querying lanaguge. This allows NHibernate to work against multiply databases easily. The key here is that one of the extension points that NHibernate is offering is the ability to define your own custom functions, which can translate to arbitrary SQL.     In this case, here is the query that I want to end up with:            select b, rowcount() from Blog b        Here is the dialect extension:            public class CustomFunctionsMsSql2005Dialect : MsSql2005Dialect                        {                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; public CustomFunctionsMsSql2005Dialect()                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; {                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; RegisterFunction(&quot;rowcount&quot;, new NoArgSQLFunction(&quot;count(*) over&quot;,                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; NHibernateUtil.Int32, true));                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; }                                }        We register a new function, called rowcount, which translate to &quot;count(*) over&quot; string. The final &quot;()&quot; are added by NHibernate when rendering the function. Now, we need to register our new dialect:            &lt;property name=&quot;hibernate.dialect&quot;&gt;MyBlog.Console.CustomFunctionsMsSql2005Dialect, Blog.Console&lt;/property&gt;        And here is the code we end up with:            IList list = session.CreateQuery(&quot;select b, rowcount() from Blog b&quot;)                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; .SetFirstResult(5)                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; .SetMaxResults(10)                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; .List();                                foreach (object[] tuple in list)                                {                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; System.Console.WriteLine(&quot;Entity: {0}&quot;, ((Blog)tuple[0]).Id);                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; System.Console.WriteLine(&quot;Row Count: {0}&quot;, (int)tuple[1]);                                }        The generated SQL is:            WITH query AS (                        &#xA0;&#xA0;&#xA0;&#xA0; SELECT TOP 15 ROW_NUMBER() OVER (ORDER BY CURRENT_TIMESTAMP) as __hibernate_row_nr__,&#xA0;                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; blog0_.Id as Id4_,                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; blog0_.Title as Title4_,                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; blog0_.Subtitle as Subtitle4_,                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; blog0_.AllowsComments as AllowsCo4_4_,                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; blog0_.CreatedAt as CreatedAt4_,                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; blog0_.Id as x0_0_,                                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; count(*) over() as x1_0_                                 &#xA0;&#xA0;&#xA0;&#xA0; from Blogs blog0_)                                 SELECT * FROM query                                 WHERE __hibernate_row_nr__ &gt; 5                                 ORDER BY __hibernate_row_nr__        Oh, and thanks for Fabio Maulo for helping me figure out the correct usage of custom functions.</p>
         </article>
-        <article id="article-8102">
+        <article id="article-8103">
             <a href="https://ayende.com/blog/2333/by-foul-moon" target="_blank">
-                <h2 class="title mb-6" id="article-8102">By foul moon</h2>
+                <h2 class="title mb-6" id="article-8103">By foul moon</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Because I know that I will need it...            # Not very accurate, but apperantly good enough for most purposes                        # source: http://www.faqs.org/faqs/astronomy/faq/part3/section-15.html                        def IsFullMoon(dateToCheck as date):                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; two_digit_year as decimal = dateToCheck.Year - ((dateToCheck.Year/100)*100)                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; remainder as decimal = two_digit_year %19                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; if remainder &gt; 9:                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; remainder -= 19;                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; phase as decimal = (remainder * 11) %30                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; if dateToCheck.Month == 1:                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; phase&#x2B;=3                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; elif dateToCheck.Month == 2:                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; phase&#x2B;=4                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; else:                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; phase&#x2B;= dateToCheck.Month                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; phase&#x2B;=dateToCheck.Day                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; if dateToCheck.Year &lt; 2000:                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; phase -= 4                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; else:                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; phase -= 8.3                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; phase = phase % 30                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; return 14.5 &lt; phase and phase &lt; 15.5        Expected usage:            if IsFullMoon(DateTime.Now):                        &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; raise SqlException(&quot;&quot;&quot;Transaction (Process ID 179) was deadlocked on lock resources with another                 process and has been chosen as the deadlock victim. Rerun the transaction.&quot;&quot;&quot;)        Update: I am still struggling with the code for WasChickenSacrifised(), will be glad to get suggestions...</p>
         </article>
-        <article id="article-8103">
+        <article id="article-8104">
             <a href="https://ayende.com/blog/2332/open-source-and-the-programmers-dilemma" target="_blank">
-                <h2 class="title mb-6" id="article-8103">Open source and the programmer&#x27;s dilemma</h2>
+                <h2 class="title mb-6" id="article-8104">Open source and the programmer&#x27;s dilemma</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Nick Carr is quoting an IEEE article about OSS Economics. I am going to respond to the article later, rigth now I wanted to comment on this piece:Given the natural imbalance between employers and employees, this aspect of open source is likely to increase competition for jobs and drive down salaries.    I have one word to say to it, rubbish! I have stated it before, working on open source software means that you have credentials. There is nothing that speaks louder than code for developers. And experianced developers are worth quite a bit, regardless of their choice of platform or license.    This statement seems to assume that the only thing that separate developers from one another is prioprietry knowledge aquired in mystic rights at the dark of the moon.</p>
         </article>
-        <article id="article-8104">
+        <article id="article-8105">
             <a href="https://ayende.com/blog/2331/msdn-vs-google" target="_blank">
-                <h2 class="title mb-6" id="article-8104">MSDN vs. Google</h2>
+                <h2 class="title mb-6" id="article-8105">MSDN vs. Google</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is a small experiment, I want to read the documentation for IDispatchMessageInspector            Go to Microsoft MSDN search page: http://search.msdn.microsoft.com/search/Default.aspx                 Load time: ~15 seconds or so                 Put IDispatchMessageInspector in the search input field and hit go.        Load time: ~8 seconds                 Go the second result:        http://msdn2.microsoft.com/en-us/library/system.servicemodel.dispatcher.idispatchmessageinspector.aspx                 Load time: too damn long!!         Just to give an idea, here is the wget output for this address:            wget http://msdn2.microsoft.com/en-us/library/system.servicemodel.dispatcher.idispatchmessageinspector.aspx                 --00:59:48--&#xA0; http://msdn2.microsoft.com/en-us/library/system.servicemodel.dispatcher.idispatchmessageinspector.aspx                 &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; =&gt; `system.servicemodel.dispatcher.idispatchmessageinspector.aspx&#x27;        Resolving msdn2.microsoft.com... 207.46.16.251        Connecting to msdn2.microsoft.com|207.46.16.251|:80... connected.        HTTP request sent, awaiting response... 200 OK        Length: 122,022 (119K) [text/html]                 100%[========================================================&gt;] 122,022&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; 5.74K/s&#xA0;&#xA0;&#xA0; ETA 00:00                 01:00:12 (5.74 KB/s) - `system.servicemodel.dispatcher.idispatchmessageinspector.aspx&#x27; saved [122022/122022]         That is right, over a minute&#xA0;half a minute&#xA0;to download just the HTML content of a single page, over two minutes just to get the simplest page to load.    Let me contrast&#xA0;that with the comparable experience:            Go to google.com        Load time: faster than I can measure                 Put IDispatchMessageInspector and hit enter        Load time: ~2 Seconds                 Go to the first result&#x27;s cached content        Load time: ~7 seconds         You know what the real sad part is? The google approach is faster than locally installed MSDN!</p>
         </article>
-        <article id="article-8105">
+        <article id="article-8106">
             <a href="https://ardalis.com/speaking-at-connection-in-vegas-in-november/" target="_blank">
-                <h2 class="title mb-6" id="article-8105">Speaking at Connection in Vegas in November</h2>
+                <h2 class="title mb-6" id="article-8106">Speaking at Connection in Vegas in November</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I found out that I should be speaking at the DevConnections show this fall. The show is being held in Las Vegas again, November 5&#x2013;8th. I&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8106">
+        <article id="article-8107">
             <a href="https://ardalis.com/the-region-for-microsoft-regional-directors/" target="_blank">
-                <h2 class="title mb-6" id="article-8106">The Region for Microsoft Regional Directors</h2>
+                <h2 class="title mb-6" id="article-8107">The Region for Microsoft Regional Directors</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There is a new web site which aggregates content from Microsoft Regional Directors call The Region, which went live last week. Keep an eye&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8107">
+        <article id="article-8108">
             <a href="https://ardalis.com/old-team-system-news/" target="_blank">
-                <h2 class="title mb-6" id="article-8107">Old Team System News</h2>
+                <h2 class="title mb-6" id="article-8108">Old Team System News</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is all from last month, but I&#x2019;ve been busy so it&#x2019;s been in my queue. Sorry for the late &#x201C;news&#x201D;: Microsoft acquired TeamPlain, makers of&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8108">
+        <article id="article-8109">
             <a href="https://ardalis.com/silverlight-resources/" target="_blank">
-                <h2 class="title mb-6" id="article-8108">Silverlight Resources</h2>
+                <h2 class="title mb-6" id="article-8109">Silverlight Resources</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here are some useful links related to Microsoft Silverlight: Microsoft Silverlight Home Silverlight Forums Official Community MSDN for&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-8109">
+        <article id="article-8110">
             <a href="https://ayende.com/blog/2330/maintainability-as-a-first-level-concern" target="_blank">
-                <h2 class="title mb-6" id="article-8109">Maintainability as a first level concern</h2>
+                <h2 class="title mb-6" id="article-8110">Maintainability as a first level concern</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: April 24, 2007
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have no idea how I missed this post from Anders Nor&#xE5;s. It is talking about some of the problems in using traditional software factories (code-gen)&#xA0;vs. using smarter frameworks. It is a long read, but it is excellent.            Maintainability is the enabler of all the other &quot;itities&quot; of an architecture. Experience shows that typical EJB applications often was hard to maintain even if code generation made them easy to develop. The IDE driven code generation for EJB paved way for vendor lock-in.                 The software factories of today will be part of Visual Studio &quot;Orcas&quot;, but I would not count on this to lock users into the IDE and Microsoft Patterns &amp; Practices way. Even with million-dollar investments in high-end application servers the enterprise Java community has largely moved from EJBs to light-weight frameworks. This&#xA0;has proven to be a&#xA0;economically healthy choice because&#xA0;of&#xA0;improved productivity and flexibility.</p>
-        </article>
-        <article id="article-8110">
-            <a href="https://ayende.com/blog/2329/linq-to-sql-dynamically-constructing-queries-um-no" target="_blank">
-                <h2 class="title mb-6" id="article-8110">LINQ to SQL - Dynamically Constructing Queries - Um... No!</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 24, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Mike Taulty&#xA0;is talking about constructing queries dynamically in Linq to SQL. Sorry, but my response to that is Yuck! Here is the code that he shows:&#xA0;&#xA0;NorthwindDataContext&#xA0;ctx&#xA0;=&#xA0;new&#xA0;NorthwindDataContext(&quot;server=.;database=northwind&quot;);        &#xA0;&#xA0;&#xA0;var&#xA0;query&#xA0;=&#xA0;from&#xA0;c&#xA0;in&#xA0;ctx.Customers    &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;where&#xA0;c.Country&#xA0;==&#xA0;&quot;Germany&quot;         &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;select&#xA0;c;        &#xA0;&#xA0;&#xA0;if&#xA0;(RuntimeCriterionOneApplies())&#xA0;    &#xA0;&#xA0;&#xA0;{    &#xA0;&#xA0;&#xA0;&#xA0;query&#xA0;=&#xA0;from&#xA0;c&#xA0;in&#xA0;query    &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;where&#xA0;c.City&#xA0;==&#xA0;&quot;Berlin&quot;         &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;select&#xA0;c;    &#xA0;&#xA0;&#xA0;}        &#xA0;&#xA0;&#xA0;if&#xA0;(RuntimeCriterionTwoApplies())    &#xA0;&#xA0;&#xA0;{    &#xA0;&#xA0;&#xA0;&#xA0;query&#xA0;=&#xA0;from&#xA0;c&#xA0;in&#xA0;query    &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;where&#xA0;c.Orders.Sum(o&#xA0;=&gt;&#xA0;o.Freight)&#xA0;&gt;&#xA0;100    &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;select&#xA0;c;    &#xA0;&#xA0;&#xA0;}        &#xA0;&#xA0;&#xA0;foreach&#xA0;(Customer&#xA0;c&#xA0;in&#xA0;query)    &#xA0;&#xA0;&#xA0;{    &#xA0;&#xA0;&#xA0;&#xA0;Console.WriteLine(c.CustomerID);    &#xA0;&#xA0;&#xA0;}    This is not constructing queries dynamically, it is choosing a query dynamically. This isn&#x27;t what I talk about when I am talking about constructing a query dynamically. You can look here&#xA0;as what I consider a complex query that is being constructed dynamically.    Mike, how would you handle that scenario in Linq?    Update:&#xA0; I really should pay more attention when I am reading the code. Sorry Mike, the code that you have will work for the scenario that I have. I don&#x27;t think that the syntax is very elegant for this scenario, but it will work. I missed the &quot;from q in query&quot; and read is as if a new query were constructed in each if.</p>
         </article>
         <div class="button flex justify-between">
             <a href="810.html"><span class="back arrow"></span></a>

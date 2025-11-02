@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4321">
-            <a href="https://ayende.com/blog/162371/raven-streams-aggregations-how-the-user-sees-them" target="_blank">
+            <a href="https://ayende.com/blog/162372/raven-streams-aggregations-from-the-system-point-of-view" target="_blank">
                 <h2 class="title mb-6" id="article-4321">Raven Streams</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 05, 2013
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Previously we introduced the following index (not sure if that would be a good name, maybe aggregation or projection?):      1: from msg in messages   2: select new   3: {   4:     Customer = msg.From,   5:     Count = 1   6: }   7:     8: from result in results   9: group result by result.Customer  10: into g  11: select new  12: {  13:     Customer = g.Key,  14:     Count = g.Sum(x=&gt;x.Count)  15: }&#xA;Let us consider how it works from the point of view of the system. The easy case is when we have just one event to work on. We are going to run it through the map and then through the reduce, and that would be about it.&#xA;What about the next step? Well, on the second event, all we actually need to do is run it through the map, then run it and the previous result through the reduce. The only thing we need to remember is the final result. No need to remember all the pesky details in the middle, because we don&#x2019;t have the notion of updates / deletes to require them.&#xA;This make the entire process so simple it is ridiculous. I am actually looking forward to doing this, if only because I have to dig through a lot of complexity to get RavenDB&#x2019;s map/reduce&#x2019;s indexes to where they are now.</p>
+        </article>
+        <article id="article-4322">
+            <a href="https://ayende.com/blog/162371/raven-streams-aggregations-how-the-user-sees-them" target="_blank">
+                <h2 class="title mb-6" id="article-4322">Raven Streams</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The major reason for streams is the idea that you don&#x2019;t really care about each individual item on its own. What you care about a lot more is some sort of aggregation over those values. And sure, you do want to be able to access the values, but you generally don&#x2019;t.  Let us say that you are a phone company, and you want to use Raven Streams to record all the events that happened, so you can bill on them. Let us imagine that we are interested in just SMS for the moment, so we append each sms to the stream. Then we are going to write something like:      1: from msg in messages   2: select new   3: {   4:     Customer = msg.From,   5:     Count = 1   6: }   7:&#xA0;    8: from result in results   9: group result by result.Customer  10: into g  11: select new  12: {  13:     Customer = g.Key,  14:     Count = g.Sum(x=&gt;x.Count)  15: }&#xA;If you ever did RavenDB map/reduce indexes, this should be very familiar to you. However, unlike RavenDB, here we don&#x2019;t need to handle any pesky updates or deletes. That means that the implementation is much simpler, but I&#x2019;ll discuss that on my next post.&#xA;In the meantime, let us consider what is the result of this would be. It would generate a result, which we would persist and allow you to lookup. One can imagine that you can do this via the customer id, and get the sum total as it is right now.&#xA;But you&#x2019;ll probably want to do additional operations, so we need to consider this as well.&#xA;For that matter, imagine the scenario where we want to get the data about SMS, MMS, phone calls, etc. How would you expect that to look like?</p>
         </article>
-        <article id="article-4322">
+        <article id="article-4323">
             <a href="https://ayende.com/blog/162370/raven-streams-architecture-thoughts-storage" target="_blank">
-                <h2 class="title mb-6" id="article-4322">Raven Streams architecture thoughts: Storage</h2>
+                <h2 class="title mb-6" id="article-4323">Raven Streams architecture thoughts: Storage</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Raven Streams is a working title. So far, I have been working mostly on getting things working from an infrastructure perspective. That is, I want to be able to successfully write &amp; read from the streams, and I have a general architecture for it.  Basically, we have something like this:  This is a single stream (of which we expect to have more than one, but not a very high number). The stream makes all writes to a mem table, backed by a log. When the mem table is full, we switch to a new memtable and write all the data to a sorted string table (SST). This is very much like the design of leveldb. Internally, however, we represent all data as etags. That is, you don&#x2019;t have an actual key that you can use, the stream will generate an etag for you. And the SST are sorted in order, so the oldest events are in the oldest file, etc. On startup, if we haven&#x2019;t flushed properly, we will translate the log file into a new SST and start from scratch. I am not sure yet if we want / need to implement compaction. Maybe we will do that for very small files only. Right now there are two methods that you actually care about:  AppendAsync(data) ReadFrom(etag) This is how you use them:      1: for (int i = 0; i &lt; 15; i&#x2B;&#x2B;)   2: {   3:     eventStream.AppendAsync(new RavenJObject { { &quot;counter&quot;, i } }).Wait();   4: }   5:&#xA0;    6: int x = 0;   7: foreach (var item in eventStream.ReadFrom(Etag.Empty))   8: {   9:     var value = item.Value&lt;int&gt;(&quot;counter&quot;);  10:     Assert.Equal(x&#x2B;&#x2B;, value);  11: }&#xA;This is all working pretty nicely right now. It isn&#x2019;t nearly ready for production or even test usage, but this is encouraging. Next, I&#x2019;ll discuss the intended implementation of map/reduce against this.</p>
         </article>
-        <article id="article-4323">
+        <article id="article-4324">
             <a href="https://ayende.com/blog/162369/raven-storage-that-aint-proper-logging-for-our-kind-of-environment" target="_blank">
-                <h2 class="title mb-6" id="article-4323">Raven.Storage &#x2013; that ain&#x2019;t proper logging for our kind of environment</h2>
+                <h2 class="title mb-6" id="article-4324">Raven.Storage &#x2013; that ain&#x2019;t proper logging for our kind of environment</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Continuing with my work on porting leveldb to .NET, we run into another problem. The log file. The log file is pretty important, this is how you ensure durability, so any problems there are a big cause of concern. You can read a bit about the format used by leveldb here, but basically, it uses the following:      1: block := record* trailer?   2: record :=   3:  checksum: uint32    // crc32c of type and data[] ; little-endian   4:  length: uint16        // little-endian   5:  type: uint8        // One of FULL, FIRST, MIDDLE, LAST   6:  data: uint8[length]&#xA;Block is of size 32Kb. &#xA;The type can be First, Middle, End or Full. Since it is legit to split a record across multiple blocks. The reasoning behind this format are outlined in the link above.&#xA;It is also a format that assumes that you know, upfront, the entire size of your record, so you can split it accordingly. That makes a lot of sense, when working in C&#x2B;&#x2B; and passing buffers around.&#xA;&#xA0;&#xA;This is straightforward in C&#x2B;&#x2B;, where the API is basically:&#xA;&#xA;Status Writer::AddRecord(const Slice&amp; slice) &#xA;(Slice is basically just a byte array).&#xA;In .NET, we do not want to be passing buffers around, mostly because of the impact on the LOH. So we had to be a bit smarter about things, in particular, we had an interesting issue with streaming the results. If I want to write a document with a size of 100K, how do I handle that? &#xA;Instead, I wanted this to look like this:&#xA;&#xA;&#xA;   1: var buffer = BitConverter.GetBytes(seq);   2: await state.LogWriter.WriteAsync(buffer, 0, buffer.Length);   3: buffer = BitConverter.GetBytes(opCount);   4: await state.LogWriter.WriteAsync(buffer, 0, buffer.Length);   5:&#xA0;    6: foreach (var operation in writes.SelectMany(writeBatch =&gt; writeBatch._operations))   7: {   8:     buffer[0] = (byte) operation.Op;   9:     await state.LogWriter.WriteAsync(buffer, 0, 1);  10:     await state.LogWriter.Write7BitEncodedIntAsync(operation.Key.Count);  11:     await state.LogWriter.WriteAsync(operation.Key.Array, operation.Key.Offset, operation.Key.Count);  12:     if (operation.Op != Operations.Put)  13:         continue;  14:     using(var stream = state.MemTable.Read(operation.Handle))  15:         await stream.CopyToAsync(stream);  16: }&#xA;The problem with this approach is that we don&#x2019;t know, upfront, what is the size that we are going to have. This means that we don&#x2019;t know how to split the record, because we don&#x2019;t have the record until it is over. And we don&#x2019;t want (can&#x2019;t actually) to go back in the log and change things to set the record straight (pun intended).&#xA;What we ended up doing is this:&#xA;&#xA;Note that we explicitly mark the start / end of the record, and in the meantime, we can push however many bytes we want. Internally, we buffer up to 32Kb in size (a bit less, actually, but good enough for now) and based on the next call, we decide whatever the current block should be marked as good or bad.&#xA;The reason this is important is that this allows us to actually keep the same format as leveldb, with all of the benefits for dealing with corrupted data, if we need to. I also really like the idea of being able to have parallel readers on the log file, because we know that we can just skip at block boundaries.</p>
         </article>
-        <article id="article-4324">
+        <article id="article-4325">
             <a href="https://ayende.com/blog/162340/ravens-scripted-index-results" target="_blank">
-                <h2 class="title mb-6" id="article-4324">Raven&#x2019;s Scripted Index Results</h2>
+                <h2 class="title mb-6" id="article-4325">Raven&#x2019;s Scripted Index Results</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Scripted Index Results (I wish it would have a better name) is a really interesting new feature in RavenDB 2.5. As the name implies, it allows you to attach scripts to indexes. Those scripts can operate on the results of the indexing. Sounds boring, right? But the options that is opens are nothing but. Using Scripted Index Results you can get recursive map/reduce indexes, for example. But we won&#x2019;t be doing that today. Instead, I&#x2019;ll show how you can enhance entities with additional information from other sources. Our sample database is Northwind, and we have defined the following index to get some statistics about our customers:  And we can query it like this:  However, what we want to do is to be able to embed those values inside the company document, so we won&#x2019;t have to query for it separately. Here is how we can use the new Scripted Index Results bundle to do this:  Once we have defined that, whenever the index is done, it will run these scripts, and that, in turns, means that this is what our dear ALFKI looks like:  I&#x2019;ll leave recursive map/reduce as tidbit for my dear readers .</p>
         </article>
-        <article id="article-4325">
+        <article id="article-4326">
             <a href="https://ayende.com/blog/162339/ravendbs-dynamic-reporting" target="_blank">
-                <h2 class="title mb-6" id="article-4325">RavenDB&#x2019;s Dynamic Reporting</h2>
+                <h2 class="title mb-6" id="article-4326">RavenDB&#x2019;s Dynamic Reporting</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the nice things about having more realistic demo data set is that we can now actually show demos on that data. I didn&#x2019;t realize how much of an issue that was until we actually improved things. Let us see how we are going to demo RavenDB&#x2019;s dynamic reporting feature.  We start by creating the following index. It is a pretty simple one, with the one thing to notice is that we are explicitly setting the Sort mode for Total to be Double.  Now that we have done that, we are going to go to Query &gt; Reporting:  And then I can start issue reporting queries:  This is the equivalent of doing: select EmployeeID, sum(tot.Total) Total from Orders o join &#xA;    (&#xA;        select sum((Quantity * UnitPrice) * (1- Discount)) Total, OrderId from [Order Details]&#xA;        group by OrderID&#xA;    ) tot&#xA;    on o.OrderID = tot.OrderID&#xA;where o.CustomerID = @CustomerId&#xA;group by EmployeeID&#xA;&#xA;&#xA;&#xA;The nice thing about this, and what makes this feature different from standard map/reduce, is that you can filter the input data into the aggregation.&#xA;In code, this would look something like this:&#xA;session.Query&lt;Order&gt;(&quot;Orders/Total&quot;)&#xA;  .Where(x=&gt;x.Company = companyId)&#xA;  .AggregateBy(x=&gt;x.Employee)&#xA;  .SumOn(x=&gt;x.Total)&#xA;  .ToList();&#xA;&#xA;&#xA;Pretty nice, even if I say so myself.</p>
         </article>
-        <article id="article-4326">
+        <article id="article-4327">
             <a href="https://ayende.com/blog/162338/ravendb-sample-data-hello-northwind" target="_blank">
-                <h2 class="title mb-6" id="article-4326">RavenDB Sample Data: Hello Northwind</h2>
+                <h2 class="title mb-6" id="article-4327">RavenDB Sample Data: Hello Northwind</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB has always came with some sample data that you could use to test things out. Unfortunately, that sample data was pretty basic, and didn&#x2019;t really cover a lot of interesting scenarios. For RavenDB 2.5, we updated the sample data to use the brand new and amazing (wait for it&#x2026;) Northwind database.  At a minimum, it would make demoing stuff easier. And in order to make things even nicer, you can get the C# classes for the sample data here.</p>
         </article>
-        <article id="article-4327">
+        <article id="article-4328">
             <a href="https://ayende.com/blog/162305/challenge-the-problem-of-locking-down-tasks" target="_blank">
-                <h2 class="title mb-6" id="article-4327">Challenge</h2>
+                <h2 class="title mb-6" id="article-4328">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The following code has very subtle bug:      1: public class AsyncQueue   2: {   3:     private readonly Queue&lt;int&gt; items = new Queue&lt;int&gt;();   4:     private volatile LinkedList&lt;TaskCompletionSource&lt;object&gt;&gt; waiters = new LinkedList&lt;TaskCompletionSource&lt;object&gt;&gt;();   5:&#xA0;    6:     public void Enqueue(int i)   7:     {   8:         lock (items)   9:         {  10:             items.Enqueue(i);  11:             while (waiters.First != null)  12:             {  13:                 waiters.First.Value.TrySetResult(null);  14:                 waiters.RemoveFirst();  15:             }  16:         }  17:     }  18:&#xA0;   19:     public async Task&lt;IEnumerable&lt;int&gt;&gt; DrainAsync()  20:     {  21:         while (true)  22:         {  23:             TaskCompletionSource&lt;object&gt; taskCompletionSource;  24:             lock (items)  25:             {  26:                 if (items.Count &gt; 0)  27:                 {  28:                     return YieldAllItems();  29:                 }  30:                 taskCompletionSource = new TaskCompletionSource&lt;object&gt;();  31:                 waiters.AddLast(taskCompletionSource);  32:             }  33:             await taskCompletionSource.Task;  34:         }  35:     }  36:&#xA0;   37:     private IEnumerable&lt;int&gt; YieldAllItems()  38:     {  39:         while (items.Count &gt; 0)  40:         {  41:             yield return items.Dequeue();  42:         }  43:&#xA0;   44:     }  45: }&#xA;I&#x2019;ll even give you a hint, try to run the following client code:&#xA;&#xA;   1: for (int i = 0; i &lt; 1000 * 1000; i&#x2B;&#x2B;)   2: {   3:     q.Enqueue(i);   4:     if (i%100 == 0)   5:     {   6:         Task.Factory.StartNew(async () =&gt;   7:             {   8:                 foreach (var result in await q.DrainAsync())   9:                 {  10:                     Console.WriteLine(result);  11:                 }  12:             });  13:     }  14:&#xA0;   15: }&#xA;Can you figure out what the problem is?</p>
         </article>
-        <article id="article-4328">
+        <article id="article-4329">
             <a href="https://ayende.com/blog/162337/special-offer-29-discount-for-all-our-products" target="_blank">
-                <h2 class="title mb-6" id="article-4328">Special Offer</h2>
+                <h2 class="title mb-6" id="article-4329">Special Offer</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, it is nearly the 29 May, and that means that I have been married for two years. To celebrate that, I am offering a 29% discount on all our products (RavenDB, NHibernate Profiler, Entity Framework Profiler, etc). All you have to do is purchase any of our products using the following coupon code:   2nd anniversary This offer is valid to the end of the month, so hurry up.</p>
         </article>
-        <article id="article-4329">
+        <article id="article-4330">
             <a href="https://ayende.com/blog/162273/raven-xyz-trying-out-some-ideas" target="_blank">
-                <h2 class="title mb-6" id="article-4329">Raven Xyz: Trying out some ideas</h2>
+                <h2 class="title mb-6" id="article-4330">Raven Xyz: Trying out some ideas</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: May 24, 2013
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that we are planning for Raven 3.0 is the introducing of additional options. In addition to having RavenDB, we will also have RavenFS, which is a replicated file system with an eye toward very large files. But that isn&#x2019;t what I want to talk about today. Today I would like to talk about something that is currently just in my head. I don&#x2019;t even have a proper name for it yet.  Here is the deal, RavenDB is very good for data that you care about individually. Orders, customers, etc. You track, modify and work with each document independently. If you are writing a lot of data that isn&#x2019;t really relevant on its own, but only as an aggregate, that is probably not a good use case for RavenDB. Examples for such things include logs, click streams, event tracking, etc. The trivial example would be any reality show, where you have a lot of users sending messages to vote for a particular candidate, and you don&#x2019;t really care for the individual data points, only the aggregate. Other things might be to want to track how many items were sold in a particular period based on region, etc. The API that I had in mind would be something like:      1: foo.Write(new PurchaseMade { Region = &quot;Asia&quot;, Product = &quot;products/1&quot;, Amount = 23 } );   2: foo.Write(new PurchaseMade { Region = &quot;Europe&quot;, Product = &quot;products/3&quot;, Amount = 3 } );&#xA;And then you can write map/reduce statements on them like this:&#xA;&#xA;&#xA;   1: // map   2: from purchase in purchases   3: select new   4: {   5:     purchase.Region,   6:     purchase.Item,   7:     purchase.Amount   8: }   9:&#xA0;   10: // reduce  11: from result in results  12: group result by new { result.Region, result.Item }  13: into g  14: select new  15: {  16:     g.Key.Region,  17:     g.Key.Item,  18:     Amount = g.Sum(x=&gt;x.Amount)  19: }&#xA;Yes, this looks pretty much like you would have in RavenDB, but there are important distinctions:&#xA;&#xA;We don&#x2019;t allow modifying writes, nor deleting them.&#xA;Most of the operations are assumed to be made on the result of the map/reduce statements.&#xA;The assumption is that you don&#x2019;t really care for each data point.&#xA;There is going to be a lot of those data points, and they are likely to be coming in at a relatively high rate.&#xA;Thoughts?</p>
-        </article>
-        <article id="article-4330">
-            <a href="https://ayende.com/blog/162242/and-that-is-why-i-wrote-my-own-db" target="_blank">
-                <h2 class="title mb-6" id="article-4330">And that is why I wrote my own db&#x2026;</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: May 23, 2013
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20"></p>
         </article>
         <div class="button flex justify-between">
             <a href="432.html"><span class="back arrow"></span></a>

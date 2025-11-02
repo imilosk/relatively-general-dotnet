@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-7371">
+            <a href="https://ayende.com/blog/2993/implementing-a-dsl" target="_blank">
+                <h2 class="title mb-6" id="article-7371">Implementing a DSL</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 03, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Tim Wilde&#xA0;asked how I would build a DSL, given the example that I gave: task &quot;warn if website is not alive&quot;:&#xA;&#x9;every 3.Minutes() &#xA;&#x9;starting now&#xA;&#x9;when WebSite(&quot;http://example.org&quot;).IsAlive == false&#xA;&#x9;then:&#xA;&#x9;&#x9;notify &quot;admin@example.org&quot;, &quot;server down!&quot;&#xA;&#xA;Now, I have a small confession to make, I didn&#x27;t build the DSL for the post, I just thought it up and posted it. Tim has spiked a somewhat nicer implementation of the C# fluent interface, and&#xA0;it was about 250 lines of code, in 8 classes, 6 interfaces.&#xA;Face with that, I felt that I had no other choice than to go on and build a DSL implementation. If fact, I think that this is a good exercise of DSL building. We have started from the required syntax, and then we see how we can implement it.&#xA;I had to make two modifications to the DSL in order to make it really work, I marked them in red. One was that I wanted to implement the DSL in C#, and it has no way to write an indexed property, which I need in order to create extension properties in Boo, something that Boo completely supports. It was an interesting insight. The second was that the is operator is for reference types, not for values types, so I changed the IsAlive is false to IsAlive == false.&#xA;Most of my DSL use the Anonymous Base Class pattern. This means that you need to imagine a base class that wraps the code in this class. This is a really simple DSL, and I wanted to introduce as little complexity as possible, so we just use the basic capabilities of the language.&#xA;There are several interesting things that are going on in the DSL. For a start, we are using Boo&#x27;s ability to drop parenthesizes if needed, which gives us a more &quot;keyword&quot; feeling. Another interesting approach is that when the last parameter of a method is a delegate, we can use just create a block and use that as a way to create the delegate.&#xA;So this code:&#xA;task &quot;foo&quot;:&#xA;&#x9;print &quot;bar&quot;&#x9;&#xA;Is the equivalent of this C# code:&#xA;task(&quot;foo&quot;, delegate&#xA;{&#xA;&#x9;Console.WriteLine(&quot;bar&quot;);&#xA;});&#xA;This is how &quot;task&quot; and &quot;then&quot; keywords works. &#xA;public void task(string name, ActionDelegate taskDelegate)&#xA;{&#xA;&#x9;this.taskName = name;&#xA;&#x9;taskDelegate();&#xA;}public void then(ActionDelegate actionDelegate)&#xA;{&#xA;&#x9;this.action = actionDelegate;&#xA;}&#xA;The &quot;when&quot; keyword is a lot more interesting. We want to do late evaluation of the expression that we pass to the when keyword, but the language doesn&#x27;t allow us to do so. This is where the real power of Boo comes into place, we simply change the language.&#xA;[Meta]&#xA;public static Expression when(Expression expression)&#xA;{&#xA;&#x9;BlockExpression right = new BlockExpression();&#xA;&#x9;right.Body.Add(new ReturnStatement(expression));&#xA;&#x9;return new BinaryExpression(&#xA;&#x9;&#x9;BinaryOperatorType.Assign,&#xA;&#x9;&#x9;new ReferenceExpression(&quot;condition&quot;),&#xA;&#x9;&#x9;right&#xA;&#x9;);&#xA;}&#xA;This code (which looks much better when it is in Boo, by the way) means that whenever the compiler encounters the result of this statement:&#xA;&#xA;when WebSite(&quot;http://example.org&quot;).IsAlive == false &#xA;Is actually this code:&#xA;condition = { return (WebSite(&quot;http://example.org&quot;).IsAlive == false) }&#xA;To my knowledge, this type of transformations is not available in other languages. In fact, while I am certainly not a Ruby expert, I do not believe that this is possible in Ruby. (Let us see if this brings the mob out of the woodworks, shall we?)&#xA;For the compiler, the code that we have above will be translated to:&#xA;public class validateWebSiteUp(Rhino.DSL.Tests.SchedulingDSL.BaseScheduler):&#xA;&#xA;&#x9;public override def Prepare() as void:&#xA;&#x9;&#x9;self.task(&#x27;warn if website is not alive&#x27;, def ():&#xA;&#x9;&#x9;&#x9;self.every(Rhino.DSL.Tests.SchedulingDSL.BaseScheduler.Minutes(3))&#xA;&#x9;&#x9;&#x9;self.starting(self.now)&#xA;&#x9;&#x9;&#x9;self.condition = { return (WebSite(&quot;http://example.org&quot;).IsAlive == false) }&#xA;&#x9;&#x9;&#x9;self.then({ self.notify(&#x27;admin@example.org&#x27;, &#x27;server down!&#x27;) })&#xA;&#xA;You can get the source for the DSL here:&#xA;https://rhino-tools.svn.sourceforge.net/svnroot/rhino-tools/trunk/rhino-dsl/Rhino.DSL.Tests/SchedulingDSL/BaseScheduler.cs&#xA;A sample DSL is here:&#xA;https://rhino-tools.svn.sourceforge.net/svnroot/rhino-tools/trunk/rhino-dsl/Rhino.DSL.Tests/SchedulingDSL/ValidateWebSiteUp.boo&#xA;Tests:&#xA;https://rhino-tools.svn.sourceforge.net/svnroot/rhino-tools/trunk/rhino-dsl/Rhino.DSL.Tests/SchedulingDSL/SchedulingDSLFixture.cs</p>
+        </article>
+        <article id="article-7372">
             <a href="https://ardalis.com/save-sql-query-results-with-column-names/" target="_blank">
-                <h2 class="title mb-6" id="article-7371">Save SQL Query Results With Column Names</h2>
+                <h2 class="title mb-6" id="article-7372">Save SQL Query Results With Column Names</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A minor frustration I&#x27;ve had with SQL Server for years is that when copying the results to Excel, the column names are not included. Well&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-7372">
+        <article id="article-7373">
             <a href="https://ayende.com/blog/2992/why-c-doesnt-have-extension-properties" target="_blank">
-                <h2 class="title mb-6" id="article-7372">Why C# doesn&#x27;t have extension properties</h2>
+                <h2 class="title mb-6" id="article-7373">Why C# doesn&#x27;t have extension properties</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just run into this problem, and I came up with a different reason than the usual one. C# simply doesn&#x27;t have the concept of indexed properties. This is not legal C# code: public static string Items[string something]&#xA;{&#xA;    get { return something; }&#xA;}&#xA;I think you can do that with VB.Net, and I am certain that C&#x2B;&#x2B; supports it.&#xA;The interesting part is that I run into it while building a DSL. The limit of the implementation language has actually limited the DSL itself.</p>
         </article>
-        <article id="article-7373">
+        <article id="article-7374">
             <a href="https://ayende.com/blog/2991/releasing-open-source" target="_blank">
-                <h2 class="title mb-6" id="article-7373">Releasing Open Source</h2>
+                <h2 class="title mb-6" id="article-7374">Releasing Open Source</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Chad Myers asks in the ALT.Net mailing list:  Why are OSS folks to scared of calling something &#x27;released&#x27;? I&#x27;m guessing that MonoRail&#x27;s &quot;RC&quot; code is 10x better than the released&#xA0;version of most corporate software out there. While I am not going to argue about the quality of the Castle code base, there is quite a bit more to the producing a release than just having good code. No, being scared of bugs is decidedly not the reason. Of the top of my head, in order to get a good release out the door you need to compile a release guide, documentation, upgrade guide, installer, wizards and much more. All of this stuff is (a) boring, (b) time consuming.&#xA0;  Throwing code over the wall and slapping a x.0 on it is not good enough.Commercial software has an advantage here because they actually pay people to do this. OSS has a problem because very few people enjoy writing the documentation. I am certainly included. Certainly not on my free time. For Castle, Hammett is the one that has to carry that load, most of the time. For NHibernate, it was Sergey that did most of the actual preparation for release. I, personally, have had very little to with prepping the releases. Actually, I feel slightly bad about that. Anyway, if you want to see releases from OSS projects, the best way to ensure that is to contribute. It can be with time, helping build the documentation, release guides and all the other necessary stuff, or it can be with monetary donation, going to the same purpose.</p>
         </article>
-        <article id="article-7374">
+        <article id="article-7375">
             <a href="https://ayende.com/blog/2990/devteach-withdrawal-woes" target="_blank">
-                <h2 class="title mb-6" id="article-7374">DevTeach Withdrawal Woes</h2>
+                <h2 class="title mb-6" id="article-7375">DevTeach Withdrawal Woes</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ll wait for the next time I am at DevTeach to reach the final conclusion, but something fishy is going on when I am getting back from DevTeach. When I got back from DevTeach Montreol, I found out that there has been zero commits to the source control repository in a week. Now, back from DevTeach Vancouver, I find out that they went and sold the company&#xA0;(Hebrew link)&#xA0;while I was gone.* * doesn&#x27;t really matter to me, I made the decision to move away a while ago, but still, it was a major surprise.</p>
         </article>
-        <article id="article-7375">
+        <article id="article-7376">
             <a href="https://ayende.com/blog/2989/on-the-difference-between-big-and-right" target="_blank">
-                <h2 class="title mb-6" id="article-7375">On the difference between big and right</h2>
+                <h2 class="title mb-6" id="article-7376">On the difference between big and right</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This discussion came up in the ALT.Net mailing list, it reflects my own thinking so much, I had to quote it:  &gt; Some of the largest software development shops in the world would disagree with you  Chad Myers: Most of the largest software development shops would disagree with me on a lot of things. They tend to be top-heavy, waterfall-ladendysfunctional bureaucratic/political nightmares, too. Many of the largest shops also still have mainframes and COBOL systems for whichthey no longer have the original source code for (I know of at least one). They&#x27;re mostly concerned with protecting middle management and howthey can shave 1% more off of software development by offshoring to Indian or Brazil too. So I&#x27;m not too worried that they disagree with me :)</p>
         </article>
-        <article id="article-7376">
+        <article id="article-7377">
             <a href="https://ayende.com/blog/2988/setting-yourself-up-for-failure" target="_blank">
-                <h2 class="title mb-6" id="article-7376">Setting yourself up for failure</h2>
+                <h2 class="title mb-6" id="article-7377">Setting yourself up for failure</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">John Lam, the guy writing IronRuby, cannot look at the Ruby source code. That is the way Microsoft works. This is setting yourself up for failure, hard.  The main issue that I have with this is that this is purposefully putting blinders on, and then acting surprised because the direction that the project went is rejected by the community.  The Entity Framework debacle is a good example. How the hell can you miss what is going in the OR/M world for the last 5 years? How the hell can you get to the point where you are surprised by the need for persistence ignorance? Well, the answer for that is simple. You don&#x27;t look at what is happening outside. This is irresponsible behavior at best, and the reason of a lot of the angst with Microsoft. Oh, and another thing, if you are actually going to do something in a certain field. Don&#x27;t go and ask people that have never been in this field. It is highly recommended to ask people who are actually doing stuff in that field, so you can get experience. That way, you don&#x27;t have to repeat all the same mistakes. MS MVC is actively doing the reverse, but that is only one project, but I hope that this approach will spread to other teams as well.</p>
         </article>
-        <article id="article-7377">
+        <article id="article-7378">
             <a href="https://ayende.com/blog/2987/microsoft-the-company-vs-microsoft-employees" target="_blank">
-                <h2 class="title mb-6" id="article-7377">Microsoft the company vs. Microsoft Employees</h2>
+                <h2 class="title mb-6" id="article-7378">Microsoft the company vs. Microsoft Employees</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So far, the only Microsoft employees that I have met and didn&#x27;t like were the marketing drones. I dislike being lied to, by I digress. All the Microsoft employees (that were even remotedly techincal) that I have met or spoke with so far were really nice guys, open to suggestions and to conversation. Microsoft, the company, however, seems to behave in a rather different manner. At some point in the chain, there is a huge management problem, because I want a Microsoft that behaves the way most of its employees are behaving. I really want Microsoft to be as open and honest and smart as most of the employees that I have met. I spoke with some Microsoft employees at DevTeach, and I am sorry to say that they got a lot of heat because of that. I am not saying anything new here, I have read it elsewhere, many times. But some action must be taken, because I, personally, am sick of this duality. I don&#x27;t like being angry at really nice people because they work at Microsoft. Either change that, or let us know who the real culprits are, because I really want to shout at them.</p>
         </article>
-        <article id="article-7378">
+        <article id="article-7379">
             <a href="https://ayende.com/blog/2986/microsoft-just-say-no" target="_blank">
-                <h2 class="title mb-6" id="article-7378">Microsoft: Just Say No</h2>
+                <h2 class="title mb-6" id="article-7379">Microsoft: Just Say No</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">And to foretell the expected response, no, I am not saying or suggesting that you should reject Microsoft. This post is a suggestion to Microsoft. Microsoft should start to say no. Let me give you the scenario that we are talking about, and I hope that it will make it clearer: A customer tells microsoft: &quot;We really want to use this new approaches that we have been seeing talked about, like inversion of control and dependency injection. Can you provide that for us?&quot; Now, up to this point, what Microsoft has been doing is to release a copy of some OSS project. It usually has greater complexity and lower quality than the equivalent OSS project that it is trying to copy (more on that in another post). The reasoning for that is always: &quot;Our customers asks us for this since they want a Microsoft XYZ&quot; You know what? There is another path. That path is saying, &quot;You know what, there are already some good implementations of that in the OSS world. We are not intereted in trying to duplicate that.&quot;</p>
         </article>
-        <article id="article-7379">
+        <article id="article-7380">
             <a href="https://ayende.com/blog/2985/devteach-summary" target="_blank">
-                <h2 class="title mb-6" id="article-7379">DevTeach Summary</h2>
+                <h2 class="title mb-6" id="article-7380">DevTeach Summary</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: December 01, 2007
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I came, I rejuvenated, I went away happy. I won&#x27;t get into the specifics, but both DevTeach conferences were the highlight of the year for me. Just interacting with all the people that came there was a pure pleasure. I am talking about far more than just the speakers, the people that came to Dev Teach were a lot of fun to talk to. Just a few more memorable moments: Avish, I think that you are the only person that I know who would think that the expectation management in Rhino Mocks is the complex part, instead of the runtime emittion of classes. &quot;It is not complex, just arcane&quot; was simply hilarious! Greg, I am still waiting for the full quotes list. Shane, just to reiterate, there might be sever bodily harm if you think that I am better than you again. Can&#x27;t continue, run out of battery, and late for the flight.</p>
-        </article>
-        <article id="article-7380">
-            <a href="https://ayende.com/blog/2984/dsl-vs-fluent-interface-compare-contrast" target="_blank">
-                <h2 class="title mb-6" id="article-7380">DSL vs. Fluent interface: Compare &amp; Contrast</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 01, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let us take a simple example, scheduling tasks, and see how we can demonstrate the difference between the two. From the perspective of the client, what do we want from a scheduling tasks?   Define named tasks  Define what happens when the task is executed  Define when a task should execute  Define conditions to execute the task  Define recurrence pattern Now, let us look at the fluent interface for this: new FluentTask(&quot;warn if website is not alive&quot;)&#xA;&#x9;.Every( TimeSpan.FromMinutes(3) )&#xA;&#x9;.StartingFrom( DateTime.Now )&#xA;&#x9;.When(delegate&#xA;&#x9;{&#xA;&#x9;&#x9;return WebSite(&quot;http://example.org&quot;).IsAlive == false;&#xA;&#x9;})&#xA;&#x9;.Execute(delegate&#xA;&#x9;{&#xA;&#x9;&#x9;Notify(&#x201C;admin@example.org&#x201D;, &#x201C;server down!&#x201D;);&#xA;&#x9;});&#xA;&#xA;And contrast that with the DSL sample:&#xA;task &quot;warn if website is not alive&quot;:&#xA;&#x9;every 3.Minutes&#xA;&#x9;starting now&#xA;&#x9;when WebSite(&quot;http://example.org&quot;).IsAlive is false&#xA;&#x9;then:&#xA;&#x9;&#x9;notify &quot;admin@example.org&quot;, &quot;server down!&quot;&#xA;&#xA;The second version has far less line noise, it a lot more clearer, and allows me to grow my DSL as I get more information, without hitting the language limits.&#xA;It also brings to mind another issue, who define these tasks and when? &#xA;Most of the time, I use a DSL as a way to setup and configure a runtime engine. I might talk later about imperative vs. declarative DSL. I tend to write my DSL at a different time than the code. &#xA;In fact, if you have no need to ever do something externally, and a fluent interface manages to express the ideas that you have clearly enough, than you probably should just use that. &#xA;If you need to do things externally, than a DSL is the place to look for. In fact, if you feel the urge to put XML into place, as anything except strict data storage mechanism, that is a place to go with a DSL.</p>
         </article>
         <div class="button flex justify-between">
             <a href="737.html"><span class="back arrow"></span></a>
