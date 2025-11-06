@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3981">
+            <a href="https://ayende.com/blog/167073/decompression-code-discussion" target="_blank">
+                <h2 class="title mb-6" id="article-3981">Decompression code &amp; Discussion</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 23, 2014
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As I said, a good &amp; small interview question is this one, it is a good one because it is short, relatively simple to handle, but it should show a lot of things about your code. To start with, being faced with a non trivial task that most people are not that familiar with.  Implement a Decompress(Stream input, Stream output, byte[][] dictionary) routine for the following protocol: Prefix byte &#x2013; composed of the highest bit &#x2B; 7 bits len If the highest bit is not set, this is a uncompressed data, copy the next len from the input to the output. If the highest bit is set, this is compressed data, the next byte will be the index in the dictionary, copy len bytes from that dictionary entry to the output. I couldn&#x2019;t resist doing this myself, and I came up with the following:  public void Decompress(Stream input, Stream output, byte[][] dictionary)&#xA;{&#xA;    var tmp = new byte[128];&#xA;    while (true)&#xA;    {&#xA;        var readByte = input.ReadByte();&#xA;        if (readByte == -1)&#xA;            break;&#xA;            &#xA;        var prefix = (byte) readByte;&#xA;        var compressed = (prefix &amp; 0x80) != 0;&#xA;        var len = prefix &amp; 0x7f;&#xA;&#xA;        if (compressed == false)&#xA;        {&#xA;            while (len &gt; 0)&#xA;            {&#xA;                var read = input.Read(tmp, 0, len);&#xA;                if(read == 0)&#xA;                    throw new InvalidDataException(&quot;Not enough data to read from compressed input stream&quot;);&#xA;                len -= read;&#xA;                output.Write(tmp, 0, read);&#xA;            }&#xA;        }&#xA;        else&#xA;        {&#xA;            readByte = input.ReadByte();&#xA;            if(readByte == -1)&#xA;                throw new InvalidDataException(&quot;Not enough data to read from compressed input stream&quot;);&#xA;            output.Write(dictionary[readByte], 0, len);&#xA;        }&#xA;    }&#xA;}&#xA;&#xA;&#xA;Things to pay attention to: Low memory allocations, error handling, and handling of partial reads from the stream.&#xA;But that is just part of the question. After reading the protocol, and implementing it. The question now turns to what does the protocol says about this kind of compression scheme. The use of just 7 bits to store len drastically limit the compression utility in a general format. It also requires an external dictionary, which most compression formats don&#x2019;t use, they use the actual compressed text itself as the dictionary.&#xA0; Of course, I&#x2019;ve been reading compression algorithms for a while now, so that isn&#x2019;t that fair. But I would expect people to note that that 7 bit limits the compression usability.&#xA;And hopefully, with a bit of a hint, they should note that the external dictionary is useful for small data sets where the repetitions are actually between entry, not per entry.</p>
+        </article>
+        <article id="article-3982">
             <a href="https://ardalis.com/rename-elements-in-powerpoint/" target="_blank">
-                <h2 class="title mb-6" id="article-3981">Rename Elements in PowerPoint</h2>
+                <h2 class="title mb-6" id="article-3982">Rename Elements in PowerPoint</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In PowerPoint, especially if you&#x2019;re working with a complex slide with a lot of animations, it can be difficult to easily determine which&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3982">
+        <article id="article-3983">
             <a href="https://ayende.com/blog/167042/interview-challenges-decompress-that" target="_blank">
-                <h2 class="title mb-6" id="article-3982">Interview challenges: Decompress that</h2>
+                <h2 class="title mb-6" id="article-3983">Interview challenges: Decompress that</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m always looking for additional challenges that I can ask people who interview at Hibernating Rhinos, and I run into an interesting challenge just now.  Implement a Decompress(Stream input, Stream output, byte[][] dictionary) routine for the following protocol: Prefix byte &#x2013; composed of the highest bit &#x2B; 7 bits len If the highest bit is not set, this is a uncompressed data, copy the next len from the input to the output. If the highest bit is set, this is compressed data, the next byte will be the index in the dictionary, copy len bytes from that dictionary entry to the output. After writing the code, the next question is going to be, what are the implication of this protocol? What is it going to be good for? What is it going to be bad for?</p>
         </article>
-        <article id="article-3983">
+        <article id="article-3984">
             <a href="https://ardalis.com/tip-&#x2013;-override-tostring-in-objects/" target="_blank">
-                <h2 class="title mb-6" id="article-3983">Tip &#x2013; Override ToString() in Objects</h2>
+                <h2 class="title mb-6" id="article-3984">Tip &#x2013; Override ToString() in Objects</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Most of your domain objects should override ToString() for the simple reason that if you ever want to simply display the object&#x2019;s state, you&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3984">
+        <article id="article-3985">
             <a href="https://ardalis.com/stir-trek-2-iron-man-edition/" target="_blank">
-                <h2 class="title mb-6" id="article-3984">Stir Trek 2: Iron Man Edition</h2>
+                <h2 class="title mb-6" id="article-3985">Stir Trek 2: Iron Man Edition</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Next month (7 May 2010) I&#x2019;ll be presenting at the second annual Stir Trek event in Columbus, Ohio. Stir Trek (so named because last year its&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3985">
+        <article id="article-3986">
             <a href="https://ardalis.com/how-to-automatically-remove-www-from-a-domain-in-iis7/" target="_blank">
-                <h2 class="title mb-6" id="article-3985">How To: Automatically Remove www from a Domain in IIS7</h2>
+                <h2 class="title mb-6" id="article-3986">How To: Automatically Remove www from a Domain in IIS7</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I recently moved the DevMavens.com site from one server to another and needed to ensure that the www.devmavens.com domain correctly&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3986">
+        <article id="article-3987">
             <a href="https://ardalis.com/looking-back-and-moving-forward/" target="_blank">
-                <h2 class="title mb-6" id="article-3986">Looking Back and Moving Forward</h2>
+                <h2 class="title mb-6" id="article-3987">Looking Back and Moving Forward</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last week I started a new chapter in my career as the Chief Technology Officer at Falafel Software. I&#x2019;m really looking forward to this role&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3987">
+        <article id="article-3988">
             <a href="https://ayende.com/blog/167041/code-challenge-make-the-assertion-fire" target="_blank">
-                <h2 class="title mb-6" id="article-3987">Code Challenge: Make the assertion fire</h2>
+                <h2 class="title mb-6" id="article-3988">Code Challenge: Make the assertion fire</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Can you create a calling code that would make this code fire the assertion? public static IEnumerable&lt;int&gt; Fibonnaci(CancellationToken token)&#xA;{&#xA;    yield return 0;&#xA;    yield return 1;&#xA;&#xA;    var prev = 0;&#xA;    var cur = 1;&#xA;&#xA;    try&#xA;    {&#xA;        while (token.IsCancellationRequested == false)&#xA;        {&#xA;            var tmp = prev &#x2B; cur;&#xA;            prev = cur;&#xA;            cur = tmp;&#xA;            yield return tmp;&#xA;        }&#xA;    }&#xA;    finally&#xA;    {&#xA;        Debug.Assert(token.IsCancellationRequested);&#xA;    }&#xA;}&#xA;&#xA;&#xA;Note that cancellation token cannot be changed, once cancelled, it can never revert.</p>
         </article>
-        <article id="article-3988">
+        <article id="article-3989">
             <a href="https://ardalis.com/microsoft-version-number-integer-type/" target="_blank">
-                <h2 class="title mb-6" id="article-3988">Microsoft Version Number Integer Type</h2>
+                <h2 class="title mb-6" id="article-3989">Microsoft Version Number Integer Type</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Microsoft made some headlines a few years ago when they decided to skip Office 13 and jump straight from Office 12 to Office 14. Recently&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-3989">
+        <article id="article-3990">
             <a href="https://ayende.com/blog/167009/your-customer-isnt-a-single-entity" target="_blank">
-                <h2 class="title mb-6" id="article-3989">Your customer isn&#x2019;t a single entity</h2>
+                <h2 class="title mb-6" id="article-3990">Your customer isn&#x2019;t a single entity</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: June 11, 2014
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">An interesting issue came up in the comments for my modeling post.&#xA0; Urmo is saying:  &#x2026;there are no defined processes, just individual habits (even among people with same set of obligations) with loose coupling on the points where people need to interact. In these companies a software can be a boot that kicks them into more defined and organized operating mode. This is part of discussion of software modeling and the kind of thinking you have to do when you approach a system. The problem with Urmo&#x2019;s approach is that there is a set implicit assumptions, and that is that the customer is speaking with a single voice, that they actually know what they are doing and that they have the best interests. Yes, it is really hard to create software (or anything, actually) without those, but that happens more frequently than one might desire. A few years ago I was working on a software to manage what was essentially long term temp workers. Long term could be 20 years, and frequently was a number of years. The area in question was caring for invalids,&#xA0; and most of the customers for that company were the elderly. That meant that a worker might not be required on a pretty sudden basis (the end customer died, care no longer required). Anyway, that is the back story. The actual problem we run into was that by the time the development team got into place there was already a very detailed spec, written by a pretty good analyst after many sessions at a luxury hotel conference room. In other words, the spec cost a lot of money to generate, and involved a lot of people from the company&#x2019;s management.  What it did not include, however, was feedback from the actual people who had to place the workers at particular people&#x2019;s homes, and eventually pay them for their work. Little things like the 1st of the month (you have 100s of workers coming in to get their hours approved and get paid) weren&#x2019;t taken into account. The software was very focused on the individual process, and there were a lot of checks to validate input. What wasn&#x2019;t there were things like: &#x201C;How do I efficiently handle many applicants at the same time?&#x2019;&#x27; The current process was paper form based, and they were basically going over the hours submitted, ask minimal questions, and provisionally approve it. Later on, they would do a more detailed scan of the hours, and do any fixups needed. That would be the time that they would also input the data to their old software. In other words, there was an entire messy process going on that the higher ups didn&#x2019;t even realize was happening. This include decisions such as &#x201C;you need an advance, we&#x2019;ll register that as 10 extra hours you worked this month, and we&#x2019;ll deduct it next month&#x201D; and &#x201C;you weren&#x2019;t supposed to go to Mrs. Xyz, you were supposed to go to Mr. Zabc! We can&#x2019;t pay for all your hours there&#x201D; , etc.  When we started working on the software, we happened to do a demo to some of the on site people, and they were horrified by what they saw. The new &amp; improved software would end up causing them much more issues, and it would actually result in more paperwork that they have to manage just so they can make the software happy. Modeling such things was tough, and at some point (with the client reluctant agreement) we essentially threw aside the hundreds of pages of well written spec, and just worked directly with the people who would end up using our software. The solution in the end was to codify many of the actual &#x201C;business processes&#x201D; that they were using. Those business processes made sense, and they were what kept the company working for decades. But management didn&#x2019;t actually realize that they were working in this manner. And that is leaving aside the &#x201C;let us change the corporate structure through software&#x201D; endeavors, which are unfortunately also pretty common.  To summarize, assuming that your client is a single entity, which speaks with one voice and actually know what they are talking about? Not going to fly for very long. In another case, I had to literally walk a VP of Sales through the process of how a sale is actually happening in his company versus what he thought was happening. Sometimes this job is likely playing a shrink, but for corporations.</p>
-        </article>
-        <article id="article-3990">
-            <a href="https://www.meziantou.net/creating-a-parser-for-boolean-expressions.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3990">Creating a Parser for Boolean Expressions</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 11, 2014
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The idea for this article came from a question on Stackoverflow. The question is about the possibility of writing the following authorization rule in ASP.NET Core:C#copy[Authorize(Roles = &quot;Expert &amp;&amp; (ReadWrite || ReadOnly)&quot;)]This syntax is not supported by the Authorize attribute. It is sti</p>
         </article>
         <div class="button flex justify-between">
             <a href="398.html"><span class="back arrow"></span></a>
