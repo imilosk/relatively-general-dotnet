@@ -138,8 +138,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4491">
+            <a href="https://ayende.com/blog/160097/dogfooding-is-critical-the-story-of-a-bug" target="_blank">
+                <h2 class="title mb-6" id="article-4491">Dogfooding is CRITICAL, the story of a bug</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: November 27, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We use RaveDB to handle our entire internal infrastructure. That has several reasons, to start with, RavenDB is a joy to work with, so it cuts down on the dev time for new internal features. More importantly, however, it let us try RavenDB in real world conditions. That seems obvious, because as much as you try, you can never really simulate real production environments. But even more important is the concept of production data. The important thing about production data is that it is dirty. You don&#x2019;t get data that is all nice and simple and all the same as you have when you generate the data, or when you are creating unit and system tests. In this case, we had an interesting problem. We had a map reduce index similar to this one:      1: public class UsersByCountry : AbstractIndexCreationTask&lt;User, UsersByCountry.Result&gt;   2: {   3:     public class Result   4:     {   5:         public string Country { get; set; }   6:         public int Count { get; set; }   7:     }   8:&#xA0;    9:     public UsersByCountry()  10:     {  11:         Map = users =&gt;  12:               from user in users  13:               select new {user.Country, Count = 1};  14:         Reduce = results =&gt;  15:                  from result in results  16:                  group result by result.Country  17:                  into g  18:                  select new  19:                  {  20:                      Country = g.Key,  21:                      Count = g.Sum(x =&gt; x.Count)  22:                  };  23:     }  24: }&#xA;This is a pretty standard thing to have, but I noticed that we had a difference from the 1.0 results in our production data. Investigating further, it appeared that this was the root issue:&#xA;&#xA;&#xA;   1: using (var session = store.OpenSession())   2: {   3:     session.Store(new User { Country = &quot;Israel&quot; });   4:     session.Store(new User { Country = &quot;ISRAEL&quot; });   5:     session.Store(new User { Country = &quot;israel&quot; });   6:     session.SaveChanges();   7: }&#xA;With RavenDB 1.0, due to fairly esoteric implementation details, this would generate the following values:&#xA;&#xA;{&quot;Country&quot;: &quot;Israel&quot;, &quot;Count&quot;: 1}&#xA;{&quot;Country&quot;: &quot;ISRAEL&quot;, &quot;Count&quot;: 1}&#xA;{&quot;Country&quot;: &quot;israel&quot;, &quot;Count&quot;: 1}&#xA;This matches what you&#x2019;ll get using Linq to Objects, and that was fine by me. I could see an argument for doing the reduce using case insensitive reduce, but then you have the argument about which or the representation is the one you should use, etc.&#xA;In the version that I tested, I actually got:&#xA;&#xA;{&quot;Country&quot;: &quot;Israel&quot;, &quot;Count&quot;: 3}&#xA;{&quot;Country&quot;: &quot;ISRAEL&quot;, &quot;Count&quot;: 3}&#xA;{&quot;Country&quot;: &quot;israel&quot;, &quot;Count&quot;: 3}&#xA;Now, that was wrong. Very wrong. &#xA;As it turned out, once I managed to recover from the palpitations that this issue gave me, the actual reason was pretty easy to figure out. Some of our code was case sensitive, some of our code was not. That meant that under this condition, we would feed the map/reduce engine with duplicate entries, per the number of various casing combinations that we had.&#xA;Spooky bug, but once we narrowed down what the actual problem was, very easy to resolve.</p>
+        </article>
+        <article id="article-4492">
+            <a href="https://ayende.com/blog/160066/clearing-up-versioning-1-2-vs-2-0-in-ravendb" target="_blank">
+                <h2 class="title mb-6" id="article-4492">Clearing up versioning, 1.2 vs 2.0 in RavenDB</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: November 26, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When we started full fledged active development on the next version of RavenDB, we used the tag name &#x201C;1.2&#x201D; for that release version. We wanted to take the time and punch some big tickets items that were going to be very hard to do with small incremental releases. I think we did quite a good job of that. But one of the major things that we wanted to do was to be able to go back and fix some of the early on design decisions that we made. Some of them were minor (null handling improvements during indexing), some of them were pretty major (changing indexing format for dates to human readable ones). Some are obvious (moving things around in the client API to make it easier to avoid mistakes), some are not so much (far superior handling of DateTime and DateTimeOffset). Interestingly enough, we didn&#x2019;t get any big breaking changes, only a lot of minor course corrections. For the most part, I expect people to move from 1.0 to 2.0 without even noticing that things got much better. We stilled called this release RavenDB 1.2, but we have some breaking changes, and we have done tremendous amount of work on the system. We started getting pushback from users and customers about the version number. This isn&#x2019;t just some minor release, this is a major step up. Thus, what we were calling 1.2 became 2.0. And I&#x2019;ll be posting about what exactly is new in RavenDB 2.0 in just a bit&#x2026;</p>
+        </article>
+        <article id="article-4493">
             <a href="https://ayende.com/blog/160065/upgrading-to-ravendb-2-0-in-our-production-systems" target="_blank">
-                <h2 class="title mb-6" id="article-4491">Upgrading to RavenDB 2.0 in our production systems</h2>
+                <h2 class="title mb-6" id="article-4493">Upgrading to RavenDB 2.0 in our production systems</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, we tried to upgrade to RavenDB 2.0 build 2152, and then we quickly had to roll things back. The reason for that, by the way, was authentications issues. In RavenDB 2.0, we did a lot of stuff to tighten security. In particular, we actively try to push you away from using the system database, and into using named databases. And we also made it easier to specify which databases which users has access to (and what kind of an access). Unfortunately, while it worked perfectly during testing, going to production revealed that we had a few&#x2026; issues in it.  Surprisingly enough, those issues weren&#x2019;t in the logic or how it worked. Those issues boiled down to&#x2026;. case sensitivity. It turned out that both the user names and the database names were case sensitive in the permission configuration, leading to&#x2026; well, you probably saw that the site threw a 401 error. Fixing that config issue was pretty high on my list of things to fix. If only because case sensitivity in this place was just a trap waiting to happen. Once we figured out what was going on, it was relatively easy to fix. This post is now written on a system running the very latest version of RavenDB 2.0.</p>
         </article>
-        <article id="article-4492">
+        <article id="article-4494">
             <a href="https://ayende.com/blog/160033/what-is-up-with-ravendb-2-0-performance" target="_blank">
-                <h2 class="title mb-6" id="article-4492">What is up with RavenDB 2.0? Performance&#x2026;</h2>
+                <h2 class="title mb-6" id="article-4494">What is up with RavenDB 2.0? Performance&#x2026;</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, one thing that we put a lot of focus on was performance. In order to test that, I had a dataset of 4.66 million documents (IMDB data set, if you care) as well as two indexes defined.&#xA;&#xA;&#x9;The results for RavenDB 2.0 (drum roll):&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;Loading 4.66 millions records in 44 minutes. Average rate of less then half a millisecond per document.&#xA;&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;But wait, what about the indexes? Well, RavenDB index stuff as they come, and as we were inserting the documents, they were indexed along the way. That meant that 11 seconds after we were done putting 4.66 millions documents to RavenDB, we were done indexing (across all indexes).&#xA;&#xA;&#xA;&#x9;Pretty nice perf, even if I say so myself.</p>
         </article>
-        <article id="article-4493">
+        <article id="article-4495">
             <a href="https://ayende.com/blog/159969/design-patterns-in-the-test-of-time-command-redux" target="_blank">
-                <h2 class="title mb-6" id="article-4493">Design patterns in the test of time</h2>
+                <h2 class="title mb-6" id="article-4495">Design patterns in the test of time</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my previous post about the command pattern, I gushed about how much I loved it. That doesn&#x2019;t mean that the command pattern as originally envisioned is still completely in fashion. In particular, the notion of &#x201C;Undo&#x201D; was&#xA0; one of the major features in the command pattern&#x2019;s cap. Today, that is almost never the case. Sure, if you are building an application such as an editor. Something like Photoshop or a text editor would find the notion of commands with the ability to have an undo stack very compelling. Other than that, however, that is a very rare need. In most business scenarios, there really is no good way to undo things. How would you implement SendEmailCommand.Undo(), for example? But even something like PlaceOrder.Undo() is a lot more complex and hard to do than you would think. The mere notion of undoing the operation assumes that this isn&#x2019;t going to have any side affects. But cancelling an order may result in cancellation fees, require you to ship back things you got back, end. It is not &#x201C;Undoing PlaceOrder&#x201D;, rather that is a whole different and distinct business process, usually represented by another command: CancelOrder. Another common issue that people have is the degeneration of the entire architecture to something like:  CommandExecuter.Execute(Command cmd); To that I answer, more power to you! I love code that is composed of a lot of small classes all doing things about the same way. There is no easier way to look at a system, and that allows you to quite easily add additional functionality to the system easily. That said, mind how you handle routing in that scenario. I have seen people go into the &#x201C;when a request comes to this URL, let us invoke the following commands&#x201D; in XML. One of the reasons that people dislike this approach is how you actually call this. If just getting to the command executer is hard and involved, you lose a lot of the advantages. This popped up in the mailing list, and I really dislike it. The notion of Composite Command. A command that can execute multiple commands. Now, from a programming point of view, I can easily see why you would want to do that. The PlaceOrderCommand operation is composed of a lot of smaller commands. But, and this is important, the notion of Composite Commands basically mean that you get the same thing as the PlaceOrderCommand, but you just lost the name. And naming is important. Almost as important, error handling is quite different between different business scenarios, and you sometimes end up with something like:      1: var placeOrderCommand = new CompositeCommand(   2:    new RegisterOrderCommand(),   3:    new ReserveStockCommand(),   4:    new ChargeCardCommand(),   5:    new ShipOrderCommand()   6: )   7: {   8:    Sequential = true,   9:    StopOnError = true  10: }&#xA;And this is simple, how do you handle an error in the ShipOrderCommand after you already charged the card, for example?</p>
         </article>
-        <article id="article-4494">
+        <article id="article-4496">
             <a href="https://ayende.com/blog/160001/ravendb-2-0-release-candidates" target="_blank">
-                <h2 class="title mb-6" id="article-4494">RavenDB 2.0 Release Candidates</h2>
+                <h2 class="title mb-6" id="article-4496">RavenDB 2.0 Release Candidates</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, it is about this time. We run out of work with RavenDB 2.0, and now we pretty much have no choice but to get into the release cycle.&#xA;&#xA;&#x9;We aren&#x2019;t done yet, but we are close. Close enough that we started running the current build in our own production systems. There is still stuff to be done, in particular, performance and bug fixes.&#xA;&#xA;&#x9;You can get the latest stuff here. We would love to get some people to hammer at things and see if they can break it.</p>
         </article>
-        <article id="article-4495">
+        <article id="article-4497">
             <a href="https://ayende.com/blog/159905/dont-play-peekaboo-with-support-damn-it" target="_blank">
-                <h2 class="title mb-6" id="article-4495">Don&#x2019;t play peekaboo with support, damn it!</h2>
+                <h2 class="title mb-6" id="article-4497">Don&#x2019;t play peekaboo with support, damn it!</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that we really pride ourselves with Hibernating Rhinos is the level of support. Just to give you some idea, today &amp; yesterday we had core team members on the phone with people (not customers, yes) who are having problems with RavenDB for quite some time. Now, I understand that you may not always have the information to give, but what you have, give me! So I can help you. From a recent exchange in the mailing list:  var clickCount = session.Query&lt;TrackerRequest&gt;().Where(t =&gt; t.TrackerCreated == doc.Created).Where(t =&gt; t.Type == Type.Click).Count();  This gives:  &quot;Non-static method requires a target&quot; To which I replied:  What is the full error that you get? Compile time? Runtime? The answer I got:   This is a document I&#x27;m trying to &#x27;Count&#x27;:  {  &#xA0; &quot;Created&quot;: &quot;2012-11-15T16:12:42.1775747&quot;,  &#xA0; &quot;IP&quot;: &quot;127.0.0.1&quot;,  &#xA0; &quot;TrackerCreated&quot;: &quot;2012-11-15T14:12:16.3951000Z&quot;,  &#xA0; &quot;Referrer&quot;: &quot;http://example.com&quot;,  &#xA0; &quot;Type&quot;: &quot;Click&quot;  }  Raven terminal gives:  Request # 172: GET&#xA0;&#xA0;&#xA0;&#xA0; -&#xA0;&#xA0;&#xA0;&#xA0; 3 ms - &lt;system&gt;&#xA0;&#xA0; - 200 - /indexes/Raven/DocumentsByEntityName?query=Tag%253ATrackerRequests&amp;start=0&amp;pageSize=30&amp;aggregation=None&amp;noCache=-1129797484  &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Query: Tag:TrackerRequests  &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Time: 2 ms  &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Index: Raven/DocumentsByEntityName  &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Results: 3 returned out of 3 total. By the way, you might note that this ISN&#x2019;T related in any way to his issue. This query (and document) were gotten from the Studio. I can tell by the URL.  Then there was this:  I mean, seriously, I am happy to provide support, even if you aren&#x2019;t a customer yet, but don&#x2019;t give me some random bit of information that has absolutely nothing to do to the problem at hand and expect me to guess what the issue is.  Relevant information like the stack trace, what build you are on, what classes are involved, etc are expected.</p>
         </article>
-        <article id="article-4496">
+        <article id="article-4498">
             <a href="https://ayende.com/blog/159873/design-patterns-in-the-test-of-time-command" target="_blank">
-                <h2 class="title mb-6" id="article-4496">Design patterns in the test of time</h2>
+                <h2 class="title mb-6" id="article-4498">Design patterns in the test of time</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The command pattern is a behavioral design pattern in which an object is used to represent and encapsulate all the information needed to call a method at a later time.  More about this pattern. I adore this pattern. If this pattern had a paypal account, I would donate it money on a regular basis. In general, the notion of encapsulating the method call into an object (like the functor sin C&#x2B;&#x2B;) is an incredibly powerful idea, because is separate the idea of selecting what to invoke and when to invoke it. Commands are used pretty much every where, WPF is probably the most obvious place, because it actually have the notion of Command as a base class that you are supposed to be using. Other variations, like encapsulating a bunch of code to be executed later (job / task), or just being able to isolate a complex behavior into its own object, is also very useful. I base quite a lot of my architectural advice on the notion that you can decompose a system to a series of commands that you can compose and shuffle at will. Recommendation: Use it. Often. In fact, if you go so far as to say that the only reason we have classes is to have a nice vehicle for creating commands, you wouldn&#x2019;t be going far enough. Okay, I am kidding, but I really like this pattern, and it is a useful one quite often. The thing that you want to watch for are commands that are too granular. IncrementAgeCommand that is basically wrapping Age&#x2B;&#x2B; is probably too much, for example. Commands are supposed to be doing something meaningful from the scope of the entire application.</p>
         </article>
-        <article id="article-4497">
+        <article id="article-4499">
             <a href="https://ardalis.com/dont-forget-block-selection-using-alt-in-visual-studio/" target="_blank">
-                <h2 class="title mb-6" id="article-4497">Dont Forget Block Selection Using Alt in Visual Studio</h2>
+                <h2 class="title mb-6" id="article-4499">Dont Forget Block Selection Using Alt in Visual Studio</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So do you ever find yourself wanting to try out some code you found on the Internet (via Copy Paste Programming, but in a spike or test&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-4498">
+        <article id="article-4500">
             <a href="https://ardalis.com/2013-software-craftsmanship-calendar/" target="_blank">
-                <h2 class="title mb-6" id="article-4498">2013 Software Craftsmanship Calendar</h2>
+                <h2 class="title mb-6" id="article-4500">2013 Software Craftsmanship Calendar</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,38 +296,6 @@
                 posted on: November 16, 2012
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It&#x2019;s that time of year again when Software Craftsmanship wall calendars are shipping out of our Hudson office. A few things are different&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-4499">
-            <a href="https://ayende.com/blog/159937/production-issue-asp-net-cache-kills-the-application" target="_blank">
-                <h2 class="title mb-6" id="article-4499">Production issue: ASP.Net Cache kills the application</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 16, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In one of our production deployments, we occasionally get a complete server process crash. Investigating the event log, we have this:&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;Exception: System.InvalidOperationException&#xA;&#x9;&#xA;&#x9;&#x9;Message: Collection was modified; enumeration operation may not execute.&#xA;&#x9;&#xA;&#x9;&#x9;StackTrace:&#xA0;&#xA0;&#xA0; at System.Collections.Generic.Dictionary`2.KeyCollection.Enumerator.MoveNext()&#xA;&#x9;&#xA;&#x9;&#x9;&#xA0;&#xA0; at System.Web.Hosting.ObjectCacheHost.TrimCache(Int32 percent)&#xA;&#x9;&#xA;&#x9;&#x9;&#xA0;&#xA0; at System.Web.Hosting.HostingEnvironment.TrimCache(Int32 percent)&#xA;&#x9;&#xA;&#x9;&#x9;&#xA0;&#xA0; at System.Web.Hosting.HostingEnvironment.TrimCache(Int32 percent)&#xA;&#x9;&#xA;&#x9;&#x9;&#xA0;&#xA0; at System.Web.Hosting.ApplicationManager.TrimCaches(Int32 percent)&#xA;&#x9;&#xA;&#x9;&#x9;&#xA0;&#xA0; at System.Web.Hosting.CacheManager.CollectInfrequently(Int64 privateBytes)&#xA;&#x9;&#xA;&#x9;&#x9;&#xA0;&#xA0; at System.Web.Hosting.CacheManager.PBytesMonitorThread(Object state)&#xA;&#x9;&#xA;&#x9;&#x9;&#xA0;&#xA0; at System.Threading.ExecutionContext.Run(ExecutionContext executionContext, ContextCallback callback, Object state, Boolean ignoreSyncCtx)&#xA;&#x9;&#xA;&#x9;&#x9;&#xA0;&#xA0; at System.Threading._TimerCallback.PerformTimerCallback(Object state)&#xA;&#xA;&#xA;&#x9;As you can see, this is a case of what appears to be a run of the mill race condition, translated to a process killing exception because it was thrown from a separate thread.&#xA;&#xA;&#x9;This thread, by the way, is the ASP.Net Cache cleanup thread, and we have no control whatsoever over that. To make things worse, this application doesn&#x2019;t even use the ASP.NET Cache in any way shape or form.&#xA;&#xA;&#x9;Any ideas how to resolve this would be very welcome.</p>
-        </article>
-        <article id="article-4500">
-            <a href="https://ayende.com/blog/159841/design-patterns-in-the-test-of-time-chain-of-responsibility" target="_blank">
-                <h2 class="title mb-6" id="article-4500">Design patterns in the test of time</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 16, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The chain-of-responsibility pattern is a design pattern consisting of a source of command objects and a series of processing objects. Each processing object contains logic that defines the types of command objects that it can handle; the rest are passed to the next processing object in the chain. A mechanism also exists for adding new processing objects to the end of this chain.  More about this pattern. It is actually quite common to see this pattern now-a-days using events. Something like CancelEventArgs and a CancelEventHandler to handle the FormClosing event of a Form. We use Chain of Responsibility in RavenDB in several places, like this one: foreach (var requestResponderLazy in currentDatabase.Value.RequestResponders)&#xA;{&#xA;  var requestResponder = requestResponderLazy.Value;&#xA;  if (requestResponder.WillRespond(ctx))&#xA;  {&#xA;    var sp = Stopwatch.StartNew();&#xA;    requestResponder.Respond(ctx);&#xA;    sp.Stop();&#xA;    ctx.Response.AddHeader(&quot;Temp-Request-Time&quot;, sp.ElapsedMilliseconds.ToString(&quot;#,# ms&quot;, CultureInfo.InvariantCulture));&#xA;    return requestResponder.IsUserInterfaceRequest;&#xA;  }&#xA;}&#xA;&#xA;&#xA;Note that we have moved on the the behavioral patterns, and those tend to have withstand the test of time much better, in general.&#xA;Other places where Chain of Responsibility is used is request routing and error handling. A common approach is to also have this done by delegating, where I am handling what I can and passing on to the next object if I don&#x2019;t know how to handle a request.&#xA;Recommendation: This is still a very useful pattern. One thing to note is that it is effectively an O(N) operation with respect to the number of items in the chain that you have. As usual, do not overuse, but it is a really nice pattern.</p>
         </article>
         <div class="button flex justify-between">
             <a href="449.html"><span class="back arrow"></span></a>
