@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-2201">
+            <a href="https://ayende.com/blog/185025-C/graphs-in-ravendb-real-world-use-cases" target="_blank">
+                <h2 class="title mb-6" id="article-2201">Graphs in RavenDB</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: November 08, 2018
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I talked a lot about how graph queries in RavenDB will work, but one missing piece of the puzzle is how they are going to be used. I&#x2019;m going to use this post to discuss some of the options that the new features enables. We&#x2019;ll take the following simple model, issue tracking. Let&#x2019;s imagine that a big (secret) project is going on and we need to track down the tasks for it. On the right, you have an image of the permissions graph that we are interested in. The permission model is pretty standard I think. We have the notion of users and groups. A user can be associated to one or more groups. Groups memberships are hierarchical. An issue&#x2019;s access is controlled either by giving access to a specific users or to a group. The act of assigning a group will also allow access to all the group&#x2019;s parents and any user that is associated to any of them.Here is the issue in question:Given the graph on the right, let&#x2019;s see, for each user, how we can find out what issues they have access to.We&#x2019;ll start with Sunny, who is named directly in the issue as allowed access. Here is the query to find the issues on which we are directly named.This was easy, I must admit. We could also write this without any need for graph queries, because it is so simple:It gets a bit trickier when we have to look at Max. Unlike Sunny, Max isn&#x2019;t directly named. Instead, he is a member in a group that is directly named in the issue. Let&#x2019;s see how we can query on issues that Max has access to:This is where things gets start to get interesting. If you&#x2019;ll look into the match clause, you&#x2019;ll see that we have arrows that go both left and right. We are telling RavenDB that we want to find issues that have the same group (denoted as g in the query) as the user. This kind of query you already can&#x2019;t express with RavenDB right now without the graph query syntax. Another way to write this query is to use explicit clauses, like so:In this case, all the arrows go in a single direction, but we have two clauses that are being and together. These two queries are exactly the same, in fact, RavenDB will translate the one with arrows going both ways to the one with the and.The key here is that between any two clauses with an and, RavenDB will match the same alias to the same value. So we now can find issues for Max and Sunny, but what about all the rest of the people? We can, of course, do this manually. Here is how we can find issues for people a group removed from the issue.This query gives us all the issues for Nati that are one group removed from him. That works, but it isn&#x2019;t how we want to do things. It is a good exercise in setting out the structure, though. Because instead of hard coding the pattern, we are now going to use recursion.The key for this query is the recursive element in the third line. We moved from the issue to its groups, and then we recurse from the issues&#x2019; groups to their parents. We allow empty recursion and we follow all the paths in the graph.On the other side, we go from the user and try to find a match from the user&#x2019;s group to any of the groups that end the query. In Nati&#x2019;s case, we went from project-x group to team-nati, which is a match, so we can return this issue.Here is the final query that we can use, it is a bit much, even if it is short, so I will deconstruct it below:We use a parameterized query here, to make things easier. We start from a user and find an issue if:The issue directly name the user as allowed access. This is the case for Sunny.The issue&#x2019;s groups (or their parents) match the groups that the user belong to (non recursively, mind).In the case of Max, for example, we have a match because the recursive element allows a zero length path, so the project-x group is allowed access and Max is a member of it.In the case of Nati, on the other hand, we have to go from project-x to team-nati to get a match.If we&#x2019;ll set $uid to users/23, which is Pheobe, all the way to the left in the graph, we&#x2019;ll also have a match. We&#x2019;ll go from project-x to execs to board and then find a match.Snoopy, on the other hand, doesn&#x2019;t have access. Look carefully at the direction of the arrows in the graph. Snoopy belongs to the r-n-d group, and that groups is a child of exces, but the query we specified only go up to the parents, not the children, so Snoopy is not included.I hope that this post gave you some ideas about what kind of use cases are enabled by graph queries in RavenDB. I would love to hear about any scenarios you have for graph queries so we can play with them and see how they are answered by RavenDB.</p>
+        </article>
+        <article id="article-2202">
             <a href="https://www.stevejgordon.co.uk/asp-net-core-2-2-options-validation" target="_blank">
-                <h2 class="title mb-6" id="article-2201">ASP.NET Core 2.2 &#x2013; Options Validation</h2>
+                <h2 class="title mb-6" id="article-2202">ASP.NET Core 2.2 &#x2013; Options Validation</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you find the information in this post useful and want to learn more about configuration and options, may I suggest viewing my new course on Pluralsight &#x2013; &#x201C;Using Configuration and Options in .NET Core and ASP.NET Core Apps&#x201C;? I dive deeply into applying all of the features in your applications. I was listening to [&#x2026;]</p>
         </article>
-        <article id="article-2202">
+        <article id="article-2203">
             <a href="https://ardalis.com/fun-browser-javascript-tricks-and-hacks/" target="_blank">
-                <h2 class="title mb-6" id="article-2202">Fun Browser JavaScript Tricks and Hacks</h2>
+                <h2 class="title mb-6" id="article-2203">Fun Browser JavaScript Tricks and Hacks</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I occasionally present to school-age kids on software development, and an easy way to get them engaged is to show them how something already&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-2203">
+        <article id="article-2204">
             <a href="https://enterprisecraftsmanship.com/posts/cqrs-vs-specification-pattern/" target="_blank">
-                <h2 class="title mb-6" id="article-2203">CQRS vs Specification pattern</h2>
+                <h2 class="title mb-6" id="article-2204">CQRS vs Specification pattern</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is an article about how two DDD patterns contradict each other.</p>
         </article>
-        <article id="article-2204">
+        <article id="article-2205">
             <a href="https://ayende.com/blog/184993-A/the-fear-of-an-empty-source-file" target="_blank">
-                <h2 class="title mb-6" id="article-2204">The fear of an empty source file</h2>
+                <h2 class="title mb-6" id="article-2205">The fear of an empty source file</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have been writing software at this point for over twenty years, and I want to believe that I have learned a few things during that timeframe. And yet, probably the hardest thing for me is to start writing from scratch. If there is no code already there, it is all too easy to get lost in the details and not actually be able to get anywhere.An empty source file is full of so many options, and any decision that I&#x2019;ll make is going to have very long lasting impact. Sometimes I look at the keyboard and just freeze, unable to proceed because I know, with a 100% certainty, that whatever I&#x2019;ll produce isn&#x2019;t going to be up to my own standards. In fact, it is going to suck, for sure.I think that about 90% of the things I have written so far are stuff that I couldn&#x2019;t write today. Not because I lack the knowledge, but because I have far greater understanding of the problem space and I know that trying to solve it all is such a big task that it is not possible for me to do so. What I need reminding, sometimes, is that I have written those things, and eventually, those things were able to accomplish all that was required of them.A painter doesn&#x2019;t just start by throwing paint on canvas, and a building doesn&#x2019;t grow up by people putting bricks where they feel like. In pretty much any profession, you need to iterate several times to get things actually done. With painters, you&#x2019;ll typically do a drawing before actually putting paint on canvas. With architects will build a small scale model, etc. For me, the hardest thing to do when I&#x2019;m building something new is to actually allow myself to write it out as is. That means, lay out the general structure of the code, and ignore all the other stuff that you must have in order to get to real production worthy code. This means flat our ignoring:Error handlingControl of allocations and memory usedSelect the underlying data structures and algorithmsYes, that means that O(N^2) is just fine for nowLogging, monitoring and visibilityCommenting and refactoring the code for maintainability over timeAll of these are important, but I literally can&#x2019;t pay these taxes and build something new in the same time. I like to think about the way I work as old style rendering passes. When I&#x2019;m done with the overall structure, I&#x2019;ll go back and add these details. Sometimes that can be a lot of work, but at that point, I actually have something to help me. At a minimum, I have tests that verify that things still work and now I have a good understanding of the problem (and my solution) so I can approach things without having so many unknown to deal with.A large part of that is that the fact that I didn&#x2019;t pay any of the taxes for development. This usually means that the new thing is basically a ball of mud, but it is a small ball of mud, which means that if I need to change things around, I have to touch fewer moving parts. A lot fewer, actually. That allow me to explore, figure out what works and doesn&#x2019;t.It is also going directly against all of my instincts and can be really annoying. I really want to do a certain piece of code properly, but focusing on perfecting a single door knob means that the whole structure will never see the light of day.</p>
         </article>
-        <article id="article-2205">
+        <article id="article-2206">
             <a href="https://andrewlock.net/delaying-strongly-typed-options-configuration-using-postconfigure-in-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-2205">Delaying strongly-typed options configuration using PostConfigure in ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-2206">Delaying strongly-typed options configuration using PostConfigure in ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I show how to use PostConfigure() with strongly-typed options to run configuration actions after all other Configure() actions are applied.&#x2026;</p>
         </article>
-        <article id="article-2206">
+        <article id="article-2207">
             <a href="https://www.meziantou.net/smart-enums-type-safe-enums-in-dotnet.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2206">Smart enums / Type-safe enums in .NET</h2>
+                <h2 class="title mb-6" id="article-2207">Smart enums / Type-safe enums in .NET</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Enumeration in .NET are very useful to avoid magic strings/numbers. .NET provides useful methods such as GetValues, Parse, TryParse, ToString.C#copypublic enum Role&#xA;{&#xA;    [DisplayName(&quot;Viewer&quot;)]&#xA;    [Description(&quot;read and comment on posts and pages&quot;)]&#xA;    Guest = 0,&#xA;    [DisplayName(&quot;Editor&quot;)]</p>
         </article>
-        <article id="article-2207">
+        <article id="article-2208">
             <a href="https://ayende.com/blog/184962-A/graphs-in-ravendb-recursive-queries" target="_blank">
-                <h2 class="title mb-6" id="article-2207">Graphs in RavenDB</h2>
+                <h2 class="title mb-6" id="article-2208">Graphs in RavenDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Graph queries as I discussed them so far gives you the ability to search for patterns. On the right, you can see the family tree of the royal family of Great Britain going back a few hundred years. That make for an interesting subject for practicing graph queries. A good example we might want to ask is who is the royal grand parent of Elizabeth II. We can do that using:This is great, and nicely demonstrate how we can scan for specific patterns in the graph. However, it is limited by its rigidity. For example, let&#x2019;s say that I want to find someone in the family tree and I&#x2019;m not sure about the exact nature of the relationship? &#x201C;We are not amused&#x201D; comes to mind, but off the top of my head and without consulting the chart, I don&#x2019;t think that I would be able to figure it out. Luckily, I don&#x2019;t have to, I can ask RavenDB to be so kind and tell me. Note the use of the recursive element here. We are asking RavenDB to start in a particular document and go up the parents, trying to find an unamused royal. The recursion portion of the query can be zero to six steps in size and should abort as soon as we have any match. Following the zero to six parents, there should be a parent that is both a royal an unamused.The Cypher syntax for what they call variable length queries is reminiscent of regular expressions, and I don&#x2019;t mean that in a complimentary manner. Looking at the query above, you might have noticed that there is a distinct difference between it and the first one. The recursive query will go up the Parents link, regardless of whatever that parent is royal or not. RavenDB Graph Queries has what I believe to be a unique feature. The recursive pattern isn&#x2019;t limited to a single step and can be as complex as you like. For example, let&#x2019;s ensure that we are only going to go up the chain of the royal parents.The recursive element has a few knows that you can tweak. The minimum and maximum distance, for example, are obvious examples, but the results criteria for the recursion is also interesting. In this query, we use the shortest, instead of the lazy. This will make RavenDB work a bit harder and find the shortest recursive path that matches the query, where as lazy stops on the first one that matches. The following options are available:Lazy &#x2013; stop on the first pattern that matches. Good for: &#x201C;Am I related to Victoria?&#x201D;Shortest &#x2013; find the shortest path that match the pattern. Good for: &#x201C;How am I related to Victoria?&#x201D;Longest &#x2013; find the longest path that match the pattern. Good for: &#x201C;For how many generations has Victoria&#x2019;s family been royals?&#x201D;All &#x2013; find all the paths that match the pattern. Good for if you have multiple paths in your ancestry to Victoria.</p>
         </article>
-        <article id="article-2208">
+        <article id="article-2209">
             <a href="https://ayende.com/blog/184961-A/graphs-in-ravendb-inconsistency-abhorrence" target="_blank">
-                <h2 class="title mb-6" id="article-2208">Graphs in RavenDB</h2>
+                <h2 class="title mb-6" id="article-2209">Graphs in RavenDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my previous post, I discussed some options for changing the syntax of graph queries in RavenDB from Cypher to be more in line with the rest of the RavenDB Query Language. We have now completed that part and can see the real impact it has on the overall design.In one of the design review, one of the devs (who have built non trivial applications using Neo4J) complained that the syntax is now much longer. Here are the before and after queries to compare:The key, from my perspective, is that the new form is more explicit and easier to read after the fact. Queries tend to grow more complex over time, and they are being read a lot more often than written). As such, I absolutely want to lean toward being readable over being terse.The example above just show the extra characters that you need to write. Let&#x2019;s talk about something that is a bit more complex:Now we have a lot more text, but it is a lot easier to understand what is going on. Focus especially on the Lines edge, where we can very clearly separate what constitute the selection on the edge, the filter on the edge and what is the property that contains the actual linked document id.The end result is that we now have a syntax that is a lot more consistent and approachable. There are other benefits, but I&#x2019;ll show them off in the next post. A major source of annoyance for me with this syntax was how to allow anonymous aliases. In the Cypher syntax we used, you could do something like:There is a problem with how to express this kind of syntax of anonymous aliases with the Collection as alias mode. I initially tried to make it work by saying that we&#x2019;ll look at the rest of the query and figure it out. But that just felt wrong. I didn&#x2019;t like this inconsistency. I want a parse tree that I can look at in isolation and know what is going on. Simplifying the language is something that pays dividends over time, so I eventually decided that the query above will look this with the next syntax:There is a lot of precedence of using underscore as the &#x201C;I don&#x2019;t care&#x201D; marker, so that works nice and resolves any ambiguities in the syntax.</p>
         </article>
-        <article id="article-2209">
+        <article id="article-2210">
             <a href="https://ardalis.com/add-images-easily-to-github/" target="_blank">
-                <h2 class="title mb-6" id="article-2209">Easily Add Images to GitHub</h2>
+                <h2 class="title mb-6" id="article-2210">Easily Add Images to GitHub</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: October 31, 2018
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When working with GitHub on things like ReadMe.md files, it&#x27;s often helpful to include pictures. Unfortunately, when editing markdown files&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-2210">
-            <a href="https://andrewlock.net/configuring-named-options-using-iconfigurenamedoptions-and-configureall/" target="_blank">
-                <h2 class="title mb-6" id="article-2210">Configuring named options using IConfigureNamedOptions and ConfigureAll</h2>
-            </a>
-            <p class="mb-2">by Andrew Lock</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 30, 2018
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I look at how to configure named options that require injected services and how to configure all named options at once using ConfigureAll()&#x2026;</p>
         </article>
         <div class="button flex justify-between">
             <a href="220.html"><span class="back arrow"></span></a>
