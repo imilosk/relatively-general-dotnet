@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4361">
+            <a href="https://ayende.com/blog/161763/ravens-storage-reading-a-sorted-string-table" target="_blank">
+                <h2 class="title mb-6" id="article-4361">Raven&#x2019;s Storage: Reading a Sorted String Table</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 02, 2013
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When reading a SST, we have to deal with values of potentially large sizes. I want to avoid loading anything into managed memory if I can possible avoid it. That, along with other considerations has led me to use memory mapped files as the underlying abstractions for reading from the table. Along the way, I think that I made the following assumptions:  Work in little endian only. Can work in 32 bits, but 64 bits are preferred. Doesn&#x2019;t put pressure on the .NET memory manager. In particular, I am worried about users wanting to do store large values, or large number of keys. As it turned out, .NET&#x2019;s memory mapped files are a pretty good answer for what I wanted to do. Sure, it is a bit of a pain with regards to how to handle things like WinRT / Silverlight, etc. But I am mostly focused on server side for now. And I got some ideas on how to provide the mmap illusion on top regular streams for platforms that don&#x2019;t support it. The fact that SST is written by a single thread, and once it is written it is immutable has drastically simplified the codebase. Although I have to admit that looking at hex dump to figure out that I wrote to the wrong position is a bit of a bother, but more on that later. A lot of the code is basically the leveldb code, tweaked for .NET uses. One important difference that I made was with regards to the actual API.  Keys are assumed to be small. Most of the time, less than 2KB in size, and there are optimizations in place to take advantage of that. (It will still work with keys bigger than that, but will consume more memory). In general, through the codebase I tried to put major emphasis on performance and memory use even at this early stage. Values are not assumed to be small. What does the last one mean? Well, to start with, we aren&#x2019;t going to map the entire file into our memory space, to start with, it might be big enough to start fragmenting our virtual address space, but mostly because there is no need. We always map just a single blokc at at time, and usually we never bother to read the values into managed memory, instead just accessing the data directly from the memory mapped file. Here is an example of reading the key for an entry from the SST:  As you can see, we need to read just the key itself to memory, the value itself is not even touched. Also, there is some buffer management going on to make sure that we don&#x2019;t need to re-allocate buffers as we are scanning through the table. When you want to get a value, you call CreateValueStream, which gives you a Stream that you can work with. Here is how you use the API:  This is actually part of the internal codebase, we are actually storing data inside the SST that will later help us optimize things, but that is something I&#x2019;ll touch on a later point in time. Except for the slight worry that I am going to have to change the underlying approach from memory mapped files to streams if I need to run it outside the server/client, this is very cool. Next on my list is to think on how to implement the memtable, again, without impacting too much on the managed memory.</p>
+        </article>
+        <article id="article-4362">
             <a href="https://ayende.com/blog/161762/this-is-debugging-old-school" target="_blank">
-                <h2 class="title mb-6" id="article-4361">This is debugging, old school</h2>
+                <h2 class="title mb-6" id="article-4362">This is debugging, old school</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Dear god in heaven, how much I did not miss that.</p>
         </article>
-        <article id="article-4362">
+        <article id="article-4363">
             <a href="https://ayende.com/blog/161761/raven-storage-just-passed-its-first-test" target="_blank">
-                <h2 class="title mb-6" id="article-4362">Raven.Storage just passed its first &#x201C;test&#x201D;</h2>
+                <h2 class="title mb-6" id="article-4363">Raven.Storage just passed its first &#x201C;test&#x201D;</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Take a look at the code below. This actually completed as expected, and was working beautifully. As I probably mentioned, the architecture of this is really nice, and I think I was able to translate this into .NET code in a way that is both idiomatic and useful. 4:30 AM now, and I think that this is bed time for me now. But I just couldn&#x2019;t leave this alone.</p>
         </article>
-        <article id="article-4363">
+        <article id="article-4364">
             <a href="https://ayende.com/blog/162113/ravendb-course-updates" target="_blank">
-                <h2 class="title mb-6" id="article-4363">RavenDB Course Updates</h2>
+                <h2 class="title mb-6" id="article-4364">RavenDB Course Updates</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am updating the RavenDB Course for 2.5. It is now a 3 days affair that include quite a lot of stuff. It was quite cramp at 2 days, so moving to 3 days will allow us to do a lot more and do more interesting stuff. I&#x2019;ll be giving the first 3 days RavenDB Course in about two weeks in London. Currently this is what I have:  Can you think of additional stuff that you&#x2019;ll like me to cover?</p>
         </article>
-        <article id="article-4364">
+        <article id="article-4365">
             <a href="https://ayende.com/blog/161729/ravens-storage-building-a-sorted-string-table" target="_blank">
-                <h2 class="title mb-6" id="article-4364">Raven&#x2019;s Storage: Building a Sorted String Table</h2>
+                <h2 class="title mb-6" id="article-4365">Raven&#x2019;s Storage: Building a Sorted String Table</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Applying the lessons from the leveldb codebase isn&#x2019;t going to be a straightforward task. I already&#xA0; discussed why we can&#x2019;t just use leveldb directly, so I won&#x2019;t go into that. I decided to see if I can implement a leveldb inspired storage for RavenDB. And the first thing that I wanted to try is to build an SST. That seems like an easy first step. SST are just sorted data in a file, and it require nothing much to write to them. As mentioned, we can&#x2019;t just do a line by line port of the code. As easy as that would be. The way leveldb manages memory is&#x2026; not really suitable for what we can / should do in .NET.  I want this to be an efficient .NET implementation. It is inspired, but not intended to be compatible with leveldb. The leveldb API deals with byte arrays all over the place. This makes sense for a C&#x2B;&#x2B; codebase, but it is horrible for a .NET application, especially when we expect a lot of our values to be large enough to hit the LOH. That means fragmentation, and pain down the road. Instead, our API uses ArraySegment&lt;byte&gt; for keys, and Stream for values. Since keys are expected to be relatively small, I don&#x2019;t foresee this being a problem. And the values are streams, so they are easily handled without introducing any cost from the API. Another thing that leveldb does quite a lot is batch things in memory for a while. It may be the current block, it may be the current data block, it may be the index block, but it does so quite often. That works nicely for C&#x2B;&#x2B; apps with expected small values, but not so much for our expected use case. So I want to avoid as much as possible holding items in managed memory. Here is the API for creating an SST:      1: var options = new StorageOptions();   2: using (var file = File.Create(&quot;test.sst&quot;))   3: using(var temp = new FileStream(Path.GetTempFileName(),FileMode.CreateNew,FileAccess.ReadWrite,    4:                     FileShare.None, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan))   5: {   6:     var tblBuilder = new TableBuilder(options, file, temp);   7:&#xA0;    8:     for (int i = 0; i &lt; 100; i&#x2B;&#x2B;)   9:     {  10:         var key = &quot;tests/&quot; &#x2B; i.ToString(&quot;0000&quot;);  11:         tblBuilder.Add(key, new MemoryStream(Encoding.UTF8.GetBytes(key)));  12:     }  13:&#xA0;   14:     tblBuilder.Finish();  15: }&#xA;As you can see, we uses two streams here, one to actually write to the table, the second is a temporary stream that we use to write the index block while we are working, then we merged it back to the actual sst file. Note that after building the table, the temp file can be deleted (indeed, we marked is as delete on close, so that would automatically happen).&#xA;That part was easy, all it required was simple I/O for generating the file. The more interesting part is going to be reading the values out.</p>
         </article>
-        <article id="article-4365">
+        <article id="article-4366">
             <a href="https://ayende.com/blog/162081/state-of-the-raven-operational-maintenance-tasks-and-features-sneak-peaks" target="_blank">
-                <h2 class="title mb-6" id="article-4365">State of the Raven - Operational &amp; Maintenance tasks and features sneak peaks</h2>
+                <h2 class="title mb-6" id="article-4366">State of the Raven - Operational &amp; Maintenance tasks and features sneak peaks</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20"></p>
         </article>
-        <article id="article-4366">
+        <article id="article-4367">
             <a href="https://ayende.com/blog/161710/reviewing-leveldb-part-xviii-summary" target="_blank">
-                <h2 class="title mb-6" id="article-4366">Reviewing LevelDB</h2>
+                <h2 class="title mb-6" id="article-4367">Reviewing LevelDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, I am very happy at the conclusion of this blog post series. Beside being one of the longest that I have done, this actually stretched my ability to count using roman numerals. In summary, I am quite happy that I spent the time reading all of this code. The LevelDB codebase is really simple, when you grok what it actually does. There is nothing there that would totally stun a person. What there is there, however, is a lot of accumulated experience in building those sort of things. You see this all over the place, in the format of the SST, in the way compaction is working, in the ability to add filters, write merging, etc. The leveldb codebase is a really good codebase to read, and I am very happy to have done so. Especially since doing this in C&#x2B;&#x2B; is way out of m comfort zone. It was also interesting to read what I believe is idiomatic C&#x2B;&#x2B; code.  Another observation about leveldb is that it is a hard core C&#x2B;&#x2B; product. You can&#x2019;t really take that and use the same approach in a managed environment. In particular, efforts to port leveldb to java (https://github.com/dain/leveldb/) are going to run into hard issues with problems like managing the memory. Java, like .NET, has issues with allocating large byte arrays, and even from the brief look I took, working with leveldb on java using the codebase as it is would likely put a lot of pressure there. Initially, I wanted to use leveldb as a storage engine for RavenDB. Since I couldn&#x2019;t get it compiling &amp; working on Windows (and yes, that is a hard requirement. And yes, it has to be compiling on my machine to apply), I thought about just porting it. That isn&#x2019;t going to be possible. At least not in the trivial sense. Too much work is require to make it work properly. Yes, I have an idea, no, you don&#x2019;t get to hear it at this time .</p>
         </article>
-        <article id="article-4367">
+        <article id="article-4368">
             <a href="https://ayende.com/blog/161601/ravendbs-transaction-merging" target="_blank">
-                <h2 class="title mb-6" id="article-4367">RavenDB&#x2019;s transaction merging</h2>
+                <h2 class="title mb-6" id="article-4368">RavenDB&#x2019;s transaction merging</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I like reading interesting code bases. And in this case, I have been reading through the leveldb codebase for a while. Most of the time, I am concentrating on grokking how other people are doing things. And the knowledge that I glean from those is only relevant a while later. In this case, I was able to apply leveldb&#x2019;s knowledge in very short order. We got a complaint about the speed of RavenDB under high transactional writes. The customer complained that they were seeing about 100 &#x2013; 200 writes/sec with multi threaded inserts, with a separate session per document. This simulate pretty well the behavior of a web application that does a write per request. The problem was that we basically had many write requests all competing on the disk. Since all transactions need to call fsync, that meant that we were limited by the number of fsync that we could call on the physical medium (more or less, it is a bit more complex than that, but that works). There really isn&#x2019;t much that I can do about it when the transactions are sequential. But there might be when we have parallel transactions. Instead of make them wait for one another, I took a leaf from the leveldb codebase and decided to merge them. I re-wrote the code so we would use the following approach: pendingBatches.Enqueue(pending);&#xA;&#xA;while (currentTask.Completed() == false &amp;&amp; pendingBatches.Peek() != pending)&#xA;{&#xA;    batchCompletedEvent.Wait();&#xA;}&#xA;if (currentTask.Completed())&#xA;    return pending.Result;&#xA;&#xA;lock (putSerialLock)&#xA;{&#xA;    try&#xA;    {&#xA;        batchCompletedEvent.Reset();&#xA;&#xA;        var sp = Stopwatch.StartNew();&#xA;        TransactionalStorage.Batch(actions =&gt;&#xA;        {&#xA;            int totalCommands = 0;&#xA;            PendingBatch currentBatch;&#xA;            while (totalCommands &lt; 1024 &amp;&amp;  // let us no overload the transaction buffer size too much&#xA;                    pendingBatches.TryDequeue(out currentBatch))&#xA;            {&#xA;                batches&#x2B;&#x2B;;&#xA;                if (ProcessBatch(currentBatch) == false)&#xA;                    // we only go on committing transactions as long as we are successful, if there is an error, &#xA;                    // we abort and do the rest in another cycle&#xA;                    break;&#xA;                actions.General.PulseTransaction();&#xA;                totalCommands &#x2B;= currentBatch.Commands.Count;&#xA;            }&#xA;        });&#xA;    }&#xA;    finally&#xA;    {&#xA;        batchCompletedEvent.Set();&#xA;    }&#xA;}&#xA;&#xA;&#xA;As you can see, this code is very similar to the leveldb one. We queue the transaction to be executed and then we check if we are the first in the queue. If so, we will execute that transaction and continue executing all available transactions.&#xA;The key here is that because we merge those transactions, we can benefit from only calling fsync once, at the end of the global operation.&#xA;This code is nice because it allows us to take advantage on load on our system. The more, the more efficient we can batch things. But at the same time, if there isn&#x2019;t any load, we don&#x2019;t care.&#xA;Note that I limited the amount of work that can be done in merged transactions, because we don&#x2019;t want the first transaction, the one that is actually doing the work for all of the others, to wait for too long. This is a really pretty way of doing this, especially since it doesn&#x2019;t even require a background thread, which is how I usually solved this issue.&#xA;Oh, and the results?&#xA;On my machine, without this change, we get about 400 writes / second. Afterward, with 25 threads, we get over 1,100 writes / second.</p>
         </article>
-        <article id="article-4368">
+        <article id="article-4369">
             <a href="https://ayende.com/blog/162049/reminder-ravendb-webinar-tomorrow" target="_blank">
-                <h2 class="title mb-6" id="article-4368">Reminder</h2>
+                <h2 class="title mb-6" id="article-4369">Reminder</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We will cover:  New features for JS Scripting Replication topologies How to handle maintenance tasks&#xA0; using RavenDB Sneak peek at reporting queries You can register here: https://www2.gotomeeting.com/register/118743562</p>
         </article>
-        <article id="article-4369">
+        <article id="article-4370">
             <a href="https://ayende.com/blog/161569/searching-for-a-lease-in-time-space" target="_blank">
-                <h2 class="title mb-6" id="article-4369">Searching for a lease in time &amp; space</h2>
+                <h2 class="title mb-6" id="article-4370">Searching for a lease in time &amp; space</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: April 24, 2013
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For some reason, there are a lot of real estate / rental people using RavenDB. I can tell you that I did not see that coming. However, that does bring us some interesting decisions. In particular, at one client, we had the need to search for a lease. Searching for a lease can be done on one of many interesting properties. For example, the unit number, or internal code, or by the leaser name. And here we got an interesting bug report.   Jane Smith leased an apartment from us at Dec 2012. At Feb 2013, she got married and changed her name to Jane Smith-Smyth. We need to allow searches on both names to find the appropriate lease. Now, remember, you can&#x2019;t go and change the lease document. That is a legal document that is frozen. Any change to that would invalidate it. (To be rather more accurate, you can modify the document, but there are certain fields that are frozen after the lease is signed.) Luckily, this was really easy to do, using RavenDB&#x2019;s referenced document feature:      1: from lease in docs.Leases   2: select new   3: {   4:    Leasers = lease.Leasers.Select(x=&gt;x.Name)   5:               .Union(lease.Leasers.Select(x=&gt;LoadDocument(x.Id).Name))   6:               .Distinct()   7: }&#xA;And now we can support changes in the names, while maintaining the sanctity of the frozen fields.&#xA;Sadly, this is still not enough. And we actually need to keep track of all of the names that the leaser had during the leasing period.&#xA;&#xA;Jane Smith-Smyth decided that it is a stupid name and changed her name to Jane Smite.&#xA;Now we need to support multiple names per leaser, while at the same time we have the current name for the lease. It looks like this:&#xA;&#xA;&#xA;   1: from lease in docs.Leases   2: select new    3: {   4:     Leasers = lease.Leasers.Select(x=&gt;x.Name)   5:     .Union(lease.Leasers.SelectMany(x=&gt;LoadDocument(x.Id).Names))   6:     .Distinct()     7: }&#xA;I highlighted the required changes .</p>
-        </article>
-        <article id="article-4370">
-            <a href="https://ayende.com/blog/161474/exporting-data-from-ravendb-the-new-way" target="_blank">
-                <h2 class="title mb-6" id="article-4370">Exporting Data from RavenDB, the new way</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 23, 2013
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In RavenDB 2.5, we provide an easy way to grab all the data from the database, regardless of the usual paging limit. I had the chance to experiment with that recently during a course. Here is the code we wrote. For fun, we made it use the async API:  I am pretty happy about that. We have stuff that streams all the way from the ravendb to the end client.</p>
         </article>
         <div class="button flex justify-between">
             <a href="436.html"><span class="back arrow"></span></a>

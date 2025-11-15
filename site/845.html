@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-8441">
+            <a href="https://ayende.com/blog/2037/castle-igloo" target="_blank">
+                <h2 class="title mb-6" id="article-8441">Castle Igloo</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 26, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Castle Igloo&#xA0;(ppt) is a very interesting experiment in bringing more MVC goodness into the WebForms. I have to say that when I dove into the code, the ideas that Gilles Bayon (no blog :-( ) had there blew my mind away. I always believed that trying to do MVC in ASP.Net was possible, but fairly awkward.    My main issue with this was always that I always had to do extra work in both the view and the controller in order to make this work, and I never felt that I really got the flexibility that I can get in MonoRail.&#xA0;Here is an implementation of MVP&#xA0;from Phil Haack, as an example. The problem here is that I still have the following problems:            I need to define an interface for the view, which will likely contains a lot of data passing parameters.            My controller is dependant of that interface, if I want to test that, I need to mock/fake the interface before I can use it, not a big deal, but not as trivial as just dowing new&#xA0;MyController() in the test.            My view implementation is dependant on the controller, and is actually responsible for creating it.    I may be spoiled by the pure MVC that I can get in MonoRail, but I really want that back. As I said, I didn&#x27;t believe that I could get nearly the same experiance, but Gilles has proven me wrong. [Forehead still hurting from that smack]. You can get the code here, I suggest taking a look and seeing what is in there.    Here is a small part of the controller:            public class PatientController : BaseController                        {                                        &#xA0;                        &#xA0;&#xA0;&#xA0; [Inject(Name = &quot;doctor&quot;)]                                &#xA0;&#xA0;&#xA0; public Doctor Doctor                                &#xA0;&#xA0;&#xA0; {                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; set { _doctor = value; }                                &#xA0;&#xA0;&#xA0; }                                        &#xA0;                        &#xA0;&#xA0;&#xA0; [Inject]                                &#xA0;&#xA0;&#xA0; public IList&lt;Patient&gt; Patients                        &#xA0;&#xA0;&#xA0; {                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; set { _patients = value; }                                &#xA0;&#xA0;&#xA0; }                        }                        And another small part of the view the view:            public partial class Index : Page                        {                                                &#xA0;&#xA0;&#xA0; [Inject]                                &#xA0;&#xA0;&#xA0; public IList&lt;Patient&gt; Patients                        &#xA0;&#xA0;&#xA0; {                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; set { _patients = value; }                                &#xA0;&#xA0;&#xA0; }                        }        Notice that the controller doesn&#x27;t care about the view at all. How does it works? Well, there is some magic behind the scenes, but basically, the controller can register an object in a registry, and when it is done, that object is populated to the view transperantly. Here is the method on the controller that gets the list of patients.            public virtual IList&lt;Patient&gt; RetrievePatients()                        {                                &#xA0;&#xA0;&#xA0; IList&lt;Patient&gt; patients = _patientService.RetrievePatients(Doctor);                                &#xA0;                        &#xA0;&#xA0;&#xA0; Scope[&quot;Patients&quot;] = patients;                                        &#xA0;                        &#xA0;&#xA0;&#xA0; return patients;                        }    The view can either call this directly, or rely on getting the value from the scope:            protected void Page_Load(object sender, EventArgs e)                                {                                &#xA0;&#xA0;&#xA0;&#xA0; if (!IsPostBack)                                &#xA0;&#xA0;&#xA0;&#xA0; {                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA0;GridViewBlog.DataSource = PatientController.RetrievePatients();                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA0;GridViewBlog.DataBind();                                &#xA0;&#xA0;&#xA0;&#xA0; }                                &#xA0;&#xA0;&#xA0;&#xA0; else                        &#xA0;&#xA0;&#xA0;&#xA0; {                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA0;GridViewBlog.DataSource = Patients;                                &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA0;GridViewBlog.DataBind();                                &#xA0;&#xA0;&#xA0;&#xA0; }                                }        In the second case, we got the value from the scope automatically.     What we gained:            No need to define an interface for the view.            Controller completely seperated from the view, easier testability.            The view is still tied to the controller (since it needs to let it know about things such as button clicks, etc), but trying to avoid that is something that isn&#x27;t really possible with WebForms (but you are welcome to prove me wrong).            Strongly typed support for passing items from controller to view :-)    I fear that I am not really doing much justice to Igloo, mainly because I am still in the process of grokking it. There are still several things there that I need to figure out. There is an automatic navigation part that I am doubtful about (I don&#x27;t see the usecase, actually). I think that I will try and get a small sample with just the bijection support (the automatic injection and outjection of properties from both controller and view), just to see how I can make this work.</p>
+        </article>
+        <article id="article-8442">
             <a href="https://ayende.com/blog/2036/feeddemon-1" target="_blank">
-                <h2 class="title mb-6" id="article-8441">FeedDemon? &#x2B;1</h2>
+                <h2 class="title mb-6" id="article-8442">FeedDemon? &#x2B;1</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am moving from RssBandit, mainly because the new UI really annoys me now. It doesn&#x27;t respond properly to scrolling, and other minor annoyances. The big thing is that it has start to consume way more CPU than it should.     I installed Omea Reader for a while, and while I really like it, I keep getting the same old items in many feeds.&#xA0;I am not quite sure why. I also have problems with defining newspaper view vs. normal view, and it rememberring a post that I read three days ago and keep returning to that in a feed that is constantly refreshing. To summarize, Omea Reader doesn&#x27;t work the way I expect it to, I find it to be very polished, but I am pretty set in the way that I read RSS, and I couldn&#x27;t figure out how to configure it the way I wanted.    I am testing FeedDemon at the moment, and after a few hours where I had the same feeling of &quot;but I don&#x27;t want it to work like this&quot;, I am starting to get used to it. Just the usage stats alone are looking like a killer feature for me. Why am I posting this?    FeedDemon just made me smile, and that means that it is 99% a keeper. It made me smile by doing what I expected it to do, and doing it in a nice way. I like it.</p>
         </article>
-        <article id="article-8442">
+        <article id="article-8443">
             <a href="https://ayende.com/blog/2035/from-the-im-logs" target="_blank">
-                <h2 class="title mb-6" id="article-8442">From the IM logs</h2>
+                <h2 class="title mb-6" id="article-8443">From the IM logs</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After the fact, I think it is funny:             Ayende Rahien says:    &#xA0;Real development for me means that I can use .Net    Ayende Rahien says:    &#xA0;And that means that I got to have R#,         Ayende Rahien says:    &#xA0;that means that I got to have VS.Net    Ayende Rahien says:    &#xA0;:-(    JetBrains, can we please get an IDE from you?</p>
         </article>
-        <article id="article-8443">
+        <article id="article-8444">
             <a href="https://ayende.com/blog/2034/how-much-a-hypothesis-weight" target="_blank">
-                <h2 class="title mb-6" id="article-8443">How much a hypothesis weight?</h2>
+                <h2 class="title mb-6" id="article-8444">How much a hypothesis weight?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, roughly 6Gb. That is the download that I had to go through to get Orcas. And I am not even that interested in Orcas itself at the moment. I just want to test a crazy idea that I had.    At any rate, I got the answer that I was looking for. The code below is not legal:            public&#xA0;class&#xA0;Foo        {        &#xA0;&#xA0;&#xA0;&#xA0;[IsValid(&#xA0;x&#xA0;=&gt;&#xA0;x==null&#xA0;)]        &#xA0;&#xA0;&#xA0;&#xA0;public&#xA0;string&#xA0;Name;        }        public&#xA0;class&#xA0;IsValidAttribute&#xA0;:&#xA0;Attribute        {        &#xA0;&#xA0;&#xA0;&#xA0;public&#xA0;IsValidAttribute(Expression&lt;StringPredicate&gt;&#xA0;expr)        &#xA0;&#xA0;&#xA0;&#xA0;{        &#xA0;&#xA0;&#xA0;&#xA0;}        }        The errors are:            Error&#xA0;1&#xA0;The best overloaded method match for &#x27;ConsoleApplication1.IsValidAttribute.IsValidAttribute(System.Linq.Expressions.Expression&lt;ConsoleApplication1.StringPredicate&gt;)&#x27; has some invalid arguments&#xA0;C:\Documents and Settings\Administrator\My Documents\Visual Studio 2005\Projects\ConsoleApplication1\ConsoleApplication1\Program.cs&#xA0;19&#xA0;10&#xA0;ConsoleApplication1                Error&#xA0;2&#xA0;Argument &#x27;1&#x27;: cannot convert from &#x27;lambda expression&#x27; to &#x27;System.Linq.Expressions.Expression&lt;ConsoleApplication1.StringPredicate&gt;&#x27;&#xA0;C:\Documents and Settings\Administrator\My Documents\Visual Studio 2005\Projects\ConsoleApplication1\ConsoleApplication1\Program.cs&#xA0;19&#xA0;19&#xA0;ConsoleApplication1        :-( :-( :-( :-( :-( :-( :-( :-(    I was really hopeful this time, there isn&#x27;t any technical reason why this can&#x27;t be done. The compiler is going to turn the lambda expression into Expression&lt;T&gt; anyway, so it is certainly should be possible to take that and put it in the attribute declaration, thus satisfying the requirement that the values will always be constants.    This is actually harder than it seems, because it probably requires a change in the attributes spec, but I think that this is worth it.    At any rate, I opened up a suggestion at Connect, so please go and vote for it.</p>
         </article>
-        <article id="article-8444">
+        <article id="article-8445">
             <a href="https://ayende.com/blog/2033/rml-refactoring-modeling-language" target="_blank">
-                <h2 class="title mb-6" id="article-8444">RML: Refactoring Modeling Language</h2>
+                <h2 class="title mb-6" id="article-8445">RML: Refactoring Modeling Language</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I need to show an iterative apporach to a problem. How I move from a coupled design to a highly de-coupled design. I run into a problem when trying to show that. At the moment, all the tools that I have to visualize a system assume a static state. It is very difficult to try and explain a change in the system, because you have no way of doing this in a clean fashion. What I ended up doing was to create two diagrams of the systems and animate them, but that takes a lot of time and a lot of explaining when it goes on.     What I really would like to see is a way to show a diagram of a change in the system. This can be a refactoring, moving from one architecture to another, versioning, etc.</p>
         </article>
-        <article id="article-8445">
+        <article id="article-8446">
             <a href="https://ayende.com/blog/2032/the-cost-of-clean-sources" target="_blank">
-                <h2 class="title mb-6" id="article-8445">The cost of clean sources</h2>
+                <h2 class="title mb-6" id="article-8446">The cost of clean sources</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just run Clean Sources&#xA0;on the two main directories I use for projects (Work and OSS). Running it on my Work projects gave me back 450Mb of space, and running it on my OSS projects gave me back over 900Mb. That is just removing the bin/obj/setup directories.</p>
         </article>
-        <article id="article-8446">
+        <article id="article-8447">
             <a href="https://ayende.com/blog/2031/talking-in-devteach" target="_blank">
-                <h2 class="title mb-6" id="article-8446">Talking in DevTeach</h2>
+                <h2 class="title mb-6" id="article-8447">Talking in DevTeach</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am going to give several talks in DevTeach&#xA0;on May. The topics are:             Interaction based testing With Rhino Mocks                 Rapid (maintainable) web development with MonoRail                 Advanced usages of Inversion of Control containers         I am very excited about it.     The part that I really like is the &quot;Advanced usages...&quot; part of the last name. It means that I can assumes that you know what IoC is and I can blow their minds with the interesting stuff (Binsor, Auto Transaction, Bijection, AoP, Generic Specializing Decorators, Scoped Containers, etc). I am now working on a lecture about IoC for developers that doesn&#x27;t neccesarily knows what it is, and I am frustrated that I can&#x27;t get to the really cool stuff.</p>
         </article>
-        <article id="article-8447">
+        <article id="article-8448">
             <a href="https://ayende.com/blog/2030/cruel-and-unusual-punishment-or-how-i-practice" target="_blank">
-                <h2 class="title mb-6" id="article-8447">Cruel And Unusual Punishment (or, how I Practice)</h2>
+                <h2 class="title mb-6" id="article-8448">Cruel And Unusual Punishment (or, how I Practice)</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was working on the talk I am going to give in the Microsoft Academy next week, and I really needed to practice saying everything. I quickly gathered some family memebers and subjected them to a high level lecture of IoC. Interesting what you can learn from the amount of glazing in their eyes. :-)    I did the same to some co-workers today, and got even more good feedback (the best piece of advice was from our QA guy, which is certainly not the target audiance). I am starting to get a good feeling about this lecture, even though it is going to be very different from the one I did about Active Record.    That one was basically all code, with a presentation there just to keep me from shooting off in some obscure directions and getting all excited that [HasManyAndBelongToMany] can now do a better job inferring what I mean. This is a more of an overview of the pattern and what advantages it can give me (I have to assume that a significant part of the audiance will be facing this concepts for the first time).</p>
         </article>
-        <article id="article-8448">
+        <article id="article-8449">
             <a href="https://ayende.com/blog/2029/all-the-ways-to-beat-a-dead-horse" target="_blank">
-                <h2 class="title mb-6" id="article-8448">All the ways to beat a dead horse</h2>
+                <h2 class="title mb-6" id="article-8449">All the ways to beat a dead horse</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This had be laughing out load:            In business we often try other strategies with dead horses, including the        following:                 Buying a stronger whip.        Read the rest, it is funny.</p>
         </article>
-        <article id="article-8449">
+        <article id="article-8450">
             <a href="https://ayende.com/blog/2028/watch-me-on-dnr-tv" target="_blank">
-                <h2 class="title mb-6" id="article-8449">Watch me on DNR-TV</h2>
+                <h2 class="title mb-6" id="article-8450">Watch me on DNR-TV</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: January 26, 2007
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">You can find the episode here, I am going to watch it now, more later...</p>
-        </article>
-        <article id="article-8450">
-            <a href="https://ayende.com/blog/2027/code-review-tools" target="_blank">
-                <h2 class="title mb-6" id="article-8450">Code Review Tools</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: January 26, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am searching for a tool to help with code reviews. This is something that is done after the fact, not before commits, by the way. Specifically, what I am thinking about is a tool that let me browse checkins into the source control, select one for review, add comments to it, etc.    I wrote the above sentence, and then went to Trac, and took a look at the Timeline view. It seems to be that this may be a way to do it, while handling the code reviews as tickets in Trac as well.    At any rate, I would like to be able to get a tool that says what has changed and needs reviews, or able to give me a diff over more than a single commit. I just thought of a new thing that I would like, something along the line of getting all the changes in this directory from last time that I reviewed it. I can get a diff from subversion, but attempting to understand something with just a diff is non trivial.    Any recommendatiosn about tools for doing this?</p>
         </article>
         <div class="button flex justify-between">
             <a href="844.html"><span class="back arrow"></span></a>
