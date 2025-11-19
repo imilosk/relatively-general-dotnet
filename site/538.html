@@ -138,8 +138,40 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5371">
+            <a href="https://ayende.com/blog/4655/disabling-linq" target="_blank">
+                <h2 class="title mb-6" id="article-5371">Disabling Linq</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 10, 2010
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For a lot of things, Linq is really nice. But there is one very important problem with Linq. It make it very easy to do some really stupid things, because it is so easy to intermix in memory operations with remote operations. One of the most common problems that we run into with the RavenDB API was this:     session.LuceneQuery&lt;User&gt;(&quot;Users/ByName&quot;)&#xA;            .Where(x=&gt;x.Name == username)&#xA;            .FirstOrDefault();&#xA;  &#xA;&#xA;The problem is that LuceneQuery is not the Linq endpoint to RavenDB. It is the lower level API that we use to query RavenDB, and the Linq API is built on top of that. The problem is that it is very easy to write code like that, and it works, for small amounts of data. What this code actually does is load the first page of information from the database and do the filtering in memory. &#xA;&#xA;Obviously, this is not ideal, but this is a pretty common mistake. We are currently thinking of ways to drastically simplify the API, but in the meantime, something had to be done about this.&#xA;&#xA;LuceneQuery returns an instance of IDocumentQuery:&#xA;&#xA;&#xA;  public interface IDocumentQuery&lt;T&gt; : IEnumerable&lt;T&gt;&#xA;  &#xA;&#xA;That was good, because that meant that we had a hook to place stop the user from making this mistake. The way Linq works, it first looks for an instance method and only afterward it will look for extension methods. That allowed me to define the following:&#xA;&#xA;&#xA;  [Obsolete(@&quot;&#xA;You cannot issue an in memory filter - such as Where(x=&gt;x.Name == &quot;&quot;Ayende&quot;&quot;) - on IDocumentQuery. &#xA;This is likely a bug, because this will execute the filter in memory, rather than in RavenDB.&#xA;Consider using session.Query&lt;T&gt;() instead of session.LuceneQuery&lt;T&gt;. The session.Query&lt;T&gt;() method fully supports Linq queries, while session.LuceneQuery&lt;T&gt;() is intended for lower level API access.&#xA;If you really want to do in memory filtering on the data returned from the query, you can use: session.LuceneQuery&lt;T&gt;().ToList().Where(x=&gt;x.Name == &quot;&quot;Ayende&quot;&quot;)&#xA;&quot;, true)]&#xA;IEnumerable&lt;T&gt; Where(Func&lt;T, bool&gt; predicate);&#xA;  &#xA;&#xA;Now, the code above it going to generate a very descriptive compilation error, and the entire class of bugs just went out the window.</p>
+        </article>
+        <article id="article-5372">
+            <a href="https://ayende.com/blog/4654/where-is-the-bug" target="_blank">
+                <h2 class="title mb-6" id="article-5372">Where is the bug?</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 09, 2010
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I thought that I was adding an innocent little feature, here:     public class CreateFolderIcon : IStartupTask&#xA;{&#xA;    public void Execute(DocumentDatabase database)&#xA;    {&#xA;        var dataDirectory = Path.GetFullPath(database.Configuration.DataDirectory);&#xA;            &#xA;        var desktopIni = Path.Combine(dataDirectory, &quot;desktop.ini&quot;);&#xA;        var icon = Path.Combine(dataDirectory, &quot;raven-data.ico&quot;);&#xA;&#xA;        if (File.Exists(desktopIni) &amp;&amp; File.Exists(icon))&#xA;            return;&#xA;&#xA;        using (var iconFile = typeof(CreateFolderIcon).Assembly.GetManifestResourceStream(&quot;Raven.Database.Server.WebUI.raven-data.ico&quot;))&#xA;        {&#xA;            File.WriteAllBytes(icon, iconFile.ReadData());&#xA;        }&#xA;&#xA;        File.WriteAllText(desktopIni, string.Format(@&quot;&#xA;[.ShellClassInfo]&#xA;IconResource={0},0&#xA;[ViewState]&#xA;Mode=&#xA;Vid=&#xA;FolderType=Generic&#xA;&quot;,&#xA;                                icon));&#xA;&#xA;&#xA;        File.SetAttributes(desktopIni, FileAttributes.Hidden | FileAttributes.System | FileAttributes.Archive);&#xA;        File.SetAttributes(dataDirectory, FileAttributes.ReadOnly);&#xA;&#xA;    }&#xA;}&#xA;  &#xA;&#xA;But this resulted in every single test failing.&#xA;&#xA;Can you figure out why?</p>
+        </article>
+        <article id="article-5373">
             <a href="https://ayende.com/blog/4653/directory-icons" target="_blank">
-                <h2 class="title mb-6" id="article-5371">Directory icons</h2>
+                <h2 class="title mb-6" id="article-5373">Directory icons</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Since people got into RavenDb&#x2019;s data directory and started messing around with things, I decided that I might as well try to stop them. Now, I can&#x2019;t really stop anyone, but I can make it clear that the Data directory is off limit.  I decided to do it by giving the RavenDB directory its own icon. That led me toward a journey to understand exactly how the desktop.ini works. Eventually, I got this:     public class CreateFolderIcon : IStartupTask&#xA;{&#xA;    public void Execute(DocumentDatabase database)&#xA;    {&#xA;        var dataDirectory = Path.GetFullPath(database.Configuration.DataDirectory);&#xA;            &#xA;        var desktopIni = Path.Combine(dataDirectory, &quot;desktop.ini&quot;);&#xA;        var icon = Path.Combine(dataDirectory, &quot;raven-data.ico&quot;);&#xA;&#xA;        if (File.Exists(desktopIni) &amp;&amp; File.Exists(icon))&#xA;            return;&#xA;&#xA;        using (var iconFile = typeof(CreateFolderIcon).Assembly.GetManifestResourceStream(&quot;Raven.Database.Server.WebUI.raven-data.ico&quot;))&#xA;        {&#xA;            File.WriteAllBytes(icon, iconFile.ReadData());&#xA;        }&#xA;&#xA;        File.WriteAllText(desktopIni, string.Format(@&quot;&#xA;[.ShellClassInfo]&#xA;IconResource={0},0&#xA;[ViewState]&#xA;Mode=&#xA;Vid=&#xA;FolderType=Generic&#xA;&quot;,&#xA;                                icon));&#xA;&#xA;&#xA;        File.SetAttributes(desktopIni, FileAttributes.Hidden | FileAttributes.System | FileAttributes.Archive);&#xA;        File.SetAttributes(dataDirectory, FileAttributes.ReadOnly);&#xA;&#xA;    }&#xA;}&#xA;  &#xA;&#xA;And now the RavenDB data directory looks like:&#xA;&#xA;&#xA0; &#xA;&#xA;&#xA;&#xA;A few things to note:&#xA;&#xA;&#xA;  This isn&#x2019;t exactly what I envisioned as the usage scenario for startup tasks.&#xA;&#xA;  You have to use set the attributes on the desktop.ini to hidden, system &amp; archive for it to work.&#xA;&#xA;  You have to set the attributes on the directory to read only. The documentation says that you need to call PathMakeSystemFolder, but you can just use File.SetAttributes (remember, a directory is a file, when all is said and done).&#xA;&#xA;&#xA;I think that this is cool, a bit useless, but cool. A bit of polish for the way RavenDB behaves.</p>
         </article>
-        <article id="article-5372">
+        <article id="article-5374">
             <a href="https://ayende.com/blog/4652/the-benefits-of-a-plugins-based-system-ravendb" target="_blank">
-                <h2 class="title mb-6" id="article-5372">The benefits of a plugins based system: RavenDB</h2>
+                <h2 class="title mb-6" id="article-5374">The benefits of a plugins based system: RavenDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just fixed an interesting bug with RavenDB. Basically, a user was complaining that if they went ahead and (effectively randomly) deleted files from the RavenDB directory, RavenDB would break. The bug is that it used to work previously and now it doesn&#x2019;t work anymore. The actual bug is a bit more complex than that, but I think that the description I just gave is a good indication of how I think of this bug.  Nevertheless, this actually demonstrate a problem with RavenDB. RavenDB stores index information in 3 different locations:     Index statistics are tracked inside the storage (the RavenDB data file)    Index definition are stored in the /IndexDefinitions directory, as plain JSON files.    The index data itself is tracked inside the /Indexes directory   Granted, the only way that those locations can go out of sync is if the user is actively trying to corrupt RavenDB by messing with the internal stuff directly, but still&#x2026;  I decided that I wanted to add explicit support for detecting and recovering from this scenario, so I wrote the following:     namespace Raven.Database.Plugins.Builtins&#xA;{&#xA;    public class DeleteRemovedIndexes : IStartupTask&#xA;    {&#xA;        public void Execute(DocumentDatabase database)&#xA;        {&#xA;            database.TransactionalStorage.Batch(actions =&gt;&#xA;            {&#xA;                var indexNames = actions.Indexing.GetIndexesStats().Select(x =&gt; x.Name).ToList();&#xA;                foreach (var indexName in indexNames)&#xA;                {&#xA;                    if(database.IndexDefinitionStorage.Contains(indexName) )&#xA;                        continue;&#xA;&#xA;                    // index is not found on disk, better kill for good&#xA;                    // Even though technically we are running into a situation that is considered to be corrupt data&#xA;                    // we can safely recover from it by removing the other parts of the index.&#xA;                    database.IndexStorage.DeleteIndex(indexName);&#xA;                    actions.Indexing.DeleteIndex(indexName);&#xA;                }&#xA;            });&#xA;        }&#xA;    }&#xA;}&#xA;  &#xA;&#xA;IStartupTask is marked with InheritableExport, and the rest just plugs into RavenDB using MEF. Just by the action of creating this class, I have added new behavior to Raven. Moreover, this is now clearly executed in the proper place and in its own class, making it very easy to understand what is going on.&#xA;&#xA;A lot of the stuff in RavenDB is wired in this fashion, and it makes adding things to it a snap.</p>
         </article>
-        <article id="article-5373">
+        <article id="article-5375">
             <a href="https://ayende.com/blog/4651/jaoo-the-go-programming-language" target="_blank">
-                <h2 class="title mb-6" id="article-5373">JAOO</h2>
+                <h2 class="title mb-6" id="article-5375">JAOO</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Currently sitting in the Go language keynote in JAOO.   Go was created to handle Google needs:     Compilation speed    Efficient    Fit for the current set of challenges we face   Go is meant to be Simple, Orthogonal, Succinct. Use C syntax, but leave a lot of complexity behind.   This make sense, because C/C&#x2B;&#x2B; is horrible for a lot of reasons, because of complexity added to it over the years. Actually, the major problem is that C/C&#x2B;&#x2B; mindset are literally designed for a different era. Take into account how long it can take to build a C&#x2B;&#x2B; application (I have seen no too big apps that had half an hour build times!), and you can figure out why Google wanted to have a better model.  Nice quotes:     Programming shouldn&#x2019;t be a game of Simon&#x2019;s Says    Difference between seat belts &amp; training wheels &#x2013; I am going to use that a lot.   I find Go&#x2019;s types annoying:     [variable name] [variable type] vs. [variable type] [variable name]    And []int vs. int[]   I like the fact that is uses garage collection in native code, especially since if you reference a variable (including local) it will live as long as it has a reference to. Which is a common mistake in C.  It also have the notion of deferring code. This is similar to how you can use RAII in C&#x2B;&#x2B;, but much more explicit, which is good, because RAII is always tricky. It very cleanly deals with the need to dispose things.  All methods looks like extension methods. Data is held in structures, not in classes. There is support for embedding structures inside one another, but Go isn&#x2019;t an OO language.   Interfaces work for all types, and interfaces are satisfied implicitly! Much easier to work, think about this like super dynamic interfaces, but strong typed. Implies that we can retrofit things afterward.  Error handling is important, and one of the major reasons that I moved from C&#x2B;&#x2B; to .NET. Go have two modes, the first is error codes, which they use for most errors. This is especially nice since Go have multiple return values, so it is very simple to use. But it also have the notion of panics, which are similar to exceptions. Let us take a look at the following test code:     package main&#xA;&#xA;func test() {&#xA;  panic(&quot;ayende&quot;)&#xA;}&#xA;&#xA;func main() {&#xA;    test()&#xA;}&#xA;  &#xA;&#xA;Which generate the following panic:&#xA;&#xA;&#xA;  panic: ayende&#xA;&#xA;panic PC=0x2ab34dd47040&#xA;runtime.panic&#x2B;0xb2 /sandbox/go/src/pkg/runtime/proc.c:1020&#xA;    runtime.panic(0x2ab300000000, 0x2ab34dd470a0)&#xA;main.test&#x2B;0x47 /tmp/gosandbox-a9aaff6c_68e6b411_26fb5255_aa397bb1_6299a954/prog.go:5&#xA;    main.test()&#xA;main.main&#x2B;0x18 /tmp/gosandbox-a9aaff6c_68e6b411_26fb5255_aa397bb1_6299a954/prog.go:8&#xA;    main.main()&#xA;mainstart&#x2B;0xf /sandbox/go/src/pkg/runtime/amd64/asm.s:78&#xA;    mainstart()&#xA;goexit /sandbox/go/src/pkg/runtime/proc.c:145&#xA;    goexit()&#xA;  &#xA;&#xA;I got my stack trace, so everything is good. Error handling is more tricky. There isn&#x2019;t a notion of try/catch, because panics aren&#x2019;t really exceptions, but you can recover from panics:&#xA;&#xA;&#xA;  package main&#xA;import ( &#xA;   &quot;fmt&quot;&#xA;)&#xA;func badCall() {&#xA;  panic(&quot;ayende&quot;)&#xA;}&#xA;&#xA;func test() {&#xA;   defer func() { &#xA;    if e := recover(); e != nil {&#xA;       fmt.Printf(&quot;Panicing %s\r\n&quot;, e);&#xA;    }&#xA;   &#xA;    }()&#xA;    badCall()&#xA;   fmt.Printf(&quot;After bad call\r\n&quot;);&#xA;}&#xA;&#xA;func main() {&#xA;   fmt.Printf(&quot;Calling test\r\n&quot;);&#xA;   test()&#xA;   fmt.Printf(&quot;Test completed\r\n&quot;);&#xA; &#xA; &#xA;}&#xA;  &#xA;&#xA;Which will result in the following output:&#xA;&#xA;&#xA;  Calling test&#xA;Panicing ayende&#xA;Test completed&#xA;&#xA;&#xA;All in all, if I need to write native code, I&#x2019;ll probably go with Go instead of C now. Especially since the ideas that it have about multi threading are so compelling. I just wish that the windows port would be completed soon.</p>
         </article>
-        <article id="article-5374">
+        <article id="article-5376">
             <a href="https://ardalis.com/linq-range-variable-problem/" target="_blank">
-                <h2 class="title mb-6" id="article-5374">LINQ Range Variable Problem</h2>
+                <h2 class="title mb-6" id="article-5376">LINQ Range Variable Problem</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Ran into this issue last night and just figured it out. I have this code for a demo: Now, in Visual Studio, it looks like this: image&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5375">
+        <article id="article-5377">
             <a href="https://ayende.com/blog/4650/nosql-without-web-scale" target="_blank">
-                <h2 class="title mb-6" id="article-5375">NoSQL without web-scale</h2>
+                <h2 class="title mb-6" id="article-5377">NoSQL without web-scale</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The application data is one of the most precious assets that we have. And for a long time, there wasn&#x27;t any question about where we are going to put this data. The RDBMS was the only game in town. The initial drive away    from the RDBMS was indeed driven by the need to scale. But that was just the original impetuous to start developing the NoSQL solutions. Once those solutions came into being and matured, it isn&#x27;t just the &quot;we need web-scale&quot; players    that benefited.   Proven &amp; Mature NoSQL solutions aren&#x27;t applicable just at high end of scaling. NoSQL solutions provide a lot of benefits even for applications that will never need to scale higher than a single machine. Document databases drastically   simplify things like user defined fields, or working with Aggregates. The performance of a NoSQL solution can often exceed a comparable RDBMS solution, because the NoSQL solution will usually focus on a very small subset of the     featureset that RDMBS has.</p>
         </article>
-        <article id="article-5376">
+        <article id="article-5378">
             <a href="https://ayende.com/blog/4649/linq-queries-with-ravendb" target="_blank">
-                <h2 class="title mb-6" id="article-5376">Linq queries with RavenDB</h2>
+                <h2 class="title mb-6" id="article-5378">Linq queries with RavenDB</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">People seems to be puzzled by my post about ad-hoc queries with RavenDB, that is mostly because I posted code from the very early experiments.   Basically, the main problem with supporting arbitrary Linq queries with RavenDB is outline in this post, since I have to compile a Linq query to an assembly, and since assemblies can&#x2019;t be unloaded (we aren&#x2019;t talking about dynamic assemblies, which can) except by unloading the whole app domain. That meant that supporting arbitrary Linq queries is essentially opening up a memory leak, which is why we didn&#x2019;t implement it for a long time.  But the feature was so&#x2026; shiny that I really couldn&#x2019;t let it go. I tried testing it with serializing the data from storage over app domain boundary, but that turned out to be prohibitive from a performance perspective. Then it occurred to me that if Mohammad can&#x27;t go to the mountain, let the mountain come to Mohammad.  RavenDB uses Esent under the covers to handle storage. That means that the storage itself doesn&#x2019;t really care for app domains, since it isn&#x27;t managed code. Once I had that idea, it was very simple to write the rest of the code that setup querying in a separate app domain and would tear it down once memory usage became too high.     Note that the purpose of this feature is mainly for testing / exporting / migrating data.    The code in the previous post was the very first attempt to prove that this can be done. This is how it looks like in practice:     [Fact]&#xA;public void CanPerformQueryToSelectSingleItem()&#xA;{&#xA;    db.Put(&quot;ayende&quot;, null, JObject.FromObject(new {Name = &quot;Ayende&quot;}), new JObject(), null);&#xA;    &#xA;    var result = db.ExecuteQueryUsingLinearSearch(new LinearQuery&#xA;    {&#xA;        Query = &quot;from doc in docs select new { doc.Name }&quot;&#xA;    });&#xA;&#xA;    Assert.Empty(result.Errors);&#xA;    Assert.Equal(@&quot;{&quot;&quot;Name&quot;&quot;:&quot;&quot;Ayende&quot;&quot;,&quot;&quot;__document_id&quot;&quot;:&quot;&quot;ayende&quot;&quot;}&quot;, result.Results[0].ToString(Formatting.None));&#xA;}&#xA;  &#xA;&#xA;We also integrated that into the HTTP API and WebUI, including all the usual taxes such as error handling, paging, etc.&#xA;&#xA;What about the name? ExecuteQueryUsingLinearSearch is a pretty hefty method name. That is quite intentional. While most queries in RavenDB are done using indexes, this performs a linear search across all documents. The performance in O(N), so this isn&#x2019;t really something that you want to run in production (in the same sense that you don&#x2019;t want table scans in production RDBMS).</p>
         </article>
-        <article id="article-5377">
+        <article id="article-5379">
             <a href="https://ayende.com/blog/4648/sometimes-support-reply-your-machine-is-hosed" target="_blank">
-                <h2 class="title mb-6" id="article-5377">Sometimes support reply: Your machine is hosed</h2>
+                <h2 class="title mb-6" id="article-5379">Sometimes support reply: Your machine is hosed</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just got the following stack trace as part of the profiler error reporting:     System.Windows.Markup.XamlParseException: Failed object initialization (ISupportInitialize.EndInit). Attempted to read or write protected memory. This is often an indication that other memory is corrupt.&#xA0; Error at object &#x27;HibernatingRhinos.Profiler.Client.MainWindow&#x27; in markup file &#x27;EFProf;component/mainwindow.xaml&#x27; Line 235 Position 3.      &#xA0; ---&gt; System.AccessViolationException: Attempted to read or write protected memory. This is often an indication that other memory is corrupt.       &#xA0; at MS.Win32.UnsafeNativeMethods.GetOpenFileName(OPENFILENAME_I ofn)       &#xA0; at Microsoft.Win32.OpenFileDialog.RunFileDialog(OPENFILENAME_I ofn)      &#xA0; at Microsoft.Win32.FileDialog.RunDialog(IntPtr hwndOwner)      &#xA0; at Microsoft.Win32.CommonDialog.ShowDialog()      &#xA0; at HibernatingRhinos.Profiler.Client.Model.LicensePromptPresenter.AttemptToGetLicenseFile()   At this point, I am sort of scratching my head. I am making a call to a perfectly legit Win32 method. And I am getting AccessViolationException.   Pretty much the only things that I can think of that can cause this issue are:     Explorer is broken.    There is some sort of explorer extension installed that is reacting badly to OpenFileDialog.   Either way, this is one of the cases where there doesn&#x2019;t seems to be anything that I can do.</p>
         </article>
-        <article id="article-5378">
+        <article id="article-5380">
             <a href="https://ayende.com/blog/4647/new-ravendb-features" target="_blank">
-                <h2 class="title mb-6" id="article-5378">New RavenDB features</h2>
+                <h2 class="title mb-6" id="article-5380">New RavenDB features</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -264,38 +296,6 @@
                 posted on: October 02, 2010
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Well, to be frank, some of those features aren&#x2019;t actually new, but I only now got around to properly document them. I am rapidly coming to the realization that if it isn&#x2019;t document, it doesn&#x2019;t exists. (Especially true when you consider people browsing the documentation to see what you can do, as part of initial evaluation.)     Replication Bundle &#x2013; master slave, master multi slaves, and multi master are supported.         Mixing Replication and Sharding.      Dealing with replication conflicts.       Versioning Bundle &#x2013; seamless audit trails for document changes.    Optimizing referenced documents load &#x2013; the includes feature.    Spatial queries &#x2013; for geo location searches.    Authorization Bundle &#x2013; per document authorization.    Index Replication Bundle &#x2013; replicate an index to an RDBMS.    Hierarchical Indexing &#x2013; indexing hierarchical data structures.    Document metadata &#x2013; manipulating the document metadata at the client side.    Patching documents &#x2013; avoid having to send the entire document on the wire, send just the changes.    Custom serialization &#x2013; control how the client API serializes your documents.   The really fun part is that by the time that this post will go live, I hope to have another list, just as large, of cool features which were implemented (and documented).</p>
-        </article>
-        <article id="article-5379">
-            <a href="https://ayende.com/blog/4646/executing-ad-hoc-queries-with-ravendb" target="_blank">
-                <h2 class="title mb-6" id="article-5379">Executing ad-hoc queries with RavenDB</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 01, 2010
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just managed to solve the most annoying problem with implementing this feature, which is how to successfully run the queries in a separate AppDomain without serializing all the data:</p>
-        </article>
-        <article id="article-5380">
-            <a href="https://ayende.com/blog/4645/the-compilers-quest-against-crud-systems" target="_blank">
-                <h2 class="title mb-6" id="article-5380">The compiler&#x2019;s quest against CRUD systems</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 30, 2010
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have no idea how it got to this stage, but I found it incredibly amusing&#x2026;</p>
         </article>
         <div class="button flex justify-between">
             <a href="537.html"><span class="back arrow"></span></a>
