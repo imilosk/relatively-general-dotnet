@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3771">
+            <a href="https://www.meziantou.net/utiliser-lapi-de-onedrive-depuis-une-application-windows.htm" target="_blank">
+                <h2 class="title mb-6" id="article-3771">Utiliser l&#x27;API de OneDrive depuis une application Windows</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 21, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">J&#x27;ai &#xE9;crit un article sur un autre blog:OneDrive est le service de Microsoft permettant de stocker des fichiers. Pour les d&#xE9;veloppeut OneDrive est accessible via une API REST. Pour utiliser cette API, Microsoft fournit un SDK pour acc&#xE9;der &#xE0; cette API depuis une application Desktop, WinRT, JavaScrip</p>
+        </article>
+        <article id="article-3772">
             <a href="https://ayende.com/blog/170114/excerpts-from-the-ravendb-performance-team-report-optimizing-compare-the-circle-of-life-a-post-mortem" target="_blank">
-                <h2 class="title mb-6" id="article-3771">Excerpts from the RavenDB Performance team report</h2>
+                <h2 class="title mb-6" id="article-3772">Excerpts from the RavenDB Performance team report</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Note, this post was written by Federico.   I want first to give special thanks to Thomas, Tobi, Alex and all the others that have made so many interesting comments and coded alternative approaches. It is a great thing to have so many people looking over your work and pointing out interesting facts that in the heat of the battle with the code we could easily overlook.   It was just three weeks since I wrote this series of posts, and suddenly three weeks seems to be a lot of time. There had been very interesting discussions regarding SSE, optimization, different approaches to optimize specific issues, about lowering measurement errors, that I was intending to write down in a follow up post. However, there was an earth shattering event happening this week that just made that post I wanted to write a moot exercise.  Let&#x2019;s first recap how we ended up optimizing compares.  At first we are using memcmp via P/Invoke. Everything was great for a while, until we eventually hit the wall and we needed all the extra juice we could get. Back at the mid of 2014 we performed the first optimization rounds where for the first time introduced a fully managed pointers based solution. That solution served us well, until we started to optimize other paths and really stress RavenDB 3.0.  In the second round, that eventually spawned this series, we introduced branch-tables, bandwidth optimizations, and we had to resort to every trick on the book to convince the JIT to write pretty specific assembler code.  And here we are. 3 days ago, on the 3rd of February, Microsoft released CoreCLR for everyone to dig into. For everyone interested in performance it is a one in a million opportunity. Being able to see how the JIT works, how high-performance battle tested code is written (not looking at it in assembler) is quite an experience.  In there, specifically in the guts of the mscorlib source we noticed a couple of interesting comments specifically one that said:   // The attributes on this method are chosen for best JIT performance.&#xA;&#xA;// Please do not edit unless intentional.&#xA;&#xA;&#xA;Needless to say that caught our attention. So we did what we usually do, just go and try it .&#xA;&#xA;The initial results were &#x201C;interesting&#x201D; to say the least. Instantaneously we could achieve faster speed-ups for our copy routines (more on that in a future series --- now I feel lucky I didn&#x2019;t wrote more than the introduction). In fact, the results were &#x201C;so good&#x201D; that we decided to give it a try for compare, if we could at least use the SSE optimized native routine for big memory compares we would be in a great spot.&#xA;&#xA;The result of our new tests? Well, we were in for a big surprise. &#xA;We had the most optimized routine all along. The code in question:&#xA;&#xA;&#xA;[DllImport(&quot;msvcrt.dll&quot;, CallingConvention = CallingConvention.Cdecl, SetLastError = false)]&#xA;[SuppressUnmanagedCodeSecurity]&#xA;[SecurityCritical]&#xA;[ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]&#xA;public static extern int memcmp(byte* b1, byte* b2, int count);&#xA;&#xA;&#xA;We just needed to be a bit more permissive, aka disable P/Invoke security checks. &#xA;From the MSDN documentation for SuppressUnmanagedCodeSecurity:&#xA;&#xA;&#xA;This attribute can be applied to methods that want to call into native code without incurring the performance loss of a run-time security check when doing so. The stack walk performed when calling unmanaged code is omitted at run time, resulting in substantial performance savings.&#xA;&#xA;Well I must say substantial is an understatement. We are already running in full-trust and also memcmp is safe function by default, then no harm is done. The same cannot be said by memcpy, where we have to be extra careful. But that is another story.&#xA0; &#xA;&#xA;&#xA;Size: 2 Native (with checks): 353 Managed: 207 Native (no checks): 217 - Gain: -4,608297%&#xA;Size: 4 Native (with checks): 364 Managed: 201 Native (no checks): 225 - Gain: -10,66667%&#xA;Size: 8 Native (with checks): 354 Managed: 251 Native (no checks): 234 - Gain: 7,26496%&#xA;Size: 16 Native (with checks): 368 Managed: 275 Native (no checks): 240 - Gain: 14,58334%&#xA;Size: 32 Native (with checks): 426 Managed: 366 Native (no checks): 276 - Gain: 32,6087%&#xA;Size: 64 Native (with checks): 569 Managed: 447 Native (no checks): 384 - Gain: 16,40625%&#xA;Size: 128 Native (with checks): 748 Managed: 681 Native (no checks): 554 - Gain: 22,92418%&#xA;Size: 256 Native (with checks): 1331 Managed: 1232 Native (no checks): 1013 - Gain: 21,61895%&#xA;Size: 512 Native (with checks): 2430 Managed: 2552 Native (no checks): 1956 - Gain: 30,47035%&#xA;Size: 1024 Native (with checks): 4813 Managed: 4407 Native (no checks): 4196 - Gain: 5,028594%&#xA;Size: 2048 Native (with checks): 8202 Managed: 7088 Native (no checks): 6910 - Gain: 2,575982%&#xA;Size: 8192 Native (with checks): 30238 Managed: 23645 Native (no checks): 23490 - Gain: 0,6598592%&#xA;Size: 16384 Native (with checks): 59099 Managed: 44292 Native (no checks): 44041 - Gain: 0,5699277%&#xA;&#xA;The gains are undeniable, especially where it matters the most for us (16 - 64 bytes). As you can see the managed optimizations are really good, at the 2048 level and up we are able to compete with the native version (accounting for the P/Invoke that is).&#xA;&#xA;The .Compare() code ended up looking like this:&#xA;&#xA;[MethodImpl(MethodImplOptions.AggressiveInlining)]&#xA;public static int Compare(byte* bpx, byte* bpy, int n)&#xA;{&#xA;    switch (n)&#xA;    {&#xA;        case 0: return 0;&#xA;        case 1: return *bpx - *bpy;&#xA;        case 2:&#xA;            {&#xA;                int v = *bpx - *bpy;&#xA;                if (v != 0)&#xA;                    return v;&#xA; &#xA;                bpx&#x2B;&#x2B;;&#xA;                bpy&#x2B;&#x2B;;&#xA; &#xA;                return *bpx - *bpy;&#xA;            }&#xA;             &#xA;        default: return StdLib.memcmp(bpx, bpy, n);&#xA;    }&#xA;}&#xA; &#xA;&#xA;With these results:&#xA;&#xA;&#xA;Size: 2 - Managed: 184 Native (no checks): 238Size: 4 - Managed: 284 Native (no checks): 280&#xA;Size: 8 - Managed: 264 Native (no checks): 257&#xA;Size: 16 - Managed: 302 Native (no checks): 295&#xA;Size: 32 - Managed: 324 Native (no checks): 313&#xA;&#xA;The bottom-line here is, until we are allowed to generate SSE2/AVX instructions in .Net I doubt we will be able to do a better job, but we are eagerly looking forward for the opportunity to try it out when RyuJIT is released.&#xA0; *&#xA;&#xA;&#xA;* We could try to write our own optimized routine in C&#x2B;&#x2B;/Assembler (if that is even possible), but that is something it is out of scope at the moment (we have bigger fishes to fry performance-wise).</p>
         </article>
-        <article id="article-3772">
+        <article id="article-3773">
             <a href="https://www.meziantou.net/using-fontawesome-in-a-wpf-application.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3772">Using FontAwesome in a WPF application</h2>
+                <h2 class="title mb-6" id="article-3773">Using FontAwesome in a WPF application</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">FontAwesome is a font with just over 500 icons. This font is very much used for the web.FontAwesome can also be used for WPF applications. This is what we will see in this article.#Step 1: include the fontThe first step is obviously to download the font and to include the TTF file as a project reso</p>
         </article>
-        <article id="article-3773">
+        <article id="article-3774">
             <a href="https://ayende.com/blog/169889/cool-index-batch-stats" target="_blank">
-                <h2 class="title mb-6" id="article-3773">Cool index batch stats</h2>
+                <h2 class="title mb-6" id="article-3774">Cool index batch stats</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I talked about this in the past, but since we just used to to diagnose a real live problem, I can&#x2019;t help but do that again, take a look:  I especially like how it shows the actual costs, including using parallel computing.</p>
         </article>
-        <article id="article-3774">
+        <article id="article-3775">
             <a href="https://ayende.com/blog/170209/crunching-the-numbers" target="_blank">
-                <h2 class="title mb-6" id="article-3774">Crunching the numbers</h2>
+                <h2 class="title mb-6" id="article-3775">Crunching the numbers</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m running the numbers, and I didn&#x2019;t really believe them. So I put them in a chart, and I&#x2019;m still not sure that I trust them.&#xA;&#xA;&#x9;Here you can see our income per month for the past year. Yes, July was pretty bad with everyone on vacation and no one is buying.&#xA;&#xA;&#x9;March 14 was pretty good, with people buying RavenConf tickets are a lot of excitement around that. September and October were great. In fact, October was out best month ever.&#xA;&#xA;&#x9;And then we get to February 2015. In other words, this month. In other words, this month where we still have 10 more days to make sales.&#xA;&#xA;&#x9;&#xA;&#xA;&#x9;I&#x2019;m pretty happy . But I wished that I had hard numbers on why.</p>
         </article>
-        <article id="article-3775">
+        <article id="article-3776">
             <a href="https://ayende.com/blog/170082/excerpts-from-the-ravendb-performance-team-report-json-structs-in-voron" target="_blank">
-                <h2 class="title mb-6" id="article-3775">Excerpts from the RavenDB Performance team report</h2>
+                <h2 class="title mb-6" id="article-3776">Excerpts from the RavenDB Performance team report</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">What seems to be a pretty set in stone rule of thumb is that when building a fool proof system, you will also find a better fool. In this case, the fool was us. In particular, during profiling of our systems, we realized that we did something heinous, something so bad that it deserve a true face palm:  In essence, we spent all this time to create a really fast key/value store with Voron. We spent man years like crazy to get everything working just so&#x2026; and then came the time to actually move RavenDB to use Voron. That was&#x2026; a big task, easily as big as writing Voron in the first place. The requirements RavenDB makes of its storage engine are anything but trivial. But we got it working. And it worked good. Initial performance testing showed that we were&#xA0; quite close to the performance of Esent, within 10% &#x2013; 15%, which was good enough for us to go ahead with. Get things working, get them working right and only then get them working fast. So we spent a lot of time making sure that things worked, and worked right. And then the time came to figure out if we can make things faster. Remember, Voron is heavily based around the idea of memory mapping and directly accessing values at very little cost. This is important, because we want to use Voron for a whole host of stuff. That said, in RavenDB we use it to store JSON documents, so we obviously store the JSON in it. There are quite a lot of book keeping information that we keep track of. In particular, let us focus on the indexing stats. We need to keep track of the last indexed etag per index, when it was changed, number of successful indexing attempts, number of failed indexing attempts, etc. Here is how we updated those stats:  As you can imagine, a lot of the time was actually spent just deserializing and deserializing the data back &amp; forth from JSON. In fact, a lot of time was spend doing just that. Now, indexing status needs to be queried on every single query, so that was a high priority for us to fix. We did this by not storing the data as JSON, but storing the data in its raw form directly into Voron. Voron gives us a memory of size X, and we put all the relevant data into that memory, and pull the data directly from the raw memory. No need for serialization/deserialization step.  There is a minor issue about the use of strings .While using fixed size structure (like the indexing stats) is really easy, we just read/write to that memory. When dealing with variable length data (such as strings), you have harder time at it, but we dealt with that as well by defining a proper way to encode string lengths and read them back. The results, by the way:  That means that we got close to 4 times faster! That is certainly going to help us down the road.</p>
         </article>
-        <article id="article-3776">
+        <article id="article-3777">
             <a href="https://ayende.com/blog/170081/improving-the-ravendb-experience-help-is-right-where-you-need-it" target="_blank">
-                <h2 class="title mb-6" id="article-3776">Improving the RavenDB Experience: Help is right where you need it</h2>
+                <h2 class="title mb-6" id="article-3777">Improving the RavenDB Experience: Help is right where you need it</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that we work very hard on is the whole experience of the product. Not just creating a good database, or writing great code, but also having good documentation, to explain exactly what is going on here. We have now taken it a bit further, and we incorporate help documents in pretty much every section of the studio, so you can get relevant docs about what you are looking by just click the big help button.   &#xA0; It ain&#x2019;t Clippy, so it won&#x2019;t try to read your mind, but we do hope that it will end up being useful.</p>
         </article>
-        <article id="article-3777">
+        <article id="article-3778">
             <a href="https://ayende.com/blog/170178/ravendb-on-linux-first-steps" target="_blank">
-                <h2 class="title mb-6" id="article-3777">RavenDB on Linux, first steps&#x2026;</h2>
+                <h2 class="title mb-6" id="article-3778">RavenDB on Linux, first steps&#x2026;</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Early days, but we are now at the point where we are capable of running RavenDB itself on Linux .   That was the easy part, now we have to figure out all of our Windows dependencies and switch them with a Linux equivalent, find out where we are doing things like case insensitive file names, etc, etc, etc. The current work is going to be pretty much a lot of &#x201C;let us get all the tests running on Linux&#x201D;, which is expected to last quite a while. After that, we&#x2019;ll be able to make sure that we run in a manner consistent with a Linux admin expectations, and then&#x2026; world domination*! * Insert maniacal sound track here.</p>
         </article>
-        <article id="article-3778">
+        <article id="article-3779">
             <a href="https://ayende.com/blog/170177/the-ravendb-comics" target="_blank">
-                <h2 class="title mb-6" id="article-3778">The RavenDB Comics</h2>
+                <h2 class="title mb-6" id="article-3779">The RavenDB Comics</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The new flyers just arrived, and we also have a new comics to go with them. We are going to give them out at QCon London in March 4 &#x2013; 5, I have a really good feeling about this. And I really like the comics.  Nitpicker: Yes, I know it isn&#x2019;t readable at this resolution. We&#x2019;ll post this online a few weeks after the QCon conference, come see us there!</p>
         </article>
-        <article id="article-3779">
+        <article id="article-3780">
             <a href="https://www.meziantou.net/asp-net-webforms-validators-bootstrap.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3779">ASP.NET WebForms Validators &amp; Bootstrap</h2>
+                <h2 class="title mb-6" id="article-3780">ASP.NET WebForms Validators &amp; Bootstrap</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: February 16, 2015
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">ASP.NET WebForms has long been proposing a validation system for data entered by the user by the server and the client!HTMLcopy&lt;div class=&quot;form-group&quot;&gt;&#xA;   &lt;asp:Label runat=&quot;server&quot; CssClass=&quot;control-label&quot; AssociatedControlID=&quot;Name&quot; Text=&quot;Name&quot; /&gt;&#xA;   &lt;asp:TextBox runat=&quot;server&quot; ID=&quot;N</p>
-        </article>
-        <article id="article-3780">
-            <a href="https://enterprisecraftsmanship.com/posts/code-contracts-vs-input-validation/" target="_blank">
-                <h2 class="title mb-6" id="article-3780">C# code contracts vs input validation</h2>
-            </a>
-            <p class="mb-2">by Vladimir Khorikov</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 14, 2015
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Input validation rules are often taken for code contracts. In this post, I&#x2019;ll try to cover their differences and show what their common use cases are.</p>
         </article>
         <div class="button flex justify-between">
             <a href="377.html"><span class="back arrow"></span></a>

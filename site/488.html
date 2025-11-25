@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4871">
+            <a href="https://ayende.com/blog/153122/architecture-code" target="_blank">
+                <h2 class="title mb-6" id="article-4871">Architecture &gt; Code</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 06, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Steve Py asks an interesting question in one of the comments to my On Infinite Scalability post:  Can you elaborate more on: &quot;Note, those changes are not changes to the code, they are architectural and system changes. Where before you had a single database, now you have many. Where before you could use ACID, now you have to use BASE. You need to push a lot more tasks to the background, the user interaction changes, etc.&quot;  When you talk about jumping from 1 server to multiple servers, ACID to BASE, and how user interaction changes, how do you quantify that this is done without code changes? The answer to that is that there is a mistaken assumption here. Changing the architecture is going to change the code. But usually that is rarely relevant, because changing the architecture is a big change. If you are moving from a single DB to multiple database, for example, there are going to be code changes, but that isn&#x2019;t what you worry about. The major change is the architecture differences (how do you split the data, how do you do reporting, can some of the dbs be down, etc). Moving from ACID to BASE is an even greater change. The code might change a little or change drastically, but that isn&#x2019;t where a lot of the effort is. Just defining the new system behavior on those scenarios is going to be much more complex. For example, taking something as simple as &#x201C;user names are unique&#x201D; would move from being a unique constraint in the database to something that needs to be able to handle those sort of things in a reasonable fashion. Depending on your original architecture, it might be anything from replacing a single service implementation to re-writing significant parts of the code.</p>
+        </article>
+        <article id="article-4872">
             <a href="https://ayende.com/blog/152769/on-infinite-scalability" target="_blank">
-                <h2 class="title mb-6" id="article-4871">On Infinite Scalability</h2>
+                <h2 class="title mb-6" id="article-4872">On Infinite Scalability</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Udi Dahan posted about the myth of infinite scalability. It is a good post, and I recommend reading it. I have my own 2 cents to add, though. YAGNI! When building a system, I am always assuming an order of magnitude increase in the work the system has to do (usually, we are talking about # of requests / time period).  In other words, if we have 50,000 users, and we have roughly 5,000 active users during work hours, we typically have 100,000 requests per hour. My job is to make sure that we can manage to get up to 1,000,000 requests per hour. (Just to give you the numbers, we are talking about moving from ~30 requests per second to ~300 requests per second). Why do we need that buffer?   There are several reasons to want to do that. First, we assume that the system is going to be in production for a relatively long time, so the # of user or their activity is going to grow. Second, in most systems, we are usually talking about some % of the users being active, but there are usually times when you have a significantly more users being active. For example, at end of tax year, an accounting system can be expected to see a greater utilization, as well as at every end of the month. And within that buffer, we don&#x2019;t need to change the system architecture, we just need to add more resources to the system. And why a full order of magnitude?   Put simply, because it is relatively easy to get there. Let us assume end of year again, and now we have 15,000 active users (vs. the &#x201C;normal&#x201D; 5,000). But the amount of work we do isn&#x2019;t directly related to the number of users. It is related to how active they are and what operations they are doing. In such a scenario, it is more likely that the users will be more active and stress the system more. Finally, there is another aspect. Usually, moving a single order of magnitude up is no problem. In fact, I feel comfortable running on a single server (maybe replicate for HA) from 1 request per second to 50 or so. That is 3,600 request per hour to 180,000 requests per hour. But beyond that, we are going to start talking about multiple servers. We can handle a millions requests per hour on a web farm without much problems, but moving to the next level is likely to require more changes, and when you get beyond that, you require more changes still. Note, those changes are not changes to the code, they are architectural and system changes. Where before you had a single database, now you have many. Where before you could use ACID, now you have to use BASE. You need to push a lot more tasks to the background, the user interaction changes, etc. Of course, you can probably start your application design with a 10,000,000 requests per hour. That is big enough that you can move to a hundred million requests per hour easily enough. But, and this is important, is this something that is valuable? Is this really something that you can justify to the guys writing the checks.  Scalability is a cost function, as Udi has mentioned. And you need to be aware that this cost incurs during development and during production. If your expected usage can be handled (including the buffer) with a simpler architecture, go for it. If you grow beyond an order of magnitude, there are three things that will happen:  You have the money to deploy a new system for the new load. You now have a better idea on the actual usage, rather than just guessing about the future. You are going to change how the system work anyway, from the UI to the internal works.  The last one is important. I am guessing that many people would say &#x201C;but we can do it right the first time&#x201D;. And the problem is that you really can&#x2019;t. You don&#x2019;t know what users will do, what they will like, etc. Whatever you are guessing now, you are bound to be wrong. I have had that happen to me on multiple systems.  More than that, remember time to market is a big feature as well.</p>
         </article>
-        <article id="article-4872">
+        <article id="article-4873">
             <a href="https://www.meziantou.net/install-windows-phone-7-developer-tools-on-windows-server-2008r2.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4872">Install Windows Phone 7 Developer Tools on Windows Server 2008R2</h2>
+                <h2 class="title mb-6" id="article-4873">Install Windows Phone 7 Developer Tools on Windows Server 2008R2</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you are using Windows Server 2008R2 to code, you may have had an error installing the Windows Phone 7 Developer Tools. Indeed, the installer only support Windows Vista or Windows 7. But, there is a solution:Download the setup fileExtract the contents of the package by running vm_web.exe /xGo to</p>
         </article>
-        <article id="article-4873">
+        <article id="article-4874">
             <a href="https://ayende.com/blog/153027/out-of-context-architecture-is-nothing-but-modern-art" target="_blank">
-                <h2 class="title mb-6" id="article-4873">Out of context, architecture is nothing but modern art</h2>
+                <h2 class="title mb-6" id="article-4874">Out of context, architecture is nothing but modern art</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When I am thinking about modern art, I am thinking about an experience that I had that was remarkably similar to this one:&#xA;&#xA;&#x9;&#xA;&#xA;&#x9;I got a lot of comments regarding my review of the Northwind Starter Kit project.&#xA;&#xA;&#x9;Here is the deal, if you want to demonstrate complex ways to solve a problem, you had better make sure that you are actually solving a problem that requires a complex solution. If you are demonstrating how to solve a simple problem in a complex way, you are basically doing disservice to the reader.&#xA;&#xA;&#x9;When I wanted to write a sample app to demonstrate something, I either chose to demonstrate the actual technology (writing a ToDo app) or I spent dozens of posts establishing the context (yes, that is Macto, I&#x2019;ll get back to it).&#xA;&#xA;&#x9;But since so many people seems to have been offended by my slight of dismissing the project based on what seemed like just the number of projects, I&#x2019;ll do a full review series on that. My point was to make it clear that creating complex solutions for simple problems is wrong, especially if you are trying to demonstrate a real workable system. Without the proper context, all of this stuff is just cargo cult.</p>
         </article>
-        <article id="article-4874">
+        <article id="article-4875">
             <a href="https://ayende.com/blog/152706/application-review-northwind-starter-kit" target="_blank">
-                <h2 class="title mb-6" id="article-4874">Application review: Northwind Starter Kit</h2>
+                <h2 class="title mb-6" id="article-4875">Application review: Northwind Starter Kit</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I continue to try to find a sample application for Northwind to use as my contrasting example for an article that I am writing, and I found the Northwind Starter Kit project. Even the project summary page gave me a few twitches, here is a small piece with the twitch inducing stuff bolded:  The application has been designed using common patterns, such as the ones defined within the &quot;classic&quot; &quot;Designs Patterns&quot; by Erich Gamma et al. and &quot;Pattern of Enterprise Application Architecture&quot;, by Martin Fowler; though not required, these lectures are strongly recommended. Guys! This is Northwind, the likelihood that you&#x2019;ll need design patterns to build this application is nil to none! That just screens complexity overload.  Domain logic is implemented by means of a Domain Model, onto a layer of services adds application logic. The model is persisted by a DAL designed around the principles of the &quot;Repository&quot; patterns, which has been implemented in a LINQ-friendly way. Northwind is a CRUD app, at its core, all of those things are adding complexity, and they aren&#x2019;t really adding much at all. In fact, they are going to create just noise, and make working with things that much harder. And then I opened the project, and I got this:   I mean, really? Seriously?!&#xA0; 22(!) projects to do a sample application using Northwind? This is the point where I gave up on this as something that could be useful, but here are a few other gems as well:   I really like how the Update method does what it is meant to do, right? Note that in either implementation, we are looking at totally and drastically different behavior.   Let us look at the interface, too:  The design is straight out of Patterns of Enterprise Application Architecture, and it is totally the wrong design to be using if you are using a modern OR/M.    Seriously, this is Northwind we are talking about, why make things so freaking complex?!</p>
         </article>
-        <article id="article-4875">
+        <article id="article-4876">
             <a href="https://ayende.com/blog/152897/structuring-your-unit-tests-why" target="_blank">
-                <h2 class="title mb-6" id="article-4875">Structuring your Unit Tests, why?</h2>
+                <h2 class="title mb-6" id="article-4876">Structuring your Unit Tests, why?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am a strong believer in automated unit tests. And I read this post by Phil Haack with part amusement and part wonder.  RavenDB currently has close to 1,400 tests in it. We routinely ask for failing tests from users and fix bugs by writing tests to verify fixes. But structuring them in terms of source code? That seems to be very strange. You can take a look at the source code layout of some of our tests here: https://github.com/ayende/ravendb/tree/master/Raven.Tests/Bugs It is a dumping ground, basically, for tests. That is, for the most part, I view tests as very important in telling me &#x201C;does this !@#! works or not?&#x201D; and that is about it. Spending a lot of time organizing them seems to be something of little value from my perspective. If I need to find a particular test, I have R# code browsing to help me, and if I need to find who is testing a piece of code, I can use Find References to get it. At the end, it boils down to the fact that I don&#x2019;t consider tests to be, by themselves, a value to the product. Their only value is their binary ability to tell me whatever the product is okay or not. Spending a lot of extra time on the tests distract from creating real value, shippable software. What I do deeply care about with regards to structuring the tests is the actual structure of the test. It is important to make sure that all the tests looks very much the same, because I should be able to look at any of them and figure out what is going on rapidly. I am not going to use the RavenDB example, because that is system software and usually different from most business apps (although we use a similar approach there). Instead, here are a few tests from our new ordering system: [Fact]&#xA;public void Will_send_email_after_trial_extension()&#xA;{&#xA;    Consume&lt;ExtendTrialLicenseConsumer, ExtendTrialLicense&gt;(new ExtendTrialLicense&#xA;    {&#xA;        ProductId = &quot;products/nhprof&quot;,&#xA;        Days = 30,&#xA;        Email = &quot;you@there.gov&quot;,&#xA;    });&#xA;&#xA;    var email = ConsumeSentMessage&lt;NewTrial&gt;();&#xA;&#xA;    Assert.Equal(&quot;you@there.gov&quot;, email.Email);&#xA;}&#xA;&#xA;[Fact]&#xA;public void Trial_request_from_same_customer_sends_email()&#xA;{&#xA;    Consume&lt;NewTrialConsumer, NewTrial&gt;(new NewTrial&#xA;    {&#xA;        ProductId = &quot;products/nhprof&quot;,&#xA;        Email = &quot;who@is.there&quot;,&#xA;        Company = &quot;h&quot;,&#xA;        FullName = &quot;a&quot;,&#xA;        TrackingId = Guid.NewGuid()&#xA;    });&#xA;    Trial firstTrial;&#xA;    using (var session = documentStore.OpenSession())&#xA;    {&#xA;        firstTrial = session.Load&lt;Trial&gt;(1);&#xA;    }&#xA;    Assert.NotNull(ConsumeSentMessage&lt;SendEmail&gt;());&#xA;    &#xA;    Consume&lt;NewTrialConsumer, NewTrial&gt;(new NewTrial&#xA;    {&#xA;        TrackingId = firstTrial.TrackingId,&#xA;        Email = firstTrial.Email,&#xA;        Profile = firstTrial.ProductId.Substring(&quot;products/&quot;.Length)&#xA;    });&#xA;&#xA;    var email = ConsumeSentMessage&lt;SendEmail&gt;();&#xA;    Assert.Equal(&quot;Hibernating Rhinos - Trials Agent&quot;, email.ReplyToDisplay);&#xA;}&#xA;&#xA;&#xA;&#xA;As you can probably see, we have a structured way to send input to the system, and we can verify the output and the side affects (creating the trial, for example).&#xA;This leads to a system that can be easily tested, but doesn&#x2019;t force us to spend too much time in the ceremony of tests.</p>
         </article>
-        <article id="article-4876">
+        <article id="article-4877">
             <a href="https://ayende.com/blog/152705/application-analysis-northwind-net" target="_blank">
-                <h2 class="title mb-6" id="article-4876">Application analysis: Northwind.NET</h2>
+                <h2 class="title mb-6" id="article-4877">Application analysis: Northwind.NET</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For an article I am writing, I wanted to compare a RavenDB model to a relational model, and I stumbled upon the following Northwind.NET project. I plugged in the Entity Framework Profiler and set out to watch what was going on. To be truthful, I expected it to be bad, but I honestly did not expect what I got. Here is a question, how many queries does it take to render the following screen?  The answer, believe it or no, is 17:  You might have noticed that most of the queries look quite similar, and indeed, they are. We are talking about 16(!) identical queries: SELECT [Extent1].[ID]           AS [ID],&#xA;       [Extent1].[Name]         AS [Name],&#xA;       [Extent1].[Description]  AS [Description],&#xA;       [Extent1].[Picture]      AS [Picture],&#xA;       [Extent1].[RowTimeStamp] AS [RowTimeStamp]&#xA;FROM   [dbo].[Category] AS [Extent1]&#xA;&#xA;&#xA;Looking at the stack trace for one of those queries led me to:&#xA;&#xA;And to this piece of code:&#xA;&#xA;&#xA;You might note that dynamic is used there, for what reason, I cannot even guess. Just to check, I added a ToArray() to the result of GetEntitySet, and the number of queries dropped from 17 to 2, which is more reasonable. The problem was that we passed an IQueryable to the data binding engine, which ended up evaluating the query multiple times.&#xA;And EF Prof actually warns about that, too:&#xA;&#xA;At any rate, I am afraid that this project suffer from similar issues all around, it is actually too bad to serve as the bad example that I intended it to be.</p>
         </article>
-        <article id="article-4877">
+        <article id="article-4878">
             <a href="https://ayende.com/blog/152673/ravendb-videos-on-youtube" target="_blank">
-                <h2 class="title mb-6" id="article-4877">RavenDB videos on YouTube</h2>
+                <h2 class="title mb-6" id="article-4878">RavenDB videos on YouTube</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are uploading RavenDB videos to our YouTube channel on a regular basis. Here&#x27;s a list of the most recent videos:  Polymorphism and RavenDB   &#xA0; The &quot;Lost Session&quot; @ KAN Malmo - Introduction to RavenDB   &#xA0; Virtual Brown Bag - RavenDB @ Orlando .NET User Group   &#xA0; Scaling with RavenDB   RavenOverflow - building a StackOverflow clone with RavenDB</p>
         </article>
-        <article id="article-4878">
+        <article id="article-4879">
             <a href="https://ayende.com/blog/152801/windows-7-conflict-resolution-dialog-how-i-hate-thee" target="_blank">
-                <h2 class="title mb-6" id="article-4878">Windows 7 Conflict Resolution Dialog: How I hate thee</h2>
+                <h2 class="title mb-6" id="article-4879">Windows 7 Conflict Resolution Dialog: How I hate thee</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Do you see this thing?   I hate it. (Yes, I know that Win 8 has a better one) The reason that I hate it, there is no shortcut keys for &#x201C;Move and Replace&#x201D;, so I have to use the freaking mouse, which takes forever.</p>
         </article>
-        <article id="article-4879">
+        <article id="article-4880">
             <a href="https://ayende.com/blog/152641/expanding-your-horizons-actions" target="_blank">
-                <h2 class="title mb-6" id="article-4879">Expanding your horizons: Actions</h2>
+                <h2 class="title mb-6" id="article-4880">Expanding your horizons: Actions</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: December 28, 2011
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In theory, there is no difference between theory and real life. In my previous blog post, I discussed my belief that the best value you get from learning is learning the very basic of how our machines operate. From learning about memory management in operating systems to the details of how network protocols like TCP/IP work. Some of that has got to be theoretical study, actually reading about how those things work, but theory isn&#x2019;t enough. I don&#x2019;t care if you know the TCP specs by heart, if you haven&#x2019;t actually built a real system with it, and experienced the pain points, it isn&#x2019;t really meaningful. The best way to learn, at least from my own experiences, is to actually do something. Because that teaches you several very interesting things:  What are the differences between the spec and what is actually implemented? How to resolve common (and not so common problems)? The later is probably the most important thing. I think that I learned most of what I know about HTTP in the process of building an RSS feed reader. I learned a lot about TCP from implementing a proxy system, and I did a lot of learning from a series of failed projects regarding distributed programming in general. I learned a lot about file systems and how to work with file based storage from Practical File System Design and from building Rhino Queues and Rhino DHT. In retrospect, I did a lot of very different projects in various areas and technologies.  The best way that I know to get better is to do, to fail, and to learn from what didn&#x2019;t work. I don&#x2019;t know of any shortcuts, although I am familiar with plenty of ways of making the road much longer (and usually not very pleasant). In short, if you want to get better, pick something that you don&#x2019;t know how to do, and then do it. You might fail, you likely will, but you&#x2019;ll learn a lot from failing.  I keep drawing a blank when people ask me to suggest options for things to try building, so I thought that I would ask the readers of this blog. What sort of things do you think would be useful to build? Things that would push most people out of their comfort zone and make them learn the fundamentals of how things work.</p>
-        </article>
-        <article id="article-4880">
-            <a href="https://ayende.com/blog/151553/expanding-your-horizons" target="_blank">
-                <h2 class="title mb-6" id="article-4880">Expanding your horizons</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 26, 2011
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the questions that I routinely get asked is &#x201C;how do you learn&#x201D;. And the answer that I keep giving is that I had accidently started learning things from the basic building blocks. I still count a C/C&#x2B;&#x2B; course that I took over a decade ago as one of the chief reasons why I have a good grounding in how computers actually operate. During that course, we had to do anything from building parts of the C standard library on our own to construct much of the foundation of C&#x2B;&#x2B; features in plain C. That gave me enough understanding of how things are actually implemented to be able to grasp how things are behaving elsewhere. Digging deep into the implementation is almost never a wasted effort. And if you can&#x2019;t peel away the layer of abstractions, you can&#x2019;t really say that you know what you are doing.  For example, I count myself ignorant in all manners about WCF, but I have full confidence that I can build a system using it. Not because I understand WCF itself, but because I understand the arena in which it plays. I don&#x2019;t need to really understand how a certain technology works, if I already know what are the rules it has to play with. Picking on WCF again, if you don&#x2019;t know firewalls and routers, you can&#x2019;t really build a WCF system, regardless of how good your memory is about the myriad ways of configuring WCF to do you will. If you can&#x2019;t use WireShark to figure out why the system is slow to respond to requests, it doesn&#x2019;t matter if you can compose an WCF envelope message literally on the back of a real world envelope.&#xA0; If you don&#x2019;t grok the Fallacies of Distributes Computing, you shouldn&#x2019;t be trying to build a real system where WCF is used, regardless of whatever certificate you have from Microsoft. The interesting bit is that for most of what we do, the rules are fairly consistent. We all have to play in Turing&#x2019;s sand box, after all. What this means is that learning the details of IP and TCP will be worth it over and over again. Understanding things like memory fetch latencies would be relevant in 5 years and in ten. Knowing what actually goes on in the system, even if it at a somewhat abstracted level is important. That is what make you the master of the system, instead of its slave. Some of the things that I especially value, and that is of the top of my head and isn&#x2019;t a closed list are:  TCP / UDP &#x2013; how do they actually work. HTTP &#x2013; and implications (for example, state management). The Fallacies of Distributed Computing. Disk based storage &#x2013; efficiently working with it, how file system works. Memory management in OS and your environment. Obviously, this is a very short list, and again, it isn&#x2019;t comprehensive.&#xA0; It is just meant to give you some indications for things that I have found to be useful over and over and over again. That kind of knowledge isn&#x2019;t something that is replaced often, and it will help you understand how anyone else has to interact with the same constraints. In fact, it often allows you to accurately guess how they solve a certain problem, because you are aware of the same alternatives that the other side had to solve. In short, if you seek to be a better developer, dig deep and learn the real basic building blocks for our profession. In my next post, I&#x2019;ll discuss strategies for doing that.</p>
         </article>
         <div class="button flex justify-between">
             <a href="487.html"><span class="back arrow"></span></a>

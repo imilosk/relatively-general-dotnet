@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1601">
+            <a href="https://ayende.com/blog/191329-C/production-post-mortem-the-opener-of-files-and-destroyer-of-peace" target="_blank">
+                <h2 class="title mb-6" id="article-1601">Production post mortem: The opener of files and destroyer of peace</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 23, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A customer opened a support call about a recurring problem that they had in their system. System.InvalidOperationException: Errno: 1224=&#x27;The requested operation cannot be performed on a file with a user-mapped section open.&#xA;&#x27; (rc=0) - &#x27;Failed to rvn_write_header &#x27;headers.one&#x27;, reason : FailOpenFile&#x27;. FailCode=FailOpenFile.&#xA;   at Sparrow.Server.Platform.PalHelper.ThrowLastError(FailCodes rc, Int32 lastError, String msg) in C:\Builds\RavenDB-Stable-4.2\42040\src\Sparrow.Server\Platform\PalHelper.cs:line 35&#xA;   at Voron.StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions.WriteHeader(String filename, FileHeader* header) in C:\Builds\RavenDB-Stable-4.2\42040\src\Voron\StorageEnvironmentOptions.cs:line 706&#xA;   at Voron.Impl.FileHeaders.HeaderAccessor.Modify(ModifyHeaderAction modifyAction) in C:\Builds\RavenDB-Stable-4.2\42040\src\Voron\Impl\FileHeaders\HeaderAccessor.cs:line 200&#xA;   at Voron.Impl.Journal.WriteAheadJournal.JournalApplicator.SyncOperation.UpdateDatabaseStateAfterSync() in C:\Builds\RavenDB-Stable-4.2\42040\src\Voron\Impl\Journal\WriteAheadJournal.cs:line 998&#xA;   at Voron.Impl.Journal.WriteAheadJournal.JournalApplicator.LockTaskResponsible.RunTaskIfNotAlreadyRan() in C:\Builds\RavenDB-Stable-4.2\42040\src\Voron\Impl\Journal\WriteAheadJournal.cs:line 1192&#xA;And the code that failed was:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          HANDLE file = CreateFileW((LPCWSTR)path,&#xA;        &#xA;        &#xA;          &#xA;            GENERIC_WRITE | GENERIC_READ,&#xA;        &#xA;        &#xA;          &#xA;            FILE_SHARE_READ,&#xA;        &#xA;        &#xA;          &#xA;            NULL,&#xA;        &#xA;        &#xA;          &#xA;            CREATE_ALWAYS,&#xA;        &#xA;        &#xA;          &#xA;            FILE_ATTRIBUTE_NORMAL,&#xA;        &#xA;        &#xA;          &#xA;            NULL&#xA;        &#xA;        &#xA;          &#xA;            );&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          code.c&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;Based on that information, the issue is obvious. Someone is poking their nose into RavenDB&#x2019;s files. It is important to understand that this will cause the I/O operation to fail. And since this is part of a critical path in managing the file, it will force the entire database to unload. We asked the customer to make sure that all indexing services, anti virus programs and the like would be instructed to ignore the RavenDB directories and were assured that this is already the case. That led us to a problem. If no one else is touching our files, is it possible that it is our own code that is causing the issue?I asked the customer to use Process Monitor to track system calls made on that particular file.&#xA0; It took a day or so, but they came back with:8:13:31.4865562 AM MsMpEng.exe 3112 CreateFileMapping D:\RavenDB\Server\RavenData\System\headers.one FILE LOCKED WITH WRITERS SyncType: SyncTypeCreateSection, PageProtection: PAGE_EXECUTE&#xA;We had our culprit, Windows Defender would mess around in our files, causing some I/O operations to fail.&#xA0; The customer added RavenDB&#x2019;s directories to Windows Defender&#x2019;s excluded list as well, and that should be the end of things. Overall, this is a short issue, but it was only short because we were able to prove what other process was causing us issues.</p>
+        </article>
+        <article id="article-1602">
             <a href="https://ardalis.com/rip-dvds-with-handbrake-and-anydvd/" target="_blank">
-                <h2 class="title mb-6" id="article-1601">How to Rip DVDs with Handbrake and AnyDVD</h2>
+                <h2 class="title mb-6" id="article-1602">How to Rip DVDs with Handbrake and AnyDVD</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m a big fan of Plex and have a lifetime subscription. If you&#x27;re not familiar with it, it basically lets you have your own Netflix hosted&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-1602">
+        <article id="article-1603">
             <a href="https://andrewlock.net/aspnetcore-in-action-2e-getting-started-with-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-1602">Getting started with ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-1603">Getting started with ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This article describes some of the highlights of ASP.NET Core and gives advice on the type of applications to build with it, as well as which to avoid.&#x2026;</p>
         </article>
-        <article id="article-1603">
+        <article id="article-1604">
             <a href="https://ayende.com/blog/191297-C/avoiding-exposing-identifier-details-to-your-users" target="_blank">
-                <h2 class="title mb-6" id="article-1603">Avoiding exposing identifier details to your users</h2>
+                <h2 class="title mb-6" id="article-1604">Avoiding exposing identifier details to your users</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A sadly common place &#x201C;attack&#x201D; on applications is called &#x201C;Web Parameter Tampering&#x201D;. This is the case where you have a URL such as this:https://secret.medical.info/?userid=823And your users &#x201C;hack&#x201D; you using:https://secret.medical.info/?userid=999And get access to another users records. As an aside, that might actually be considered to be hacking, legally speaking. Which make me want to smash my head on the keyboard a few time.Obviously, you need to run your security validation on parameters, but there are other reasons to want to avoid to expose the raw identifiers to the user. If you are using the a incrementing counter of some kind, creating two values might cause you to leak the rate in which your data change. For example, a competitor might want to create an order once a week and track the number of the order. That will give you a good indications of how many orders there have been in that time frame. Finally, there are other data leakage issues that you want to might want to take into account. For example, &#x201C;users/321&#x201D; means that you are likely to be using RavenDB while &#x201C;users/4383-B&#x201D; means that you are using RavenDB 4.0 or higher and &#x201C;607d1f85bcf86cd799439011&#x201D; means that you are using MongoDB. A common reaction to this is to switch your ids to use guids. I hate that option, it means that you are entering very unfriendly territory&#xA0; for the application. Guids convey no information to the developers working with the system and they are hard to work with, from a humane point of view. They are also less nice for the database systemto work with. A better alternative is to simply mask the information when it leaves your system. Here is the code to do so:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          public class IdentifierMasking&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              private static byte[] _key;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              public IdentifierMasking(byte[] key = null)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  _key = key ?? Sodium.SecretBox.GenerateKey();&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              public string RevealIdentifier(string hidden)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  Span&lt;byte&gt; data = SimpleBase.Base58.Bitcoin.Decode(hidden);&#xA;        &#xA;        &#xA;          &#xA;                  byte[] nonce = data.Slice(0, 12).ToArray();&#xA;        &#xA;        &#xA;          &#xA;                  byte[] encrypted = data.Slice(12).ToArray();&#xA;        &#xA;        &#xA;          &#xA;                  byte[] plain = Sodium.SecretAeadAes.Decrypt(encrypted, nonce, _key);&#xA;        &#xA;        &#xA;          &#xA;                  return Encoding.UTF8.GetString(plain);&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;              public string HideIdentifier(string id)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  byte[] nonce = Sodium.SecretAeadAes.GenerateNonce();&#xA;        &#xA;        &#xA;          &#xA;                  byte[] encrypted = Sodium.SecretAeadAes.Encrypt(Encoding.UTF8.GetBytes(id), nonce, _key);&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;                  return SimpleBase.Base58.Bitcoin.Encode(nonce.Concat(encrypted).ToArray());&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          IdentifierMasking.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;You can see that I&#x2019;m actually using AES encryption to hide the data, and then encoding it in the Bitcoin format. That means that an identifier such as &quot;users/1123&quot; will result in output such as this:bPSPEZii22y5JwUibkQgUuXR3VHBDCbUhC343HBTnd1XMDFZMuokThe length of the identifier is larger, but not overly so and the id is even URL safe . In addition to hiding the identifier itself, we also ensure that the users cannot muck about in the value. Any change to the value will result in an error to unmask it.</p>
         </article>
-        <article id="article-1604">
+        <article id="article-1605">
             <a href="https://www.meziantou.net/creating-a-repeater-component-with-blazor.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1604">Creating a Repeater component with Blazor</h2>
+                <h2 class="title mb-6" id="article-1605">Creating a Repeater component with Blazor</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you are familiar with the old ASP.NET, you know the &lt;asp:Repeater&gt; control. This control iterates on a collection (may come from any kind of DataSource) and use a template to generate the page.ASP.NETcopy&lt;%-- This is ASP.NET code (not ASP.NET Core) --%&gt;&#xA;&lt;asp:Repeater runat=&quot;server</p>
         </article>
-        <article id="article-1605">
+        <article id="article-1606">
             <a href="https://ayende.com/blog/191265-C/how-much-do-you-need-transactions" target="_blank">
-                <h2 class="title mb-6" id="article-1605">How much do you need transactions?</h2>
+                <h2 class="title mb-6" id="article-1606">How much do you need transactions?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The most famous example about the use of transactions is the money transfer scenario. As money is shifted from one account to the other, we want to ensure that no money goes poof or made up of whole cloth.I just logged in to the bank to pay the taxes. It is a boring process that mostly consist of checking a box in a transfer filled by the accounting department. Today there was much excitement. The transfer failed. That was strange. I got an error that the money transfers failed and that I should process the order again later.&#xA0; I checked my balance and the money is deducted from my account. I&#x2019;m trying to decide if I should shrug it off and just make sure that the money was sent in a couple of days or if I should call someone at the bank and offer them consulting services about how to build transactional systems.</p>
         </article>
-        <article id="article-1606">
+        <article id="article-1607">
             <a href="https://ardalis.com/the-singleton-design-pattern/" target="_blank">
-                <h2 class="title mb-6" id="article-1606">The Singleton Design Pattern</h2>
+                <h2 class="title mb-6" id="article-1607">The Singleton Design Pattern</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The Singleton Design Pattern is a fairly simple creational pattern used to ensure that there is only ever a single instance of a class in an&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-1607">
+        <article id="article-1608">
             <a href="https://www.meziantou.net/publishing-a-blazor-webassembly-application-to-github-pages.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1607">Publishing a Blazor WebAssembly application to GitHub pages</h2>
+                <h2 class="title mb-6" id="article-1608">Publishing a Blazor WebAssembly application to GitHub pages</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Blazor WebAssembly is now officially released and is ready for production use. Blazor WebAssembly runs your client-side C# code directly in the browser, using WebAssembly. This means your application doesn&#x27;t need a server and can be published as a static website.There are multiple possibilities to</p>
         </article>
-        <article id="article-1608">
+        <article id="article-1609">
             <a href="https://ayende.com/blog/191233-B/webinar-recording-using-ravendb-as-a-queuing-infrastructure" target="_blank">
-                <h2 class="title mb-6" id="article-1608">Webinar recording</h2>
+                <h2 class="title mb-6" id="article-1609">Webinar recording</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The recording for using RavenDB as queueing infrastructure is ready. Today I&#x2019;m going to be talking about ACID and how it plays out in RavenDB and in MongoDB.</p>
         </article>
-        <article id="article-1609">
+        <article id="article-1610">
             <a href="https://andrewlock.net/adding-host-filtering-to-kestrel-in-aspnetcore/" target="_blank">
-                <h2 class="title mb-6" id="article-1609">Adding host filtering to Kestrel in ASP.NET Core</h2>
+                <h2 class="title mb-6" id="article-1610">Adding host filtering to Kestrel in ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: June 16, 2020
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe how to add host filtering to an ASP.NET Core application, and show why not filtering could allow attackers to exploit your app&#x2026;</p>
-        </article>
-        <article id="article-1610">
-            <a href="https://ayende.com/blog/191203-B/find-best-fit-local-block-allocation-using-a-bitmap" target="_blank">
-                <h2 class="title mb-6" id="article-1610">Find best fit local block allocation using a bitmap</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 15, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my previous post, I showed how you can search for a range of cleared bit in a bitmap, as part of an allocation strategy. I want to do better than just finding a range, I want to find the best range. Best is define as:Near a particular location (to increase locality).Create the least amount of fragmentation.Here is the bitmap in question: [0x80520A27102E21, 0xE0000E00020, 0x1A40027F025802C8, 0xEE6ACAE56C6C3DCC].And a visualization of it:What we want is to find the following ranges:single cell near the red marker (9th cell)&#xA;2 cells range near the red marker (9th cell)&#xA;4 cells range near the yellow marker (85th cell)&#xA;7 cells range near the green marker (198th cell)We have an existing primitive already, the find_next() function. Let&#x2019;s see how we can use it to find the right buffer for us.Here is how it goes, we scan forward from the beginning of the word that you and trying to find a range that match the requirement. We&#x2019;ll find the smallest range we can find, but as we go further from the starting point, we&#x2019;ll loosen our requirements. If we can&#x2019;t find anything higher, we&#x2019;ll search lower that the given position. Regardless, if we find an exact match, one where we don&#x2019;t need to fragment for, we&#x2019;ll take that if it is close enough.Here are the results from the code (the code itself will follow shortly):single cell near the 9th &#x2013; 12 &#x2013; as expected2 cells near the 9th &#x2013; 27 &#x2013; because there is a two cell hole there and we won&#x2019;t fragment4 cells near 85 &#x2013; 64 &#x2013; I mentioned that we are scanning only forward, right? But we are scanning on a word boundary. So the 85th cell&#x2019;s bit is in the 2nd word and the first 4 bits there are free. 7 cells near 198 &#x2013; 47 &#x2013; we couldn&#x2019;t find anything suitable higher, so we started to look from the bottom. Here is the full code for this. I want to highlight a couple of functions:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          static bool find_smallest_nearby_buffer(struct range_finder *restrict range) {&#xA;        &#xA;        &#xA;          &#xA;            struct selected_range current = {0, SIZE_MAX};&#xA;        &#xA;        &#xA;          &#xA;            size_t pickiness_boundary =&#xA;        &#xA;        &#xA;          &#xA;                (range-&gt;index &#x2B; 1) * 64 &#x2B;&#xA;        &#xA;        &#xA;          &#xA;                // the bigger the request range, the less we care about locality&#xA;        &#xA;        &#xA;          &#xA;                &#x2B;range-&gt;size_required;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;            while (find_next(range)) {&#xA;        &#xA;        &#xA;          &#xA;              if (range-&gt;size_required == range-&gt;selection.size_available)&#xA;        &#xA;        &#xA;          &#xA;                return true;&#xA;        &#xA;        &#xA;          &#xA;              if (current.size_available &gt; range-&gt;selection.size_available) {&#xA;        &#xA;        &#xA;          &#xA;                current = range-&gt;selection;&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;              if (range-&gt;selection.position &gt; pickiness_boundary) {&#xA;        &#xA;        &#xA;          &#xA;                // We have gone too far? Stop being choosy&#xA;        &#xA;        &#xA;          &#xA;                if (current.size_available &lt; range-&gt;selection.size_available) {&#xA;        &#xA;        &#xA;          &#xA;                  range-&gt;selection = current;&#xA;        &#xA;        &#xA;          &#xA;                }&#xA;        &#xA;        &#xA;          &#xA;                return true;&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;            }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;            range-&gt;selection = current;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;            return current.size_available != SIZE_MAX;&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          static bool find_best_buffer(uint64_t *bitmap, size_t bitmap_size,&#xA;        &#xA;        &#xA;          &#xA;                                       size_t size_required, size_t near_pos,&#xA;        &#xA;        &#xA;          &#xA;                                       size_t *bit_pos) {&#xA;        &#xA;        &#xA;          &#xA;            if (!size_required || near_pos / 64 &gt;= bitmap_size)&#xA;        &#xA;        &#xA;          &#xA;              return false;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;            size_t high = near_pos / 64;&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;            struct range_finder range;&#xA;        &#xA;        &#xA;          &#xA;            init_range(bitmap &#x2B; high, bitmap_size - high, size_required, &amp;range);&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;            if (find_smallest_nearby_buffer(&amp;range)) {&#xA;        &#xA;        &#xA;          &#xA;              *bit_pos = range.selection.position &#x2B; high * 64;&#xA;        &#xA;        &#xA;          &#xA;              return true;&#xA;        &#xA;        &#xA;          &#xA;            }&#xA;        &#xA;        &#xA;          &#xA;            if (!high) {&#xA;        &#xA;        &#xA;          &#xA;              return false; // already scanned it all&#xA;        &#xA;        &#xA;          &#xA;            }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;            // we search _high_, couldn&#x27;t find anything, maybe lower?&#xA;        &#xA;        &#xA;          &#xA;            init_range(bitmap, high, size_required, &amp;range);&#xA;        &#xA;        &#xA;          &#xA;            if (find_next(&amp;range)) {&#xA;        &#xA;        &#xA;          &#xA;              *bit_pos = range.selection.position;&#xA;        &#xA;        &#xA;          &#xA;              return true;&#xA;        &#xA;        &#xA;          &#xA;            }&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;            return false;&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          allocate_nearest.c&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;Here you can see how I&#x2019;m approach the issue. First, get the data from the start of the word containing the desired location, then see if I can get the best match. Or, if I can&#x2019;t, just try to get anything.The fact that I can play around with the state of the system and resume operations at ease make it possible to write this code.Note that there is a tension in allocation code between:Finding the best possible matchThe time that it takes to find the matchThe resources consumed by the findIn particular, if I need to scan a lot of memory, I may run into issue. It is usually better to get something as soon as possible than wait for the perfect match.If you are interested in a nice mental workout, implement the find_prev function. That is a somewhat of a challenge, because you need to manage the state in reverse. Hint, use: __builtin_ctzll().</p>
         </article>
         <div class="button flex justify-between">
             <a href="160.html"><span class="back arrow"></span></a>
