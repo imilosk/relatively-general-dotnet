@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-6381">
+            <a href="https://ayende.com/blog/3795/nh-prof-feature-the-2nd-level-cache" target="_blank">
+                <h2 class="title mb-6" id="article-6381">NH Prof feature: The 2nd level cache</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 05, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One word of warning first, this feature is currently for entities only, NH Prof cannot (currently) inspect cached queries. That said, I am working on it, but this is something that is going to require some changes to NHibernate, so it is a feature that will be available on NHibernate 2.1 only. That said, you can see the profiling result of this piece of code: public class LoadEntityByIdFromSecondLevelCache : IScenario&#xA;{&#xA;&#x9;public void Execute(ISessionFactory factory)&#xA;&#x9;{&#xA;&#x9;&#x9;int id;&#xA;&#x9;&#x9;using (ISession s = factory.OpenSession())&#xA;&#x9;&#x9;using(ITransaction tx = s.BeginTransaction())&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;id = s.CreateCriteria(typeof(Blog))&#xA;&#x9;&#x9;&#x9;&#x9;.SetMaxResults(1)&#xA;&#x9;&#x9;&#x9;&#x9;.UniqueResult&lt;Blog&gt;().Id;&#xA;&#xA;&#x9;&#x9;&#x9;tx.Commit();&#xA;&#x9;&#x9;}&#xA;&#xA;&#x9;&#x9;using (ISession s = factory.OpenSession())&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;var blog = s.Load&lt;Blog&gt;(id);&#xA;&#x9;&#x9;&#x9;Console.WriteLine(blog.Title);&#xA;&#x9;&#x9;}&#xA;&#x9;}&#xA;}&#xA;&#xA;And, the actual profiler output:&#xA; &#xA;We can clearly see that we loaded this entity from the second level cache, and that we didn&#x27;t hit the database.&#xA;This is awesome, even if I say so myself.&#xA;Update: Here is the test for this feature:&#xA;[TestFixture]&#xA;public class CanDetect2ndLevelCaching : IntegrationTestBase&#xA;{&#xA;&#x9;[Test]&#xA;&#x9;public void Will_detect_entity_load()&#xA;&#x9;{&#xA;&#x9;&#x9;ExecuteScenarioInDifferentAppDomain&lt;LoadEntityByIdFromSecondLevelCache&gt;();&#xA;&#xA;&#x9;&#x9;var first = observer.Model.Sessions[2]&#xA;&#x9;&#x9;&#x9;.Statements.OfType&lt;StatementModel&gt;().First();&#xA;&#xA;&#x9;&#x9;Assert.AreEqual(&quot;2nd level cache load Blog (1 /* id */)&quot;, first.Text);&#xA;&#x9;}&#xA;}&#xA;&#xA;You might notice that this looks like it is traversing the UI. You are almost correct, it is traversing the View Model, which is an extremely rich model that allow us to do things like on the fly updates to all parts of the UI, Linq reporting and other nice stuff.&#xA;Among the most important benefits that it has is the fact that this is an end to end test of the system. From another app domain executing NHibernate code to the view model being updated by the profiler.</p>
+        </article>
+        <article id="article-6382">
             <a href="https://ayende.com/blog/3794/nh-prof-is-version-tolerant" target="_blank">
-                <h2 class="title mb-6" id="article-6381">NH Prof is version tolerant</h2>
+                <h2 class="title mb-6" id="article-6382">NH Prof is version tolerant</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">From the get go, I decided that I wanted NH Prof to work without having an explicit dependency on a particular version of NHibernate. I had trouble with that when I built the NHibernate Query Analyzer, and I had enough of that. This is especially true since I am one of the target audience of NH Prof, and I would hate having to manage NH Prof &lt;---&gt; NHibernate version mapping. So I set out to make NH Prof version tolerant. My explicit goal was to be able to work with NHibernate 2.0 and up. Along the way, I did something that is pretty surprising. NH Prof also work with NHibernate 1.2, which I never even tried to test with. When I say works, I mean that most of the things work as usual, but some of the fine points are missing (for example, I know that showing entity identifiers are not working in 1.2). That is quite encouraging, and probably means that I can support 1.2 fully without too much hassle. But,  It also means that going forward, I am going to have a much easier time with adding new features to NH Prof as they appear in NHibernate. Overall, I am pretty happy about this.</p>
         </article>
-        <article id="article-6382">
+        <article id="article-6383">
             <a href="https://ayende.com/blog/3793/nh-prof-new-feature-query-duration" target="_blank">
-                <h2 class="title mb-6" id="article-6382">NH Prof New Feature</h2>
+                <h2 class="title mb-6" id="article-6383">NH Prof New Feature</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I keep adding new features and fixing strange bugs in NH Prof. Most of those aren&#x27;t really interesting things. &#xA;Does anyone really care about sort order in a particular query? Those are things that are important for the overall UX, but they are not things that I can honestly call them features.&#xA;This thing, however, is a full blown feature. Even if it takes just a tiny bit of screen real estate.&#xA; &#xA;And integrating it into the analysis section of NH Prof as well:&#xA; &#xA;And in the views by method report:&#xA; &#xA;And something that is important to remember, the moment that I have a piece of information, I can start making use of it in alerts and rules. I haven&#x27;t decided yet if I want to do so for the v1.0 release, but I have a feeling that this is going to be a very useful base for additional features.</p>
         </article>
-        <article id="article-6383">
+        <article id="article-6384">
             <a href="https://ardalis.com/zune-feature-requests/" target="_blank">
-                <h2 class="title mb-6" id="article-6383">Zune Feature Requests</h2>
+                <h2 class="title mb-6" id="article-6384">Zune Feature Requests</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve been the proud owner of a black Zune 30 for a couple of years now. I think it&#x27;s great and I really don&#x27;t foresee a need to get a Zune&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6384">
+        <article id="article-6385">
             <a href="https://ardalis.com/2008-goals-recap/" target="_blank">
-                <h2 class="title mb-6" id="article-6384">2008 Goals Recap</h2>
+                <h2 class="title mb-6" id="article-6385">2008 Goals Recap</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last year I decided to blog some personal goals that I had for the year. It&#x2019;s widely known that the act of writing something down greatly&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6385">
+        <article id="article-6386">
             <a href="https://ardalis.com/cool-games/" target="_blank">
-                <h2 class="title mb-6" id="article-6385">Cool Games</h2>
+                <h2 class="title mb-6" id="article-6386">Cool Games</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Like many others, I enjoy playing games in my short supply of free time. I used to be a bigtime PC gamer who scoffed at console gamers, but&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-6386">
+        <article id="article-6387">
             <a href="https://ayende.com/blog/3792/70-of-my-job-is-social-engineering" target="_blank">
-                <h2 class="title mb-6" id="article-6386">70% of my job is Social Engineering</h2>
+                <h2 class="title mb-6" id="article-6387">70% of my job is Social Engineering</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It has been over a year since the last time that I actually shipped software for production. As the NH Prof beta shipping has reminded me, this is not a trivial task. Actually, we had relatively few problems with NH Prof itself, it was with the web site that I run into a few teething issues. I am afraid that I treated the site as an afterthought at first. Anyway, that made me reflect a bit over the last year. I discovered a very surprising truth. Most of what I do recently is not strictly technical. Oh, there is a heavy technical side for everything that I am doing, but a lot of that is simply social engineering within that context. Even my approach for API design or building a particular user experience are affected by this. On my business card, I have a big sign saying: &quot;Zero Friction Maintenance&quot;. That isn&#x27;t something that require a technical skill, this is something that require social manipulation skills. Friction is a people problem, not a technical problem. I am going to start a new series of post about social engineering in software development. Here is the initial topic list:  Initiating Actions Delivering Confidence Gliding on the path of least resistance Walking on the Path of Success Failure Motivation  I probably should point out that what I consider social engineering might be considered by others as PR, politicking or playing with team dynamics.</p>
         </article>
-        <article id="article-6387">
+        <article id="article-6388">
             <a href="https://ayende.com/blog/3791/errors-are-part-of-your-experience" target="_blank">
-                <h2 class="title mb-6" id="article-6387">Errors are part of your experience</h2>
+                <h2 class="title mb-6" id="article-6388">Errors are part of your experience</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The NH Prof website is running on Rhino Service Bus. I decided that this is a great time to test Rhino Service Bus for real, and I built the website on top of it. Even the order processing is done on top of RSB. But that isn&#x27;t what I wanted to talk about today. I wanted to talk about errors, and how important they are. In this case, I screwed up when I build the error reporting capability for NH Prof, which means that if you tried to report an error back, you would get a nasty 404 and I would get nada as feedback. The actual fault is not relevant, and it is fixed already, so hopefully you&#x27;ll forgive me for having bugs in a beta product. What I really wanted to talk about was how I fixed the issue. Remember, this is the production machine, and I have no debugger there. What I did was go to the MSMQ interface, go to the back end queue and take a peek in the errors sub queue, where I got to see the following:   The first message is the original one, the second is the error description for it. When I opened it, I could see that the error was &quot;AyendeIsStupidException&quot;, which explained exactly what went wrong, and I was able to quickly resolve the issue by buying more IQ on eBay. I then moved the message back to the main queue, and got the email that I expected about the problem with NH Prof. A few important points about this:  No debugging No hunting through the logs No custom tools. Rhino Service Bus Profiler doesn&#x27;t exist (yet). In your face, explicit and very quick troubleshooting experience. Error handling was an explicit design goal when I set to build Rhino Service Bus, and I am happy to be able to say that so far, it is proving that it is working, and is definitely worth the time I spent in it.</p>
         </article>
-        <article id="article-6388">
+        <article id="article-6389">
             <a href="https://ayende.com/blog/3790/msmq-and-troublesome-api-experience" target="_blank">
-                <h2 class="title mb-6" id="article-6388">Msmq and troublesome API experience</h2>
+                <h2 class="title mb-6" id="article-6389">Msmq and troublesome API experience</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">There is just one thing in the Msmq API that I hate. If you try to send to a queue using the wrong transaction, it will silently not send you message, but give absolutely no error. This is incredibly error prone, and has caused me quite a number of bugs. If at all possible, API should never silently fail. In this case, the API should throw an explicit argument exception, saying that this transaction is not valid for this queue. That would make things much simpler all around.</p>
         </article>
-        <article id="article-6389">
+        <article id="article-6390">
             <a href="https://ayende.com/blog/3789/nh-prof-is-in-public-beta" target="_blank">
-                <h2 class="title mb-6" id="article-6389">NH Prof is in public beta</h2>
+                <h2 class="title mb-6" id="article-6390">NH Prof is in public beta</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: January 02, 2009
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Surprisingly, the hardest part in getting here wasn&#x27;t writing the actual software, but all the other activities around it. Setting a web site, integrating a payment provider, getting content for said web site, etc. But, we are now there, and NH Prof is in public beta, hooray! You can go to the NHibernate Profiler web site and download a 30 days trail right now. A few important points:  It is still in beta. There are several issues that we are aware of in the current version that will be fixed before we ship v1.0. The reason it is in beta is to fix those issues and gather more input from the actual users. The private beta group was wonderful, but it is time for a bigger test group. During the beta period, the web site is hooked to the continuous integration server. Whenever you download a version from the site, you get the latest bits. I am also looking for feedback on the site and the content that you wish to see there. Like the actual application, the site is also in a beta period, and I plan on creating more content (help, samples, web casts) soon. Oh, and as a precursor for a blog series about social engineering in software development, I am offering a reduced price for the profiler for the duration of the beta period. That is all I have to say right now.  Do tell me what you think...</p>
-        </article>
-        <article id="article-6390">
-            <a href="https://ayende.com/blog/3788/didja-know-merging-windsor-configuration-with-automatic-registration" target="_blank">
-                <h2 class="title mb-6" id="article-6390">Didja know? Merging Windsor configuration with automatic registration</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 31, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the most annoying things that we have to do during development is updating configuration files. That is why convention over configuration is such a successful concept. The problem is what to do when you can mostly use the convention, but need to supply configuration values as well. Well, one of the nice things about Windsor is the ability to merge several sources of information transparently. Given this configuration: &lt;configuration&gt;&#xA;&#x9;&lt;configSections&gt;&#xA;&#x9;&#x9;&lt;section name=&quot;castle&quot;&#xA;&#x9;&#x9;&#x9;type=&quot;Castle.Windsor.Configuration.AppDomain.CastleSectionHandler, Castle.Windsor&quot; /&gt;&#xA;&#x9;&lt;/configSections&gt;&#xA;&#x9;&lt;castle&gt;&#xA;&#x9;&#x9;&lt;facilities&gt;&#xA;&#x9;&#x9;&#x9;&lt;facility id=&quot;rhino.esb&quot; &gt;&#xA;&#x9;&#x9;&#x9;&#x9;&lt;bus threadCount=&quot;1&quot;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9; numberOfRetries=&quot;5&quot;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9; endpoint=&quot;msmq://localhost/demo.backend&quot;&#xA;             /&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&lt;messages&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&lt;/messages&gt;&#xA;&#x9;&#x9;&#x9;&lt;/facility&gt;&#xA;&#x9;&#x9;&lt;/facilities&gt;&#xA;&#x9;&#x9;&lt;components&gt;&#xA;&#x9;&#x9;&#x9;&lt;component id=&quot;Demo.Backend.SendEmailConsumer&quot;&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&lt;parameters&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&lt;host&gt;smtp.gmail.com&lt;/host&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&lt;port&gt;587&lt;/port&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&lt;password&gt;*****&lt;/password&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&lt;username&gt;*****@ayende.com&lt;/username&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&lt;enableSsl&gt;true&lt;/enableSsl&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&lt;from&gt;*****@ayende.com&lt;/from&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&lt;fromDisplayName&gt;Something&lt;/fromDisplayName&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&lt;/parameters&gt;&#xA;&#x9;&#x9;&#x9;&lt;/component&gt;&#xA;&#x9;&#x9;&lt;/components&gt;&#xA;&#x9;&lt;/castle&gt;&#xA;&lt;/configuration&gt;&#xA;And this auto registration:&#xA;var container = new WindsorContainer(new XmlInterpreter());&#xA;container.Register(&#xA;&#x9;AllTypes.Of(typeof (ConsumerOf&lt;&gt;))&#xA;&#x9;&#x9;.FromAssembly(typeof(Program).Assembly)&#xA;&#x9;);&#xA;&#xA;We now get the benefit of both convention and configuration. We can let the convention pick up anything that we need, and configure just the values that we really have to configure.</p>
         </article>
         <div class="button flex justify-between">
             <a href="638.html"><span class="back arrow"></span></a>

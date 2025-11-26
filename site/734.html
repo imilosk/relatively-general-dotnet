@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-7331">
+            <a href="https://ayende.com/blog/3045/requirements-of-a-dsl-engine" target="_blank">
+                <h2 class="title mb-6" id="article-7331">Requirements of a DSL engine</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 13, 2007
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Getting a DSL to work for a single file is fairly easy. Getting it to work in a real application is much harder. There are quite a few scenarios that you need to deal with irrespective of the DSL itself.  Those issues include:  Caching - compilation is expensive Batch compilation - see above, also very important Error handling - we can probably do at least some work here to make it easier. At the very least, output something like compilation exception would give us the nice yellow page with the error, compiled output, etc. Automatic refresh - when the file changes, we can invalidate the cache and load from the file again. IoC integration ? What else do you think is needed?</p>
+        </article>
+        <article id="article-7332">
             <a href="https://ayende.com/blog/3044/dont-like-visibility-levels-change-that" target="_blank">
-                <h2 class="title mb-6" id="article-7331">Don&#x27;t like visibility levels, change that</h2>
+                <h2 class="title mb-6" id="article-7332">Don&#x27;t like visibility levels, change that</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This came up with respect to MS MVC. The MS MVC team has decided to make some methods protected, and that makes testing using Rhino Mocks a bit of a pain. Let us assume that I want test that the call to ProductController.Index() will render the &quot;index.aspx&quot; view. I can do something like: [Test]&#xA;public void ShouldAskToRenderTheIndexAspxView()&#xA;{&#xA;&#x9;MockRepository mocks = new MockRepository();&#xA;&#x9;ProductController controller = mocks.PartialMock&lt;ProductController&gt;();&#xA;&#x9;using(mocks.Record())&#xA;&#x9;{&#xA;&#x9;&#x9;controller.RenderView(&quot;index.aspx&quot;); // &lt;&lt;-- Compiler error here, RenderView is protected!&#xA;&#x9;}&#xA;&#xA;&#x9;using (mocks.Playback())&#xA;&#x9;{&#xA;&#x9;&#x9;controller.Index();&#xA;&#x9;}&#xA;}&#xA;Problem, part of the Rhino Mocks design goal was the use of the compiler and tools as verifiers. I explicitly do not want to have strings in my code, and I put them only where I have no other choice. However, since Rhino Mocks by runtime subclassing, there is no issue with reflection calls...&#xA;This means that we can get around this limitation by using the following extension method:&#xA;public static void RenderView(this Controller self, string action)&#xA;{&#xA;&#x9;typeof(Controller).GetMethod(&quot;RenderView&quot;).Invoke(self, new object[] { action} );&#xA;}&#xA;This is it, it will compile and work now.</p>
         </article>
-        <article id="article-7332">
+        <article id="article-7333">
             <a href="https://ayende.com/blog/3043/dsl-ioc-combining-powerful-concepts" target="_blank">
-                <h2 class="title mb-6" id="article-7332">DSL &amp; IoC - Combining powerful concepts</h2>
+                <h2 class="title mb-6" id="article-7333">DSL &amp; IoC - Combining powerful concepts</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was just writing this line of code: DslExecuter&lt;SchedulingDslEngine&gt;.Create(&#x201C;validateWebSiteIsUp&#x201D;)&#xA;When it occurred to me that this looks a look like an IoC resolve call. Which got me thinking about combining both concepts together, which gave me the shakes.&#xA;The idea is that we can expose those dependencies like this:&#xA;customers as ICustomerRepository&#xA;fraudService as IFraudService&#xA;alerts as IAlertService&#xA;&#xA;for customer in customers.FindAll(With.Orders):&#xA;&#x9;for order in customer.Orders:&#xA;&#x9;&#x9;if fraudService.IsFraud(order):&#xA;&#x9;&#x9;&#x9;alerts.ForFaurdOn(order)&#xA;&#x9;&#x9;&#x9;if customer.Important:&#xA;&#x9;&#x9;&#x9;&#x9;alerts.NotifyCustomerAboutFraud(customer)&#xA;Leaving aside the mountain slope code*, consider what is going on here. We are exposing dependencies by specifying the types that we need. We can then get them through the IoC and execute the code in hand.&#xA;This means that the DSL has full access to everything in the application, and is subject to the same rules and behavior as all the other components. From my point of view... sweeeeeet.&#xA;* First example that popped to mind, yes, I know it is a bad one.</p>
         </article>
-        <article id="article-7333">
+        <article id="article-7334">
             <a href="https://ayende.com/blog/3042/javascript-lexical-scopes-and-what-your-momma-thought-you-about-variables" target="_blank">
-                <h2 class="title mb-6" id="article-7333">Javascript, lexical scopes and what your momma thought you about variables</h2>
+                <h2 class="title mb-6" id="article-7334">Javascript, lexical scopes and what your momma thought you about variables</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let us assume that we have this amazing javascript function: function test()&#xA;{&#xA;&#x9;var nums = [1,2,3,4,5,6,7];&#xA;&#x9;for(var i = 0; i&lt;nums.length; i&#x2B;&#x2B;)&#xA;&#x9;{&#xA;&#x9;&#x9;var alertLink = document.createElement(&quot;A&quot;);&#xA;&#x9;&#x9;alertLink.href = &quot;#&quot;;&#xA;&#x9;&#x9;alertLink.innerHTML = nums[i];&#xA;&#x9;&#x9;&#xA;&#x9;&#x9;if( nums[i] % 2 == 0)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;alertLink.onclick = function() { alert(&#x27;EVEN: &#x27;&#x2B; nums[i]); };&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;else&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;alertLink.onclick = function() { alert(&#x27;ODD: &#x27; &#x2B; nums[i]); };&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;&#xA;&#x9;&#x9;document.firstChild.appendChild(alertLink);&#xA;&#x9;&#x9;document.firstChild.appendChild(document.createElement(&quot;BR&quot;));&#xA;&#x9;&#x9;&#xA;&#x9;}&#xA;}&#xA;Can you guess what it would generate? Quite a few undefines alerts, as a matter of fact. Why is that? Because the anonymous function is a closure, which capture not the value of i, but the i variable itself.&#xA;This means when we click on a link that this method has generated, we use the last known value of i. Since we have exited the loop, i is actually 8.&#xA;Now, in C# we have the same problem, and we can solve it by introducing a temporary variable in the loop, so we change the code to look like this:&#xA;&#x9;&#xA;function test()&#xA;{&#xA;&#x9;var nums = [1,2,3,4,5,6,7];&#xA;&#x9;for(var i = 0; i&lt;nums.length; i&#x2B;&#x2B;)&#xA;&#x9;{&#xA;&#x9;&#x9;var alertLink = document.createElement(&quot;A&quot;);&#xA;&#x9;&#x9;alertLink.href = &quot;#&quot;;&#xA;&#x9;&#x9;alertLink.innerHTML = nums[i];&#xA;&#x9;&#x9;&#xA;&#x9;&#x9;var tmpNum = nums[i];&#xA;&#x9;&#x9;&#xA;&#x9;&#x9;if( nums[i] % 2 == 0)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;alertLink.onclick = function() { alert(&#x27;EVEN: &#x27;&#x2B; tmpNum ); };&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;else&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;alertLink.onclick = function() { alert(&#x27;ODD: &#x27; &#x2B; tmpNum ); };&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;&#xA;&#x9;&#x9;document.firstChild.appendChild(alertLink);&#xA;&#x9;&#x9;document.firstChild.appendChild(document.createElement(&quot;BR&quot;));&#xA;&#x9;&#x9;&#xA;&#x9;}&#xA;}&#xA;Try to run it, and you&#x27;ll get an.. interesting phenomenon. All the links will show tmpNum as 7. Again, we captured the variable itself, not its value. And in JS, it looks like you are getting the same variable in the loop, not a new one (this is absolutely the wrong way to describe it, but it is a good lie), like you would in C#.&#xA;What is even more interesting is that you would get the exact same result here:&#xA;&#x9;&#xA;function test()&#xA;{&#xA;&#x9;var nums = [1,2,3,4,5,6,7];&#xA;&#x9;for(var i = 0; i&lt;nums.length; i&#x2B;&#x2B;)&#xA;&#x9;{&#xA;&#x9;&#x9;var alertLink = document.createElement(&quot;A&quot;);&#xA;&#x9;&#x9;alertLink.href = &quot;#&quot;;&#xA;&#x9;&#x9;alertLink.innerHTML = nums[i];&#xA;&#x9;&#x9;&#xA;&#x9;&#x9;&#xA;&#x9;&#x9;if( nums[i] % 2 == 0)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;var tmpNum = nums[i];&#xA;&#x9;&#x9;&#x9;alertLink.onclick = function() { alert(&#x27;EVEN: &#x27;&#x2B; tmpNum ); };&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;else&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;var tmpNum = nums[i];&#xA;&#x9;&#x9;&#x9;alertLink.onclick = function() { alert(&#x27;ODD: &#x27; &#x2B; tmpNum ); };&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;&#xA;&#x9;&#x9;document.firstChild.appendChild(alertLink);&#xA;&#x9;&#x9;document.firstChild.appendChild(document.createElement(&quot;BR&quot;));&#xA;&#x9;&#x9;&#xA;&#x9;}&#xA;}&#xA;Here we have two different lexical scopes, with respectively different variables. Looks like it should work. But the lexical scope of JS is the function, not the nearest set of curly.&#xA0;Both tmpNum refer to the same variable, and as such, are keeping the last value in it.&#xA;If the lexical scope is a function, we need to use a function then. Here is a version that works:&#xA;&#x9;&#xA;function test()&#xA;{&#xA;&#x9;var nums = [1,2,3,4,5,6,7];&#xA;&#x9;for(var i = 0; i&lt;nums.length; i&#x2B;&#x2B;)&#xA;&#x9;{&#xA;&#x9;&#x9;var alertLink = document.createElement(&quot;A&quot;);&#xA;&#x9;&#x9;alertLink.href = &quot;#&quot;;&#xA;&#x9;&#x9;alertLink.innerHTML = nums[i];&#xA;&#x9;&#x9;&#xA;&#x9;&#xA;&#x9;&#x9;if( nums[i] % 2 == 0)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;var act = function(tmpEVEN)&#xA;&#x9;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;&#x9;alertLink.onclick = function() { alert(&#x27;EVEN: &#x27;&#x2B;tmpEVEN); };&#xA;&#x9;&#x9;&#x9;};&#xA;&#x9;&#x9;&#x9;act(nums[i]);&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;else&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;var tmpODD = nums[i];&#xA;&#x9;&#x9;&#x9;alertLink.onclick = function() { alert(&#x27;ODD: &#x27; &#x2B; tmpODD); };&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;&#xA;&#x9;&#x9;document.firstChild.appendChild(alertLink);&#xA;&#x9;&#x9;document.firstChild.appendChild(document.createElement(&quot;BR&quot;));&#xA;&#x9;&#x9;&#xA;&#x9;}&#xA;}&#xA;And that is it for today&#x27;s JS lesson.</p>
         </article>
-        <article id="article-7334">
+        <article id="article-7335">
             <a href="https://ardalis.com/cool-apps-from-microsoft/" target="_blank">
-                <h2 class="title mb-6" id="article-7334">Cool Apps from Microsoft</h2>
+                <h2 class="title mb-6" id="article-7335">Cool Apps from Microsoft</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I attended the Cleveland .NET SIG last night, where Jeff Blankenburg (my new Developer Evangelist) gave a demo-rich presentation on some&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-7335">
+        <article id="article-7336">
             <a href="https://ardalis.com/it-isnt-working/" target="_blank">
-                <h2 class="title mb-6" id="article-7335">It isn&#x27;t working?</h2>
+                <h2 class="title mb-6" id="article-7336">It isn&#x27;t working?</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My wife hates me because of this, and my co-workers are learning to consider their question phrasing carefully if they want to be able to&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-7336">
+        <article id="article-7337">
             <a href="https://ardalis.com/mvc-getting-started/" target="_blank">
-                <h2 class="title mb-6" id="article-7336">MVC Getting Started</h2>
+                <h2 class="title mb-6" id="article-7337">MVC Getting Started</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Scott Hanselman has posted a very well done screencast on getting started with Model View Controller for ASP.NET, which I watched and did&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-7337">
+        <article id="article-7338">
             <a href="https://ardalis.com/being-agile-means-understanding-when-to-change/" target="_blank">
-                <h2 class="title mb-6" id="article-7337">Being Agile Means Understanding When to Change</h2>
+                <h2 class="title mb-6" id="article-7338">Being Agile Means Understanding When to Change</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">While I was completing my drive into work this morning, I was thinking about a book I read recently, Cryptonomicon (highly recommended&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-7338">
+        <article id="article-7339">
             <a href="https://ardalis.com/regexlib-redesign-complete/" target="_blank">
-                <h2 class="title mb-6" id="article-7338">RegExLib Redesign Complete</h2>
+                <h2 class="title mb-6" id="article-7339">RegExLib Redesign Complete</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We&#x2019;ve done some design work on the Regular Expression Library, and cleaned up the code base significantly to get rid of some cruft and fix a&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-7339">
+        <article id="article-7340">
             <a href="https://ayende.com/blog/3041/the-consequences-of-web-services-architecture" target="_blank">
-                <h2 class="title mb-6" id="article-7339">The consequences of web services architecture</h2>
+                <h2 class="title mb-6" id="article-7340">The consequences of web services architecture</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: December 12, 2007
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned before that MS CRM&#x27;s decision to build all its external API based on web services (that cannot be accessed outside of ASMX proxies) was a big mistake. It is a mistake because you are handing the developer a really clumsy, stupid, API. I just spent an hour trying to figure out how to set a value to null. An hour! It couldn&#x27;t be as simple as this: customer.new_employeeintouch = null;&#xA;&#xA;It has to be:&#xA;customer.new_employeeintouch = new Lookup();&#xA;customer.new_employeeintouch.IsNull = true;&#xA;customer.new_employeeintouch.IsNullSpecified = true;</p>
-        </article>
-        <article id="article-7340">
-            <a href="https://ayende.com/blog/3040/building-an-external-dsl" target="_blank">
-                <h2 class="title mb-6" id="article-7340">Building an External DSL</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 12, 2007
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Over in the Alt.net mailing list, Glenn said:  If I was really being verbose in the way a business user would expect to define this I would say &#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; When customer is preferred and the order exceeds 1000 then apply a .05 discount and apply free shipping.  Now do that in a DSL&#x2026;. Now, I am sucker for this kind of things, and I can probably use the practice. So I decided to go ahead with this. Just to be clear, this is supposedly a natural language processing, only we are going to cheat and get around that. First, let us analyze the structure of the statement that we need to handle: When customer is preferred and the order exceeds 1000 then apply a .05 discount and apply free shipping.  I put strike through all the fluff stuff, the things that doesn&#x27;t really means anything for the language. Keywords are marked in blue, operators in red. We have the following keywords:  When And Then And the following operators:  Is Exceeds Discount Shipping Everything else is a variable. This language follows the following syntax:  When [parameter] [operator] [value] (and [parameter] [operator] [value])&#x2B; then [parameter] [value] [operator] (and [parameter] [value] [operator] ) Note that the syntax between the when clause and the then clause is different. The operator is the last word there. This is because on the when we would usually do comparisons, while on the then we will perform actions. Now, to the actual building of the language. We have the following model:   Let us take a look at the parser, it is a stupid, single purpose one, but it works. The main parts are to extract a list of ActionExpressions from the language. public WhenThenClause SplitToWhenThenClause(string text)&#xA;{&#xA;&#x9;if (text.StartsWith(&quot;when&quot;, StringComparison.InvariantCultureIgnoreCase) == false)&#xA;&#x9;&#x9;throw new InvalidOperationException(&quot;statement should start with a when&quot;);&#xA;&#x9;int thenIndex = text.IndexOf(&quot;then&quot;, StringComparison.InvariantCultureIgnoreCase);&#xA;&#x9;if (thenIndex == -1)&#xA;&#x9;&#x9;throw new InvalidOperationException(&quot;statement should have a then&quot;);&#xA;&#x9;WhenThenClause clause = new WhenThenClause();&#xA;&#x9;string whenClause = text.Substring(4, thenIndex - 4).Trim();&#xA;&#x9;ParseClause(whenClause,&#xA;&#x9;            delegate(string[] parts)&#xA;&#x9;            {&#xA;&#x9;            &#x9;ActionExpression item = new ActionExpression();&#xA;&#x9;            &#x9;item.Left = parts[0];&#xA;&#x9;            &#x9;item.Operator = parts[1];&#xA;&#x9;            &#x9;item.Right = parts[2];&#xA;&#x9;            &#x9;clause.When.Add(item);&#xA;&#x9;            });&#xA;&#x9;string thenClause = text.Substring(thenIndex &#x2B; 4);&#xA;&#x9;ParseClause(thenClause,&#xA;&#x9;            delegate(string[] parts)&#xA;&#x9;            {&#xA;&#x9;            &#x9;ActionExpression item = new ActionExpression();&#xA;&#x9;            &#x9;item.Left = parts[0];&#xA;&#x9;            &#x9;item.Right= parts[1];&#xA;&#x9;            &#x9;item.Operator = parts[2];&#xA;&#x9;            &#x9;clause.Then.Add(item);&#xA;&#x9;            });&#xA;&#xA;&#x9;return clause;&#xA;}&#xA;&#xA;&#xA;private static void ParseClause(string clause,&#xA;                                Action&lt;string[]&gt; action)&#xA;{&#xA;&#x9;foreach (string subClauses in&#xA;&#x9;&#x9;clause.Split(new string[] { &quot;and&quot; }, StringSplitOptions.RemoveEmptyEntries))&#xA;&#x9;{&#xA;&#x9;&#x9;if (subClauses.Trim().Length == 0)&#xA;&#x9;&#x9;&#x9;continue;&#xA;&#xA;&#x9;&#x9;string[] parts = subClauses.Split(new char[] {&#x27; &#x27;, &#x27;\t&#x27;}, StringSplitOptions.RemoveEmptyEntries);&#xA;&#x9;&#x9;if (parts.Length != 3)&#xA;&#x9;&#x9;&#x9;throw new InvalidOperationException(&quot;A clause should have three parts &quot;&#x2B;                             &quot;[object] [operation] [value], found: &quot; &#x2B; subClauses);&#xA;&#xA;&#x9;&#x9;action(parts);&#xA;&#x9;}&#xA;}&#xA;Now we need to look at the DslExecuter. This is the one that will take an ActionExpression and actually execute it. We are using reflection to avoid having to do all the work ourselves, so we have this:&#xA;public class DslExecuter&#xA;{&#xA;&#x9;private readonly Hashtable parameters = new Hashtable(StringComparer.InvariantCultureIgnoreCase);&#xA;&#xA;&#x9;public void AddParameter(string name, object parameter)&#xA;&#x9;{&#xA;&#x9;&#x9;parameters[name] = parameter;&#xA;&#x9;}&#xA;&#xA;&#x9;public object Invoke(ActionExpression expression)&#xA;&#x9;{&#xA;&#x9;&#x9;object obj = parameters[expression.Left];&#xA;&#x9;&#x9;if (obj == null)&#xA;&#x9;&#x9;&#x9;throw new InvalidOperationException(&quot;Could not find parameter with name: &quot; &#x2B; expression.Left);&#xA;&#x9;&#x9;MethodInfo method = obj.GetType().GetMethod(expression.Operator, BindingFlags.IgnoreCase                           | BindingFlags.Instance | BindingFlags.Public);&#xA;&#x9;&#x9;if (method == null)&#xA;&#x9;&#x9;&#x9;throw new InvalidOperationException(&quot;Could not find method operator &quot; &#x2B;                                             expression.Operator &#x2B; &quot; on &quot; &#x2B; expression.Left);&#xA;&#x9;&#x9;ParameterInfo[] methodParams = method.GetParameters();&#xA;&#x9;&#x9;if(methodParams.Length!=1)&#xA;&#x9;&#x9;&#x9;throw new InvalidOperationException(expression.Operator &#x2B; &quot; should accept a single parameter&quot;);&#xA;&#x9;&#x9;object converted;&#xA;&#x9;&#x9;Type paramType = methodParams[0].ParameterType;&#xA;&#x9;&#x9;if(paramType.IsEnum)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;converted = Enum.Parse(paramType, expression.Right,true);&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;else&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;converted = Convert.ChangeType(expression.Right, paramType);&#xA;&#x9;&#x9;}&#xA;&#x9;&#x9;return method.Invoke(obj, new object[] {converted});&#xA;&#x9;}&#xA;}&#xA;Now that we have those two building blocks, it is very easy actually build the DSL itself.&#xA0;Here is the relevant code:&#xA;public void Execute()&#xA;{&#xA;&#x9;bool result = true;&#xA;&#x9;foreach (ActionExpression expression in parsed.When)&#xA;&#x9;{&#xA;&#x9;&#x9;bool clauseResult = (bool) this.executer.Invoke(expression);&#xA;&#x9;&#x9;result &amp;= clauseResult;&#xA;&#x9;}&#xA;&#xA;&#x9;if(result)&#xA;&#x9;{&#xA;&#x9;&#x9;foreach (ActionExpression expression in parsed.Then)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;executer.Invoke(expression);&#xA;&#x9;&#x9;}&#xA;&#x9;}&#xA;}&#xA;&#xA;We build a domain model to aid us here:&#xA; &#xA;Basically this translate directly to the parameters that the DSL needs. This means that all we have left is just the setup of the DSL. &#xA;[Test]&#xA;public void CanExecuteThenStatement()&#xA;{&#xA;&#x9;ExternalDSLDemo dsl = new ExternalDSLDemo(sentence);&#xA;&#x9;Customer customer = new Customer();&#xA;&#x9;customer.CustomerStatus = CustomerStatus.Preferred;&#xA;&#x9;dsl.AddParameter(&quot;customer&quot;, customer);&#xA;&#x9;Order order = new Order();&#xA;&#x9;order.TotalCost = 5000;&#xA;&#x9;order.ShippingType = ShippingType.Fast;&#xA;&#x9;dsl.AddParameter(&quot;order&quot;, order);&#xA;&#x9;dsl.AddParameter(&quot;apply&quot;, new ApplyCommands(order));&#xA;&#x9;dsl.Execute();&#xA;&#xA;&#x9;Assert.AreEqual(4750, order.TotalCost);&#xA;&#x9;Assert.AreEqual(ShippingType.Free, order.ShippingType);&#xA;}&#xA;&#xA;But I am pretty sure that I explained that this external DSL are very hard. This doesn&#x27;t seem very hard all.&#xA;No, this external DSL is not really hard. But try to do support something like:&#xA;&#xA;when (customer is preferred) and (order exceeds 1000 or order is new) then ...&#xA;This is when it gets suddenly much more complex... and why I think that External DSL are rarely worth the time to fully develop them. It is much easier to build on top of an existing infrastructure.&#xA;You can get the code for this here:&#xA;https://rhino-tools.svn.sourceforge.net/svnroot/rhino-tools/trunk/rhino-dsl/Rhino.DSL.Tests/ExternalDSL</p>
         </article>
         <div class="button flex justify-between">
             <a href="733.html"><span class="back arrow"></span></a>
