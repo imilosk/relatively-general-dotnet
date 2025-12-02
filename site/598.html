@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-5971">
+            <a href="https://ayende.com/blog/4150/wpf-tripwires-beware-of-uncommon-culture-infos" target="_blank">
+                <h2 class="title mb-6" id="article-5971">WPF tripwires, beware of uncommon culture infos</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 27, 2009
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I got a few bug reports about NH Prof giving an error that looks somewhat like this one:     System.Windows.Markup.XamlParseException: Cannot convert string &#x27;0.5,1&#x27; in attribute &#x27;EndPoint&#x27; to object of type &#x27;System.Windows.Point&#x27;. Input string was not in a correct format.&#xA0;    It took a while to figure out exactly what is going on, but I finally was able to track it down to this hotfix (note that this hotfix only take cares of list separator, while the problem exists for the decimal separator as well. Since I can&#x2019;t really install the hotfix for all the users of NH Prof, I was left with having to work around that.  I whimpered a bit when I wrote this, but it works:     private static void EnsureThatTheCultureInfoIsValidForXamlParsing()&#xA;{&#xA;&#x9;var numberFormat = CultureInfo.CurrentCulture.NumberFormat;&#xA;&#x9;if (numberFormat.NumberDecimalSeparator == &quot;.&quot; &amp;&amp; &#xA;&#x9;&#x9;numberFormat.NumberGroupSeparator == &quot;,&quot;) &#xA;&#x9;&#x9;return;&#xA;&#x9;Thread.CurrentThread.CurrentCulture = CultureInfo.GetCultureInfo(&quot;en-US&quot;);&#xA;&#x9;Thread.CurrentThread.CurrentUICulture = CultureInfo.GetCultureInfo(&quot;en-US&quot;);&#xA;}&#xA;&#xA;&#xA;I wonder when I&#x2019;ll get the bug report about NH Prof not respecting the user&#x2019;s UI culture&#x2026;</p>
+        </article>
+        <article id="article-5972">
             <a href="https://ayende.com/blog/4149/nh-prof-the-ten-minutes-feature" target="_blank">
-                <h2 class="title mb-6" id="article-5971">NH Prof</h2>
+                <h2 class="title mb-6" id="article-5972">NH Prof</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">15:51 - I have about ten more minutes before starting a presentation, and I thought that I might as well make use of the time and do some work on NH Prof.  This feature is supporting filtering of sessions by URL. And I don&#x2019;t expect it to be very hard.  16:01 - Manual testing is successful, writing a test for it  16:02 &#x2013; Test passed, ready to commit, but don&#x2019;t have network connection to do so.  The new feature is integrated into the application, in the UI, filtering appropriately, the works:     Just for fun, I did the feature with the projector on in front of the waiting crowd. I love NH Prof architecture.</p>
         </article>
-        <article id="article-5972">
+        <article id="article-5973">
             <a href="https://ayende.com/blog/4148/a-guide-into-or-m-implementation-challenges-the-session-level-cache" target="_blank">
-                <h2 class="title mb-6" id="article-5972">A guide into OR/M implementation challenges</h2>
+                <h2 class="title mb-6" id="article-5973">A guide into OR/M implementation challenges</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Continuing to shadow Davy&#x2019;s series about building your own DAL, this post is about the Session Level Cache.  The session cache (first level cache in NHibernate terms) exists to support one main scenario, in a single session, a row in the database is represented by a single instance. That means that the session needs to track all the instances that it loads and be able to search through them. Davy does a good job covering how it is used, and the implementation is quite similar to the way it is done in NHibernate.  Davy&#x2019;s implementation is to use a nested dictionary to hold instances per entity type. This is done mainly to support&#xA0; RemoveAllInstancesOf&lt;TEntity&gt;(), a method that is unique to Day&#x2019;s DSL. The reasoning for that method are interesting:     When a user executes a custom DELETE statement, there is no way for us to know which entities were actually removed from the database. But if any of those deleted entities happen to remain in the SessionLevelCache, this could lead to buggy application code whenever a piece of code tries to retrieve a specific entity which has already been removed from the database, but is still present in the SessionLevelCache. In order to deal with this scenario, the SessionLevelCache has a ClearAll and a RemoveAllInstancesOf method which you can use from your application code to either clear the entire SessionLevelCache, or to remove all instances of a specific entity type from the cache.    Personally, I think this is using an ICBM to crack eggshells. But I am probably being unfair. NHibernate has much the same issue, if you issue a Delete via SQL or HQL queries, NHibernate doesn&#x2019;t have a way to track what was actually delete and deal with it. With NHibernate, it doesn&#x2019;t tend to be a problem for the session level cache, mostly because of usage habits than anything else. The session used to do so rarely have to deal with entities loaded that were deleted by the query issue (and if it does, the user needs to handle that by calling Evict() on all the objects manually). NHibernate doesn&#x2019;t try to support this scenario explicitly for the session cache. It does support this very feature for the second level cache.  It make sense, though. With NHibernate, in the vast majority of cases deleting is going to be done using NHibernate itself, rather than a special query. With Davy&#x2019;s DAL, the usage of SQL queries for deletes is going to be much higher.  Another interesting point in Davy&#x2019;s post is the handling of queries:     When a custom query is executed, or when all instances are retrieved, there is no way for us to exclude already cached entity instances from the result of the query. Well, theoretically speaking you could attempt to do this by adding a clause to the WHERE statement of each query that would prevent cached entities from being loaded. But then you might have to add the cached entity instances to the resulting list of entities anyways if they would otherwise satisfy the other query conditions. Obviously, trying to get this right is simply put insane and i don&#x2019;t think there&#x2019;s any DAL or ORM that actually does this (even if there was, i can&#x2019;t really imagine any of them getting this right in every corner case that will pop up).     So a good compromise is to simply check for the existence of a specific instance in the cache before hydrating a new instance. If it is there, we return it from the cache and we skip the hydration for that database record. In this way, we avoid having to modify the original query, and while we could potentially return a few records that we already have in memory, at least we will be sure that our users will always have the same reference for any particular database record.   This is more or less how NHibernate operates, and for much the same reasoning. But there is a small twist. In order to ensure query coherency between the data base queries and in memory entities, NHibernate will optionally try to flush all the items in the session level cache that have been changed that may be affected by the query. A more detailed description of this can be found here, Davy&#x2019;s DAL doesn&#x2019;t do automatic change tracking, so this is not a feature that can be easily added with this prerequisite.</p>
         </article>
-        <article id="article-5973">
+        <article id="article-5974">
             <a href="https://ardalis.com/906/" target="_blank">
-                <h2 class="title mb-6" id="article-5973">Conways Life in WPF</h2>
+                <h2 class="title mb-6" id="article-5974">Conways Life in WPF</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The&#x201C;Game of Life&#x201D; was invented in 1970 by John Conway, a British mathematician. The rules of the game are simple, but the resulting behavior&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5974">
+        <article id="article-5975">
             <a href="https://ayende.com/blog/4147/progressive-net-event-in-stockholm" target="_blank">
-                <h2 class="title mb-6" id="article-5974">Progressive.NET event in Stockholm</h2>
+                <h2 class="title mb-6" id="article-5975">Progressive.NET event in Stockholm</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I think that it is better to forget to blog about an event than to forget to show up for the event, so I am improving.  I am currently in Stockholm, Sweden, for the Progressive.NET event that starts tomorrow. I am going to do an Intro to NHibernate and two runs of my Advanced NHibernate workshop.  Should be fun :-)</p>
         </article>
-        <article id="article-5975">
+        <article id="article-5976">
             <a href="https://ayende.com/blog/4146/a-guide-into-or-m-implementation-challenges-hydrating-entities" target="_blank">
-                <h2 class="title mb-6" id="article-5975">A guide into OR/M implementation challenges</h2>
+                <h2 class="title mb-6" id="article-5976">A guide into OR/M implementation challenges</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Continuing to shadow Davy&#x2019;s series about building your own DAL, this post is about hydrating entities.  Hydrating Entities is the process of taking a row from the database and turning it into an entity, while de-hydrating in the reverse process, taking an entity and turning it into a flat set of values to be inserted/updated.  Here, again, Davy&#x2019;s has chosen to parallel NHibernate&#x2019;s method of doing so, and it allows us to take a look at a very simplified version and see what the advantages of this approach is.  First, we can see how the session level cache is implemented, with the check being done directly in the entity hydration process. Davy has some discussion about the various options that you can choose at that point, whatever to just use the values from the session cache, to update the entity with the new values or to throw if there is a change conflict.   NHibernate&#x2019;s decision at this point was to assume that the entity that we have is correct, and ignore any changes made in the meantime to the database. That turn out to be a good approach, because any optimistic concurrency checks that we might want will run when we commit the transaction, so there isn&#x2019;t much difference from the result perspective, but it does simplify the behavior of NHibernate.  Next, there is the treatment of reference properties, what NHibernate call many-to-one associations. Here is the relevant code (editted slightly so it can fit on the blog width):     private void SetReferenceProperties&lt;TEntity&gt;(&#xA;&#x9;TableInfo tableInfo, &#xA;&#x9;TEntity entity, &#xA;&#x9;IDictionary&lt;string, object&gt; values)&#xA;{&#xA;&#x9;foreach (var referenceInfo in tableInfo.References)&#xA;&#x9;{&#xA;&#x9;&#x9;if (referenceInfo.PropertyInfo.CanWrite == false)&#xA;&#x9;&#x9;&#x9;continue;&#xA;&#x9;&#x9;&#xA;&#x9;&#x9;object foreignKeyValue = values[referenceInfo.Name];&#xA;&#xA;&#x9;&#x9;if (foreignKeyValue is DBNull)&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;referenceInfo.PropertyInfo.SetValue(entity, null, null);&#xA;&#x9;&#x9;&#x9;continue;&#xA;&#x9;&#x9;}&#xA;&#xA;&#x9;&#x9;var referencedEntity = sessionLevelCache.TryToFind(&#xA;&#x9;&#x9;&#x9;referenceInfo.ReferenceType, foreignKeyValue);&#xA;&#x9;&#x9;&#x9;&#xA;&#x9;&#x9;if(referencedEntity == null)&#xA;&#x9;&#x9;&#x9;referencedEntity = CreateProxy(tableInfo, referenceInfo, foreignKeyValue);&#xA;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;   &#xA;&#x9;&#x9;referenceInfo.PropertyInfo.SetValue(entity, referencedEntity, null);&#xA;&#x9;}&#xA;}&#xA;&#xA;&#xA;There are a lot of things going on here, so I&#x2019;ll take them one at a time.&#xA;&#xA;You can see how the uniquing process is going on. If we already have the referenced entity loaded, we will get it directly from the session cache, instead of creating a separate instance of it.&#xA;&#xA;It also shows something that Davy&#x2019;s promised to touch in a separate post, lazy loading. I had an early look at his implementation and it is pretty. So I&#x2019;ll skip that for now.&#xA;&#xA;This piece of code also demonstrate something that is very interesting. The lazy loaded inheritance many to one association conundrum.&#xA0; Which I&#x2019;ll touch on a future post.&#xA;&#xA;There are a few other implications of the choice of hydrating entities in this fashion. For a start, we are working with detached entities this way, the entity doesn&#x2019;t have to have a reference to the session (except to support lazy loading). It also means that our entities are pure POCO, we handle it all completely externally to the entity itself. &#xA;&#xA;It also means that if we would like to handle change tracking (with Davy&#x2019;s DAL currently doesn&#x2019;t do), we have a much more robust way of doing so, because we can simply dehydrate the entity and compare its current state to its original state. That is exactly how NHibernate is doing it. This turn out to be a far more robust approach, because it is safe in the face of method modifying state internally, without going through properties or invoking change tracking logic.&#xA;&#xA;I wanted to also touch about a few things that makes the NHibernate implementation of the same thing a bit more complex. NHibernate supports reflection optimization and multiple ways of actually setting the values on the entity, is also support things like components and multi column properties, which means that there isn&#x2019;t a neat ordering between properties and columns that make the Davy&#x2019;s code so orderly.</p>
         </article>
-        <article id="article-5976">
+        <article id="article-5977">
             <a href="https://ayende.com/blog/4145/concepts-features-a-concept-cover-the-whole-range-a-feature-is-constrained" target="_blank">
-                <h2 class="title mb-6" id="article-5976">Concepts &amp; Features: A concept cover the whole range, a feature is constrained</h2>
+                <h2 class="title mb-6" id="article-5977">Concepts &amp; Features: A concept cover the whole range, a feature is constrained</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A while ago I mentioned the idea of Concepts and Features, I expounded it a bit more in the Feature by Feature post. Concepts and Features is the logical result of applying the Open Closed and Single Responsibility Principles. It boils down to a single requirement:     A feature creation may not involve any design activity.   Please read the original post for details about how this is actually handled. And a the specific example about filtering with NH Prof.  But while I put constraints on what a feature is, I haven&#x2019;t talked about what a concept is. Oh, I talked about it being the infrastructure, but not much more.   The point about a concept implementation is that it contains everything that a feature must do. To take the filtering support in NH Prof as an example, the concept is responsible for finding all available filters, create and manage the UI, show the filter definition for the user when a filter is active, save and load the filter definition when the application is closed/started, perform the actual filtering, etc. The concept is also responsible for defining the appropriate conventions for the features in this particular concept.  As you can see, a lot of work goes into building a concept. But that work pays off the first time that you can service a user request in a rapid manner. To take NH Prof again, for most things, I generally need about half an hour to put out a new feature within an existing concept.</p>
         </article>
-        <article id="article-5977">
+        <article id="article-5978">
             <a href="https://ardalis.com/iterators-expressions-and-linq-for-euler/" target="_blank">
-                <h2 class="title mb-6" id="article-5977">Iterators, Expressions, and LINQ for Euler</h2>
+                <h2 class="title mb-6" id="article-5978">Iterators, Expressions, and LINQ for Euler</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently I&#x2019;ve been doing some Project Euler problems as exercises to help improve my coding skills. We do this internally at NimblePros&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5978">
+        <article id="article-5979">
             <a href="https://ardalis.com/practice-code-exercises-and-code-katas/" target="_blank">
-                <h2 class="title mb-6" id="article-5978">Practice, Code Exercises, and Code Katas</h2>
+                <h2 class="title mb-6" id="article-5979">Practice, Code Exercises, and Code Katas</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the ways we improve as software developers is through practice. Practice isn&#x2019;t just something that&#x2019;s done as you go about your job&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-5979">
+        <article id="article-5980">
             <a href="https://ayende.com/blog/4144/concepts-features-in-nh-prof-filtering" target="_blank">
-                <h2 class="title mb-6" id="article-5979">Concepts &amp; Features in NH Prof: Filtering</h2>
+                <h2 class="title mb-6" id="article-5980">Concepts &amp; Features in NH Prof: Filtering</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: August 25, 2009
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A while ago I mentioned the idea of Concepts and Features, I expounded it a bit more in the Feature by Feature post. Concepts and Features is the logical result of applying the Open Closed and Single Responsibility Principles. It boils down to a single requirement:     A feature creation may not involve any design activity.   Please read the original post for details about how this is actually handled. In this case, I wanted to show you how this works in practice with NH Prof. Filtering in NH Prof is a new concept, which allows you to limit what you are seeing in the UI based on some criteria.  The ground work for this feature include the UI for showing the filters, changing the UI to support the actual idea of filtering, and other related stuff. I can already see that we would want to be able to serialize the filters to save them between sessions, but that is part of what the concept is. It is the overall idea.  But once we have the concept outlined, thinking about features related to it is very easy. Let us see how we can build a new filter for NH Prof, one that filter out all the cached statements.  I intentionally choose this filter, because it doesn&#x2019;t really have any options you need a UI for. Which make my task easier, but here is the UI, FilterByNotCachedView.xaml     &lt;UserControl&#xA;&#x9;xmlns=&quot;http://schemas.microsoft.com/winfx/2006/xaml/presentation&quot;&#xA;&#x9;xmlns:x=&quot;http://schemas.microsoft.com/winfx/2006/xaml&quot;&gt;&#xA;    &lt;Grid&gt;&#xA;&#x9;&#x9;&lt;TextBlock&gt;Uncached statements&lt;/TextBlock&gt;&#xA;    &lt;/Grid&gt;&#xA;&lt;/UserControl&gt;&#xA;&#xA;&#xA;And the filter implementation:&#xA;&#xA;&#xA;  [DisplayName(&quot;Not Cached&quot;)]&#xA;public class FilterByNotCached: StatementFilterBase&#xA;{&#xA;&#x9;public override bool IsValid&#xA;&#x9;{&#xA;&#x9;&#x9;get { return true; }&#xA;&#x9;}&#xA;&#xA;&#xA;&#x9;public override Func&lt;IFilterableStatementSnapshot, bool&gt; Process&#xA;&#x9;{&#xA;&#x9;&#x9;get&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;return snapshot =&gt; snapshot.IsCached == false;&#xA;&#x9;&#x9;}&#xA;&#x9;}&#xA;}&#xA;&#xA;&#xA;Not hard to figure out what this is doing, I think.&#xA;&#xA;This is all the code required, and NH Prof knows that it is going to pick it up from the appropriate places, and make use of it. This is why after adding these two files, I can now run NH Prof and I get the following:&#xA;&#xA; &#xA;&#xA;I don&#x2019;t think that I can emphasis enough how important this is to enable creating consistent and easy to handle solutions. Moreover, since most requests tend to be for features, rather than concepts, it is extremely easy to put up a new feature.&#xA;&#xA;The end result is that I have a smart infrastructure layer, where I am actually implementing the concepts, and on top of it I am building the actual features. Just to give you an idea, NH Prof currently have just 6 concepts, and everything else is built on top of it.</p>
-        </article>
-        <article id="article-5980">
-            <a href="https://ayende.com/blog/4143/a-guide-into-or-m-implementation-challenges-crud" target="_blank">
-                <h2 class="title mb-6" id="article-5980">A guide into OR/M implementation challenges</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: August 25, 2009
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Continuing the series about Davy&#x2019;s build your own DAL, this post is talking about CRUD functionality.  One of the more annoying things about any DAL is dealing with the repetitive nature of talking to the data source. One of Davy&#x2019;s stated goal in going this route is to totally eliminate those. CRUD functionality shouldn&#x2019;t be something that you have to work with for each entity, it is just something that exists and that you get for free whenever you are using it.  I think he was very successful there, but I also want to talk about his method in doing so. Not surprisingly, Davy&#x2019;s DAL is taking a lot of concepts from NHibernate, simplifying them a bit and then applying them. His approach for handling CRUD operations is reminiscent of how NHibernate itself works.  He divided the actual operations into distinct classes, called DatabaseActions, and he has things like FindAllAction, InsertAction, GetByIdAction.  This architecture gives you two major things, maintaining things is now far easier, and playing around with the action implementations is far easier. It is just a short step away from Davy&#x2019;s Database Actions to NHibernate&#x2019;s event &amp; listeners approach.   This is also a nice demonstrations of the Single Responsibility Principle. It makes maintaining the software much easier than it would be otherwise.</p>
         </article>
         <div class="button flex justify-between">
             <a href="597.html"><span class="back arrow"></span></a>
