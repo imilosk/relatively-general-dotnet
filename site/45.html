@@ -138,8 +138,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-441">
+            <a href="https://andrewlock.net/behind-the-scenes-of-collection-expressions-part-4-the-spread-element/" target="_blank">
+                <h2 class="title mb-6" id="article-441">Exploring the generated code: the spread element</h2>
+            </a>
+            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 02, 2024
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Behind the scenes of collection expressions - Part 4</p>
+        </article>
+        <article id="article-442">
+            <a href="https://ayende.com/blog/201281-B/challenge-efficient-snapshotable-state" target="_blank">
+                <h2 class="title mb-6" id="article-442">Challenge</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 01, 2024
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">At the heart of RavenDB, there is a data structure that we call the Page Translation Table. It is one of the&#xA0;most important pieces inside RavenDB.The page translation table is basically a Dictionary&lt;long, Page&gt;, mapping between a page number and the actual page. The critical aspect of this data structure is that it is both concurrent and multi-version. That is, at a single point, there may be multiple versions of the table, representing different versions of the table at given points in time.The way it works, a transaction in RavenDB generates a page translation table as part of its execution and publishes the table on commit. However, each subsequent table builds upon the previous one, so things become more complex. Here is a usage example (in Python pseudo-code):table = {}&#xA;&#xA;&#xA;with wtx1 = write_tx(table):&#xA;  wtx1.put(2, &#x27;v1&#x27;)&#xA;  wtx1.put(3, &#x27;v1&#x27;)&#xA;  wtx1.publish(table)&#xA;&#xA;&#xA;# table has (2 =&gt; v1, 3 =&gt; v1)&#xA;&#xA;&#xA;with wtx2 = write_tx(table):&#xA;  wtx2.put(2, &#x27;v2&#x27;)&#xA;  wtx2.put(4, &#x27;v2&#x27;)&#xA;  wtx2.publish(table)&#xA;&#xA;&#xA;# table has (2 =&gt; v2, 3 =&gt; v1, 4 =&gt; v2)This is pretty easy to follow, I think. The table is a simple hash table at this point in time.The catch is when we mix read transactions as well, like so:# table has (2 =&gt; v2, 3 =&gt; v1, 4 =&gt; v2)&#xA;&#xA;&#xA;with rtx1 = read_tx(table):&#xA;&#xA;&#xA;        with wtx3 = write_tx(table):&#xA;                wtx3.put(2, &#x27;v3&#x27;)&#xA;                wtx3.put(3, &#x27;v3&#x27;)&#xA;                wtx3.put(5, &#x27;v3&#x27;)&#xA;&#xA;&#xA;                with rtx2 = read_tx(table):&#xA;                        rtx2.read(2) # =&gt; gives, v2&#xA;                        rtx2.read(3) # =&gt; gives, v1&#xA;                        rtx2.read(5) # =&gt; gives, None&#xA;&#xA;&#xA;                wtx3.publish(table)&#xA;&#xA;&#xA;# table has (2 =&gt; v3, 3 =&gt; v3, 4 =&gt; v2, 5 =&gt; v3)&#xA;# but rtx2 still observe the value as they were when&#xA;# rtx2 was created&#xA;&#xA;&#xA;        rtx2.read(2) # =&gt; gives, v2&#xA;        rtx2.read(3) # =&gt; gives, v1&#xA;        rtx2.read(5) # =&gt; gives, NoneIn other words, until we publish a transaction, its changes don&#x2019;t take effect. And any read&#xA0;translation that was already started isn&#x2019;t impacted. We also need this to be concurrent, so we can use the table in multiple threads (a single write transaction at a time, but potentially many&#xA0;read transactions). Each transaction may modify hundreds or thousands of pages, and we&#x2019;ll only clear the table of old values once in a while (so it isn&#x2019;t infinite&#xA0;growth, but may certainly reach respectable numbers of items).The implementation we have inside of RavenDB for this is complex! I tried drawing that on the whiteboard to explain what was going on, and I needed both the third and fourth dimensions to illustrate the concept. Given these requirements, how would you implement this sort of data structure?</p>
+        </article>
+        <article id="article-443">
+            <a href="https://www.meziantou.net/how-to-output-a-sarif-file-from-a-dotnet-project.htm" target="_blank">
+                <h2 class="title mb-6" id="article-443">How to output a SARIF file from a .NET project</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 01, 2024
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">SARIF (Static Analysis Results Interchange Format) is an OASIS Standard that defines an output file format. The SARIF standard is used to streamline how static analysis tools share their results. SARIF is a JSON-based format that is easy to parse. Lots of tools support it, including Visual studio C</p>
+        </article>
+        <article id="article-444">
             <a href="https://ayende.com/blog/201250-A/ravendb-news-june-2024" target="_blank">
-                <h2 class="title mb-6" id="article-441">RavenDB News: June, 2024</h2>
+                <h2 class="title mb-6" id="article-444">RavenDB News: June, 2024</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We recently published an article on Getting started with GraphQL and RavenDB, it will walk you through setting up Hot Chocolate&#xA0;to create a RavenDB-based GraphQL endpoint in your system.Here is what this looks like:Another new feature is the New Database Wizard, which was completely redesigned and made much simpler. We have a great number of features &amp; options, and the idea is that we want to give you better insight into what you can do with your system. Here is a quick peek, but take a look at the link. I&#x2019;m biased, of course, but I think the team did a really great job in exposing a really complex set of options in a very clear manner.The About Page&#xA0;of RavenDB Studio has undergone major updates. In particular, we have made it easier to see that new versions are available, what changes are included in each version, and check for updates. Additionally, you can now review your license details and compare features available in different editions. Furthermore, we pushed an update to the About Page of RavenDBitself. Here we try to tell the story of RavenDB and how it came about. Beyond the narrative, our goal is to explain the design philosophy of RavenDB.The idea is quite simple, we aim to be the database that you don&#x2019;t&#xA0;have to think about. The one component in your system that you don&#x2019;t need to worry about, the cog that just keeps on working. If we do our job right, we are a very boring database. Amusingly enough, the actual story behind it is quite interesting, and I would love to get your feedback on it.We also published our new roadmap, which has a bunch of new goodies for you. I&#x2019;m quite excited about this, and I hope you&#x2019;ll too (in a boring manner &#x1F642;). Upcoming features include data governance features, Open Telemetry integration, extremely large clusters, and more.One of our stated goals in the roadmap is better performance, with a focus on ARM hardware, which is taking the server / cloud world by storm. To that end, we are performing many &#x201C;crimes against code&#x201D; to squeeze every last erg of performance from the system. Initial results are promising, but we still have some way to go before we can publicly disclose numbers. As usual, I would appreciate your feedback about the roadmap and the new features in general.</p>
         </article>
-        <article id="article-442">
+        <article id="article-445">
             <a href="https://ayende.com/blog/201249-A/implementing-suggested-destinations-in-a-few-lines-of-code" target="_blank">
-                <h2 class="title mb-6" id="article-442">Implementing &quot;Suggested Destinations&quot; in a few lines of code</h2>
+                <h2 class="title mb-6" id="article-445">Implementing &quot;Suggested Destinations&quot; in a few lines of code</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today I got in my car to drive to work and realized that Waze suggested &#x201C;Work&#x201D; as the primary destination to select. I had noticed that before, and it is a really nice feature. Today, I got to thinking about how I would implement something like that. That was a nice drive since I kept thinking about algorithms and data flow. When I got to the office, I decided to write about how we can implement something like that. Based on historical information, let&#x2019;s suggest the likely destinations. Here is the information we have:The Lat &amp; Lng coordinates represent the start location, the time is the start time for the trip, and the destination is obvious. In the data set above, we have trips to and from work, to the gym once a week, and to our parents over the weekends.Based on this data, I would like to build recommendations for destinations. I could try to analyze the data and figure out all sorts of details. The prediction that I want to make is, given a location &amp; time, to find where my likely destination is going to be.I could try to analyze the data on a deep level, drawings on patterns, etc. Or I can take a very different approach and just throw some computing power at the problem. Let&#x2019;s talk in code since this is easier. I have a list of trips that look like this:public record Trip(double Lat, double Lng, string Destination, DateTime Time);&#xA;Trip[] trips = RecentTrips(TimeSpan.FromDays(90));Given that, I want to be able to write this function:string[] SuggestDestination((double Lat, double Lng) location, DateTime now)I&#x2019;m going to start by processing the trips data, to extract the relevant information:var historyByDest = new Dictionary&lt;string, List&lt;double[]&gt;&gt;();&#xA;foreach (var trip in trips)&#xA;{&#xA;    if (historyByDest.TryGetValue(trip.Destination, out var list) is false)&#xA;    {&#xA;        historyByDest[trip.Destination] = list = new();&#xA;    }&#xA;    list.Add([&#xA;        trip.Lat,&#xA;        trip.Lng,&#xA;        trip.Time.Hour * 100 &#x2B; trip.Time.Minute, // minutes after midnight&#xA;        trip.Time.DayOfYear,&#xA;        (int)trip.Time.DayOfWeek&#xA;    ]);&#xA;}What this code does is extract details (location, day of the week, time of day, etc.) from the trip information and store them in an array. For each trip, we basically break apart the trip across multiple dimensions. The next step is to make the actual prediction we want, which will begin by extracting the same dimensions from the inputs we get, like so:double[] compare = [&#xA;    location.Lat, &#xA;    location.Lng, &#xA;    now.Hour * 100 &#x2B; now.Minute, &#xA;    now.DayOfYear, &#xA;    (int)now.DayOfWeek&#xA;];Now we basically have an array of values from which we want to predict, and for each destination, an array that represents the same dimensions of historical trips. Here is the actual computation:List&lt;(string Dest, double Score)&gt; scores = new();&#xA;&#xA;&#xA;foreach (var (dest, items) in historyByDest)&#xA;{&#xA;    double score = 0;&#xA;    foreach (var cur in items)&#xA;    {&#xA;        for (var i = 0; i &lt; cur.Length; i&#x2B;&#x2B;)&#xA;        {&#xA;            score &#x2B;= Math.Abs(cur[i] - compare[i]);&#xA;        }&#xA;    }&#xA;    score /= items.Count;&#xA;    scores.Add((dest, score));&#xA;}&#xA;&#xA;&#xA;scores.Sort((x, y) =&gt; x.Score.CompareTo(y.Score));What we do here is compute the difference between the two arrays: the current start location &amp; time compared to the start location &amp; time of historical trips. We do that not only on the raw data but also extract additional features from the information.For example, one dimension is the day of the week, and the other is the time of day. It is not sufficient to compare just the date itself. The end result is the distance between the current trip start and previous trips for each of the destinations I have. Then I can return the destinations that most closely match my current location &amp; time.Running this over a few tests shows that this is remarkably effective. For example, if I&#x2019;m at home on a Saturday, I&#x2019;m very likely to visit either set of grandparents. On Sunday morning, I head to the Gym or Work, but on Monday morning, it is more likely to be Work.All of those were mostly fixed, with the day of the week and the time being different. But If I&#x2019;m at my parents&#x2019; house on a weekday (which is unusual), the location would have a far greater weight on the decision, etc. Note that the code is really trivial (I spent more time generating the actual data), but we can extract some nice information from this. The entire code is here, admittedly it&#x2019;s pretty dirty code since I wanted to test how this would actually work. At this point, I&#x2019;m going to update my Curriculum Vitae and call myself a senior AI developer. Joking aside, this approach provides a good (although highly simplified) overview of how modern AI systems work. Given a data item (image, text, etc.), you run that through the engine that outputs the embedding (those arrays we saw earlier, with values for each dimension) and then try to find its nearest neighbors across multiple dimensions. In the example above, I explicitly defined the dimensions to use, whereas LLMs would have their&#x201C;secret sauce&#x201D; for this. The concept, at a sufficiently high level, is the same.</p>
         </article>
-        <article id="article-443">
+        <article id="article-446">
             <a href="https://devblogs.microsoft.com/dotnet/join-us-for-dotnet-aspire-developers-day/" target="_blank">
-                <h2 class="title mb-6" id="article-443">Join Us for .NET Aspire Developers Day &#x2013; Elevate Your Cloud Native Skills!</h2>
+                <h2 class="title mb-6" id="article-446">Join Us for .NET Aspire Developers Day &#x2013; Elevate Your Cloud Native Skills!</h2>
             </a>
             <p class="mb-2">by Mehul Harry</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Join us on July 23, 2024, for .NET Aspire Developers Day, a livestream event to elevate your .NET skills with keynotes, deep dives, and interactive sessions. Connect with experts and the community.</p>
         </article>
-        <article id="article-444">
+        <article id="article-447">
             <a href="https://andrewlock.net/behind-the-scenes-of-collection-expressions-part-3-arrays-span-of-t-and-immutable-collections/" target="_blank">
-                <h2 class="title mb-6" id="article-444">Exploring the generated code: T[], Span&lt;T&gt;, and Immutable collections</h2>
+                <h2 class="title mb-6" id="article-447">Exploring the generated code: T[], Span&lt;T&gt;, and Immutable collections</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Behind the scenes of collection expressions - Part 3</p>
         </article>
-        <article id="article-445">
+        <article id="article-448">
             <a href="https://devblogs.microsoft.com/dotnet/lets-learn-dotnet-aspire/" target="_blank">
-                <h2 class="title mb-6" id="article-445">Let&#x2019;s Learn .NET Aspire &#x2013; Start your cloud-native journey live!</h2>
+                <h2 class="title mb-6" id="article-448">Let&#x2019;s Learn .NET Aspire &#x2013; Start your cloud-native journey live!</h2>
             </a>
             <p class="mb-2">by James Montemagno</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Join us for Let&#x27;s Learn .NET Aspire, a global live stream workshop where you can learn all about what .NET Aspire is, why you would use it, and see how to integrate .NET Aspire into your apps with a hands on workshop.</p>
         </article>
-        <article id="article-446">
+        <article id="article-449">
             <a href="https://www.meziantou.net/improve-the-tree-view-settings-in-visual-studio-code.htm" target="_blank">
-                <h2 class="title mb-6" id="article-446">Improve the tree view settings in Visual Studio Code</h2>
+                <h2 class="title mb-6" id="article-449">Improve the tree view settings in Visual Studio Code</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I think the default settings for the tree view in Visual Studio Code are not very good. The indentation is too small, and the indentation guides are not visible enough. Here&#x27;s how to improve the tree view settings:Open the VS Code settingsAdd the following json content to the settings:JSONcopy{</p>
         </article>
-        <article id="article-447">
+        <article id="article-450">
             <a href="https://devblogs.microsoft.com/dotnet/announcing-api-map-support-for-ua/" target="_blank">
-                <h2 class="title mb-6" id="article-447">Announcing Third Party API and Package Map Support for .NET Upgrade Assistant</h2>
+                <h2 class="title mb-6" id="article-450">Announcing Third Party API and Package Map Support for .NET Upgrade Assistant</h2>
             </a>
             <p class="mb-2">by Marco Goertz</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,54 +296,6 @@
                 posted on: June 20, 2024
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Learn how to extend the .NET Upgrade Assistant by providing mappings for your own libraries and packages.</p>
-        </article>
-        <article id="article-448">
-            <a href="https://ayende.com/blog/201217-A/recording-building-a-database-engine-in-c-net" target="_blank">
-                <h2 class="title mb-6" id="article-448">Recording</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 19, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Watch Oren Eini, CEO of RavenDB, as he delves into the intricate process of constructing a database engine using C# and .NET. Uncover the unique features that make C# a robust system language for high-end system development. Learn how C# provides direct memory access and fine-grained control, enabling developers to seamlessly blend high-level concepts with intimate control over system operations within a single project. Embark on the journey of leveraging the power of C# and .NET to craft a potent and efficient database engine, unlocking new possibilities in system development.I&#x2019;m going deep into some of the cool stuff that you can do with C# and low level programming.</p>
-        </article>
-        <article id="article-449">
-            <a href="https://ardalis.com/navigation-properties-between-aggregates-modules/" target="_blank">
-                <h2 class="title mb-6" id="article-449">Modeling Navigation Properties Between Aggregates or Modules</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 19, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the key challenges in developing a modular monolith is managing the communication between different modules, especially when it comes&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-450">
-            <a href="https://devblogs.microsoft.com/dotnet/using-phi3-csharp-with-onnx-for-text-and-vision-samples-md/" target="_blank">
-                <h2 class="title mb-6" id="article-450">Using Phi-3 &amp; C# with ONNX for text and vision samples</h2>
-            </a>
-            <p class="mb-2">by Bruno Capuano</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 19, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Harness the power of Phi-3 SLMs and ONNX for AI-driven .NET applications, showcasing C# integration for advanced tasks like image analysis and interactive Q&amp;A.</p>
         </article>
         <div class="button flex justify-between">
             <a href="44.html"><span class="back arrow"></span></a>

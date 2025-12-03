@@ -138,8 +138,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4911">
+            <a href="https://ayende.com/blog/137217/nhibernate-vs-entity-framework-usage" target="_blank">
+                <h2 class="title mb-6" id="article-4911">NHibernate vs. Entity Framework: Usage</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: November 24, 2011
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is in a response to a question on twitter:  In general, for applications, I would always use NHibernate. Mostly because I am able to do so much more with it.  For one off utilities and such, where I just need to get the data and I don&#x2019;t really care how, I would generally just use the EF wizard to generate a model and do something with it. Mostly, it is so I can get the code gen stuff ASAP and have the data working. For example, the routine to import the data from the Subtext database to the RacconBlog database is using Entity Framework. Mostly because it is easier and it is a one time thing. I guess that if I was running any of the tools for generating NHibernate model from the database, I would be using it, but honestly, it just doesn&#x2019;t really matter at that point. I just don&#x2019;t care for those sort of tools.</p>
+        </article>
+        <article id="article-4912">
+            <a href="https://ayende.com/blog/136198/ravendb-replication-master-master-support" target="_blank">
+                <h2 class="title mb-6" id="article-4912">RavenDB&#x2013;Replication &amp; Master &lt;-&gt; Master support</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: November 23, 2011
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB support master/master replication, with the caveat that such scenarios may result in conflicts. I recently had a long discussion with a customer about deploying a clustered RavenDB server. Setting it up is as simple as having two RavenDB server and telling each one to replicate to the other:  One nice aspect of this is that with the way RavenDB replication works, we also get failover for free. With the setup that we have here, we need to configure the client to failover both reads are writes (by default, we only failover reads):  store.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondariesAndWritesToSecondaries; And now we are all set. During normal operations, all writes to the primary would be replicated to the secondary automatically. If the primary goes down for any reason, we will failover to the secondary transparently. When the primary goes up, we will switch back to it, and the secondary will replicate all of the missing writes to the primary server. So far, so good. There is only one thing that we have to worry about: conflicts. What happen if during the failure period, we had two writes to the same document, one at the primary and one at the secondary. There is a very slim chance of this is happening, but it is something that we have to deal with. From RavenDB&#x2019;s perspective, that is considered to be a conflict. We have two documents with the same key that have different ancestry chains. At that point, RavenDB will save all the conflict versions and then create a new conflict document with the document key. Access to the document would result in an error, and give you access to all of the conflicting versions. You now have to resolve the conflict by saving a new version of the document. So far, easy enough, but the problem is that until the conflict is resolved, that document is not accessible. There are other alternatives, though. RavenDB can&#x2019;t make decisions on which version of the document is accurate, or how to merge the two versions, but you might have enough information to do so, and we provide an extension point for you to do so: [InheritedExport]&#xA;public abstract class AbstractDocumentReplicationConflictResolver&#xA;{&#xA;    public abstract bool TryResolve(string id, RavenJObject metadata, RavenJObject document, JsonDocument existingDoc);&#xA;}&#xA;&#xA;In fact, something that I suggested and might very well be the conflict resolution strategy is to select one of the documents (arbitrarily) and use that as the &#x201C;merged&#x201D; document, but record elsewhere that a conflict has occurred. The reasoning behind that is that we select one of the document versions, and then we have a human that gets to decide if there is anything that needs to be merged back to the live document.&#xA;This is useful because the chance of this actually happening are fairly small, we ensure that there is no data loss even if does happen, but more importantly, we don&#x2019;t waste developer cycles on something that we currently don&#x2019;t know how to handle. If/when we have a real failover, and if/when that resulted in a conflict, that is when we can start planning for having the next conflict automatically solved, and the best part of that? We don&#x2019;t even need to solve all of the potential conflicts. We can solve the ones that we know about, and rest assure that anything that we aren&#x2019;t familiar with would go through the same process of manual resolution that we already set up.&#xA;All in all, it is a fairly nice system, even if I do say so myself.</p>
+        </article>
+        <article id="article-4913">
+            <a href="https://ayende.com/blog/136197/when-should-you-not-use-ravendb" target="_blank">
+                <h2 class="title mb-6" id="article-4913">When should you NOT use RavenDB?</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: November 22, 2011
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">That is a much more interesting question, especially when it is me that gets asked. Again, I am might be biased, but I really think that RavenDB is suitable for a whole range of problems. One case that we don&#x2019;t recommend using RavenDB for is reporting, though. In many cases, reporting databases need to answer queries that would be awkward or slow on a RavenDB system. For reporting, we recommend just throwing that data into a reporting database (either star schema or a cube) and do the reporting directly from there. Most reporting tools will give you great support when you do that, and that is one sour spot (the reverse of a sweet spot) for RavenDB. We can do reporting, but you have to know what you want to report on beforehand. In most reporting systems, you give the users&#xA0; great deal of freedom with regards to how to look, aggregate and process the data, and that isn&#x2019;t something that you can easily do with RavenDB. So far, that is the one place where we have said, &#x201C;nope, that isn&#x2019;t us, go look at that other thing that does this feature really well&#x201D;. RavenDB is focused on being a good database for OLTP, not for reporting.</p>
+        </article>
+        <article id="article-4914">
             <a href="https://www.meziantou.net/merge-code-coverage-results.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4911">Merge code coverage results</h2>
+                <h2 class="title mb-6" id="article-4914">Merge code coverage results</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Sometimes we would like to have the result of code coverage of the current test combined with those before. Visual Studio has a feature that combines several files .coverage. To do this you have to go into the code coverage result window, click on Merge and choose the files to combine.Do you have a</p>
         </article>
-        <article id="article-4912">
+        <article id="article-4915">
             <a href="https://ayende.com/blog/136196/when-should-you-use-ravendb" target="_blank">
-                <h2 class="title mb-6" id="article-4912">When should you use RavenDB?</h2>
+                <h2 class="title mb-6" id="article-4915">When should you use RavenDB?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a question a lot of people are asking me, and I keep give them the same answer. &#x201C;I am the one building RavenDB, your grandmother and all her cats deserve to have three licenses, each (maybe with 3 way replication as well).&#x201D; Kidding aside, it is a serious question, which I am going to try answering in this post. I just wanted to make sure that it is clear that there might be some bias from my perspective. Having built NHibernate based application for years, and having built RavenDB based applications from almost the point where it could start up on its own, I can tell you that there is quite a bit of a difference between the two. Mostly because I intentionally designed RavenDB and the RavenDB client API to deal with problems and frustrations in the NHibernate / RDMBS model. What we discovered is that the lack of mapping and the ability to store complex object graphs in a single document makes for a speedy development and high performance applications. We usually see RavenDB being used in OLTP applications or as a persistent view model store (usually for the performance critical pages). Typically, it isn&#x2019;t the only database in the project. In brown field projects, we usually see RavenDB brought in to serve as a persistent view model store for the critical pages, data is replicated to RavenDB from the main database and then read directly from RavenDB in order to process the perf critical pages. For green field projects, we usually see RavenDB used as the primary application database, most or all of the data resides inside RavenDB. In some cases, there is also an additional reporting database as well. So the quick answer, and the one we are following, is that RavenDB is imminently suitable for OLTP applications, and can be used with great success as a persistent view model cache.</p>
         </article>
-        <article id="article-4913">
+        <article id="article-4916">
             <a href="https://www.meziantou.net/enable-code-coverage-in-visual-studio-2010.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4913">Enable code coverage in Visual Studio 2010</h2>
+                <h2 class="title mb-6" id="article-4916">Enable code coverage in Visual Studio 2010</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Code coverage is a feature that allows you to see which parts of the code are covered by the tests and which ones are not. This is very useful to see if the tests that have been written cover all the required cases. Indeed, it&#x27;s sometimes hard to figure out all the branches that should be tested.So</p>
         </article>
-        <article id="article-4914">
+        <article id="article-4917">
             <a href="https://ayende.com/blog/136195/when-should-you-use-nhibernate" target="_blank">
-                <h2 class="title mb-6" id="article-4914">When should you use NHibernate?</h2>
+                <h2 class="title mb-6" id="article-4917">When should you use NHibernate?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you are using a relational database, and you are going to do writes, you want to use NHibernate. If all you are doing are reads, you don&#x2019;t need NHibernate, you can use something like Massive instead, and it would probably be easier. But when you have read &amp; writes on a relational database, NHibernate is going to be a better choice. That said, look for the next post about when you should be using a relational database.</p>
         </article>
-        <article id="article-4915">
+        <article id="article-4918">
             <a href="https://ayende.com/blog/136194/make-a-distinction-errors-vs-alerts" target="_blank">
-                <h2 class="title mb-6" id="article-4915">Make a distinction: Errors vs. Alerts</h2>
+                <h2 class="title mb-6" id="article-4918">Make a distinction: Errors vs. Alerts</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">At several customer visits recently, I encountered a common problem. Their production error handling strategy. In one customer, they capture all of the production errors, push them to System Center Operations Manager (SCOM) and then send those errors to the development team over email. On another customer, they didn&#x2019;t really have a production error handling strategy. The interesting thing about that is that in both cases, production errors were handled in exactly the same way. They were ignored until a user called and complained about that. Huh?! What do you mean, ignored? The first client obviously did the right thing, they had capture and monitored the production errors, notifying the development team on each and every one of them.  Well, it is actually very simple, at the first client, I asked everyone to raise their hands if they receive the production errors emails. About half the room raised their hands. Then I asked how many of them set up a rule to move those emails from their inbox.  Every single one of them had done that. The major problem is that errors happen all the time. In the vast majority of cases, you don&#x2019;t really care, and it will fix itself automatically. For example, a error such as Transaction Deadlock Exception might happen a few times a day. There really isn&#x2019;t much you can do about those errors (well, re-architecting the app might do that, but that is out of scope for this post). Another might be a call to an external service that occasionally fails and already have a retry strategy in place. Do you get the problem? Getting notified about every single production error has immunized the team from them. Now going over the productions errors is just a chore, and a fairly unpleasant one. That is a major difference between Errors and Alerts. An error is just an exception or a problem that happened in production. Usually, those aren&#x2019;t really important. It will sort itself out. An ETL process that runs once an hour can fail a few times, and as long as it&#x2019;ll complete within a reasonable time frame, you don&#x2019;t care. Did you notice how often that statement is repeated. You don&#x2019;t care. When do you care?  When the ETL process has been unable to complete for three consecutive times. When the external service that you call has been unresponsive for over 8 hours. When a specific error is happening over 50 times an hour. When an unknown error showed up in the logs more than twice in the last hour. Each of those cases requires a human intervention in needed. And in most cases, those are going to be rare.  Errors are common place, they happen all the time and no one really care. Alerts is what you wake up at 2 AM for.</p>
         </article>
-        <article id="article-4916">
+        <article id="article-4919">
             <a href="https://ayende.com/blog/136193/the-required-infrastructure-frees-you-from-infrastructure-decisions" target="_blank">
-                <h2 class="title mb-6" id="article-4916">The required infrastructure frees you from infrastructure decisions</h2>
+                <h2 class="title mb-6" id="article-4919">The required infrastructure frees you from infrastructure decisions</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that I try to do whenever I design a system is to have just enough infrastructure in place to make sure that I don&#x2019;t have to make any infrastructure decisions. What does this means? It means that the code that actually does the interesting things, the code that actually provide a business value, isn&#x2019;t really aware of the context that it is running on. It can make assumptions about the state of the world in which it runs.  For example, let us take this controller, it inherits from RavenController, and it assumes that when it runs, it will have a documentSession instance primed &amp; ready for it: public ActionResult Validate(Guid key)&#xA;{&#xA;  var license = documentSession.Query&lt;License&gt;()&#xA;    .Customize(x=&gt;x.Include&lt;License&gt;(y=&gt;y.OrderId))&#xA;    .Where(x=&gt;x.Key == key)&#xA;    .FirstOrDefault();&#xA;&#xA;  if (license == null)&#xA;    return HttpNotFound();&#xA;&#xA;  var orderMessage = documentSession.Load&lt;OrderMessage&gt;(license.OrderId);&#xA;&#xA;  switch (orderMessage.OrderType)&#xA;  {&#xA;    case &quot;Perpetual&quot;:&#xA;      return Json(new {License = &quot;Valid&quot;});&#xA;  }&#xA;&#xA;  return HttpNotFound();&#xA;}&#xA;&#xA;&#xA;What is important about that is that it isn&#x2019;t actively doing something, it just assumes that it is there. &#xA;Why is that important? It is important because instead of going ahead and creating the session, we assume it is there, we are unaware of how it got there, who did it, etc. If we wanted to execute this code in a unit test, all we would need to do is to plug a session in, and then execute the code.&#xA;But that is just part of this. Let us look at a more complex scenario, the processing of an order:&#xA;public class ProcessOrderMessageTask : BackgroundTask&#xA;{&#xA;  public string OrderId { get; set; }&#xA;&#xA;  public override void Execute()&#xA;  {&#xA;    var orderMessage = documentSession.Load&lt;OrderMessage&gt;(OrderId);&#xA;&#xA;    var license = new License&#xA;    {&#xA;      Key = Guid.NewGuid(),&#xA;      OrderId = orderMessage.Id&#xA;    };&#xA;    documentSession.Store(license);&#xA;&#xA;    TaskExecuter.ExecuteLater(new SendEmailTask&#xA;    {&#xA;      From = &quot;orders@tekpub.com&quot;,&#xA;      To = orderMessage.Email,&#xA;      Subject = &quot;Congrats on your new tekpub thingie&quot;,&#xA;      Template = &quot;NewOrder&quot;,&#xA;      ViewContext = new&#xA;      {&#xA;        orderMessage.OrderId,&#xA;        orderMessage.Name,&#xA;        orderMessage.Amount,&#xA;        LiceseKey = license.Key&#xA;      }&#xA;    });&#xA;&#xA;    orderMessage.Handled = true;&#xA;  }&#xA;&#xA;&#xA;  public override string ToString()&#xA;  {&#xA;    return string.Format(&quot;OrderId: {0}&quot;, OrderId);&#xA;  }&#xA;}&#xA;&#xA;&#xA;There are several things that are happening here:&#xA;&#xA;Again, we are assuming that when we run, we are actually going to run with the documentSession set to a valid value.&#xA;Note that we have the notion of TaskExecuter.ExecuteLater.&#xA;That is actually quite an important aspect of infrastructure ignorance.&#xA;ExecuteLater is just that, a promise to execute something later, it doesn&#x2019;t specify how or when. In fact, it takes this a bit farther than that. Only if the current operation will complete successfully will this task run. So if we failed to commit the transaction, the SendemailTask won&#x2019;t get executed. Those sort of details can only happen when we let go of trying to control everything and let the infrastructure support us.&#xA;During the Full Throttle episode in which this code was written, we moved the task execution from a background thread to a different process, and nothing in the code had to change, because the only thing that we had to do is to setup the environment that the code expected.&#xA;I really like this sort of behavior, because it frees the code from all the nasty infrastructure concerns, at the same time as it gives you an incredibly powerful platform to work on.&#xA;And just for fun, this result in a system that you can play with with great ease, you don&#x2019;t have to worry about your choice. You can modify them at any time, because you don&#x2019;t really care how those things are done.</p>
         </article>
-        <article id="article-4917">
+        <article id="article-4920">
             <a href="https://ayende.com/blog/135169/frictionless-development-web-config-and-connection-strings" target="_blank">
-                <h2 class="title mb-6" id="article-4917">Frictionless development: Web.config and connection strings</h2>
+                <h2 class="title mb-6" id="article-4920">Frictionless development: Web.config and connection strings</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,54 +296,6 @@
                 posted on: November 15, 2011
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is something that I actually run into a lot at customer sites. They have a lot of friction during development between different connection strings that developers use during development. For example, we may have one developer using: &lt;add name=&quot;RavenDB&quot; connectionString=&quot;Url=http://localhost:8080&quot; /&gt;&#xA;&#xA;&#xA;While another is using:&#xA;&lt;add name=&quot;RavenDB&quot; connectionString=&quot;Url=http://localhost:8191;Database=TheApp&quot; /&gt;&#xA;&#xA;&#xA;This usually causes a hell of a lot of trouble in most teams (or maybe you have developers that use SQL Express, and some who installed SQL Development, etc). &#xA;That is friction, and you want to deal with that as soon as possible. The easiest thing to do is actually:&#xA;&lt;add name=&quot;Ayende-PC&quot; connectionString=&quot;Url=http://localhost:8080&quot; /&gt;&#xA;&lt;add name=&quot;Ayende-Laptop&quot; connectionString=&quot;Url=http://localhost:8191;Database=TheApp&quot; /&gt;&#xA;&#xA;&#xA;This works, because the connection string name is now the machine name (System.Environment.MachineName). That is a great first step, because it means that you can get things done without fighting over the connection string in the web.config.&#xA;Another alternative is to have a default connection string, and allow to &#x201C;override&#x201D; it with the specification of a connection string specific for the machine.&#xA;It is a small thing, but it actually helps quite a lot. You can extend this to other settings as well. For apps that have a lot of settings, I usually take them out of the Web.config into a Default.config file, and the configuration reader is set to look for [MachineName].config first, and only then at the Default.config file.</p>
-        </article>
-        <article id="article-4918">
-            <a href="https://ayende.com/blog/134145/sharding-vs-having-multiple-databases" target="_blank">
-                <h2 class="title mb-6" id="article-4918">Sharding vs. Having multiple databases</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 14, 2011
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was recently at a customer site, and he made a mention of sharding their database in a specific way, putting all of the user generated content on a separate server. I jumped in and told him that this isn&#x2019;t sharding. And then I had to explain, both to the customer and to myself, why splitting things up in that way bothered me. The basic idea is the same, we want to split the information over several databases to reduce the load on each individual server, and get higher capacity. We&#x2019;ll use the Flickr model for this post. What the client suggested was:  And what I suggested was:  On the face of it, there isn&#x2019;t much difference, right? But I really don&#x2019;t like calling the first example sharding. From my perspective, this is merely splitting the data into multiple databases, it isn&#x2019;t sharding. I&#x2019;ll accept arguments about this still being sharding, but it doesn&#x2019;t feel right from my perspective. The main problem with the first option is that in order to actually do something interesting, you have to go to three different servers. On the other hand, by selecting a good sharding function, you can usually serve a single request completely from a single database. That is important, because databases, whatever they are relational or RavenDB all include multiple ways for you to gather several pieces of information in an efficient manner. The common part about all of those efficient ways to gather multiple pieces of information? They all break down when you are trying to gather different pieces of information from different servers. That is leaving aside things like connection pooling and persistent connections, which are also quite important. For example, loading an image with its user&#x2019;s information and its comments would be the following three queries in the first example: var image = imagesSession.Load&lt;Image&gt;(&quot;images/1&quot;);&#xA;var user = usersSession.Load&lt;User&gt;(image.UserId)&#xA;var comments = commentsSession.Load&lt;ImageComments&gt;(images.CommentsId);&#xA;&#xA;&#xA;Whereas with the second example, we will have:&#xA;session&#xA;     .Include&lt;Image&gt;(x=&gt;x.UserId)&#xA;     .Include(x=&gt;x.CommentsId)&#xA;     .Load(&quot;images/1&quot;);&#xA;      &#xA;&#xA;&#xA;Other things, like transactions across the data set, are also drastically simpler when you are storing all of the related data on the same server.&#xA;In short, sharding means splitting the dataset, but a good sharding function would make sure that related information is located on the same server (strong locality), since that drastically simply things. A bad sharding function (splitting by type) would create very weak locality, which will drastically impact the system performance down the road.</p>
-        </article>
-        <article id="article-4919">
-            <a href="https://ardalis.com/represent-behavior-with-classes-not-flags/" target="_blank">
-                <h2 class="title mb-6" id="article-4919">Represent Behavior with Classes not Flags</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 11, 2011
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In any non-trivial software applications, there will be different kinds of behavior attributed to different kinds of objects.  For instance&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-4920">
-            <a href="https://ayende.com/blog/132097/legacy-etl-solutions" target="_blank">
-                <h2 class="title mb-6" id="article-4920">Legacy ETL solutions</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 11, 2011
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I am currently working with a customer on some issues that they have with moving to RavenDB, and we run into a set of problems with their (Legacy with a capital L) relational database. They run into several problems with how to create a good ETL on that, especially with regards to how to detect changes and the tendency of the legacy system to re-use old primary keys. The solution for both is actually fairly easy. Instead of relying on the primary keys of the legacy system, which can be re-used and creates a ton of trouble down the stream, create your own ids, distinct from the legacy system ids. That can be done easily enough by issuing: ALTER TABLE Customers ADD UniqueKeyForEtl uniqueidentifier NOT NULL DEFAULT(newid())&#xA;&#xA;&#xA;&#xA;&#xA;This is a non breaking change operation, that is, you can do that on any database without fearing that this would somehow break any application that is using it. The good thing about this is that this now ensures that every row in the table is going to have a unique, never repeating, never re-used key. This is a good approach because it is also something that has such a low cost. &#xA;The next problem was how to actually detect changes, the Legacy System does have LastModified column on some tables, and actually bothers to update this in some cases, but not in all of them. Again, the answer is to add a column to the table. The easiest option would probably to just ensure that the LastModified is updated in a trigger, something like:&#xA;CREATE TRIGGER UpdateCustomersLastModifiedDate ON Customers&#xA;FOR UPDATE &#xA;AS&#xA;UPDATE [TableName] SET Customers.LastModified=getdate()&#xA;FROM Customers INNER JOIN Inserted ON Customers.[UniqueID]= Inserted.[UniqueID]&#xA;&#xA;&#xA;Maybe with a check to skip the update if the Legacy System already updated it. &#xA;The problem is that the Legacy System has so many triggers already, that the client is very reluctant to add another one. So another option is to use the rowversion feature in SQL Server. This allows us to define the following:&#xA;ALTER TABLE Customers ADD ModifiedVersionForEtl rowversion NOT NULL &#xA;&#xA;&#xA;&#xA;&#xA;The rowversion will be incremented by the DB on every write. So you can check on all rows that has been updated since the last version that you have seen. This isn&#x2019;t a trigger, since this happens as part of the actual update process, and is likely to be significantly cheaper. &#xA;By adding these two columns, an operation that it is safe to make since it can&#x2019;t break any code that uses the database, we have given ourselves an easy way to detect changes, and an easy way to get unique keys that are actually unique, and non repeating.</p>
         </article>
         <div class="button flex justify-between">
             <a href="491.html"><span class="back arrow"></span></a>
