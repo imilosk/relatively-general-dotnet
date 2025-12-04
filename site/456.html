@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-4551">
-            <a href="https://ayende.com/blog/159233/multi-threaded-design-guidelines-for-libraries-part-ii" target="_blank">
+            <a href="https://ayende.com/blog/159265/multi-threaded-design-guidelines-for-libraries-part-iii" target="_blank">
                 <h2 class="title mb-6" id="article-4551">Multi threaded design guidelines for libraries</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 19, 2012
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I want to talk about libraries that want or need to not only support being run in multiple threads, but actually want to use multiple threads themselves. Remember, you are a library, not a framework. You are a guest in someone&#x2019;s else home, and you shouldn&#x2019;t litter. The first thing to remember is error handling. That actually comes in two parts. First, unhandled exceptions from a thread will kill the application. There are very few things that people will find more annoying with your library than your errors killing their application. Second, and almost as important, you should have a way to report those errors.  Even more annoying than killing my application, failing to do something silently and in a way that is really hard to debug is going to cause major hair loss all around. There are several scenarios that we need to consider:  Long running threads &#x2013; I need to do something in a background thread that would usually live as long as the application itself. Short term threads &#x2013; I need to do something that requires a lot of threads, just for a short time. Timeouts / delays / expirations &#x2013; I need to do something every X amount of time. In the first case, of long running threads, there isn&#x2019;t much that can be done. You want to handle errors, obviously, and you want to make it crystal clear when you spin up your threads, and when / how you tear them down again. Another important aspect is that you should name your threads. This is important because it means that when debugging things, we can figure out what this or that thread is doing more easily. The next approach is much more common, you just need some way to execute some code in parallel. The easiest thing to do is to go to new Thread(), ThreadPool.QueueUserWorkItem or Task.Factory.StartNew(). Such, this is easy to do, and it is also perfectly wrong. Why is that, you say? Quite simply, it ain&#x2019;t your app. You don&#x2019;t get to make such decisions for the application that is hosting your library. Maybe the app needs to conserve threads to serve requests? Maybe it is trying to utilize less threads to reduce CPU load and save power on a laptop running on batteries? Maybe they are trying to debug something and all those threads popping around is driving them crazy? The polite thing to do when you recognize that you have a threading requirement in your application is to:  Give the user a way to control that. Provide a default implementation that works. A good example of that can be seen in RavenDB&#x2019;s sharding implementation.  public interface IShardAccessStrategy&#xA;{&#xA;    event ShardingErrorHandle&lt;IDatabaseCommands&gt; OnError;&#xA;&#xA;    T[] Apply&lt;T&gt;(IList&lt;IDatabaseCommands&gt; commands, ShardRequestData request, Func&lt;IDatabaseCommands, int, T&gt; operation);&#xA;}&#xA;&#xA;&#xA;As you can see, we abstracted the notion of making multiple requests. We provide you out of the box with sequential and parallel implementations for this.&#xA;The last item, timeouts /expirations / delays is also something that you want to give the user of your library control of. Ideally, using something like the strategy above. By all means, make a default implementation and wire it without needing anything. &#xA;But it is important to have control over those things. The expert users for your library will want and need it.</p>
+        </article>
+        <article id="article-4552">
+            <a href="https://ayende.com/blog/159233/multi-threaded-design-guidelines-for-libraries-part-ii" target="_blank">
+                <h2 class="title mb-6" id="article-4552">Multi threaded design guidelines for libraries</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Next on the agenda for writing correct multi threaded libraries, how do you handle shared state? The easiest way to handle that is to use the same approach that NHibernate and the RavenDB Client API uses. You have a factory / builder / fizzy object that you use to construct all of your state, this is done on a single thread, and then you call a method that effectively &#x201C;freeze&#x201D; this state from now on. All future accesses to this state are read only. This is really good for doing things like reflection lookups, loading configuration, etc. But what happens when you actually need shared mutable state? A common example is a cache, or global statistics. This is where you actually need to pull out your copy of Concurrent Programming on Windows and very carefully write true multi threaded code. It is over a thousand pages, you say? Sure, and you need to know all of this crap to get multi threading working properly. Multi threading is scary, hard and should not be used. In general, even if you actually need to do shared mutable state, you really want to make sure that there are clear definitions between things that can be shared among multiple threads and the things that cannot. And you want to make most of the work in the parts where you don&#x2019;t have to worry about multi threading. It also means that your users have much easier time figuring out what the expected behavior of the system is. This is very important with the advent of C# 5.0, since async API are going to be a lot more common. Sure, you use the underlying async primitives, but did you consider what may happen when you are issuing multiple concurrent async requests. Is that allowed? With C# 5.0, you can usually treat async code as if it was single threaded, but that breaks down if you are allowing multiple concurrent async operations. In RavenDB and NHibernate, we use the notion of Document Store / Session Factory &#x2013; which are created once, safe for multi threading and are usually singletons. And then we have the notion of sessions, which are single threaded, easy &amp; cheap to create and follow the notion of one per thread (actually, one per work unit, but that is beside the point). On my next post, I&#x2019;ll discuss what happens when your library actually wants to go beyond just being safe for multi threading, when the library wants to use threading directly.</p>
         </article>
-        <article id="article-4552">
+        <article id="article-4553">
             <a href="https://ayende.com/blog/159201/multi-threaded-design-guidelines-for-libraries-part-i" target="_blank">
-                <h2 class="title mb-6" id="article-4552">Multi threaded design guidelines for libraries</h2>
+                <h2 class="title mb-6" id="article-4553">Multi threaded design guidelines for libraries</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The major difference between libraries and frameworks is that a framework is something that runs your code, and is in general in control of its own environment and a library is something that you use in your own code, where you control the environment. Examples for frameworks: ASP.Net, NServiceBus, WPF, etc. Examples for libraries: NHibernate, RavenDB Client API, JSON.Net, SharpPDF, etc. Why am I talking about the distinction between frameworks and libraries in a post about multi threaded design? Simple, there are vastly different rules for multi threaded design with frameworks and libraries. In general, frameworks manage their own threads, and will let your code use one of their threads. On the other hands, libraries will use your own threads. The simple rule for multi threaded design for libraries? Just don&#x2019;t do it. Multi threading is hard, and you are going to cause issues for people if you don&#x2019;t know exactly what you are doing. Therefor, just write for a single threaded application and make sure to hold no shared state. For example, JSON.Net pretty much does this. The sole place where it does do multi threading is where it is handling caching, and it must be doing this really well because I never paid it any mind and we got no error reports about it. But the easiest thing to do is to just not support multi threading for your objects. If the user want to use the code from multiple threads, he is welcome to instantiate multiple instances and use one per thread. In my next post, I&#x2019;ll talk about what happens when you actually do need to hold some shared state.</p>
         </article>
-        <article id="article-4553">
+        <article id="article-4554">
             <a href="https://ayende.com/blog/159169/you-release-too-often-you-dont-release-enough-ravendb-plans" target="_blank">
-                <h2 class="title mb-6" id="article-4553">You release too often, you don&#x2019;t release enough: RavenDB Plans</h2>
+                <h2 class="title mb-6" id="article-4554">You release too often, you don&#x2019;t release enough: RavenDB Plans</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A common complaint from users with RavenDB 1.0 has been that we release too often, which meant that to upgrade RavenDB too often.  We made a clean break with 1.2 (which allowed handle several very large issues cleanly) and we have been releasing unstable version at a steady rate of 5 &#x2013; 8 builds a week.&#xA0; Now, of course, we get complaints about not releasing enough . At any rate, the following is a rough plan for where we will be in the near future. RavenDB 1.2 is currently running in production (running our internal infrastructure) and we have been doing a lot of comparability, stability and performance work. There are still a lot of little tweaks that we still want to put into the product, but major features are likely to be deferred post 1.2 We have just completed triage of the things that we intend to do for 1.2, and we currently have ~60 - 70 items to go through in terms of features to implement, bug fixes to do, etc. Toward the end of this month, we intend to stop all new feature development and focus on bug fixes, stability and performance.&#xA0; By mid Nov, we want to have an RC version out that you can take take out to town, and the release is scheduled to late Nov or early Dec. Post 1.2 release, we will go back to a stable release every 4 - 6 weeks.</p>
         </article>
-        <article id="article-4554">
+        <article id="article-4555">
             <a href="https://www.meziantou.net/asp-mvc-mass-assignment.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4554">ASP MVC: Mass Assignment</h2>
+                <h2 class="title mb-6" id="article-4555">ASP MVC: Mass Assignment</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is part of the series &#x27;Vulnerabilities&#x27;. Be sure to check out the rest of the blog posts of the series!Impersonation and securitySQL injectionsHow to prevent CSRF attacksASP MVC and XSRFCross-site scripting (XSS)ASP MVC: Mass Assignment (this post)Regex - Deny of Service (ReDoS)Deserializ</p>
         </article>
-        <article id="article-4555">
+        <article id="article-4556">
             <a href="https://www.meziantou.net/cross-site-scripting-xss.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4555">Cross-site scripting (XSS)</h2>
+                <h2 class="title mb-6" id="article-4556">Cross-site scripting (XSS)</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is part of the series &#x27;Vulnerabilities&#x27;. Be sure to check out the rest of the blog posts of the series!Impersonation and securitySQL injectionsHow to prevent CSRF attacksASP MVC and XSRFCross-site scripting (XSS) (this post)ASP MVC: Mass AssignmentRegex - Deny of Service (ReDoS)Deserializ</p>
         </article>
-        <article id="article-4556">
+        <article id="article-4557">
             <a href="https://www.meziantou.net/asp-mvc-and-xsrf.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4556">ASP MVC and XSRF</h2>
+                <h2 class="title mb-6" id="article-4557">ASP MVC and XSRF</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is part of the series &#x27;Vulnerabilities&#x27;. Be sure to check out the rest of the blog posts of the series!Impersonation and securitySQL injectionsHow to prevent CSRF attacksASP MVC and XSRF (this post)Cross-site scripting (XSS)ASP MVC: Mass AssignmentRegex - Deny of Service (ReDoS)Deserializ</p>
         </article>
-        <article id="article-4557">
+        <article id="article-4558">
             <a href="https://ayende.com/blog/159137/this-code-aint-production-ready" target="_blank">
-                <h2 class="title mb-6" id="article-4557">This code ain&#x2019;t production ready</h2>
+                <h2 class="title mb-6" id="article-4558">This code ain&#x2019;t production ready</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Greg Young has a comment on my Rhino Events post that deserves to be read in full. Go ahead, read it, I&#x2019;ll wait. Since you didn&#x2019;t, I&#x2019;ll summarize. Greg points out numerous faults and issues that aren&#x2019;t handled or could be handled better in the code. That is excellent, from my point of view, if only because it gives me more stuff to think about for the next time.  But the most important thing to note here is that Greg is absolutely correct about something:  I have always said an event store is a fun project because you can go anywhere from an afternoon to years on an implementation. Rhino Events is a fun project, and I&#x2019;ve learned some stuff there that I&#x2019;ll likely use again letter on. But above everything else, this is not production worthy code .It is just some fun code that I liked. You may take and do whatever you like with it, but mostly I was concerned with finding the right ways to actually get things done, and not considering all of the issues that might arise in a real production environment.</p>
         </article>
-        <article id="article-4558">
+        <article id="article-4559">
             <a href="https://www.meziantou.net/how-to-prevent-csrf-attacks.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4558">How to prevent CSRF attacks</h2>
+                <h2 class="title mb-6" id="article-4559">How to prevent CSRF attacks</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is part of the series &#x27;Vulnerabilities&#x27;. Be sure to check out the rest of the blog posts of the series!Impersonation and securitySQL injectionsHow to prevent CSRF attacks (this post)ASP MVC and XSRFCross-site scripting (XSS)ASP MVC: Mass AssignmentRegex - Deny of Service (ReDoS)Deserializ</p>
         </article>
-        <article id="article-4559">
+        <article id="article-4560">
             <a href="https://ayende.com/blog/159105/introducing-rhino-events" target="_blank">
-                <h2 class="title mb-6" id="article-4559">Introducing Rhino.Events</h2>
+                <h2 class="title mb-6" id="article-4560">Introducing Rhino.Events</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: October 11, 2012
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After talking so often about how much I consider OSS work to be indicative of passion, I got bummed when I realized that I didn&#x2019;t actually did any OSS work for a while, if you exclude RavenDB. I was recently at lunch at a client, when something he said triggered a bunch of ideas in my head. I am afraid that I made for poor lunch conversation, because all I could see in my head was code and IO blocks moving around in interesting ways. At any rate, I sat down at the end of the day and wrote a few spikes, then I decided to write the actual thing in a way that would actually be useful. What is Rhino Events?  It is a small .NET library that gives you embeddable event store. Also, it is freakishly fast. How fast is that?   Well, this code writes a fairly non trivial events 10,000,000 (that is ten million times) to disk. It does this at a rate of about 60,000 events per second. And that include the full life cycle (serializing the data, flushing to disk, etc). Rhino.Events has the following external API:   As you can see, we have several ways of writing events to disk, always associating to a stream, or just writing the latest snapshot. Note that the write methods actually return a Task. You can ignore that Task, if you wish, but this is part of how Rhino Events gets to be so fast. When you call EnqueueEventAsync, we register the value in a queue and have a background process write all of the pending events to disk. This means that we actually have only one thread that is actually doing writes, which means that we can batch all of those writes to get really nice performance from being able to handle all of that. We can also reduce on the number of times that we have to actually Flush to disk (fsync), so we only do that when we run out of things to write or at a predefined times (usually after a full 200 ms of non stop writes. Only after the information was fully flushed to disk will we set the task status to completed. This is actually a really interesting approach from my point of view, and it makes the entire thing transactional, in the sense that you can wait to be sure that the event has been persisted to disk (and yes, Rhino Events is fully ACID) or you can fire &amp; forget it, and move on with your life. A few words before I let you go off and play with the bits.  This is a Rhino project, which means that it is a fully OSS one. You can take the code and do pretty much whatever you want with it. But I , or Hibernating Rhinos, will not be providing support for that. You can get the bits here: https://github.com/ayende/Rhino.Events</p>
-        </article>
-        <article id="article-4560">
-            <a href="https://www.meziantou.net/sql-injections.htm" target="_blank">
-                <h2 class="title mb-6" id="article-4560">SQL injections</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: October 11, 2012
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is part of the series &#x27;Vulnerabilities&#x27;. Be sure to check out the rest of the blog posts of the series!Impersonation and securitySQL injections (this post)How to prevent CSRF attacksASP MVC and XSRFCross-site scripting (XSS)ASP MVC: Mass AssignmentRegex - Deny of Service (ReDoS)Deserializ</p>
         </article>
         <div class="button flex justify-between">
             <a href="455.html"><span class="back arrow"></span></a>
