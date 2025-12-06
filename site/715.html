@@ -138,8 +138,24 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-7141">
+            <a href="https://ayende.com/blog/3198/non-invasive-api-now-with-an-ioc-container" target="_blank">
+                <h2 class="title mb-6" id="article-7141">Non invasive API - Now with an IoC container</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: March 19, 2008
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I talked about ways to avoid invasive API design, and a lot of people asked about how to handle this with a container. First, I want to make it clear that the previous example assumed that you can&#x27;t rely on a container, so it used Poor Man IoC to do that. Now that we can assume that there is a container, this is another matter entirely. The API design now shifts to allow me to select the proper implementation from the container automatically. This generally ends up being either as a naming convention on top of a fixed interface, or as a generic interface with a given type as a parameter. The decision depends on what you are doing, basically, and the capabilities of your tools. For myself, I strongly favor the generic interface approach, which would give us the following syntax: public interface IMessageHandler&lt;TMsg&gt;&#xA;&#x9;where TMsg : IMessage&#xA;{&#xA;&#x9;void Handle(TMsg msg);&#xA;}&#xA;&#xA;public class EndPoint&#xA;{&#xA;&#x9;public void HandleMsg(IMessage msg)&#xA;&#x9;{&#xA;&#x9;&#x9;// this should be cached and turned into a delegate&#xA;&#x9;&#x9;// not reflection call&#xA;&#x9;&#x9;GetGenericHandleMsgMethod().MakeGenericMethod(msg.GetType())&#xA;&#x9;&#x9;&#x9;.Invoke(this, new object[]{msg});&#xA;&#x9;}&#xA;&#xA;&#x9;public void HandleMsg&lt;TMsg&gt;(TMsg msg)&#xA;&#x9;&#x9;where TMsg : IMessage&#xA;&#x9;{&#xA;&#x9;&#x9;IoC.Resolve&lt;IMessageHandler&lt;TMsg&gt;().Handle(msg);&#xA;&#x9;}&#xA;&#xA;}&#xA;There is some ugliness in invoking the method with the generic parameter, but this allows you to handle a wide variety of cases very easily.&#xA;Let us take another example, this time it is from the Prism.Services.RegionManagerService:&#xA;public void SetRegion(DependencyObject containerElement, string regionName)&#xA;{&#xA;&#x9;IRegion region = null;&#xA;&#xA;&#x9;if (containerElement is Panel)&#xA;&#x9;{&#xA;&#x9;&#x9;region = new PanelRegion((Panel)containerElement);&#xA;&#x9;}&#xA;&#x9;else if (containerElement is ItemsControl)&#xA;&#x9;{&#xA;&#x9;&#x9;region = new ItemsControlRegion((ItemsControl)containerElement);&#xA;&#x9;}&#xA;&#xA;&#x9;if (region != null)&#xA;&#x9;&#x9;_regions.Add(regionName, region);&#xA;}&#xA;I don&#x27;t really like this code, let us see what happens when we introduce the idea of the container as a deeply rooted concept:&#xA;// only use for selection&#xA;public interface IRegion&lt;T&gt; : IRegion {}&#xA;&#xA;public void SetRegion(DependencyObject containerElement, string regionName)&#xA;{&#xA;&#x9;IRegion region = (IRegion) IoC.TryResolve(typeof(IRegion&lt;&gt;).MakeGenericType(containerElement.GetType()));&#xA;&#xA;&#x9;if (region != null)&#xA;&#x9;&#x9;_regions.Add(regionName, region);&#xA;}&#xA;Now the code is much clearer, we can extend it from the outside, without modifying anything when we add a new region type.</p>
+        </article>
+        <article id="article-7142">
             <a href="https://ayende.com/blog/3197/advance-mocking-partial-mocks-and-do" target="_blank">
-                <h2 class="title mb-6" id="article-7141">Advance Mocking - Partial mocks and Do()</h2>
+                <h2 class="title mb-6" id="article-7142">Advance Mocking - Partial mocks and Do()</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +169,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Kyle has just posted about the MvcContrib.TestHelper project:  The CreateController method on my TestControllerBuilder uses Castle&#x27;s DynamicProxy to create the controller. It also creates a ControllerContext using dynamic mocks from Rhino Mocks similar to the way Haackselman have already showed you and wires it up to the controller. An interceptor is also attached to the controller to intercept calls to RenderView and RedirectToAction. (Actually, it intercepts all calls but only these two have special handling.) Calls to either method will populate an appropriate object on the builder class. In the example above, I&#x27;m using the RedirectToActionData object. I&#x27;ll leave aside the need to get to that level when you want to test brand new framework and code. I think that this is a serious flaw, but that is not the subject of this post. The use of dynamic proxy and interceptors caught my eye, because they aren&#x27;t actually needed. Rhino Mocks can do it for you. Let us see how it is done right now.  public T CreateController&lt;T&gt;() where T : Controller{&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ProxyGenerator generator = new ProxyGenerator(); //Castle DynamicProxy&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; Controller controller = (Controller)generator.CreateClassProxy(typeof(T), new ControllerInterceptor(this));&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; ControllerContext controllerContext = new ControllerContext(HttpContext, RouteData, controller);&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; controller.ControllerContext = controllerContext;&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; &#xA0;&#xA0;&#xA0;&#xA0;&#xA0; typeof(T).GetProperty(&quot;TempData&quot;).SetValue(controller, TempDataDictionary, null);&#xA0;&#xA0;&#xA0;&#xA0;&#xA0; return controller as T;} The controller interceptor can be found here. Let us take out the dynamic proxy part and use Rhino Mocks to handle it. In this case, it will look like this: public T CreateController&lt;T&gt;(params object[] ctorArgs) where T : Controller&#xA;{&#xA;&#x9;Controller controller = _mocks.PartialMock&lt;T&gt;();&#xA;&#x9;&#xA;&#x9;var renderViewDataParams = new Type[]{typeof(string),typeof(string), typeof(object));&#xA;&#x9;typeof(Controller).GetMethod(&quot;RenderViewData&quot;, renderViewDataParams)&#xA;&#x9;&#x9;.Invoke(controller, new [] { null, null, null });&#xA;&#x9;LastCall.IgnoreArguments().Repeat.Any()&#xA;&#x9;&#x9;.Do( (RenderViewDataDelegate)delegate(string viewName, string masterName, object viewData)&#xA;&#x9;{&#xA;&#x9;&#x9;RenderViewData = new RenderViewData&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;ViewName = viewName, &#xA;&#x9;&#x9;&#x9;MasterName = masterName, &#x9;&#xA;&#x9;&#x9;&#x9;ViewData = viewData&#xA;&#x9;&#x9;};&#xA;&#x9;});&#xA;&#x9;&#xA;&#x9;typeof(Controller).GetMethod(&quot;RedirectToAction&quot;, new []{typeof(RouteValueDictionary}})&#xA;&#x9;&#x9;.Invoke(controller, new []{null});&#xA;&#x9;LastCall.IgnoreArguments().Repeat.Any()&#xA;&#x9;&#x9;.Do( (RedirectToActionDelegate) delegate(RouteValueDictionary route)&#xA;&#x9;{&#xA;&#x9;&#x9;RedirectToActionData = new RedirectToActionData&#xA;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;ActionName = Convert.ToString(values.ContainsKey(&quot;action&quot;) ? values[&quot;action&quot;] : &quot;&quot;),&#xA;&#x9;&#x9;&#x9;ControllerName = Convert.ToString(values.ContainsKey(&quot;controller&quot;) ? values[&quot;controller&quot;] : &quot;&quot;)&#xA;&#x9;&#x9;};&#xA;&#x9;});&#xA;&#xA;&#x9;_mocks.Repaly(controller);&#xA;&#x9;&#xA;&#x9;return controller;&#xA;}&#xA;&#xA;A lot of the ugliness here is the need to make calls with reflection, because they aren&#x27;t exposed externally. Ignoring that, it is really a trivial exercise. &#xA;Just to point out, I added this functionality to Rhino Mocks a long time ago, specifically to enable the Extract and Override scenarios. This is a technique used for legacy code testing, it should be frowned upon in most green field scenarios.</p>
         </article>
-        <article id="article-7142">
+        <article id="article-7143">
             <a href="https://ayende.com/blog/3196/svnbridge-development-environment" target="_blank">
-                <h2 class="title mb-6" id="article-7142">SvnBridge development environment</h2>
+                <h2 class="title mb-6" id="article-7143">SvnBridge development environment</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +185,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The first thing is getting the source to your machine. I recommend downloading the latest released version of SvnBridge from the SvnBridge site, and executing the SvnBridge.exe file.  Put https://tfs03.codeplex.com in the Team Foundation Server text box and 8081 in the port text box, then click Ok.   SvnBridge will connect to the remote server and then the the following notification tool tip:   Check out the source using TortoiseSvn:    Note: You can also use the following command line to checkout the code: svn checkout http://localhost:8081/SvnBridge SvnBrdige Open the SvnBridge.sln in Visual Studio and ensure that you can compile all the projects in the solution.  Note: It is possible that you&#x27;ll get compilation errors in the TestsRequiringTfsClient project, if you don&#x27;t have the Team Foundation Client installed. If it fails to compile, you can safely remove the project from the solution. SvnBridge does not require you to have TFS installed, and only this test project has any dependency on TFS. You can now execute the SvnBridge project and start working with TFS using the SVN protocol.  Running the tests The following test projects can be run without having a test instance of TFS to work with:  TestsUnit TestsProtocol The following test projects requires an instance for TFS to work with:  TestsEndToEnd TestsIntegration TestsRequiringTfsClient  Setting up TFS test instance  Note: Getting TFS up and running can be tricky, for testing purposes, I generally use the TFS VPC trail. Open Visual Studio and connect to a TFS server using Team Explorer. Right click the TFS server and select New Team Project (note that if the New Team Project menu item is missing or disabled, it is likely that you don&#x27;t have permissions to create a new project):   Name the project SvnBridgeTesting and click next:   On the select process template screen, click Finish:  Important: Ensure that the time zone of the TFS machine match the time zone on the development machine. For each of the test projects, open the App.config file and paste the following, replacing the configured values with the ones matching your environment.  &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;&#xA;&lt;configuration&gt;&#xA;&#x9;&lt;configSections&gt;&#xA;&#x9;&#x9;&lt;sectionGroup name=&quot;applicationSettings&quot; type=&quot;System.Configuration.ApplicationSettingsGroup, System, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089&quot; &gt;&#xA;&#x9;&#x9;&#x9;&lt;section name=&quot;IntegrationTests.Properties.Settings&quot; type=&quot;System.Configuration.ClientSettingsSection, System, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089&quot; requirePermission=&quot;false&quot; /&gt;&#xA;&#x9;&#x9;&lt;/sectionGroup&gt;&#xA;&#x9;&lt;/configSections&gt;&#xA;&#x9;&lt;applicationSettings&gt;&#xA;&#x9;&#x9;&lt;IntegrationTests.Properties.Settings&gt;&#xA;&#x9;&#x9;&#x9;&lt;setting name=&quot;ServerUrl&quot; serializeAs=&quot;String&quot;&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&lt;value&gt;http://TFSRTM08:8080&lt;/value&gt;&#xA;&#x9;&#x9;&#x9;&lt;/setting&gt;&#xA;&#x9;&#x9;&#x9;&lt;setting name=&quot;Username&quot; serializeAs=&quot;String&quot;&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&lt;value&gt;tfsSetup&lt;/value&gt;&#xA;&#x9;&#x9;&#x9;&lt;/setting&gt;&#xA;&#x9;&#x9;&#x9;&lt;setting name=&quot;Password&quot; serializeAs=&quot;String&quot;&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&lt;value&gt;P2ssw0rd&lt;/value&gt;&#xA;&#x9;&#x9;&#x9;&lt;/setting&gt;&#xA;&#x9;&#x9;&#x9;&lt;setting name=&quot;Domain&quot; serializeAs=&quot;String&quot;&gt;&#xA;&#x9;&#x9;&#x9;&#x9;&lt;value&gt;TFSRTM08&lt;/value&gt;&#xA;&#x9;&#x9;&#x9;&lt;/setting&gt;&#xA;&#x9;&#x9;&lt;/IntegrationTests.Properties.Settings&gt;&#xA;&#x9;&lt;/applicationSettings&gt;&#xA;&lt;/configuration&gt;&#xA;Now you can run all the tests, and the development environment is ready to go.&#xA;Have fun...</p>
         </article>
-        <article id="article-7143">
+        <article id="article-7144">
             <a href="https://ayende.com/blog/3195/svnbridge-performance" target="_blank">
-                <h2 class="title mb-6" id="article-7143">SvnBridge - Performance</h2>
+                <h2 class="title mb-6" id="article-7144">SvnBridge - Performance</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I just did a small (and inconclusive) test. I run the following:  DateTime start = DateTime.Now;Process svn = Process.Start(&quot;svn&quot;, &quot;co http://localhost:8081/SvnBridge SvnBridge&quot;);svn.WaitForExit();Console.WriteLine(&quot;Took: {0}&quot;, DateTime.Now - start); First with the released version of SvnBridge (from October 07) and then with the trunk version of SvnBridge. The results means that I am doing something right:  Checking out SvnBridge&#x27;s code takes 04:49.125 minutes using the released version, but just 02:42.234 minutes using the trunk version. Just for kicks, making a second checkout using the same trunk instance of SvnBridge completes in 01:06.468 minutes.  This is the results of a change in the threading model, introducing two levels of caching, and general profiling and optimization. It is important to note that I run those tests from my home machine in Israel, which means that I have a fairly high latency (common scenario for running the local version). The caching improvements is very important when you consider the hosted version performance.</p>
         </article>
-        <article id="article-7144">
+        <article id="article-7145">
             <a href="https://ayende.com/blog/3194/avoiding-invasive-api-design" target="_blank">
-                <h2 class="title mb-6" id="article-7144">Avoiding Invasive API design</h2>
+                <h2 class="title mb-6" id="article-7145">Avoiding Invasive API design</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have a strong dislike for invasive API and framework. I dislike them because they require a lot of work, avoid existing options, limit my ability to work with them, etc. They also tend to tie you to a platform for very little reason. Here is a simple (and fictional) example. Let us assume that we want to write a library to expose our domain model in a version way. So we can do something like this:  svn://localhost/Customers/15[@revision=3] Now, in order to handle this scenario, I have devised the following schema. I can create the end point using the following approach: public class Customers : Versioned&lt;Customer&gt; { }&#xA;&#xA;And I can can specify the revision using an attribute:&#xA;public class Customer&#xA;{&#xA;&#x9;public virtual int Id { get; set; }&#xA;&#xA;&#x9;[SvnVersion]&#xA;&#x9;public virtual int Version { get; set; }&#xA;}&#xA;&#xA;&#xA;Very simple, right? And very straightforward. Except that this in incredibly invasive approach to take.&#xA;I really dislike API that work this way. Now, if I want to expose my domain model using SVN, I need to go into the domain model and start messing with that, just because I want to add another accessibility option?&#xA;This is bad. It violates the open close principal, single responsibility principal and in Ayende Annoyance Principal.&#xA;Let us try to make this easier, shall we?&#xA;public class Customers : Versioned&lt;Customer, CustomerVersionPropertyProvider&gt;&#xA;{&#xA;}&#xA;Now I don&#x27;t have to modify the Customer entity, I can do this in a way that doesn&#x27;t modify Customer, I keep things separate and in general I am happy. From the Versioned class perspective, I now define it as:&#xA;public class Versioned&lt;TEntity, TVersionProvider&gt;&#xA;&#x9;where TVersionProvider : IVersionProvider, new()&#xA;{&#xA;}&#xA;Actually, this is not really good. We probably want to control the creation of the version provider ourselves (it may need external dependencies, we may want to control its lifetime, etc), so we get to this design:&#xA;public class Versioned&lt;TEntity, TVersionProviderFactory&gt; where TVersionProviderFactory: IVersionProviderFactory, new() {}&#xA;&#xA;public interface IVersionProviderFactory&#xA;{&#xA;&#x9;IVersionProvider Create();&#xA;}&#xA;&#xA;public class Customers : Versioned&lt;Customers, CustomersVerionProviderFactory&gt;&#xA;{&#xA;}&#xA;And now we really have non invasive API, which plays well with other tools.&#xA;Except, the simple scenario that we had before turn out to be really complex. Instead of putting a simple attribute in place, we now need to implement two interfaces, do it per class, and in generally add a lot more work into our life.&#xA;That is also bad. But we can resolve that easily, by defaulting to the invasive behavior (which is really easy to explain), yet allowing extensibility. The way to do it is simple:&#xA;public class Versioned&lt;TEntity, TVersionProviderFactory&gt;&#xA;&#x9;where TVersionProviderFactory: IVersionProviderFactory, new() &#xA;{&#xA;} &#xA;&#xA;public class Versioned&lt;TEntity&gt; : Versioned&lt;TEntity, SvnVersionAttributeVersionProviderFactory&gt;&#xA;{&#xA;} &#xA;&#xA;&#xA;public class Customers : Versioned&lt;Customer&gt;&#xA;{&#xA;}&#xA;Now we have the same API for the simple (and invasive) scenario, but with minimal effort, we have made it possible to use non invasive and smart approaches.</p>
         </article>
-        <article id="article-7145">
+        <article id="article-7146">
             <a href="https://ardalis.com/continuous-integration-setup-with-mstest/" target="_blank">
-                <h2 class="title mb-6" id="article-7145">Continuous Integration Setup with MSTest</h2>
+                <h2 class="title mb-6" id="article-7146">Continuous Integration Setup with MSTest</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m working with a client this week to set up Continuous Integration for their development environment. They&#x2019;re a small shop who are using&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-7146">
+        <article id="article-7147">
             <a href="https://ardalis.com/visual-studio-shortcuts/" target="_blank">
-                <h2 class="title mb-6" id="article-7146">Visual Studio Shortcuts</h2>
+                <h2 class="title mb-6" id="article-7147">Visual Studio Shortcuts</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I was doing a bunch of Silverlight last night on a new machine and once again set up my shortcut to basically arrow left in order to let me&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-7147">
+        <article id="article-7148">
             <a href="https://ayende.com/blog/3193/xunit-net" target="_blank">
-                <h2 class="title mb-6" id="article-7147">xUnit.NET</h2>
+                <h2 class="title mb-6" id="article-7148">xUnit.NET</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -249,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A while ago xUnit.NET came out, and I checked it out, decided that it didn&#x27;t offer me anything really interesting, and moved on. I was wrong. Or, to be rather exact, I didn&#x27;t dug deep enough. xUnit.NET doesn&#x27;t really offer something that we haven&#x27;t seen elsewhere, but today I had the chance to do some work on the it a bit, and I found some interesting things. I am not sure why xUnit.NET is using [Fact] instead of [Test], but aside from that, it is a really nice framework. Most significantly, I like the use of Assert.DoesNotThrows(delegate); It makes it very clear what is supposed to happen, instead of the more awkward syntax in other places. What has sparked this post is that I wanted to have a parameterized test. Now, I know that xUnit.NET has this feature somewhere, but I decided to take a look inside (one of my standard procedures before I am using a library). What I found out was very pleasing. In fact, I still don&#x27;t know what the standard way to deal with that scenario in xUnit.NET (well, I know it is called [Theory], but I don&#x27;t know the exact syntax). The reason that I don&#x27;t know the exact syntax is very simple.  It was easier to write my own than to learn the official syntax. That is a rare pleasure. I haven&#x27;t actually looked at NUnit or MbUnit code, so I have no idea how they are looking, but it was a lot of fun trawling through xUnit.NET on reflector.</p>
         </article>
-        <article id="article-7148">
+        <article id="article-7149">
             <a href="https://ardalis.com/silverlight-2-beta-1-installation-tips/" target="_blank">
-                <h2 class="title mb-6" id="article-7148">Silverlight 2 Beta 1 Installation Tips</h2>
+                <h2 class="title mb-6" id="article-7149">Silverlight 2 Beta 1 Installation Tips</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -265,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">BradleyB has some great tips for troubleshooting installation problems with Silverlight 2 Beta 1,releasedat MIX last week. I&#x2019;m trying to&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-7149">
+        <article id="article-7150">
             <a href="https://ardalis.com/verizon-crippled-my-blackberry-pearl/" target="_blank">
-                <h2 class="title mb-6" id="article-7149">Verizon Crippled My Blackberry Pearl</h2>
+                <h2 class="title mb-6" id="article-7150">Verizon Crippled My Blackberry Pearl</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -280,22 +296,6 @@
                 posted on: March 17, 2008
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A few weeks ago I upgraded my phone to a Blackberry Pearl 8130. Overall I was (and am) very happy with the phone. It&#x2019;s small, light, has&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-7150">
-            <a href="https://ardalis.com/three-requests-for-asp-net-4-and-vs-2010/" target="_blank">
-                <h2 class="title mb-6" id="article-7150">Three Requests for ASP.NET 4 and VS 2010</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: March 16, 2008
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have three things that have been on my wish list for ASP.NET and/or Visual Studio that I&#x2019;m curious to know what others think. I&#x2019;ve&#x2026;Keep Reading &#x2192;</p>
         </article>
         <div class="button flex justify-between">
             <a href="714.html"><span class="back arrow"></span></a>
