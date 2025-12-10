@@ -138,8 +138,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3791">
+            <a href="https://ayende.com/blog/170209/crunching-the-numbers" target="_blank">
+                <h2 class="title mb-6" id="article-3791">Crunching the numbers</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 18, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m running the numbers, and I didn&#x2019;t really believe them. So I put them in a chart, and I&#x2019;m still not sure that I trust them.&#xA;&#xA;&#x9;Here you can see our income per month for the past year. Yes, July was pretty bad with everyone on vacation and no one is buying.&#xA;&#xA;&#x9;March 14 was pretty good, with people buying RavenConf tickets are a lot of excitement around that. September and October were great. In fact, October was out best month ever.&#xA;&#xA;&#x9;And then we get to February 2015. In other words, this month. In other words, this month where we still have 10 more days to make sales.&#xA;&#xA;&#x9;&#xA;&#xA;&#x9;I&#x2019;m pretty happy . But I wished that I had hard numbers on why.</p>
+        </article>
+        <article id="article-3792">
+            <a href="https://ayende.com/blog/170082/excerpts-from-the-ravendb-performance-team-report-json-structs-in-voron" target="_blank">
+                <h2 class="title mb-6" id="article-3792">Excerpts from the RavenDB Performance team report</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 18, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">What seems to be a pretty set in stone rule of thumb is that when building a fool proof system, you will also find a better fool. In this case, the fool was us. In particular, during profiling of our systems, we realized that we did something heinous, something so bad that it deserve a true face palm:  In essence, we spent all this time to create a really fast key/value store with Voron. We spent man years like crazy to get everything working just so&#x2026; and then came the time to actually move RavenDB to use Voron. That was&#x2026; a big task, easily as big as writing Voron in the first place. The requirements RavenDB makes of its storage engine are anything but trivial. But we got it working. And it worked good. Initial performance testing showed that we were&#xA0; quite close to the performance of Esent, within 10% &#x2013; 15%, which was good enough for us to go ahead with. Get things working, get them working right and only then get them working fast. So we spent a lot of time making sure that things worked, and worked right. And then the time came to figure out if we can make things faster. Remember, Voron is heavily based around the idea of memory mapping and directly accessing values at very little cost. This is important, because we want to use Voron for a whole host of stuff. That said, in RavenDB we use it to store JSON documents, so we obviously store the JSON in it. There are quite a lot of book keeping information that we keep track of. In particular, let us focus on the indexing stats. We need to keep track of the last indexed etag per index, when it was changed, number of successful indexing attempts, number of failed indexing attempts, etc. Here is how we updated those stats:  As you can imagine, a lot of the time was actually spent just deserializing and deserializing the data back &amp; forth from JSON. In fact, a lot of time was spend doing just that. Now, indexing status needs to be queried on every single query, so that was a high priority for us to fix. We did this by not storing the data as JSON, but storing the data in its raw form directly into Voron. Voron gives us a memory of size X, and we put all the relevant data into that memory, and pull the data directly from the raw memory. No need for serialization/deserialization step.  There is a minor issue about the use of strings .While using fixed size structure (like the indexing stats) is really easy, we just read/write to that memory. When dealing with variable length data (such as strings), you have harder time at it, but we dealt with that as well by defining a proper way to encode string lengths and read them back. The results, by the way:  That means that we got close to 4 times faster! That is certainly going to help us down the road.</p>
+        </article>
+        <article id="article-3793">
+            <a href="https://ayende.com/blog/170081/improving-the-ravendb-experience-help-is-right-where-you-need-it" target="_blank">
+                <h2 class="title mb-6" id="article-3793">Improving the RavenDB Experience: Help is right where you need it</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 17, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that we work very hard on is the whole experience of the product. Not just creating a good database, or writing great code, but also having good documentation, to explain exactly what is going on here. We have now taken it a bit further, and we incorporate help documents in pretty much every section of the studio, so you can get relevant docs about what you are looking by just click the big help button.   &#xA0; It ain&#x2019;t Clippy, so it won&#x2019;t try to read your mind, but we do hope that it will end up being useful.</p>
+        </article>
+        <article id="article-3794">
             <a href="https://ayende.com/blog/170178/ravendb-on-linux-first-steps" target="_blank">
-                <h2 class="title mb-6" id="article-3791">RavenDB on Linux, first steps&#x2026;</h2>
+                <h2 class="title mb-6" id="article-3794">RavenDB on Linux, first steps&#x2026;</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Early days, but we are now at the point where we are capable of running RavenDB itself on Linux .   That was the easy part, now we have to figure out all of our Windows dependencies and switch them with a Linux equivalent, find out where we are doing things like case insensitive file names, etc, etc, etc. The current work is going to be pretty much a lot of &#x201C;let us get all the tests running on Linux&#x201D;, which is expected to last quite a while. After that, we&#x2019;ll be able to make sure that we run in a manner consistent with a Linux admin expectations, and then&#x2026; world domination*! * Insert maniacal sound track here.</p>
         </article>
-        <article id="article-3792">
+        <article id="article-3795">
             <a href="https://ayende.com/blog/170177/the-ravendb-comics" target="_blank">
-                <h2 class="title mb-6" id="article-3792">The RavenDB Comics</h2>
+                <h2 class="title mb-6" id="article-3795">The RavenDB Comics</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The new flyers just arrived, and we also have a new comics to go with them. We are going to give them out at QCon London in March 4 &#x2013; 5, I have a really good feeling about this. And I really like the comics.  Nitpicker: Yes, I know it isn&#x2019;t readable at this resolution. We&#x2019;ll post this online a few weeks after the QCon conference, come see us there!</p>
         </article>
-        <article id="article-3793">
+        <article id="article-3796">
             <a href="https://www.meziantou.net/asp-net-webforms-validators-bootstrap.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3793">ASP.NET WebForms Validators &amp; Bootstrap</h2>
+                <h2 class="title mb-6" id="article-3796">ASP.NET WebForms Validators &amp; Bootstrap</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">ASP.NET WebForms has long been proposing a validation system for data entered by the user by the server and the client!HTMLcopy&lt;div class=&quot;form-group&quot;&gt;&#xA;   &lt;asp:Label runat=&quot;server&quot; CssClass=&quot;control-label&quot; AssociatedControlID=&quot;Name&quot; Text=&quot;Name&quot; /&gt;&#xA;   &lt;asp:TextBox runat=&quot;server&quot; ID=&quot;N</p>
         </article>
-        <article id="article-3794">
+        <article id="article-3797">
             <a href="https://enterprisecraftsmanship.com/posts/code-contracts-vs-input-validation/" target="_blank">
-                <h2 class="title mb-6" id="article-3794">C# code contracts vs input validation</h2>
+                <h2 class="title mb-6" id="article-3797">C# code contracts vs input validation</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Input validation rules are often taken for code contracts. In this post, I&#x2019;ll try to cover their differences and show what their common use cases are.</p>
         </article>
-        <article id="article-3795">
+        <article id="article-3798">
             <a href="https://ayende.com/blog/169986/excerpts-from-the-ravendb-performance-team-report-facets-of-information-part-ii" target="_blank">
-                <h2 class="title mb-6" id="article-3795">Excerpts from the RavenDB Performance team report</h2>
+                <h2 class="title mb-6" id="article-3798">Excerpts from the RavenDB Performance team report</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my previous post, I outlined the performance problem with facets, in this one, I want to discuss how we solved it. For the purpose of discussion, we&#x2019;ll deal with the following data model:   { &quot;Id&quot;: &quot;phones/1&quot;, &quot;Unlocked&quot;: false, &quot;Brand&quot;: &quot;Apple&quot;, ... }&#xA;{ &quot;Id&quot;: &quot;phones/2&quot;, &quot;Unlocked&quot;: true,  &quot;Brand&quot;: &quot;LG&quot;, ... }&#xA;{ &quot;Id&quot;: &quot;phones/3&quot;, &quot;Unlocked&quot;: false, &quot;Brand&quot;: &quot;Samsung&quot;, ... }&#xA;{ &quot;Id&quot;: &quot;phones/4&quot;, &quot;Unlocked&quot;: true,  &quot;Brand&quot;: &quot;Apple&quot;, ... }&#xA;{ &quot;Id&quot;: &quot;phones/5&quot;, &quot;Unlocked&quot;: false, &quot;Brand&quot;: &quot;Samsung&quot;, ... }&#xA;&#xA;In order to handle that, we have to understand how Lucene actually work behind the scenes. Everything with Lucene is based on the notion of a document id. The results of a query is a set of document ids, and the internal structures refer to document ids on a regular basis.&#xA;So, if the result of a query is actually a set of document ids (Int32), we can represent them as a simple HashSet&lt;int&gt;. So far, so good. Now, we want to do a facet by the brand. How is Lucene actually storing that information? &#xA;There are two data structures of interest. The TermsEnum, which looks like this:&#xA;&#xA;Brand:Apple &#x2013; 2 &#xA;Brand:LG &#x2013;1 &#xA;Brand:Samsung -2&#xA;This shows the number of documents per term. This is almost exactly what we would have wanted, except that this is global information, relevant for all the data. It our query is for unlocked phones only, we cannot use this data to answer the query.&#xA;For that, we need to use the TermsDocs, which looks like this:&#xA;&#xA;Brand:Apple &#x2013; [1,4] &#xA;Brand:LG &#x2013; [2] &#xA;Brand:Samsung &#x2013; [3,5]&#xA;So we have the term, and the document ids that contained that term. &#xA;&#xA;Note that this is a very high level view of how this actually works, and it ignores a lot of stuff that isn&#x2019;t actually relevant for what we need to understand here.&#xA;The important bit is that we have good way to get all the document matches for a particular term. Because we can do that, it gives us an interesting option. Instead of trying to calculate things on a case by case basis, we changed things around. We used the information inside the Lucene&#xA0; index to create the following structure:&#xA;&#xA;{&#xA;&#x9;&quot;Brand&quot;: {&#xA;&#x9;&#x9;&quot;Apple&quot;: [1,4],&#xA;&#x9;&#x9;&quot;LG&quot;: [2],&#xA;&#x9;&#x9;&quot;Samsung&quot;: [3,5]&#xA;&#x9;}&#xA;}&#xA;&#xA;There is caching and other obvious stuff also involved, naturally, but those aren&#x2019;t important for the purpose of this talk.&#xA;Now, let us get back to our query and the required facets. We want:&#xA;&#xA;Give me all the unlocked phones, and show me the facet for Brand.&#xA;A query in Lucene is going to return the following results:&#xA;&#xA;[1,3,5]&#xA;Looking at the data like that, I think you can figure out where we are going with this. Here is the general algorithm that we have for answering facets.&#xA;&#xA;&#xA;var docsIds = ExecuteQuery();&#xA;var results = {};&#xA;foreach(var facet in facets) {&#xA;&#x9;var termsForFacet = terms[facet];&#xA;&#x9;foreach(var term in termsForFacet){&#xA;&#x9;&#x9;results[facet] = CountIntersection(docIds, term.DoccumentsForTerm)&#xA;&#x9;}&#xA;}&#xA;&#xA;The actual cost for calculating the facet is down to a mere set intersection, so the end result is that the performance of facets in the scenarios we test had improved by more than an order of magnitude. &#xA;I&#x2019;m skipping over a lot of stuff, obviously. With facets we deal with distinct queries, ranges, dynamic aggregation, etc. But we were able to shove all of them into this style of work, and the results certainly justify the work.&#xA;Oh, and the normal case that we worked so hard to optimize normally, we are seeing 50% improvement there as well, so I&#x2019;m pretty happy.</p>
         </article>
-        <article id="article-3796">
+        <article id="article-3799">
             <a href="https://ayende.com/blog/169985/excerpts-from-the-ravendb-performance-team-report-facets-of-information-part-i" target="_blank">
-                <h2 class="title mb-6" id="article-3796">Excerpts from the RavenDB Performance team report</h2>
+                <h2 class="title mb-6" id="article-3799">Excerpts from the RavenDB Performance team report</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Facets are annoying. Mostly because they tend to be used relatively rarely, but when they are used, they are used a lot, and in many interesting ways. Because they are fairly rarely used, let me explain what they are first.  We want to show the users all the recent phones. We can do this using the following query:  from phone in session.Query&lt;Phone&gt;() orderby phone.ReleaseDate descending select phone;&#xA;&#xA;So far, so good. But we want to do better than just show a potentially big list to the user. So we start faceting the results. We pull some interesting pieces of data from the results, and allow the user to quickly narrow down the details. Typical facets for a phone query would be:&#xA;&#xA;Brand &#xA;Screen Size &#xA;Camera &#xA;Cost&#xA;Now, we can certainly give the&#xA0; option to search for them individually, but then you end up with something like this:&#xA;&#xA;That is neither friendly nor very useful. so UX designers came up with this idea, instead:&#xA;&#xA;This gives the user a much easier way to look at the large data sets, and quickly narrow down the search to just the things they want. It also gives the user some indication about the actual data. I can see how changing the facet selection would likely change the number of results I have. This is a great way to offer data exploration capabilities. And in any kind of data repository, this is crucial. Shopping sites are a natural choice, but content/document management systems, job sites, information centers are all commonly making use of this feature.&#xA;&#xA;I&#x2019;m sorry for the long intro, but I feel that this feature needs to be placed in context, to explain its history and the various iterations it has gone through.&#xA;We first got this feature in Sep 2011. It was a pull request from Matt Warren, apparently based on some code that I spiked. I intentionally goes there, because that is the first time we see this code, and it was implemented in the simplest possible manner that could possibly work, to showcase this feature and to make sure that it works end to end. The underlying implementation looked something like this:&#xA;&#xA;private void HandleTermsFacet(string index, Facet facet, IndexQuery indexQuery, IndexSearcher currentIndexSearcher, &#xA;&#x9;Dictionary&lt;string, IEnumerable&lt;FacetValue&gt;&gt; results)&#xA;{&#xA;&#x9;var terms = database.ExecuteGetTermsQuery(index,&#xA;&#x9;&#x9;facet.Name,null,&#xA;&#x9;&#x9;database.Configuration.MaxPageSize);&#xA;&#x9;var termResults = new List&lt;FacetValue&gt;();&#xA;&#x9;foreach (var term in terms)&#xA;&#x9;{&#xA;&#x9;&#x9;var baseQuery = database.IndexStorage.GetLuceneQuery(index, indexQuery);&#xA;&#x9;&#x9;var termQuery = new TermQuery(new Term(facet.Name, term));&#xA;&#xA;&#x9;&#x9;var joinedQuery = new BooleanQuery();&#xA;&#x9;&#x9;joinedQuery.Add(baseQuery, BooleanClause.Occur.MUST);&#xA;&#x9;&#x9;joinedQuery.Add(termQuery, BooleanClause.Occur.MUST);&#xA;&#xA;&#x9;&#x9;var topDocs = currentIndexSearcher.Search(joinedQuery, 1);&#xA;&#xA;&#x9;&#x9;if(topDocs.totalHits &gt; 0)&#xA;&#x9;&#x9;&#x9;termResults.Add(new FacetValue&#xA;&#x9;&#x9;&#x9;{&#xA;&#x9;&#x9;&#x9;&#x9;Count = topDocs.totalHits,&#xA;&#x9;&#x9;&#x9;&#x9;Range = term&#xA;&#x9;&#x9;&#x9;});&#xA;&#x9;}&#xA;&#xA;&#x9;results[facet.Name] = termResults;&#xA;}&#xA;In other words, the overall logic was something like this:&#xA;&#xA;Get a faceted query, with a list of facets.&#xA;For each facet:&#xA;&#xA;Get all the terms for the field (if this is Operating System, then that would be: Android, iOS, BlackBerry, Windows Phone)&#xA;For each of those terms, executed the original query and add a clause that limit the results to the current term and value.&#xA;As you can imagine, this has some.. performance issues. The more facets we had, and the more terms per facets, the costlier this got. Surprisingly enough, this code lasted almost unmodified for about 10 months, and the next major change was simply to process all of this in parallel. &#xA;Shortly thereafter, we have more changes. Moving from this trivial model to a much more efficient one, where we are executing the query once (PR from Michael Weber, by the way) per facet, instead of once per facet/term. Dynamic aggregation in RavenDB is also done through facets, and that added a much more common code path, so more changes started happening to the facets code. In particular, we started handling caching, we ended up reducing the time to run by a lot by restructuring how we were handling things so we would only executed a single query, then use low level index access to get all the other information we needed in an optimized fashion.&#xA;We got more customer usage sample, from the guys who had 70,000 facet queries to the people who wanted facets over multiple millions of results. All of that meant that we put a lot of thought into how we can reduce the performance of faceted queries, and over time, things because more and more complex, but much faster. In particular, by ordering the sequence of operations for computing the query, adding prefetching support and in general greatly reduced the amount of work we needed to do to just get the query working.&#xA;The end result was that the facet code looked something like this:&#xA;&#xA;IndexedTerms.ReadEntriesForFields(currentState, fieldsToRead, allCollector.Documents,&#xA;    (term, docId) =&gt;&#xA;    {&#xA;        List&lt;Facet&gt; facets;&#xA;        if (!sortedFacets.TryGetValue(term.Field, out facets))&#xA;            return;&#xA;        &#xA;        foreach (var facet in facets)&#xA;        {&#xA;            switch (facet.Mode)&#xA;            {&#xA;                case FacetMode.Default:&#xA;                    var facetValues = facetsByName.GetOrAdd(facet.DisplayName);&#xA;                    FacetValue existing;&#xA;                    if (facetValues.TryGetValue(term.Text, out existing) == false)&#xA;                    {&#xA;                        existing = new FacetValue&#xA;                        {&#xA;                            Range = GetRangeName(term)&#xA;                        };&#xA;                        facetValues[term.Text] = existing;&#xA;                    }&#xA;                    ApplyFacetValueHit(existing, facet, docId, null, currentState, fieldsCrc);&#xA;                    break;&#xA;                case FacetMode.Ranges:&#xA;                    // removed for brevity&#xA;                    break;&#xA;                default:&#xA;                    throw new ArgumentOutOfRangeException();&#xA;            }&#xA;        }&#xA;&#xA;    });});&#xA;There is a lot of stuff going on around this code, but this is where we actually computed the facets. Note that this basically calls the lambda once per every matching term for the specified fields for every document in the query.&#xA;And the performance was pretty good for our test cases, we run this through several customers who were heavy facet users, and they saw a marked improvement in performance of queries. But we recently got a customer that mentioned in passing that facet queries were expensive. As in, 5 &#x2013; 10 seconds range per query. That raised some red flags, we consider requests that takes more than 100ms to be suspicious, so we asked for more information, and we realized that he was using facets slightly differently from most of our customers.&#xA;Usually, facets are used to&#x2026; well, facet the data on a search. Typical performance issues with facets in the past were with large number of facets on a search result (I wasn&#x2019;t kidding with the 70,000 facets). Because most of the customer feedback we got was around that, we focused on this issue primarily, to the point were even stuff like that was well behaving. This customer, however, was using facets not for searching, but as a way to manage the data itself. That meant that they were using a lot of facets on the entire data set. &#xA;So instead of having many facets on a medium size number of documents, we were using a small number of facets, but on the entire data set. Profiling this resulted in a few calls being highlighted:&#xA;&#xA;GetOrAdd&#xA;TryGetValue&#xA;They are very cheap calls, on their own, but this piece of code was called literally tens of millions of times for this particular scenario. We spent some time with a profiler and started playing with the code, trying to see if we can remove the costly calls and optimize this code path.&#xA;The answers was&#x2026; no. In fact, everything we did was in the range of 5% &#x2013; 7% change (in both directions, mind). &#xA;This sucked, because going back to the user and saying: &#x201C;that is the way it is&#x201D; didn&#x2019;t sit well with us. We got together, closed the shutters, turned off the light, and solely by the light of the monitors, we did a major hacking session. We completely changed the way we were handling facets, to avoid not just the problem with the calls to TryGetValue or GetOrAdd but to change direction to a much more efficient mode.&#xA;This post is getting pretty long, so I&#x2019;ll discuss this in my next post. For now, can you suggest options for improvements?</p>
         </article>
-        <article id="article-3797">
+        <article id="article-3800">
             <a href="https://ayende.com/blog/169953/figure-this-code" target="_blank">
-                <h2 class="title mb-6" id="article-3797">Figure this code?</h2>
+                <h2 class="title mb-6" id="article-3800">Figure this code?</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,54 +296,6 @@
                 posted on: February 11, 2015
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have just finished writing this code, and it occurred to me that on its own, it makes very little sense.&#xA;&#xA;&#x9;&#xA;&#x9;&#x9;private static int RedactedFunctionName(List&lt;int&gt; a, List&lt;int&gt; b)&#xA;{&#xA;    List&lt;int&gt; n,m;&#xA;    if (a.Count &gt; b.Count)&#xA;    {&#xA;        n = a;&#xA;        m = b;&#xA;    }&#xA;    else&#xA;    {&#xA;        n = b;&#xA;        m = a;&#xA;    }&#xA;&#xA;    int nSize = n.Count;&#xA;    int mSize = m.Count;&#xA;&#xA;    double o1 = nSize &#x2B; mSize;&#xA;    double o2 = nSize * Math.Log(mSize, 2);&#xA;&#xA;    int result = 0;&#xA;    if (o1 &lt; o2)&#xA;    {&#xA;        int mi = 0, ni = 0;&#xA;        while (mi &lt; mSize &amp;&amp; ni &lt; nSize)&#xA;        {&#xA;            if (n[ni] &gt; m[mi])&#xA;            {&#xA;                mi&#x2B;&#x2B;;&#xA;            }&#xA;            else if (n[ni] &lt; m[mi])&#xA;            {&#xA;                ni&#x2B;&#x2B;;&#xA;            }&#xA;            else&#xA;            {&#xA;                ni&#x2B;&#x2B;;&#xA;                mi&#x2B;&#x2B;;&#xA;                result&#x2B;&#x2B;;&#xA;            }&#xA;        }&#xA;    }&#xA;    else&#xA;    {&#xA;        for (int i = 0; i &lt; mSize; i&#x2B;&#x2B;)&#xA;        {&#xA;            if (n.BinarySearch(m[i]) &gt;= 0)&#xA;                result&#x2B;&#x2B;;&#xA;        }&#xA;    }&#xA;    return result;&#xA;}&#xA;&#x9;&#xA;&#xA;&#xA;&#x9;Can you figure out what this function does, why is it behaving in this manner, and what preconditions it expects?</p>
-        </article>
-        <article id="article-3798">
-            <a href="https://ayende.com/blog/170145/inside-ravendb-3-0-chapter-9-is-out" target="_blank">
-                <h2 class="title mb-6" id="article-3798">Inside RavenDB 3.0&#x2013;Chapter 9 is out</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 10, 2015
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Chapter 9 of the Inside RavenDB 3.0 book is now available. This chapter goes over Full Text Search, and how to make the best use of that in RavenDB. It covers how Full Text Search works, Suggestions, Facets, and more.  You can download it using the following link. We now have PDF, Kindle and ePub versions available.</p>
-        </article>
-        <article id="article-3799">
-            <a href="https://ayende.com/blog/170146/new-ravendb-3-0-stable-release" target="_blank">
-                <h2 class="title mb-6" id="article-3799">New RavenDB 3.0 Stable Release</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 09, 2015
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We have been hard at work in the past three months, and according to the statistics, we got quite a few things done, 1,144 commits a host of new features and serious performance improvements are out. I&#x2019;ll do another post shortly on our future work, but for now, here is what is new in this release:  Side by Side indexing Indexing performance timeline Index tryouts&#xA0; Data Subscriptions We also made a lot of performance improvements, most of them were discussed in this blog, but I think that you&#x2019;ll like the new numbers. There are also things that we did mostly as preparation of future work, such as:  Voron running on Linux&#xA0; Minimal incremental backup in Voron Rachis: Raft implementation for RavenDB You&#x2019;ll be hearing a lot more on those when we are ready for the next round of feature releases. In the meantime, you can head here for the new build, hot off the press.</p>
-        </article>
-        <article id="article-3800">
-            <a href="https://www.meziantou.net/how-to-deploy-an-application.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3800">How to deploy an application?</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: February 09, 2015
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">After developing an application, you must be able to deploy it on the end user&#x27;s computer. For this, there are several methods that each respond to different needs. Before choosing the one that suits you, you must first ask yourself a few questions:What should we deploy? files, desktop shortcuts, r</p>
         </article>
         <div class="button flex justify-between">
             <a href="379.html"><span class="back arrow"></span></a>

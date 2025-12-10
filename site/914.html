@@ -138,8 +138,56 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-9131">
+            <a href="https://ayende.com/blog/1475/ado-net-entity-framework" target="_blank">
+                <h2 class="title mb-6" id="article-9131">ADO.Net Entity Framework</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 17, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m currently reading the documentation for ADO.Net Entities Framework. As always, I&#x27;m using this as a scratch pad for what I think as I read this.    Next-Generation Data Access - June 2006:            They still allow access to lower level services with the Entity Framework. Lower level is apperantely IDbConnection and IDbCommand. They mention the 80% brick wall, which is encouraging. The problem is that I don&#x27;t like this solution. The framework should be flexible enough that I could plug in at all the important points and replace the functionality with my custom one. Using two ways to acess the data has a big &quot;Don&#x27;t Do Unless You Know What You Are Doing And Have Fasted For Three Days&quot; sign over it with red blnking lights.                 Chapter&#xA0;3 is slightly interesting, 1,2,4,5 are extremely boring. Going over unrelated details (such as SQL Server ACID guarantees, merge replication, or order entry from 20 years ago). I understand the concept of a problem statement, but this is taking it to a new level.                 Chapter 6 is about what they are trying to achieve. Admirable goals.                 Chapter 7 shows the XML mapping. I&#x27;m not a fan of XML, and that XML is defiantely not something that you would want to write by hand.                 One nice feature that I noticed is the ability to map several tables into a single entity. This has some performance implications, because of joins                 I don&#x27;t like that immediately show how to escape from the framework and go back to working with SQL and untyped data.                 They mention WCFClient which sounds interesting. I&#x27;m not sure how that will work, the models are very different.                 From the document, it seems like SQL Everywhere is going to ship with this, and be the local cache for the framework.                 The MapProvider looks like it is the equilent of the ADO.Net driver. You apperantly get one for each DB provider. It looks like it provide quite a bit more, though. Mapping, eSQL (Entities SQL), etc.    Okay, that was the high level overview, let start on the real details.    The ADO.NET Entity Framework Overview June 2006:            Oh joy! Three ORM frameworks. Linq to SQL, Linq to DataSet, Linq to Entities.                 I understand the need of simple examples, but this is wrong:        where order.Status == &quot;Pending Stock Verification&quot;                 This is no data mdoel that I know. There is no need to start the bad&#xA0;habits in the documentation.&#xA0;                 This is a new record. They managed to piss me off on the very first page. The code example that they give as the desired state doesn&#x27;t even make sense. Check the seond part of the example (in page 6), they load all the products, regardless of the order that has it. No order will ever ship unless all the products are shippable.                 What about custom collections? I&#x27;m only 1/3 of the way, so it may appear later, but this is a very big concern.                 Page 10: What do they mean? No behavior inheritance? If you map a table to a set of related classes, you bet you will get behavior inheritance. It is one of the more powerful features on an OR/M.                 Sigh. It looks like this is much about providing a mapping layer between the database and the logical model, and getting uptyped results back. I&#x27;m not excited about this at all. This is where they are putting quite a bit of emphasis.                 Given that they create a new langauge to work with the data, why not make it compatible with the way Linq work and use from-select-where ?                 Check this:                                    SELECT VALUE sp                                                        FROM AdventureWorks.AdventureWorksDB.SalesPeople AS sp                                                        WHERE EXISTS(                                                        &#xA0; SELECT VALUE o                                                                         &#xA0; FROM NAVIGATE(p, AdventureWorks.SalesPerson_Order) AS o                                                        &#xA0; WHERE o.TotalDue &gt; 200000)                             This query makes no sense to me at all, it is supposed to bring all the sales persons with a sale over 200,000. Is there a reason I need to know the foriegn keys between the two objects?        The same query, expressed in HQL (Hiberante Query Languague) will look like this:                                     SELECT sp FROM&#xA0;             SalesPeople sp join sp.Orders o where o.TotalDue &gt; 200000                Update 20:36: Fixed HQL Query.                &#xA0;This is the magic? Please tell that they are joking...        ctx.GetQuery&lt;SalesPerson&gt;(&quot;some eSql Query&quot;);            p.Orders.Source.Where(&quot;it.Status == 0&quot;)                 Where is the Linq stuff? It was mentioned briefly as the ideal, but I didn&#x27;t see it since (page 20).                 A side note, I see a lot of code written like this:                                     &quot;SELECT VALUE &quot;                         &#x2B;            &quot;FROM AdventureWorks.AdventureWorksDB.SalesOrders AS o &quot; &#x2B;            &quot;WHERE o.Status = 0&quot;                 C# has a multi line string. It bothers me to see that they are not using it.                 Okay, chapter 4 is titled &quot;Linq to Entities&quot;, so I guess there is Linq magic there.                 &#xA0;The Linq samples looks like I expected them too. So I guess that I worried for no reason.                 The Linq on DataSet stuff it just ugly on untyped datasets. The difference between untyped &amp; typed is just amazing.                 &#xA0;No word on the difference between Linq for SQL (DLinq) and Linq for Entities except that the mapping is done directly against the database and not against a mapping layer on top of the databse (oh, how the Architects are going to love this).                 It looks like that are two types of mapping: Database --&gt; EDM,&#xA0;Database?/EDM?&#xA0;--&gt; Classes. And yet I see no references to the database on the EDM, and plenty of references to the database in the classes mapping.         Overall, not really impressed. I guess I will have to wait until I have the real bits to play bit, but except from the Linq magic, I don&#x27;t see anything really interesting. I do foresee quite a bit of confusion, though.</p>
+        </article>
+        <article id="article-9132">
+            <a href="https://ayende.com/blog/1474/indidrection-3" target="_blank">
+                <h2 class="title mb-6" id="article-9132">Indidrection ^ 3</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 17, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Working on a VM through a remote desktop via VPN.    It isn&#x27;t completely slow, surprisingly.</p>
+        </article>
+        <article id="article-9133">
+            <a href="https://ardalis.com/18721/" target="_blank">
+                <h2 class="title mb-6" id="article-9133">Tech Ed 2006 Summary</h2>
+            </a>
+            <p class="mb-2">by Ardalis</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 16, 2006
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I haven&#x2019;t posted in a bit, so let me summarize what I&#x2019;ve been doing the last few days, apart from going to various parties and staying out&#x2026;Keep Reading &#x2192;</p>
+        </article>
+        <article id="article-9134">
             <a href="https://ardalis.com/18722/" target="_blank">
-                <h2 class="title mb-6" id="article-9131">Atlas, IIS7, and BLINQ</h2>
+                <h2 class="title mb-6" id="article-9134">Atlas, IIS7, and BLINQ</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -153,9 +201,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Scott Guthrie presented on Atlas and BLINQ this afternoon at TechEd. The latest Atlas bits seem to be coming along very nicely, allowing&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-9132">
+        <article id="article-9135">
             <a href="https://ardalis.com/18723/" target="_blank">
-                <h2 class="title mb-6" id="article-9132">Caching Birds of a Feather</h2>
+                <h2 class="title mb-6" id="article-9135">Caching Birds of a Feather</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -169,9 +217,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I hosted a Caching Best Practices Birds of a Feather today at Tech Ed. The attendance was not quite as great as I&#x2019;d hoped but wasn&#x2019;t&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-9133">
+        <article id="article-9136">
             <a href="https://ardalis.com/18724/" target="_blank">
-                <h2 class="title mb-6" id="article-9133">TechEd Boston &#x2013; What&#x27;s Up With All the Cows?</h2>
+                <h2 class="title mb-6" id="article-9136">TechEd Boston &#x2013; What&#x27;s Up With All the Cows?</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -185,9 +233,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So, all week at Boston I&#x2019;ve seen these cows  all over the city, and have been wondering what, if any, significance they have. I finally&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-9134">
+        <article id="article-9137">
             <a href="https://ayende.com/blog/1473/corporate-culture" target="_blank">
-                <h2 class="title mb-6" id="article-9134">Corporate Culture</h2>
+                <h2 class="title mb-6" id="article-9137">Corporate Culture</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -201,9 +249,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m currently listening to Re Your Brains&#xA0;from Jonathan Coulton. The first link has the lyrics, check them out. Corporate culture with zombies in it.    I&#x27;m playing it over and over again, the words and the music are completely out of line with the content. A great joke.</p>
         </article>
-        <article id="article-9135">
+        <article id="article-9138">
             <a href="https://ayende.com/blog/1472/command-batching-in-ado-net-2-0" target="_blank">
-                <h2 class="title mb-6" id="article-9135">Command Batching in ADO.Net 2.0</h2>
+                <h2 class="title mb-6" id="article-9138">Command Batching in ADO.Net 2.0</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -217,9 +265,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I got one question about this. How am I supposed to do this?    No, using a data adapter is not an option, I want to create my own commands and batch them. Searching gave no answer, and Reflecting over the relevant classes bring me to a whole mess of internal classes and methods in System.Data.    Any ideas?    I would really like it to be DB agnostic (or be able to query if I can batch or not), but even something for SQL Server only will be helpful.    It looks like this is not supported :-(. We dont have batching at command level for .Net Framework version 2.0. Batching is only supported at the Adapter level. Meaning all the update, insert and delete commands on the adapter are the only ones that get batched. Hope this helps.    This is extremely annoying. Why does Microsoft insist of interalizing everything? Here is a perfectly good functionality that I can&#x27;t access, reducing me to the bad way of concating queries if I need to do it.    Yuck!</p>
         </article>
-        <article id="article-9136">
+        <article id="article-9139">
             <a href="https://ayende.com/blog/1471/microsoft-productfeedback-service-packs-for-net" target="_blank">
-                <h2 class="title mb-6" id="article-9136">Microsoft Productfeedback &amp; Service Packs for .Net</h2>
+                <h2 class="title mb-6" id="article-9139">Microsoft Productfeedback &amp; Service Packs for .Net</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -233,9 +281,9 @@
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I have to agree with Frans&#xA0;in this matter, Microsoft Product Feedback sucks. I reported several crashing bugs there (compiler, IDE), among other things. I never even got &quot;we are checking&quot; message.    In th same vein, and from the same source, Frans also talks about the due date for .Net 2.0 SP1. Apperantly it has been set to Orcas&#x27; release. I&#x27;m not overly concerned about this, since I have far more problems with VS than the framework itself. The due date for this SP is Q3 of this year, which has already started, and beyond a single page, no one seems to be talking about.    Hotfixes by request, after phoning PSS, is not a way to distribue patches. The Windows team is capable of putting patches out, why can&#x27;t the VS team do the same? We are all developers, we understand about unexpected consequences. What I don&#x27;t understand is why Microsoft is hoarding the patches this way.</p>
         </article>
-        <article id="article-9137">
+        <article id="article-9140">
             <a href="https://ayende.com/blog/1470/on-the-look-ma-no-code-approach" target="_blank">
-                <h2 class="title mb-6" id="article-9137">On the &quot;Look Ma, No Code!&quot; Approach</h2>
+                <h2 class="title mb-6" id="article-9140">On the &quot;Look Ma, No Code!&quot; Approach</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -248,54 +296,6 @@
                 posted on: June 15, 2006
             </p>
             <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Just a few words about this issue. As you can probably guess, I&#x27;m not an advocate of this approach. The problem I see with this is that the code exists, it is just not code as you normally think about it. But it is there, and it will have bugs, and you will need to fix it. I&#x27;m suspicious of the whole deal because it is a leaky abstraction at best, and highly rigid most of the time. It also tend to break down when things gets complex.    The WinForms designer and ASP.Net &#x27;s markup are two cases of very well done designer that are very leak-proof, and they still break down when you are doing complex stuff. In WinForms it is easier to handle, since dropping to code is natural if you know what you are doing. In ASP.Net it is more complex, because of the page lifecycle issues, but very possible.    The problem starts when the designer is the only way in. Take SSIS for example. It is pretty easy to grok when you have a few steps. I have a project that has ~100 items in a single package, many of them include more items in them. There are arrows all over the screen, and I usually can&#x27;t really understand the flow without a lot of effort.     I see a big push toward &quot;no code&quot; approach, and this is fine and dandy for demos. But I don&#x27;t write demo software for a living.</p>
-        </article>
-        <article id="article-9138">
-            <a href="https://ayende.com/blog/1469/what-not-to-put-in-your-resume" target="_blank">
-                <h2 class="title mb-6" id="article-9138">What not to put in your resume</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 15, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve reviewed a lot of resumes lately, and there have been some that actually made me cringe.     When applying to a developer, this guy listed email as a core competency. And no, he did not mean that he can chat about the relative merits of POP/SMTP vs. IMAP over coffee.         I understand the need to put everything in the resume to inflate it, but some things should be implict.    Another gem was a guy listing several years of experiance in Java, working in ADO.Net against SQL Server. Hm... possible, if he was using J#. Chances that he was... ? Nil to none, I would say.    On the other hand, the resume was full of all the buzzward of yesterday.    There were a few that cought my eyes, because they actually listed projects that they did, and some included details. Knowing that they actually did something with their skills is much more important to me than a checklist of stuff in a resume.    Then again, maybe I shouldn&#x27;t speak. I am not hirable by my resume.</p>
-        </article>
-        <article id="article-9139">
-            <a href="https://ardalis.com/18679/" target="_blank">
-                <h2 class="title mb-6" id="article-9139">Software Projects As Seen By Everyone Involved &#x2013; Cartoon</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 14, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is a great cartoon showing the life of a simple software project, as a cartoon. So true, it&#x2019;s funny. http://www.scaryideas.com/Cartoons&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-9140">
-            <a href="https://ayende.com/blog/1468/rhino-mocks-2-8-7" target="_blank">
-                <h2 class="title mb-6" id="article-9140">Rhino Mocks 2.8.7</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: June 14, 2006
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Yesterday I applied the fix to Ordered orderring only, but not to unordered orderring. This release fixes it.    Code and binaries are here. The regular rambling will be resumed shortly.</p>
         </article>
         <div class="button flex justify-between">
             <a href="913.html"><span class="back arrow"></span></a>
