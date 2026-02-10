@@ -138,24 +138,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1011">
-            <a href="https://ayende.com/blog/197057-B/production-postmortem-misleading-security-and-other-production-snafus" target="_blank">
-                <h2 class="title mb-6" id="article-1011">Production postmortem</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 20, 2022
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A typical production postmortem story is a tale of daring dives deep into the guts of your system. It is a journey into the intricacies of dependencies between multiple components, the delicate balance of distributed processes that got just the wrong level of alignment to cause some havoc. A production postmortem is a toil of mystery that can last for weeks. This isn&#x2019;t one of those tales, however. In this one, the entire thing was wrapped up within fifteen minutes. So what was the issue?&#xA;The initial premise was pretty straightforward. A customer was running RavenDB in production, but due to their topology, their RavenDB instances are not exposed to the outside world directly. Instead, they route the connection to Azure Web Application Firewall and through Azure Front Door. I have no comment on the actual decision to route through those firewalls. The problem the customer had was that Azure Front Door doesn&#x2019;t support web-sockets, RavenDB studio makes extensive use of them for a bunch of reasons and there are certain features that are also dependent on them (such as aggressive caching, the Changes() API, etc).&#xA;The customer wanted everything to work, and asked if RavenDB can support a long polling method, to avoid the issue entirely.&#xA;This is an XY Problem.&#xA;There was much confusion to be had, between our support team, yours truly and the technical people of the customer. Here is the issue, the problem the customer experienced is simply not possible. There is absolutely no way that they can run into this issue.&#xA;Here is the deal:&#xA;&#xA;RavenDB is a secured-by-default database, which assumes that it is always running in a hostile environment.&#xA;For security, RavenDB uses TLS 1.2 or higher to safeguard the data in transit.&#xA;For authentication, RavenDB uses mutual authentication for both client &amp; server using X509 certificates.&#xA;&#xA;Take those three together and you&#x2019;ll realize that the very design of RavenDB forces you to do SSL termination (here I&#x2019;m using TLS &amp; SSL as interchangeable terms) at the RavenDB process directly. We have to do it in this manner, since otherwise we wouldn&#x2019;t be able to validate the certificate from the client.&#xA;The customer in this case was running in a secured mode, but was completely unable to use web sockets.&#xA;Again, that is not possible. Let me explain why.&#xA;If RavenDB is the entity that does SSL termination (in this case, doing the cryptographic handshake, authentication, etc) then anything in the middle between RavenDB and the client is dealing with an encrypted stream of bytes that are indistinguishable from random noise.&#xA;In other words, there shouldn&#x2019;t be a way to not support web sockets, since any proxy in the middle shouldn&#x2019;t be able to tell what the content of the request is.&#xA;This design by RavenDB also prevents you from forwarding requests, since the SSL stream must reach to RavenDB directly (as-is). Otherwise, RavenDB will not be able to authenticate the client certificate.&#xA;When we looked at the actual server in question, it quickly became apparent what the issue was. The customer was accessing RavenDB using HTTPS, as is proper. However, RavenDB itself was not configured to run in a secured manner. In other words, the client was accessing RavenDB using HTTPS, but the proxies in the middle will then connect to RavenDB itself using HTTP (no security). That means that RavenDB talks to the proxy with no encryption and the proxy is able to see into the requests. That leads, of course, to the situation where the supported feature set of the proxy impacts what capabilities RavenDB can utilize.&#xA;This is a broken setup, I want to point out. It is also a highly misleading setup, because RavenDB is running in unsecured mode, but you are using HTTPS to access it. We intend to make this configuration setup raise an alert and block this from deployments. RavenDB goes to great lengths to ensure that you won&#x2019;t have those pitfalls to stumble into. I have to admit that we have never actually considered this sort of setup as a scenario. I am strongly reminded of this.&#xA;RavenDB is amenable to running behind a proxy, of course. The key to doing so successfully is that the proxy is responsible for TCP traffic only, never interfering with the (encrypted) content that goes over the wire. As a result of this requirement, we don&#x2019;t need to worry about the capabilities of the various proxies. As long as it is able to support TCP connections, all features of RavenDB will work.</p>
-        </article>
-        <article id="article-1012">
-            <a href="https://ardalis.com/aggregate-responsibility-design/" target="_blank">
-                <h2 class="title mb-6" id="article-1012">Aggregate Responsibility Design</h2>
+            <a href="https://ardalis.com/quickly-trimming-video-files/" target="_blank">
+                <h2 class="title mb-6" id="article-1011">Quickly Trimming Video Files</h2>
             </a>
             <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
@@ -165,45 +149,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: April 20, 2022
+                posted on: June 07, 2022
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The Aggregate Pattern comes from Domain-Driven Design and provides a way to encapsulate business logic among several related objects. The&#x2026;Keep Reading &#x2192;</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I do a fair bit of video editing as part of producing content for Pluralsight, clients, and YouTube. Recently I took on the task of editing&#x2026;Keep Reading &#x2192;</p>
         </article>
-        <article id="article-1013">
-            <a href="https://enterprisecraftsmanship.com/posts/modeling-relationships-in-ddd-way/" target="_blank">
-                <h2 class="title mb-6" id="article-1013">Modeling Relationships in a DDD Way</h2>
-            </a>
-            <p class="mb-2">by Vladimir Khorikov</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 19, 2022
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let&#x2019;s talk about modeling of relationships, including the dreaded many-to-many relationships, in a DDD way.</p>
-        </article>
-        <article id="article-1014">
-            <a href="https://ayende.com/blog/197025-B/ravendb-with-the-java-api" target="_blank">
-                <h2 class="title mb-6" id="article-1014">RavenDB with the Java API</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 19, 2022
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I usually talk about RavenDB in the context of C# and .NET, but we also have clients for many other platforms. On Thursday, the Copenhagen Javagruppen Meetup is doing an online event to show how you can use RavenDB from Java.&#xA;The meetup is open to the public, and we would love to see you there.</p>
-        </article>
-        <article id="article-1015">
-            <a href="https://andrewlock.net/running-javascript-in-a-dotnet-app-with-javascriptengineswitcher/" target="_blank">
-                <h2 class="title mb-6" id="article-1015">Running JavaScript inside a .NET app with JavaScriptEngineSwitcher</h2>
+        <article id="article-1012">
+            <a href="https://andrewlock.net/using-pathbase-with-dotnet-6-webapplicationbuilder/" target="_blank">
+                <h2 class="title mb-6" id="article-1012">Using PathBase with .NET 6&#x27;s WebApplicationBuilder</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -213,13 +165,29 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: April 19, 2022
+                posted on: June 07, 2022
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe how you can use the JavaScriptEngineSwitcher NuGet package to run JavaScript inside a .NET application&#x2026;</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe the difficulties of adding calls to UsePathBase with .NET 6 WebApplication programs, and describe two approaches to work around it&#x2026;</p>
         </article>
-        <article id="article-1016">
-            <a href="https://www.meziantou.net/list-all-routes-in-an-asp-net-core-application.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1016">How to list all routes in an ASP.NET Core application</h2>
+        <article id="article-1013">
+            <a href="https://ayende.com/blog/197410-B/building-a-call-for-papers-website-with-blazor-ravendb" target="_blank">
+                <h2 class="title mb-6" id="article-1013">Building a Call for Papers website with Blazor &amp; RavenDB</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 06, 2022
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">CodingAfterWork has published a three parts series (more than 5 hours!) showing how you can build the Next Tech Event using Blazor and RavenDB. Take a look, it&#x2019;s interesting.</p>
+        </article>
+        <article id="article-1014">
+            <a href="https://www.meziantou.net/using-av1-video-codec-to-reduce-web-page-size.htm" target="_blank">
+                <h2 class="title mb-6" id="article-1014">Using AV1 video codec to reduce web page size</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -229,61 +197,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: April 18, 2022
+                posted on: June 06, 2022
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When your ASP.NET Core application is big enough, you may want to have a comprehensive view of all routes. There are multiple ways to declare routes. You can use Minimal API, Controllers, Razor Pages, gRPC, Health checks, etc. But all of them use the same routing system under the hood.The collectio</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is part of the series &#x27;Web Performance&#x27;. Be sure to check out the rest of the blog posts of the series!Website performance: Why and how to measure?Website performance: How I&#x27;ve improved the performance of this website?Using AV1 video codec to reduce web page size (this post)Using Avif cod</p>
         </article>
-        <article id="article-1017">
-            <a href="https://www.stevejgordon.co.uk/using-the-roslyn-apis-to-analyse-a-dotnet-solution" target="_blank">
-                <h2 class="title mb-6" id="article-1017">Using the Roslyn APIs to Analyse a .NET Solution</h2>
-            </a>
-            <p class="mb-2">by Steve Gordon</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 13, 2022
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I demonstrate how to analyse a .NET solution using the Roslyn APIs and aMsBuildWorkspace.</p>
-        </article>
-        <article id="article-1018">
-            <a href="https://andrewlock.net/keeping-up-with-dotnet-learning-about-new-features-and-apis/" target="_blank">
-                <h2 class="title mb-6" id="article-1018">Keeping up with .NET: learning about new features and APIs</h2>
-            </a>
-            <p class="mb-2">by Andrew Lock</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 12, 2022
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe some of the sources I use to learn about new features and APIs when a new version of .NET is released&#x2026;</p>
-        </article>
-        <article id="article-1019">
-            <a href="https://enterprisecraftsmanship.com/posts/new-course-ef-core-encapsulation/" target="_blank">
-                <h2 class="title mb-6" id="article-1019">Encapsulating EF Core Usage: New Pluralsight course</h2>
-            </a>
-            <p class="mb-2">by Vladimir Khorikov</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: April 11, 2022
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My new online training course about Encapsulating EF Core Usage&#xA0;went live.</p>
-        </article>
-        <article id="article-1020">
-            <a href="https://ayende.com/blog/196993-B/recording-clean-architecture-with-ravendb" target="_blank">
-                <h2 class="title mb-6" id="article-1020">Recording</h2>
+        <article id="article-1015">
+            <a href="https://ayende.com/blog/197409-B/challenge-spot-the-data-corruption" target="_blank">
+                <h2 class="title mb-6" id="article-1015">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -293,9 +213,89 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: April 11, 2022
+                posted on: June 03, 2022
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last week I did a webinar about Clean Architecture, and it run about twice as long as I expected it to be. Mostly because I got some really interesting questions and I think we had a great discussion.You can watch all of it here, as usual, comments are very welcome:</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The following code does not output the right value, can you tell why?&#xA;&#xA;&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          record Item(string Name, dynamic Extra = null);&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;          static void Main(string[] args)&#xA;        &#xA;        &#xA;          &#xA;          {&#xA;        &#xA;        &#xA;          &#xA;              var obj = new Item(&quot;Milk&quot;)&#xA;        &#xA;        &#xA;          &#xA;              {&#xA;        &#xA;        &#xA;          &#xA;                  Extra = new Dictionary&lt;string, object&gt;&#xA;        &#xA;        &#xA;          &#xA;                  {&#xA;        &#xA;        &#xA;          &#xA;                      [&quot;Skim&quot;] = false,&#xA;        &#xA;        &#xA;          &#xA;                      [&quot;Viscosity&quot;] = 39m&#xA;        &#xA;        &#xA;          &#xA;                  }&#xA;        &#xA;        &#xA;          &#xA;                  [&quot;Type&quot;] = &quot;Food&quot;,&#xA;        &#xA;        &#xA;          &#xA;              };&#xA;        &#xA;        &#xA;          &#xA;              Console.WriteLine(JsonConvert.SerializeObject(obj, Formatting.Indented));&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          strange.cs&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;&#xA;&#xA;This has been a real bug that we ran into (with only slightly more complicated code.&#xA;The sort of things that make you just stare at the screen in disbelief when you realize what is going on&#x2026;</p>
+        </article>
+        <article id="article-1016">
+            <a href="https://ayende.com/blog/197377-C/re-bonsaidb-performance-update-a-deep-dive-on-file-synchronization" target="_blank">
+                <h2 class="title mb-6" id="article-1016">re</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 02, 2022
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I run into this fascinating blog post discussing the performance of BonsaiDb. To summarize the post, the author built a database and benchmarked it, but wasn&#x2019;t actually calling fsync() to ensure durability. When they added the fsync() call at the right time, the performance didn&#x2019;t degrade as expected. It turned out that they were running benchmarks on tmpfs, which is running in memory and where fsync() has no impact. Once they tested on a real system, there was a much higher cost, to the point where the author is questioning whether to continue writing the database library he has developed.&#xA;Forgetting to call fsync() is an understandable issue (they called the flush() method, but that didn&#x2019;t translate to an fsync() call). I recall that at one point the C#&#x2019;s API once had a bug where a Flush() would not call fsync() if you were making writes with 4KB alignment (that is&#x2026; super bad).&#xA;After figuring out the issue, the author has out to figure exactly how to ensure durability. That is a journey that is fraught with peril, and he has some really interesting tidbits there. Including sync_file_range(), fdatasync() and how you cannot write a durable database for Mac or iOS.&#xA;From my perspective, you cannot really trust anything beyond O_DIRECT | O_DSYNC or fdatasync() for durability. Almost a decade ago I wrote about performance testing that I did for various databases. My code was the 2nd fastest around for the tested scenarios. It was able to achieve almost 23,000 writes, almost 25% of the next slowest database. However, the fastest database around was Esent, which clocked at 786,782 writes.&#xA;I dug deep into how this is done and I realized that there is a fundamental difference between how all other databases were working and how Esent was handling things. All other databases issued fsync() calls (or fdatasync()). While Esent skipped that altogether. Instead, it opened a file with FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_DIRECT (the Unix version is O_DIRECT | O_DSYNC). That change alone was responsible for a major performance difference. When using O_DIRECT | O_DSYNC, the write is sent directly to persistent medium, skipping all buffers. That means that you don&#x2019;t have to flush anything else that is waiting to be written.&#xA;If you are interested, I wrote a whole chapter on the topic of durable writes. It is a big topic.&#xA;The other thing that has a huge impact on performance is whether you are doing transaction merging or not. If you have multiple operations running at roughly the same time, are you going to do a separate disk write for each one of them, or will you be able to do that in a single write. The best example that I can think of is the notion of taking the bus. If you send a whole bus for each passenger, you&#x2019;ll waste a lot of time and fuel. If you pack the bus as much as possible, for almost the same cost, you&#x2019;ll get&#xA0;a far better bang.&#xA;In other words, your design has to include a way for the database to coalesce such operations into a single write.&#xA;Yesterday there was an update to this task, which more or less followed that direction. The blog post covers quite a lot of ground and is going in the right direction, in my opinion. However, there are a few things there that I want to comment upon.&#xA;First, pre-allocation of disk space can make a huge impact on the overall performance of the system. Voron does that by allocating up to 1GB of disk space at a time, which dramatically reduces the amount of I/O work you have to do. Just to give some context, that turns a single disk write to multiple fsyncs that you have to do, on both your file and the parent directory, on each write. That is insanely expensive. The storage engine discussed here used append only mode, which makes this a bit of a problem, but not that much. You can still preallocate the disk space. You have to scan the file from the end on startup anyway, and the only risk here is the latency for reading the whole pre-allocation size on startup if we shut down immediately after the preallocation happened. It&#x2019;s not ideal, but it is good enough.&#xA;Second, the way you manage writes shouldn&#x2019;t rely on fsync and friends. That is why we have the log for, and you can get away with a lot by letting just the log handle the durability issue. The log is pre-allocated to a certain size (Voron uses dynamic sizes, with a max of 256MB) and written to using O_DIRECT | O_&#xA;O_DSYNC each time. But because this is expensive, we have something like this (Python code, no error handling, demo code, etc):&#xA;&#xA;&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          class WriteAheadLog:&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              def __init__(self) -&gt; None:&#xA;        &#xA;        &#xA;          &#xA;                  self.queue = []&#xA;        &#xA;        &#xA;          &#xA;                  self.hasWrites = threading.Event()&#xA;        &#xA;        &#xA;          &#xA;                  self.log = open(&quot;write-ahead.log&quot;, O_DIRECT | O_DSYNC)&#xA;        &#xA;        &#xA;          &#xA;                  th = threading.Thread(target=self.backgroundThread)&#xA;        &#xA;        &#xA;          &#xA;                  th.start()&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              def writeToLog(self, pages):&#xA;        &#xA;        &#xA;          &#xA;                  future = loop.create_future()&#xA;        &#xA;        &#xA;          &#xA;                  self.queue.append((pages, future))&#xA;        &#xA;        &#xA;          &#xA;                  return future&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;              def backgroundThread(self):&#xA;        &#xA;        &#xA;          &#xA;                  while self.hasWrites.wait():&#xA;        &#xA;        &#xA;          &#xA;                      self.hasWrites.clear()&#xA;        &#xA;        &#xA;          &#xA;                      pending = self.queue&#xA;        &#xA;        &#xA;          &#xA;                      self.queue = []&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;                      pagesToWrite = []&#xA;        &#xA;        &#xA;          &#xA;                      for (pages, _) in pending:&#xA;        &#xA;        &#xA;          &#xA;                          pagesToWrite = pagesToWrite &#x2B; pages&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;                      dataToWrite = CompressPages(pagesToWrite)&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;                      self.log.write(dataToWrite)&#xA;        &#xA;        &#xA;          &#xA;          &#xA;&#xA;        &#xA;        &#xA;          &#xA;                      for (_, future) in pending:&#xA;        &#xA;        &#xA;          &#xA;                          future.set_result(True)&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          WriteAheadLog.py&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;&#xA;&#xA;The idea is that you can call writeToLog() each time and you&#x2019;ll get a future on the write to the log file. You can continue with your transaction when the log holds the data. Note that in this model, if you have concurrent writes, they will be merged into a single disk write. You can also benefit significantly from reduced amount we write to disk by applying compression.&#xA;Third, something that has been raised as an option here is a new storage format. I&#x2019;m not sure that I 100% get what is the intention, but&#x2026; what I understand I don&#x2019;t like. I think that looking at how LMDB does things would help a lot here. It is a COW model (which the append only is very similar to). The key difference is that the new model is going to store every header twice. Probably with a CURRENT and NEXT model, where you can switch between the two configurations. That&#x2026; works, but it is pretty complex. Given that you have a log involved, there is no need for any of this. You can just store the most recent changes in the log and use that to find what the current version is of the data is.&#xA;I don&#x2019;t like append only models, since they require you to do compaction at some point. A better model is what LMDB does, where it re-used the same pages (with copy on write). It requires you to manage a free list of pages, of course, but that isn&#x2019;t that big a task.</p>
+        </article>
+        <article id="article-1017">
+            <a href="https://ardalis.com/managing-up-and-getting-ahead/" target="_blank">
+                <h2 class="title mb-6" id="article-1017">Managing Up and Getting Ahead</h2>
+            </a>
+            <p class="mb-2">by Ardalis</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: June 01, 2022
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you&#x27;re an employee, you probably have a boss, manager, supervisor, or similarly titled person to whom you report. Normally, you figure it&#x2026;Keep Reading &#x2192;</p>
+        </article>
+        <article id="article-1018">
+            <a href="https://andrewlock.net/understanding-pathbase-in-aspnetcore/" target="_blank">
+                <h2 class="title mb-6" id="article-1018">Understanding PathBase in ASP.NET Core</h2>
+            </a>
+            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 31, 2022
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I&#x27;ll describe a lesser-known property on HttpRequest called `PathBase`. I describe what it does, when it&#x27;s useful, and how to use it.&#x2026;</p>
+        </article>
+        <article id="article-1019">
+            <a href="https://www.meziantou.net/round-robin-dns-support-in-dotnet-httpclient.htm" target="_blank">
+                <h2 class="title mb-6" id="article-1019">Round-robin DNS support in .NET HttpClient</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 30, 2022
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Round-robin DNS is a load-balancing technique where the DNS returns multiple IP addresses for a host. The client can choose any of the IP addresses to connect to the server. For example, bing.com has 2 IPv4 addresses:In .NET, the HttpClient connects to the server using the first IP address in the l</p>
+        </article>
+        <article id="article-1020">
+            <a href="https://ayende.com/blog/197313-A/infoq-interview-with-me-on-ravendb-database-consistency-and-using-c-as-a-system-language" target="_blank">
+                <h2 class="title mb-6" id="article-1020">InfoQ interview with me on RavenDB, database consistency and using C# as a system language</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: May 27, 2022
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">My podcast interview with Wesley Reisz from InfoQ has been published. I think it was a very interesting discussion.</p>
         </article>
         <div class="button flex justify-between">
             <a href="101.html"><span class="back arrow"></span></a>
@@ -312,7 +312,7 @@
             <ul class="flex flex-1 items-center gap-x-2 sm:flex-initial">
                 <li class="flex">
                     <p class="flex items-end gap-2 justify-center flex-wrap	">© Relatively General
-                        .NET 2025<span
+                        .NET 2026<span
                             class="inline-block">&nbsp;🚀&nbsp;Theme: Astro Cactus</span>
 
                         <a class="inline-block sm:hover:text-link" href="https://github.com/chrismwilliams/astro-cactus"
@@ -337,7 +337,7 @@
             class="px-4 py-2 sm:py-0 sm:hover:text-textColor sm:hover:underline" href="about.html"> About </a>
     </nav>
 </footer>
-<script src="js/script.js?id=af8f4559935e7bf5bf6015373793411d"></script>
+<script src='js/script-yhlcWZp2.js'></script>
 <script src="/pagefind/pagefind-ui.js"></script>
 
 <!-- Cookie Consent Banner -->

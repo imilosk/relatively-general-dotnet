@@ -138,8 +138,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3251">
-            <a href="https://ayende.com/blog/175649/performance-analysis-the-cost-of-stackoverflow-indexes" target="_blank">
-                <h2 class="title mb-6" id="article-3251">Performance analysis</h2>
+            <a href="https://ayende.com/blog/175970/idle-memory-gc-memory-yanking" target="_blank">
+                <h2 class="title mb-6" id="article-3251">Idle memory GC memory yanking</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -149,15 +149,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: October 03, 2016
+                posted on: November 01, 2016
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, we are going to look at the relevant costs we have when testing out different indexes on the stack overflow data dump. In this case, we have the following two collections, and sample documents from each.  The first index we&#x2019;ll look at is a simple full text index, simply mapping the users and asking to search over their data.  This index is pretty simple, both in how it works and what it would cause RavenDB to do. We do a simple scan over all the Users documents, and just index those two properties. Nothing much to see here, let&#xA0; us move on. Here we have a map/reduce index, over users, to see how many signups StackOverflow had per month.       This gets more interesting as a performance analysis goes. While a map only index just needs to spill everything to Lucene, and let it do its work (more on that later), a map/reduce index has to keep track of quite a lot of internal state. And as it runs out, the costs associated with the index vary according to what it does, and the access pattern it has. In this case, we&#x2019;re going to be scanning the users in roughly the order they were inserted into the database, and that would match pretty closely to the aggregation by the registration month. That means that this is likely to be a pretty cheap index, since we scan the data and it is mostly going to be naturally grouped along the same lines that we are going to group it. It means that the working set we&#x2019;ll need for this index is going to be fairly small. Once we have passed by a particular month, we won&#x2019;t be accessing it again. The number of reduce keys (the distinct number of values that we group by) is also going to be fairly small, in the order of 100 keys or so.  Now, let us move to a more complex index:  This one is aggregating information over questions twice, once for the questions, and once for the answers. In terms of sheer amount of data it works on, it is pretty big. However, in terms of actual work that is done, we still somewhat benefit so significantly from the ordering of the data. This is the case since while questions and answers are usually temporally close to one another, that isn&#x2019;t always the case. That said, for the vast majority of cases, we&#x2019;re likely to see quite a bit of locality, which will help the index. There is also the fact that we still have very few reduce key, only about 100 or so, which also helps.  And now we are talking about putting the db through its paces. The problem here is that we are scanning all the indexes, and outputting an entry for each tag. There are 46,564 tags, and in total this index outputs 37,122,139 entries.&#xA0; However, there are just 3,364 tags that have more than a thousand questions, and they are responsible for 32,831,961 of the questions, so while there is a significant long tail, it is pretty small, in terms of actual number of questions. Note that we are still scanning in a manner consistent with the index, so we&#x2019;ll typically go over a set of questions that all belong to the same month. And each month will have roughly 3 million questions (obviously less the further back in time we go). So complex, but not too badly so. The number of reduce keys will be in the hundreds of thousands, but the number of entries per reduce key will be relatively small.  This one, however, is much more problematic:  On the face of it, it looks like it would be a simpler index than the previous two, but it lacks a very important property, it isn&#x2019;t actually limited by anything related to the scanning order we have. What this means is that whenever we will scan the data for this index, we are going to find a lot of tags, so each batch will have to touch a lot of reduce keys, and they are going to be big reduce keys (with lots of entries), so that means that we&#x2019;ll need to re-reduce large number of large reduce keys often. Effectively, this index is forcing us to scatter values all over the place, then aggregate all the information about each of those values. It is likely to be one of the worst scenarios for us to work with. Now that we have the groundwork laid out, we can talk about how we are actually going to approach performance optimizations here.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I mentioned in passing that a lot of the actual memory use we have in RavenDB 4.0 is in unmanaged code. That frees us from the benevolent tyranny of the garbage collector, and it allow us to optimize our memory utilization to fit our usage scenarios. In particular, most of our memory is used in thread local manner, and there it is used in one of two ways. Dedicated threads that do specific type of work (indexing, replication, etc) and request processing threads, that handle all requests.  A typical scenario for us would be to have a lot of requests come in all of a sudden and require us to allocate all bunch of memory, for example, if we have just run a benchmark. Or, for production usage, a spike in traffic that then turns into a lull.  One of the common hotspots in high performance servers is memory allocations, in particular, allocating and de-allocating can kill your performance. So you don&#x2019;t do that. Instead, you pool the memory and reuse it,hopefully without major costs for doing that. Which is all well and good, until you get that spike. In this case, you allocated memory to handle the traffic, and after the load is over, you are still holding on to that memory, and we probably really should give it back so something else can use that. Sure, it will be paged out to disk eventually, etc, and virtual memory is there to cover us, but that is really not the right way to write high performance stuff.  Now, the way we want to handle it, we want to wait until everything is calmed, and then start de-allocating all that memory that isn&#x2019;t being used. But that lead to a problem. How can we do this if everything is thread local? And you want to have everything thread local, because synchronization on memory allocation/de-allocation is one of the most common performance killers.  So we handle this by using a MutliReaderSingleWriterStack. The idea is, like in the previous post,&#xA0; we have a designated data structure that has only a single write and is held in a thread local value, but that is expected to be read by multiple threads. In particular, the thread that is going to be reading from it is the idle thread. Once a minute, this is going to scan all the threads, find all the saved memory that we have allocated but haven&#x2019;t used in the past minute, and clear it. Because this can run concurrently with the thread using memory itself, we&#x2019;ll only free the memory that is parked (as in, waiting for work to come), not memory that is actively used. And we also need to be aware that we aren&#x2019;t taking the idle memory to be disposed at the same time the thread is reaching for its memory bank to pull a new range. Here we have to have some thread safe operation. We do that using an interlocked operation on the InUse field. Both the cleanup thread and the owning thread will try to set that value, but only one of them will succeed.  In this way, under load, we get to use purely local memory, but we also have automatic cleanup going on if we have an idle period.</p>
         </article>
         <article id="article-3252">
-            <a href="https://www.stevejgordon.co.uk/github-contributor-tips-tricks-gitiquette" target="_blank">
-                <h2 class="title mb-6" id="article-3252">GitHub Contributor Tips and Tricks (Gitiquette)</h2>
+            <a href="https://andrewlock.net/adding-cache-control-headers-to-static-files-in-asp-net-core/" target="_blank">
+                <h2 class="title mb-6" id="article-3252">Adding Cache-Control headers to Static Files in ASP.NET Core</h2>
             </a>
-            <p class="mb-2">by Steve Gordon</p>
+            <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -165,13 +165,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: September 30, 2016
+                posted on: November 01, 2016
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I made by first GitHub pull request back in November 2015. After a code review I needed to make some changes to the code and the learning curve of Git/GitHub bit me. I had to close my PR and open a fresh one in order to get my code accepted since I couldn&#x2019;t figure out [&#x2026;]</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I&#x27;ll show how you can add caching headers to the files served by the StaticFileMiddleware to increase your site&#x27;s performance.&#x2026;</p>
         </article>
         <article id="article-3253">
-            <a href="https://ayende.com/blog/175618/playing-with-the-stackoverflow-datasets-all-the-wrong-ways" target="_blank">
-                <h2 class="title mb-6" id="article-3253">Playing with the StackOverflow datasets : All the wrong ways</h2>
+            <a href="https://ayende.com/blog/175969/optimizing-read-transaction-startup-time-racy-data-structures" target="_blank">
+                <h2 class="title mb-6" id="article-3253">Optimizing read transaction startup time</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -181,13 +181,61 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: September 30, 2016
+                posted on: October 31, 2016
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As I mentioned, given a 45 GB file containing all the StackOverflow questions since 2008, I wanted to transform items like this:  Into this:  This turn out to be rather tricky to do. The file is sorted by the row id, but there are tricks here:  You can&#x2019;t assume that all the answers to a question are located near the question itself. Ideally, we could keep a dictionary of the questions and their answers until we have all the answers to the question, they write it all out. The problem here is that a question might have answered years after it was asked, which means that the answer id would place it very far from the question in the file, which means that we have to keep the question in memory for a very long time. In practice, this happens quite frequently, and it plays havoc with trying to limit the memory utilization for this approach.  While you would expect that answers will always have a row id that is higher than their questions, that isn&#x2019;t always the case. Let us take this question, about Haskell monads, which has the following answer. The answer id is: 2388 The question id is: 44965 That means that if you scan the file sequentially, you are going to find the answers before their questions, somethings a lot before (I&#x2019;m guessing that this happens if you have edits to a question, so a popular question might get edited long after it was asked &amp; had answers). The next thing I tried was to group all the questions together, then process them. Because I can&#x2019;t do that in memory, I tried writing them to disk directly:  /questions/44965/q  /questions/44965/2388 The idea is that I can write them out to the file system, and then traverse the file system to gather all of them. The problem is that we are talking about over 32 million questions &amp; answers, that isn&#x2019;t really going to work for us using most normal file systems. So I tried writing it all to a zip file, which was successful, but resulted in a zip file that was 21GB in size, and was very good in ensuring that nothing could open it before I run out of patience.  Eventually I just gave us and used Voron to handle it, here are the relevant sections:  Remember that Voron stores everything in a B&#x2B;Tree, and allows to do ordered operations, so once this is done, all I need to do is traverse the tree, get all the records that have the same parent id, and voila, I have the grouping I wanted.  If I wanted to do it without the use of a database (or Voron), I would probably go with the following manner:  Read each entry from the source data, and write it to another file, noting its location. Write &#x201C;parent id, id, location&#x201D; to a separate index file Sort the index file. Start reading from the index file as long as I have the same parent id, and merge those questions. Why separate file? Because XmlReader does buffering, so it will be really hard to just in the file from just reading, by writing it out, we have the proper position to seek to. Note that this will require a lot of random I/O, but that is pretty much just what it has to be.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Finding the appropriate image for this post was hard, you try searching for &#x201C;racy pictures&#x201D; in Google Image Search, but you might not want to do it from work . Anyway, today at lunch we had a discussion about abstractions and at what level you should be working. The talk centered about the difference between working in low level C and working with a high level framework like C# and the relative productivity associated with it. At one point the following argument was raised: &#x201C;Well, consider the fact that you never need to implement List, for example&#x201D;. To which my reaction was: &#x201C;I did just that last week&#x201D;. Now, to forestall the nitpickers, pretty much any C developer will have an existing library of common data structures already in place, I know. And no, you shouldn&#x2019;t be implementing basic data structures unless you have a really good reason. In my case, I think I did. The issue is very simple. I need to have a collection of items that are safe for multi threaded reads, but they are mostly only ever accessed from a single thread, and are only ever modified by a single thread. Oh, and they are also extremely performance sensitive. The reason we started looking into replacing them is that the concurrent data structures that we were using (ConcurrentDictionary &amp; ConcurrentStack, in those cases) were too expensive. And a large part of that was because they gave us a lot more than what we actually needed (fully concurrent access). So, how do we build a simple list that allow for the following:  Only one thread can write. Multiple threads can read. No synchronization on either end. Stale reads allowed. The key part here is the fact that we allow stale reads.  Here is the concrete scenario, we need to track all active transactions. A transaction is single threaded, but we allow thread hopping (because of async). So we define:  And then we have:  DynamicArray is just a holder for an array of Nodes. Whenever we need to add an item to the active transactions, we&#x2019;ll get the local thread value, and do a linear search through the array. If we find a node that has a null Transaction value, we&#x2019;ll use it. Otherwise, we&#x2019;ll add a new Node value to the end of the array. If we run out of room in the array, we&#x2019;ll double the array size.&#xA0; All pretty standard stuff, so far. Removing a value from the array is also simple, all you need to do is to null the Transaction field on the relevant node.  Why all of this? Well, only a single thread can ever register a transaction for a particular DynamicArray instance. That means that we don&#x2019;t have to worry about concurrency here. However, we do need to worry about transactions that need to remove themselves from the list from other threads. That is why we don&#x2019;t have any concurrency control here. Instead, removing the transaction is done by setting the node&#x2019;s Transaction field to null. Since only the owning transaction can do that, this is safe. Other threads, however, need to read this information. They do that by scanning through all the thread values, and then accessing the DynamicArray directly. Now, that means that we need to be safe for concurrent reading. This is done by having the array more or less static on most scenarios. After it get full enough, it will never grow again, and the values will remain there, so effectively other threads will be reading an array of Nodes. We do need to be careful when we expand the array to give more room. We do this by first creating the new array, copying the values to the new array, and only then setting it in the threaded instance.  This way, concurrent code may either see the old array or the new one, but never need to traverse both. And when traversing, it goes through the nodes and check their Transaction value.  Remember that the Transaction is only being set from the original thread, but can be reset from another thread if the transaction moved between threads. We don&#x2019;t really care, the way it works, we read the node&#x2019;s transaction field, and then check its value (once we have a stable reference). The idea is that we don&#x2019;t worry about data races. The worst that can happen is that we&#x2019;ll see an older view of the data, which is perfectly fine for our purposes.  This is pretty complex, but the code itself is simple enough, and the performance benefit justify it several times over.</p>
         </article>
         <article id="article-3254">
-            <a href="https://enterprisecraftsmanship.com/posts/law-of-demeter-and-immutability/" target="_blank">
-                <h2 class="title mb-6" id="article-3254">Law of Demeter and immutability</h2>
+            <a href="https://ayende.com/blog/175907/optimizing-read-transaction-startup-time-every-little-bit-helps-a-lot" target="_blank">
+                <h2 class="title mb-6" id="article-3254">Optimizing read transaction startup time</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 28, 2016
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Some of the performance work that I have been doing recently was complex, and then, some of it isn&#x2019;t:  And its implementation:  And the optimized version:  And the result?  The really interesting thing is that we have an improvement that is about 3 times more than we would expect. Why is that? We can see that we eliminated the ResouceName call, and saved all of that cost, but we have much lower cost overall, where did that come from? This is something that we saw over and over again. The obvious answer is that we now do less allocations, so we have less GC work to do, which is true as far as it goes, but it is also true that when we are even slightly faster, things start to align more closely, and we get a chain reaction (slightly less work means more time process the actual requests, so we can get more done in less).</p>
+        </article>
+        <article id="article-3255">
+            <a href="https://ayende.com/blog/175937/ravendb-3-5-rtm-released" target="_blank">
+                <h2 class="title mb-6" id="article-3255">RavenDB 3.5 RTM released</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 27, 2016
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m very proud to announce that RavenDB 3.5 is out and about, feeling quite awesome about itself.&#xA;&#xA;Here is some of our team in Las Vegas celebrating the release:&#xA;&#xA;You can find the go read the full features highlights page, or you can download it or just start playing with it directly.&#xA;This release represent about 3 years of effort and over three thousands commits.&#xA;This release makes me very happy.</p>
+        </article>
+        <article id="article-3256">
+            <a href="https://andrewlock.net/accessing-services-when-configuring-mvcoptions-in-asp-net-core/" target="_blank">
+                <h2 class="title mb-6" id="article-3256">Accessing services when configuring MvcOptions in ASP.NET Core</h2>
+            </a>
+            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 27, 2016
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is a follow on to one by Steve Gordon, in which I show a clean way to use configured services when setting up MvcOptions when calling AddMvc.&#x2026;</p>
+        </article>
+        <article id="article-3257">
+            <a href="https://enterprisecraftsmanship.com/posts/verifying-collaborations-at-system-edges/" target="_blank">
+                <h2 class="title mb-6" id="article-3257">Verifying collaborations at the system edges</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -197,77 +245,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: September 29, 2016
+                posted on: October 26, 2016
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, we&#x2019;ll discuss the Law of Demeter in the context of immutability.</p>
-        </article>
-        <article id="article-3255">
-            <a href="https://ayende.com/blog/175617/interview-question-stackoverflow-that" target="_blank">
-                <h2 class="title mb-6" id="article-3255">Interview question</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 29, 2016
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are doing perf testing right now, and we are looking into real world datasets to play around with. Luckily for us, Stackoverflow have regular data dump of size significant enough to be useful for our experiments. The file that I&#x2019;m currently looking it is the Posts.xml file, which is about 45GB in size, and looks roughly like this (lot of stuff removed to make the point).  Since Stackoverflow is using relational database, their output is also relational. You can see that each element is a single row, and you have the ParentId in row #7 that points back to row #4. Basically, row #4 is the question, and row #7 is one of the answers.  What I want it to take all of this data and move it into a more document format. In other words, what I want to have all the answers for a question contained within the question, something like this:  The fun part here is that this is a pretty big file, and we are writing the output into a GzipStream, so we don&#x2019;t really have the option of saving / modifying midway through. Once we have written something out to the GzipStream, it cannot be changed. So we need to find a way in which we can group all the answers under their questions, but at the same time, the file size is big, much bigger than the memory I have available, so we can&#x2019;t just keep it all in memory and write it out in the end. How would you solve this issue? My attempt is currently sitting at roughly 10GB of RAM used after processing about 30GB of XML, but I have to admit that I have thrown it together rather quickly, since I just needed the data and a quick &amp; dirty solution is just fine here.</p>
-        </article>
-        <article id="article-3256">
-            <a href="https://andrewlock.net/injecting-services-into-validationattributes-in-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-3256">Injecting services into ValidationAttributes in ASP.NET Core</h2>
-            </a>
-            <p class="mb-2">by Andrew Lock</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 29, 2016
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post describes how to use dependency injection with ValidationAttributes in ASP.NET Core, and the process I took in trying to figure out how!&#x2026;</p>
-        </article>
-        <article id="article-3257">
-            <a href="https://ayende.com/blog/175586/ravendb-retrospective-unbounded-result-sets" target="_blank">
-                <h2 class="title mb-6" id="article-3257">RavenDB Retrospective</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 28, 2016
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We spent some time recently looking into a lot of our old design decisions. Some of them make very little sense today (json vs. blittalbe as a good example), but made perfect sense at the time, and were essential to actually getting the product out. Some of those design decisions, however, are still something that I very firmly believe in.&#xA0; This series of posts is going to explore those decisions, their background and how they played out in the real world. So, without further ado, let us talk about unbounded result sets. The design of RavenDB was heavily influenced by my experience as That NHibernate Guy (I got started with NHibernate over a decade ago, if you can believe that), where I saw the same types of error, repeated over and over again. I then read Release It!, and I suddenly discovered that I wasn&#x2019;t alone fighting those kind of demons. When I designed RavenDB, I set out explicitly to prevent as many of those as I possibly could. One of the major issues that I wanted to address was Unbounded Result Sets, simply put, this is when you have:  SELECT * FROM OrderLines WHERE OrderID = 1555 And you don&#x2019;t realize that this order has three million line items (or, which is worst, that most of your orders have a few thousands line items, so you are generating a lot of load on the database, only to throw most of them away). In order to prevent this type of issue, RavenDB has the notion of mandatory page sizes.  On the client side, if you don&#x2019;t specify a limit, we&#x2019;ll implicitly add one (by default set to 128). On the server side, there is a database wide maximum page size (by default set to 1024). The server will trim all page sizes to the max if they are larger. I think that this is one of the more controversial decisions in RavenDB design, and one that got a lot of heated discussion. But I still think that this is a good idea,because I have seen what happens when you don&#x2019;t do that.&#xA0;&#xA0; And the arguments are mostly about &#x201C;RavenDB should trust developers to know what they are doing&#x201D; and a particular irate guy called me while I was out shopping to complain how I broke the sacred contract of Linq with regards to &#x201C;queries should return all by default, even if this is ten billion results&#x201D;. I pointed out that this is actually configurable, and if he wanted to set the default to any size he wanted, he could do that, but apparently it is supposed to be &#x201C;shoot my own foot first, then think&#x201D; kind of deal. Even though that I still think that this is a really good idea, we have added some features over the years to make it easy for people to access the entire dataset when they need it. Streaming has been around since 2.5 or so, giving you a dedicated API to stream unbounded results. Streams were built to make it efficient to process large sets of data, and they allow both client &amp; server to process the data in parallel, instead of batching huge responses on the server, then consuming ridiculous amounts of memory on the client before giving you the full result set. Instead, you can get each result as soon as it arrive from server, and you can process it and send it further. In 4.0, we are going to change the behavior of the paging limits so:  If you don&#x2019;t specify a limit, we&#x2019;ll supply a limit clause of 25 items. If there are more than 25 items, we&#x2019;ll throw an exception (unless you asked otherwise in the conventions).  If you supply a limit explicitly, it will work as expected and page through the data. The idea is that we want to reduce the surprise for users, and that can give them the experience to draw upon early on. Another thing that we&#x2019;ll do is make sure that the operations guys can also change that, likely with an environment variable or something like that. If you need to modify the conventions on the fly, you usually have hard time deploying a new version, and an immediate action is needed. In this manner, we can help users avoid expensive requests to the server, and they can be explicit with what they need to do.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Last week I wrote about when to use mocks. In this post, I&#x2019;d like to outline a specific guideline which comes into play when you start working with mocks: verifying collaborations at the system edges. This article is based on my recent Pluralsight course about Pragmatic Unit Testing.&#xA; Verifying collaborations at the system edges The use of mocks goes hand in hand with the style of unit testing which I call collaboration verification.</p>
         </article>
         <article id="article-3258">
-            <a href="https://www.meziantou.net/creer-une-extension-pour-chrome-opera-vivaldi.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3258">Cr&#xE9;er une extension pour Chrome/Opera/Vivaldi</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: September 28, 2016
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">NoteAn English version of this post is available: Creating an extension for Chrome / Opera / VivaldiJ&#x27;ai &#xE9;crit un article sur un autre blog:En tant que d&#xE9;veloppeur, j&#x27;ai r&#xE9;guli&#xE8;rement besoin d&#x27;informations sur les outils et les Frameworks que j&#x27;utilise. La plupart des informations techniques sont p</p>
-        </article>
-        <article id="article-3259">
-            <a href="https://ayende.com/blog/175585/debug-operations-as-a-feature-tracking-allocations-costs" target="_blank">
-                <h2 class="title mb-6" id="article-3259">Debug &amp; Operations as a feature: Tracking allocations costs</h2>
+            <a href="https://ayende.com/blog/175906/optimizing-read-transaction-startup-time-the-performance-triage" target="_blank">
+                <h2 class="title mb-6" id="article-3258">Optimizing read transaction startup time</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -277,13 +261,29 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: September 27, 2016
+                posted on: October 26, 2016
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the things that we have learned from supporting RavenDB in production is that you by default, everything is a black box into which you have exactly zero input. And in order to figure out what the problems are, you need to use expert tools (WinDBG or VM MAP for example) that are typically more focused on developers, and not usually available in production. In RavenDB 4.0, we have started from the get go with the notion that everything we do must be exposed, tracked and monitored. Here is the results of the latest effort in that direction.  And:  There are several important things here. First, you can see that we are tracking the managed and unmanaged allocations that are happening in the system. More than that, we are now able to track down exactly which part of the system is responsible for that. In the screenshots above, you can see that the UsageIpAndQuantity index has allocated about 65 MB of unmanaged memory, and that we have a few memory mapped files storing the data for index #3. The idea is that we can now glance at this endpoint and tell very quickly what is going on. And this is something that can be done in production. In fact, that is something that we&#x2019;ll expose in the studio so you can see those value change over time. We are also waiting for the CoreCLR to expose the managed allocations on&#xA0; a per thread basis, which will give us even better metrics.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This series is no longer appropriately named, but we&#x2019;ll go with that for the sake of grouping everything together. So far we have seen how we start with a fixed benchmark, and we use a profiler to narrow down all sort of hotspots. However, we do that in a pretty strange way. Consider were we started:  Now consider this series&#x2019; name. Why are we even looking at OpenReadTransaction in the first place? There is a big giant hotspot in GetDocumentsById that we can start with. Even a small change there is likely to generate a lot more results for our benchmark than eliminating everything else entirely. So why focus on those first? Put simply, this isn&#x2019;t just about this particular benchmark. We focused on everything else because those are costs that are shared across the board. Not only for the &#x201C;read random documents&#x201D; benchmark but for pretty much anything else in RavenDB.  By reducing those costs, we are enabling ourselves to get much better performance overall. And we&#x2019;ll get to the actual meat of this benchmark late, when it takes the bulk of the work.  Look at the relative costs here. We moved from 60% of the request being spent there to over 80% being spent there. (Don&#x2019;t look at the actual number, different machines, load and timing are responsible for those). Now any work that we do here will have much greater impact.</p>
+        </article>
+        <article id="article-3259">
+            <a href="https://ayende.com/blog/175905/optimizing-read-transaction-startup-time-unicode-ate-my-perf-and-all-i-got-was" target="_blank">
+                <h2 class="title mb-6" id="article-3259">Optimizing read transaction startup time</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: October 25, 2016
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As an aside, I wonder how much stuff will break because the title of this post has  in it. The topic of this post is the following profiler output. GetSliceFromKey takes over 6% of our performance, or about 24.5 seconds out of the total run. That kinda sucks.  What is the purpose of this function? Well, RavenDB&#x2019;s document ids are case insensitive, so we need to convert the key to lower case and then do a search on our internal index. That has quite a big cost associated with it. And yes, we are aware of the pain. Luckily, we are already working with highly optimized codebase, so we aren&#x2019;t seeing this function dominate our costs, but still&#x2026; Here is the breakdown of this code:   As you can see, over 60% of this function is spent in just converting to lower case, which sucks. Now, we have some additional knowledge about this function. For the vast majority of cases, we know that this function will handle only ASCII characters, and that Unicode document ids are possible, but relatively rare. We can utilize this knowledge to optimize this method. Here is what this will look like, in code:  Basically, we scan through the string, and if there is a character whose value is over 127 we fall to the slower method (slower being relative, that is still a string conversion in less than 25 &#x3BC;s). Then we just find if a character is in the upper case range and convert it to lower case (ASCII bit analysis is funny, it was intentionally designed to be used with bit masking, and all sort of tricks are possible there) and store it in the buffer, or just store the original value.  The result?  This method went from taking 5.89% to taking just 0.6%, and we saved over 22 seconds(!) in the run. Again, this is under the profiler, and the code is heavily multi threaded. In practice, this means that the run took 3 seconds less.  Either way, we are still doing pretty good, and we don&#x2019;t have that pile of poo, so I  we&#x2019;re good.</p>
         </article>
         <article id="article-3260">
-            <a href="https://andrewlock.net/localising-the-displayattribute-and-avoiding-magic-strings-in-asp-net-core/" target="_blank">
-                <h2 class="title mb-6" id="article-3260">Localising the DisplayAttribute and avoiding magic strings in ASP.NET Core</h2>
+            <a href="https://andrewlock.net/resource-specific-authorisation-in-asp-net-core/" target="_blank">
+                <h2 class="title mb-6" id="article-3260">Resource-based authorisation in ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -293,9 +293,9 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: September 27, 2016
+                posted on: October 25, 2016
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, we cover some of the problems you may find when localising your application such as localising the DisplayAttribute and broken magic strings.&#x2026;</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this next post on authorisation in ASP.NET Core I show how you can secure resources based on properties of the resource itself&#x2026;</p>
         </article>
         <div class="button flex justify-between">
             <a href="325.html"><span class="back arrow"></span></a>
@@ -312,7 +312,7 @@
             <ul class="flex flex-1 items-center gap-x-2 sm:flex-initial">
                 <li class="flex">
                     <p class="flex items-end gap-2 justify-center flex-wrap	">© Relatively General
-                        .NET 2025<span
+                        .NET 2026<span
                             class="inline-block">&nbsp;🚀&nbsp;Theme: Astro Cactus</span>
 
                         <a class="inline-block sm:hover:text-link" href="https://github.com/chrismwilliams/astro-cactus"
@@ -337,7 +337,7 @@
             class="px-4 py-2 sm:py-0 sm:hover:text-textColor sm:hover:underline" href="about.html"> About </a>
     </nav>
 </footer>
-<script src="js/script.js?id=af8f4559935e7bf5bf6015373793411d"></script>
+<script src='js/script-yhlcWZp2.js'></script>
 <script src="/pagefind/pagefind-ui.js"></script>
 
 <!-- Cookie Consent Banner -->

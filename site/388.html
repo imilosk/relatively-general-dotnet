@@ -138,10 +138,10 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-3871">
-            <a href="https://www.meziantou.net/jquery-unobstrusive-validation-and-bootstrap.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3871">jQuery Unobstrusive Validation and Bootstrap</h2>
+            <a href="https://ayende.com/blog/169729/current-status-voron-on-linux" target="_blank">
+                <h2 class="title mb-6" id="article-3871">Current status, Voron on Linux</h2>
             </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -149,93 +149,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 27, 2014
+                posted on: January 12, 2015
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">jQuery Validation verifies the validity of client-side user entries (in the browser). This has two purposes:Avoid unnecessary round trips between the client and the server when the data is invalidImprove the user experience by providing immediate visual feedback when the user enters datajQuery Unob</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We have been quite for a while on that front, but that is just because we were head down and working hard on it. The current status is that we are getting there .&#xA;&#xA;&#x9;Recently we have been fighting with a SIGSEGV (segmentation fault) that appear out of nowhere and kind of ruin our fun. To be rather more exact, we have been on that bug for over a month. We have been getting great help from Sine Nomine about figure out the root cause of that, and today Neale Ferguson finally tracked down the final clues that gave up a simple reproduction.&#xA;&#xA;&#x9;Take the following code and run it on a Linux machine (in our case, Ubuntu 14.4 with Mono 3.10). It would crash with a really nasty error:&#xA;class MainClass&#xA;{&#xA;    public unsafe static void Main(string[] args)&#xA;    {&#xA;        var f = Syscall.mmap(IntPtr.Zero, 1024 * 1024, MmapProts.PROT_WRITE | MmapProts.PROT_READ, MmapFlags.MAP_SHARED | MmapFlags.MAP_ANONYMOUS, -1, 0);&#xA;&#xA;        var p = new byte*[]{ (byte*)f.ToPointer() };&#xA;&#xA;        Syscall.munmap(f,1024*1024);&#xA;&#xA;        Console.WriteLine(p.Length);&#xA;&#xA;        p = null;&#xA;&#xA;        GC.Collect();&#xA;        GC.WaitForPendingFinalizers();&#xA;    }&#xA;}&#xA;&#xA;&#xA;&#x9;The underlying reason, to the best of my understanding at the moment, is that the sgen GC implementation in Mono is going inspecting the p array for its values. But instead of just treating this as an opaque value (because I wouldn&#x2019;t expect the GC to follow a pointer reference), it is trying to access the value. Since by this time, this value is no longer valid, it is accessing invalid memory location, and dying horribly.&#xA;&#xA;&#x9;The good news htat once we had a simple repro, the Mono team was really quick on their feet and this has already been fixed.</p>
         </article>
         <article id="article-3872">
-            <a href="https://ayende.com/blog/169122/ravendb-wow-features-presentation" target="_blank">
-                <h2 class="title mb-6" id="article-3872">RavenDB Wow! Features presentation</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 26, 2014
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In Oredev, beside sitting in a booth and demoing why RavenDB is cool for about one trillion times, I also gave a talk. I intended it to be a demo packed 60 minutes, but then I realized that I only have 40 minutes for the entire thing. The only thing to do was to speed things out, I think I breathed twice throughout the entire presentation. And I think it went great.  RAVENDB: WOW! FEATURES - THE THINGS THAT YOU DIDN&#x27;T KNOW THAT YOUR DATABASE CAN DO FOR YOU from &#xD8;redev Conference on Vimeo.</p>
-        </article>
-        <article id="article-3873">
-            <a href="https://ayende.com/blog/169313/ravendb-3-0-rtm" target="_blank">
-                <h2 class="title mb-6" id="article-3873">RavenDB 3.0 RTM!</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 25, 2014
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB 3.0 is out and about!&#xA;&#xA;&#x9;&#xA;&#xA;&#x9;It is available on out downloads page and on Nuget. You can read all about what is new with RavenDB 3.0 here.&#xA;&#xA;&#x9;This is a stable release, fully supported. It is the culmination of over a year and a half of work, a very large team and enough improvements to make you dance a jig.&#xA;&#xA;&#x9;You can play with the new version here, and all of our systems has been running on 3.0 for a while now, of course.&#xA;&#xA;&#x9;And with that, I&#x2019;m exhausted, thrilled and very excited. Have fun playing with 3.0, and check by tomorrow to see some of the cool Wow features.</p>
-        </article>
-        <article id="article-3874">
-            <a href="https://ayende.com/blog/169281/the-road-to-ravendb-3-0-stable-release" target="_blank">
-                <h2 class="title mb-6" id="article-3874">The road to RavenDB 3.0 stable release</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 25, 2014
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We are currently busy shouting at the build cluster to hurry up and finish (it is not impressed by us and keep chugging on our test suite), but I was quite amused by the following:  This is the merge from the 3.0 development branch to the stable branch. That is a lot of goodness coming your way&#x2026;</p>
-        </article>
-        <article id="article-3875">
-            <a href="https://ayende.com/blog/169092/large-scale-distributed-consensus-approaches-concurrent-consistent-decisions" target="_blank">
-                <h2 class="title mb-6" id="article-3875">Large scale distributed consensus approaches</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 24, 2014
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So far we tackled the idea of large compute cluster, and a large storage cluster. I mentioned that the problem with the large storage cluster is that it doesn&#x2019;t handle consistency within itself. Two concurrent requests can hit two storage nodes and make concurrent operations that aren&#x2019;t synchronized between themselves. That is usually a good thing, since that is what you want for high throughput system. The less coordination you can get away with, the more you can actually do. So far, so good, but that isn&#x2019;t always suitable. Let us consider a case where we need to have a consistent approach, for some business reason. The typical example would be transactions in a bank, but I hate this example, because in the real world banks deal with inconsistency all the time, this is an explicit part of their business model. Let us talk about auctions and bids, instead. We have an auction service, which allow us to run a large number of auctions.  For each auction, users can place bids, and it is important for us that bids are always processed sequentially per auction, because we have to know who place a bid that is immediately rejected ($1 commission) or a wining bid that was later overbid (no commission except for the actual winner). We&#x2019;ll leave aside the fact that this is something that we can absolutely figure out from the auction history and say that we need to have it immediate and consistent. How do we go about doing this? Remember, we have enough load on the system that we are running a cluster with a hundred nodes in it. The rough topology is still this:  We have the consensus cluster, which decide on the network topology. In other words, it decide which set of servers is responsible for which auction. What happens next is where it gets interesting. Instead of just a set of cooperating nodes that share the data between them and each of which can accept both reads and writes, we are going to twist things a bit. Each set of servers is their own consensus cluster for that particular auction. In other words, we first go to the root consensus cluster to get the topology information, then we add another command to the auction&#x2019;s log. That command go through the same distributed consensus algorithm between the three nodes. The overall cluster is composed of many consensus clusters for each auction.  This means that we have a fully consistent set of operations across the entire cluster, even in the presence of failure. Which is quite nice. The problem here is that you have to have a good way to distinguish between the different consensuses. In this case, an auction is the key per consensus, but it isn&#x2019;t always so each to make such distinction, and it is important that an auction cannot grow large enough to overwhelm the set of servers that it is actually using. In those cases, you can&#x2019;t really do much beyond relax the constraints and go in a different manner. For optimization purposes, you usually don&#x2019;t run an independent consensus for each of the auctions. Or rather, you do, but you make sure that you&#x2019;ll share the same communication resources, so for auctions/123 the nodes are D,E,U with E being the leader, while for auctions/321 the nodes are also D,E,U but U is the leader. This gives you the ability to spread processing power among the cluster, and the communication channels (TCP connections, for example) are shared between both auctions consensuses.</p>
-        </article>
-        <article id="article-3876">
-            <a href="https://ayende.com/blog/169250/ravendb-3-0-rc-discount-ends-in-two-days" target="_blank">
-                <h2 class="title mb-6" id="article-3876">RavenDB 3.0 RC discount ends in two days</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 23, 2014
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I forgot the mention this explicitly, but we are currently giving 20% discount for RavenDB 3.0 licenses for the release candidate. This discount is going to be discontinued with the release of RavenDB 3.0 in two days, so if you are counting it, hurry up .</p>
-        </article>
-        <article id="article-3877">
-            <a href="https://enterprisecraftsmanship.com/posts/read-only-collections-and-lsp/" target="_blank">
-                <h2 class="title mb-6" id="article-3877">C# Read-Only Collections and LSP</h2>
+            <a href="https://enterprisecraftsmanship.com/posts/how-to-build-microservices-wrong/" target="_blank">
+                <h2 class="title mb-6" id="article-3872">How to build Microservices wrong</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -245,45 +165,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 22, 2014
+                posted on: January 10, 2015
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I often see programmers saying that .NET read-only collections violate Liskov Substitution Principle. Do they? The quick answer is no but let&#x2019;s go through the whole story first.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Microservices have got a lot of traction last year. It&#x2019;s always interesting to read about success stories other people have; they tend to inspire you to try this new trend out in your own project.&#xA;&#xA;&#xA;However, there are several traps you can fall into if you follow this trend without deep understanding of its fundamentals. Today, I&#x2019;ll share some bad practices I saw one particular company used on its way to adopt microservices architecture.</p>
         </article>
-        <article id="article-3878">
-            <a href="https://ayende.com/blog/169186/ravendb-3-0-release-date-25-nov-2014" target="_blank">
-                <h2 class="title mb-6" id="article-3878">RavenDB 3.0 Release date: 25 Nov, 2014</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 21, 2014
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Barring anything major, we&#x2019;ll be releasing RavenDB 3.0 in 5 days . It will be&#xA0; a stable release and you&#x2019;re encourage to move to it as soon as it is available, using the Esent database. The Voron database is still in RC mode (mostly because we&#x2019;re paranoid and want to have more real world experience before we go full forward with this), but it is going to be fully supported.  Upgrading instances will use Esent, and new databases will default to Esent unless you explicitly select Voron.</p>
-        </article>
-        <article id="article-3879">
-            <a href="https://ayende.com/blog/169091/large-scale-distributed-consensus-approaches-large-data-sets" target="_blank">
-                <h2 class="title mb-6" id="article-3879">Large scale distributed consensus approaches</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 20, 2014
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In my previous post, I talked about how we can design a large cluster for compute bound operations. The nice thing about this is that is that the actual amount of shared data that you need is pretty small, and you can just distribute that information among your nodes, then let them do stateless computation on that, and you are done. A much more common scenario is when can&#x2019;t just do stateless operations, but need to keep track of what is actually going on. The typical example is a set of users changing data. For example, let us say that we want to keep track of the pages each user visit on our site. (Yes, that is a pretty classic Big Table scenario, I&#x2019;ll ignore the prior art issue for now). How would we design such a system? Well, we still have the same considerations. We don&#x2019;t want a single point of failures, and we want to have very large number of machines and make the most of their resources.  In this case, we are merely going to change the way we look at the data. We still have the following topology:  There is the consensus cluster, which is responsible for cluster wide immediately consistent operations. And there are all the other nodes, which actually handle processing requests and keeping the data. What kind of decisions do we get to make in the consensus cluster? Those would be:  Adding &amp; removing nodes from the entire cluster. Changing the distribution of the data in the cluster. In other words, the state that the consensus cluster is responsible for is the entire cluster topology. When a request comes in, the cluster topology is used to decide into which set of nodes to direct it to. Typically in such systems, we want to keep the data on three separate nodes, so we get a request, then route it to one of those three nodes that match this. This is done by sharding the data according the the actual user id whose page views we are trying to track. Distributing the sharding configuration is done as described in the compute cluster example, and the actual handling of requests, or sending the data between the sharded instances is handled by the cluster nodes directly. Note that in this scenario, you cannot ensure any kind of safety. Two requests for the same user might hit different nodes, and do separate operations without being able to consider the concurrent operation. Usually, that is a good thing, but that isn&#x2019;t always the case. But that is an issue of the next post.</p>
-        </article>
-        <article id="article-3880">
-            <a href="https://www.meziantou.net/detect-the-opening-of-a-new-window-in-csharp.htm" target="_blank">
-                <h2 class="title mb-6" id="article-3880">Detect the opening of a new window in C#</h2>
+        <article id="article-3873">
+            <a href="https://www.meziantou.net/application-recovery-and-restart.htm" target="_blank">
+                <h2 class="title mb-6" id="article-3873">Application Recovery and Restart</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -293,9 +181,121 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 20, 2014
+                posted on: January 05, 2015
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One can sometimes need to detect the opening of a new window to perform a treatment: close a popup, automatically enter some information&#x2026;To avoid using interop and the RegisterShellHookWindow method, UI Automation can be used. UI Automation provides programmatic UI access initially to create assist</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When an application crashes the user does not want to lose the data is was working on. Small bonus they would like the application to restart automatically and restore their context. This is exactly what allows the Application Recovery and Restart (ARR) API. ARR allows you to define a method to cal</p>
+        </article>
+        <article id="article-3874">
+            <a href="https://enterprisecraftsmanship.com/posts/value-objects-explained/" target="_blank">
+                <h2 class="title mb-6" id="article-3874">Value Objects explained</h2>
+            </a>
+            <p class="mb-2">by Vladimir Khorikov</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 03, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ve already written about base entity class. Today, I&#x2019;d like to continue with Value Object base class I use in my projects. Also, I&#x2019;ll share some best practices regarding Value Objects implementation.&#xA; Value Objects: what is it?  An object that represents a descriptive aspect of the domain with no conceptual identity is called a Value Object. Value Objects are instantiated to represent elements of the design that we care about only for what they are, not who or which they are.</p>
+        </article>
+        <article id="article-3875">
+            <a href="https://ayende.com/blog/169666/side-by-side-indexes-in-ravendb" target="_blank">
+                <h2 class="title mb-6" id="article-3875">Side by side indexes in RavenDB</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 02, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of the new features we just finished working on is the notion of side by side indexes. You can see how to access it on the image, but what is it?  As usual lately, this is part and parcel of our current focus in operations. The basic notion is simple. You have an index in production that you want to update, but just updating it on the fly isn&#x2019;t going to work. The problem is that updating the index force a complete reindexing of the data, and in most production systems, we have enough documents that this can take a while. That means that during the indexing process, your application would see partial results, and may see that for a while. Common work around was to add support in your application to change the index name, so you would create a new index, wait for it to become non stale and then you would update the application configuration so you would query the new index. With the side by side option, this is all handled for you. When you save an index with side by side option, you get the following options:  Basically, we create the index under a temporary name, and start indexing it. And you can choose when RavenDB automatically will make the switch (note that there is an OR condition between those, so any of those that match would work). This give you the option of changing an index, and have no interruptions of service, because RavenDB will take care of all of that for you. You can even mark an index with a &#x201C;force to change via side-by-side&#x201D;, which will protect it from accidental changes.</p>
+        </article>
+        <article id="article-3876">
+            <a href="https://ayende.com/blog/169667/data-subscriptions-in-ravendb" target="_blank">
+                <h2 class="title mb-6" id="article-3876">Data Subscriptions in RavenDB</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 01, 2015
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Most of the time, RavenDB&#xA0; is being used for OLTP scenarios, and it is doing great work there. However, we have customers that use RavenDB as the source for data processing jobs. Those jobs calls for processing all / most of the documents in the database. A typical example would be an ordering system, where each document is an order, and we need to process the orders. You can certainly handle this right now, but that requires you to maintain quite a bit of state in order to do so efficiently. What we have done is to take this entire process and make this very simple to use. I know that this is a bit vague, but let me try showing you some code, and hopefully it will clear things up. var id = store.Subscriptions.Create(new SubscriptionCriteria&#xA;{&#xA;    BelongsToCollection = &quot;Orders&quot;,&#xA;    PropertiesMatch =&#xA;    {&#xA;        {&quot;Valid&quot;, true}&#xA;    },&#xA;});&#xA;&#xA;&#xA;Here we create an subscription, along with its configuration. In this case, give me all the orders, but only those which are valid. We can also do a bunch more basic filters like that. The result of this operation is an id, which I can use to open the subscription.&#xA;Note that subscriptions are persistent and long lived, so you are expected to hold on to that id and make use of it. Using the subscription id, we can open the subscription:&#xA;IObservable&lt;User&gt; subscription = store.Subscriptions.Open&lt;User&gt;(id, new SubscriptionConnectionOptions&#xA;{&#xA;    IgnoreSubscribersErrors = false,&#xA;    BatchOptions = new SubscriptionBatchOptions()&#xA;    {&#xA;        AcknowledgmentTimeout = TimeSpan.FromMinutes(1),&#xA;        MaxDocCount = 1024 * 16,&#xA;        MaxSize = 1024 * 1024 * 4&#xA;    },&#xA;    ClientAliveNotificationInterval = TimeSpan.FromSeconds(10),&#xA;});&#xA;&#xA;&#xA;&#xA;You can see that we specify some details about the running connection. In particular, we limit the size of a single batch, and the heart beat intervals. I&#x2019;ll touch on the error handling a bit later, first, let us see how we actually get the data. Because the subscription is an IObservable&lt;RavenJObject&gt;, that means that you can just utilize reactive extensions and subscribe to the incoming stream as you would expect to. And it means that you&#x2019;ll continue to get them, even for items that were added after you opened the subscription.&#xA;What is interesting is the error handling scenario. Data subscriptions will ensure that you&#x2019;ll receive each document at least once, but what happens if there is an error? In that case, it depends on your configuration. In the code above, we don&#x2019;t allow errors, so we you&#x2019;ll get the same document over and over until you have successfully processed it. If you set IgnoreSubscribersErrors to true, we&#x2019;ll ignore the errors raised by subscribers.&#xA;The nice thing about this is that it works even in the presence of crashes. Under the scenes, once you have successfully processed a document, we&#x2019;ll send a confirmation to the server about it, so if there is a crash, we know we already processed it. If you crashed midway, we&#x2019;ll just resend you the relevant document when you open the subscription again.</p>
+        </article>
+        <article id="article-3877">
+            <a href="https://ayende.com/blog/169697/end-of-year-discount-last-2-coupons-remaining" target="_blank">
+                <h2 class="title mb-6" id="article-3877">End of year discount, last 2 coupons remaining</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 31, 2014
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Reminding you that the end of year coupon has 2 remaining uses. You can use: 0x21-celebrate-new-year to purchase any of the following with a 21% discount:  RavenDB NHibernate Profiler Entity Framework Profiler This is valid for today only, so hurry up.</p>
+        </article>
+        <article id="article-3878">
+            <a href="https://www.meziantou.net/prevent-windows-shutdown-or-session-ending-in-dotnet.htm" target="_blank">
+                <h2 class="title mb-6" id="article-3878">Prevent Windows shutdown or session ending in .NET</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 29, 2014
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When the user logs off or when he stops his machine, Windows quits all open applications. Some applications want to execute code before ending in order not to lose the current state (a document being written for example).For this Windows sends a message to all applications:WM_QUERYENDSESSION when c</p>
+        </article>
+        <article id="article-3879">
+            <a href="https://enterprisecraftsmanship.com/posts/dont-use-ids-domain-entities/" target="_blank">
+                <h2 class="title mb-6" id="article-3879">Don&#x27;t use Ids in your domain entities!</h2>
+            </a>
+            <p class="mb-2">by Vladimir Khorikov</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 27, 2014
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">How often do you see code like this in your domain model?&#xA; public void Ship(int orderId, int customerId, string address)&#xA;{&#xA;Shipment shipment = _existingShipments.Single(x =&gt; x.OrderId == orderId);&#xA;if (shipment.CustomerId == customerId)&#xA;{&#xA;// Do something&#xA;&#xA0;}&#xA;}   Seems pretty good, doesn&#x2019;t it? Well, it doesn&#x2019;t. I&#x2019;ve already pointed&#xA0;using Ids in domain entities as a bad practice, but I see developers - even sophisticated ones - write such code over and over again, so this topic definitely deserves a separate article.</p>
+        </article>
+        <article id="article-3880">
+            <a href="https://ayende.com/blog/169668/exercise-learning-and-sharpening-skills" target="_blank">
+                <h2 class="title mb-6" id="article-3880">Exercise, learning and sharpening skills</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 26, 2014
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The major portion of the RavenDB core team is co-located in our main office in Israel. That means that we get to do things like work together, throw ideas off one another, etc. But one of the things that I found stifling in other work places is a primary focus on the current work. I mean, the work is important, but one of the best ways to stagnate is to keep doing the same thing over and over again. Sure, you are doing great and can spin that yarn very well, but there is always that power loom that is going to show up any minute. So we try to do some skill sharpening.  There are a bunch of ways we do that. We try to have a lecture every week (given by one of our devs). The topics so far range from graph theory to distributed gossip algorithms to new frameworks and features that we deal with to the structure of the CPU and memory architecture.  We also have mini debuggatons. I&#x2019;m not sure if the name fit, but basically, we show a particular problem, split into pairs and try to come up with a root cause and a solution. This post is written while everyone else in the office is busy looking at WinDBG and finding a memory leak issue, in the meantime, I&#x2019;m posting to the blog and fixing bugs.</p>
         </article>
         <div class="button flex justify-between">
             <a href="387.html"><span class="back arrow"></span></a>
@@ -312,7 +312,7 @@
             <ul class="flex flex-1 items-center gap-x-2 sm:flex-initial">
                 <li class="flex">
                     <p class="flex items-end gap-2 justify-center flex-wrap	">© Relatively General
-                        .NET 2025<span
+                        .NET 2026<span
                             class="inline-block">&nbsp;🚀&nbsp;Theme: Astro Cactus</span>
 
                         <a class="inline-block sm:hover:text-link" href="https://github.com/chrismwilliams/astro-cactus"
@@ -337,7 +337,7 @@
             class="px-4 py-2 sm:py-0 sm:hover:text-textColor sm:hover:underline" href="about.html"> About </a>
     </nav>
 </footer>
-<script src="js/script.js?id=af8f4559935e7bf5bf6015373793411d"></script>
+<script src='js/script-yhlcWZp2.js'></script>
 <script src="/pagefind/pagefind-ui.js"></script>
 
 <!-- Cookie Consent Banner -->

@@ -138,8 +138,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-2851">
-            <a href="https://ayende.com/blog/178977/ravendb-4-0-securing-the-keys-to-the-kingdom" target="_blank">
-                <h2 class="title mb-6" id="article-2851">RavenDB 4.0</h2>
+            <a href="https://ayende.com/blog/179170/production-postmortem-the-lightly-loaded-trashing-server" target="_blank">
+                <h2 class="title mb-6" id="article-2851">Production postmortem</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -149,13 +149,29 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: July 10, 2017
+                posted on: August 02, 2017
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A major design goal for RavenDB is that it would be easy and convenient to user. A major constraint is that it must be secured. As you can imagine, those two are quite often work against one another. Security is often anything but easy to use, and it is rarely convenient.&#xA0; Previously, we have used Windows Authentication and OAuth to secure access to RavenDB. That works and has been deployed in the wild for quite some time. It is also a major pain whenever there is an issue. If the connection to the domain controller drops, we might have authentication delays of many seconds, and trying to debug Active Directory issues in production deployments can be&#x2026; a bit of a pain, in the same way that an audit by the IRS that starts with SWAT team bashing down your door is mildly annoying.&#xA0; OAuth, on the other hand, is much better, since it is under our control, and we can figure out exactly what is going on with it if need be.Since RavenDB 4.0 is running on Windows, Linux &amp; Mac, we decided to drop the Windows Authentication support and just use OAuth. The problem is that if we choose to support HTTP, we have to rely on extremely complex protocols that attempt to secure authentication using plain text, but don&#x2019;t usually deliver good results and are typically a pain to debug and support. Or, we can use HTTPS and just let SSL/TLS to handle it all for us. A good example of the difference can be seen in OAuth 1.0 vs OAuth 2.0. When we built RavenDB 1.0, roughly around 2009, the operating environment was quite different. In 2017, not using HTTPS is pretty much a sin into itself. As we started security modeling for RavenDB 4.0, it became obvious that we couldn&#x2019;t really support any security on top of HTTP without effectively having to implement most of the properties of HTTPS ourselves. I&#x2019;m many things, but I&#x2019;m not a security expert, not by a long shot. Given the chance to implement my own security protocol, I would gladly do that, for a toy project or a weekend hackfest. But there is no way I would trust my own security in production against serious attacks. That pretty much led us to the realization that we have to require HTTPS for anything that require security. That includes running inside the organization, exposed to the public internet, running inside the cloud or in a shared datacenter, etc. Pretty much, unless you have HTTPS, there is no real point in talking about security. Given that, it meant that we could shift our baseline approach to security. If we are always going to require HTTPS for security, it means that we are operating in an environment that is much nicer for us to apply security.Now, you can choose to run HTTP only, and avoid the need for certificate management, etc. However, at that point, you aren&#x2019;t running a secure system, or you are already running it in a trusted and secured environment. In that case, we want to be clear that there isn&#x2019;t any point to try to apply security policy (such as who can access what). Any network sniffer can figure out the access tokens and pretend to be whomever they want, if you are using HTTP. With HTTPS required, we now move to the realm of having the admin take care of the certificates, securing them, renewal, etc. That is the part where it isn&#x2019;t as easy or convenient as we could wish for. However, once we had that as a baseline, it opens an interesting path for security. Instead of relying on our own solution, we can use the builtin one and use x509 certificates from the client for authentication. This has the advantage that it is widely supported, standardized and secured. It is a bit less convenient then just a password, but the advantage is that any security system already in place know how to deal with, store, authorize and manage access to certificates.The idea is that you can go to RavenDB and either register or generate a x509 certificate. To that certificate an administrator can assign permissions (such as what dbs it is allowed to access). From that point on, a client (RavenDB, browser, curl, etc) can connect to RavenDB and just issue REST requests. There is no need to do anything else for the system to work. Contrast that with how you would typically have to deal authentication using OAuth, by sending the token, keeping it fresh manually, etc.Using x509 also has the distinct advantage that it is widely trusted. We intend to provide this level of security to all editions of RavenDB (so the Community Edition will also be able to use it). A nice accidental feature of this decision is that we are going to be able to apply authentication at the connection level, and connection pooling means that we are likely going to have connections live for a long time. That means that we only need to pay the authentication cost once, instead of per request, with OAuth.To simplify matters, we&#x2019;ll likely just use the client certificates for authenticating the client, so we&#x2019;ll not care if they are from a trusted root, etc. We&#x2019;ll just require that the admin register the valid certificate with the cluster so they will be recognized. If you need to stop using a certificate, you can delete its registration or generate a new certificate to take its place. On the client side, it means that the DocumentStore will expose a X509Certificate property that you can set (or the equivalent in other clients). That means that you can use your own policies on the client to determine how to store the certificate. On the server side, by the way, we&#x2019;ll expose an extension point that will allow you to retrieve the certificate using your own policies. For example, if you are using Azure Key Vault or Hashicorp Vault or even your own HSM. This is done by invoking a process you specify, so you can write your own scripts / mini programs and apply whatever logic you need. This creates a clean separation between RavenDB and the secret store in use.Authentication between servers is also done using SSL and certificates. We expect that we&#x2019;ll commonly have all the servers running the same wildcard certificate, in which case they will obviously trust each other. Alternatively, you can also specify additional certificates that will be treated as servers. This is useful for when you are running with separate certificate for each server, but it is also a critical part of certificate rotation. When your certificate is about to expire, the admin will register the new certificate as trusted, and then start replacing the certificates of each of the nodes in turn. This allow us to run with both old and new certificates concurrently during this process.We considered relying on some properties of the certificate itself, but it seemed like an error prune process. It is better to have the admin explicitly state, both for clients and server certificates which one we should actually trust, and at what level.I would really appreciate any commentary you have about this feature, both in terms of ease of use, acceptability and obviously its security.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We got a puzzle. A particular customer was seeing very high latency in certain operations on a fairly frequent basis. The problem is that when this happened, the server was practically idle, serving around 5% of the usual requests/sec. What was even stranger was that during the times when we had reached the peek of requests/seconds, we&#x2019;ll see no such slowdowns. The behavior was annoyingly consistent, we&#x2019;ll see no slowdown at all during high load, but after a period of relatively light load, the server would appear to choke. That one took a lot of time to figure out, because it was so strange. The immediate cause was pretty simple to figure out, the server was busy paging into memory a lot of data, but why would it need to do this? The server was just sitting there doing nothing much, but it was thrashing like crazy, and that was affecting the entire system.I&#x2019;ll spare you the investigation, because it was mostly grunting and frustration, but the sequence of events as we pieced it together was something like this:The system is making heavy use of caching, with a cache duration set to 15 minutes or so. Most pages would hit the cache first, and if there was a miss, generate it and save it back. The cached documents was setup with the RavenDB expiration bundle. During periods of high activity, we&#x2019;ll typically have very few cache expiration (because we kept using the cached data) and we&#x2019;ll fill up the cache quite heavily (the cache db was around 100GB or so).That would work just fine and rapidly be able to serve a high number of requests.And then came the idle period&#x2026;During that time, we had other work (by a different process) going on in the server, which we believe would give the OS reason to page the now unused memory to disk. So far, everything goes on as predicted, but then something happens. The expiration timer is hit, and we now have a lot of items that need to be expired. RavenDB expiration is coarse, and it runs every few minutes, so each run we had a lot of stuff to delete. Most of it was on disk, and we needed to access all of it so we can delete it. And that caused us to trash, affecting the overall server performance. As long as we were active, we wouldn&#x2019;t expire so much at once, and we had a lot more of the db in memory, so the problem wasn&#x2019;t apparent. The solution was to remove the expiration usage and handle the cache invalidation in the client, when you fetched a cached value, you checked its age, and then you can apply a policy decision if you wanted to update it or not. This actually turned out to be a great feature in general for that particular customer, since they had a lot of data that can effectively be cached for much longer periods, and that gave them the ability to express that policy.</p>
         </article>
         <article id="article-2852">
-            <a href="https://andrewlock.net/localising-the-displayattribute-in-asp-net-core-1-1/" target="_blank">
-                <h2 class="title mb-6" id="article-2852">Localising the DisplayAttribute in ASP.NET Core 1.1</h2>
+            <a href="https://ayende.com/blog/179169/the-cost-of-an-extension-point" target="_blank">
+                <h2 class="title mb-6" id="article-2852">The cost of an extension point</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: August 01, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Recently we had a discussion on server side extension points in RavenDB 4.0, currently, outside of the ability to load custom analyzers for Lucene, we have none. That is in stark contrast for the architecture we have in 3.x.That is primarily because we found out several things about our extensions based architecture, over the years.Firstly, the extension based approach allowed us to develop a lot of standard extensions (called bundles) in 3.x. In fact, replication, versioning, unique constraints and a lot of other cool features are all implemented as extensions. On the one hand, it is a very convenient manner to add additional functionality, but it is also led to what I can&#x2019;t help but term an isolationist attitude. In other words, whenever we build a feature, we tended to focus on that particular feature on its own. And a lot of trouble we have seen has been the result of feature intersection. Versioning and replication in a multi master cluster, for example, can have a fairly tricky behavior.And the only way to resolve such issues is to actually teach the different pieces about each other and how they should interact with one another. That sort of defeated the point of writing independent extensions. Another an issue is that the interface that we have to expose are pretty generic. In many cases, that means that we have to do extra work (such as materializing values) in order for us to send the right values to the extension points. Even if in most cases, that extra work isn&#x2019;t used.Another issue is that in RavenDB 4.0, we have been treating all the pieces as a single whole, instead of tacking them on after the fact. Versioning, for example, as a core feature, has implications for maintaining transaction boundaries in a distributed environment, and that requires tight integration with the replication code and other parts on the environment. It is much easier to do so when we are building it as a single coherent piece.There is another aspect here, not having external extensions also make it much easier to lay down the law with regards to what can and cannot happen in our codebase. We can make assumptions about what things will do, and this can result in much better code and behavior. Now, there are things that we are going to have to do (allow you to customize your indexes with additional code, for example) and we can allow that by allowing you to upload additional code to be compiled with your indexes, but that is a very narrow use case.</p>
+        </article>
+        <article id="article-2853">
+            <a href="https://andrewlock.net/formatting-response-data-as-xml-or-json-based-on-the-url-in-asp-net-core/" target="_blank">
+                <h2 class="title mb-6" id="article-2853">How to format response data as XML or JSON, based on the request URL in ASP.NET Core</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -165,29 +181,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: July 10, 2017
+                posted on: August 01, 2017
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I recap localisation in ASP.NET Core, and see how localising the DisplayAttribute changed in ASP.NET Core 1.1. Spoiler alert - it just works!&#x2026;</p>
-        </article>
-        <article id="article-2853">
-            <a href="https://www.meziantou.net/entity-framework-core-soft-delete-using-query-filters.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2853">Entity Framework Core: Soft Delete using Query Filters</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 10, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Note: I use the preview version of Entity Framework Core 2.0 (2.0.0-preview2-final). Things may change after the final version is releasedI continue my exploration of Entity Framework Core 2.0. Today, I&#x27;ll explore how to use soft-delete (or logical delete) easily. I mean implementing soft-delete in</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I&#x27;ll show how to use the FormatFilter, so that you can specify the output format for an action using a URL suffix, e.g. /api/values.xml as XML.&#x2026;</p>
         </article>
         <article id="article-2854">
-            <a href="https://ayende.com/blog/178882/bad-bugs-makes-for-self-assigning-issues" target="_blank">
-                <h2 class="title mb-6" id="article-2854">Bad bugs makes for self assigning issues</h2>
+            <a href="https://ayende.com/blog/179106/practice-makes-perfect" target="_blank">
+                <h2 class="title mb-6" id="article-2854">Practice makes perfect</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -197,29 +197,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: July 07, 2017
+                posted on: July 31, 2017
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">One of our developers just added the following bug:This is in an area that of the code that this particular developer is not regularly traversing*. The image above includes the full contents of the bug. And that caused me to immediately assign it back to its opener.The problem?&#xA0; If you say that you got an error, include the error. In many cases, you can save a lot of time and guessing. For an internal bug, where the person who opened it is available, we have much lower bar for bug report quality. Most bugs are closed relatively quickly anyway. But lower bar for bug report quality still means there is a bar.* I started to say, not responsible for, but we don&#x2019;t have code ownership, so that wouldn&#x2019;t have been right.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I run into this over twitter:There were some suggestions there to go to meetups, find a mentor, etc. Those are important, but I consider them secondary to what you need to be a good developer.My advice:Write code, you&#x27;ll likely write crap code, but write code, and a lot of it. Read code, you&#x27;ll not understand some, but try to.The order matter.The only way to be a good developer is to be a bad developer first. I have a drawer full of old hard disks that contain old code, some of it goes back over 20 years. I still remember being incredibly proud in writing a full BBS system in VBScript &amp; ASP (classic!) that didn&#x2019;t use a database but rather manipulated the HTML files on disk directly so you had what is effectively a static website that would self modify itself. The impressive thing was this was a single nested switch statement that went on for thousands of lines. I somehow managed to keep it all in my head enough to be able to actually complete the project.It would never work in practice (I didn&#x2019;t have any concept of &#x201C;what happens if two requests happen at the same time&#x201D;) and it was never deployed, but it was code that I wrote, and that thought me what works. More importantly, it told me what doesn&#x2019;t work. That meant reading errors, figuring out how to find faults in my program, getting used to run &lt;----&gt; modify cycle, etc. I wrote web systems, gesture recognition systems that would serve as hot keys in Windows, shell extensions and a lot of random stuff. Most of it was never meant to be anything, it was just a way for me to explore. The more I wrote, the more I knew what was going on. At that point, reading other people&#x2019;s code would have done nothing for me. I wasn&#x2019;t at a level that I could grasp what other people were doing. It took a long time until I was ready to actually peek into other people&#x2019;s code and actually be able to make sense of it. More to the point, it took a long time until I was able to actually learn something from that, rather then just go with a targeted &#x201C;what do I need to make X work&#x201D;.Having other people there to help can be very useful, but it can also be a crutch. At least initially, you need to fall down a lot to figure things out. Mostly because people have very hard time telling you how they found the problem in your code. &#x201C;It&#x2019;s obvious that this is here&#x201D; doesn&#x2019;t give you much to learn from except possibly that you are stupid for missing the obvious. A lot of the advice that this tweet got is absolutely something that I can get behind, but I would put it significantly later in the process.</p>
         </article>
         <article id="article-2855">
-            <a href="https://ayende.com/blog/178849/the-ghost-of-the-zombie-of-revisions-past" target="_blank">
-                <h2 class="title mb-6" id="article-2855">The ghost of the zombie of revisions past</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 06, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I talked about difficult naming decisions, and this one was certainly one of the more lively ones. We bounced between zombies, orphans and ghosts, with a bunch of crazy stuff going in between. At one point it was suggested we&#x2019;ll just make up a word, but my suggestion to use Welchet was sadly declined by all, including a rather rude comment by the author of this blog about what kind of jokes are appropriate for the workplace. After we settled the discussion on ghosts, there was another discussion about whatever we should use Inky, Blinky, Pinky and Clyde. I tell you, when we aren&#x2019;t building distributed databases, the office is a hotbed for nerd references. And then an idea cam along. Which I really liked, so we talked about this in the morning and I&#x2019;m showing screenshots at a blog post a bit before midnight. The feature is called the revision bin. In the UI, you can see it as one of the top level elements. In essence, this is a recycle bin for revisions. RavenDB can be configured to keep revisions of documents as they change, and even keep track of them after they were deleted. However, that presented a problem. If you deleted a document that had revisions, how would you tell that it was there in the first place? Just knowing the document id and looking for that wouldn&#x2019;t work very well. So we created the revisions bin, whose content looks like this:And from there you can go to:For that matter, if we recreate this document again, you&#x2019;ll be able to see its entire history, including across deletes.Now admittedly this is a nice looking UI, and the skull on the menu is a nice touch, if a bit morbid. However, why make such a noise about such a feature?The answer is that the revisions bin isn&#x2019;t that important, but keeping track of deletes of documents using revisions is quite important, since it allow subscriptions and ETL to handle them in a clean and easy to grok manner. And in order to actually explain that, we needed to be able to show the users what we are talking about.</p>
-        </article>
-        <article id="article-2856">
-            <a href="https://www.meziantou.net/internalsvisibleto-with-strong-named-assemblies.htm" target="_blank">
-                <h2 class="title mb-6" id="article-2856">InternalsVisibleTo with strong-named assemblies</h2>
+            <a href="https://www.meziantou.net/suppress-use-throw-expression-suggestion.htm" target="_blank">
+                <h2 class="title mb-6" id="article-2855">Suppress &quot;Use &#x27;throw&#x27; expression&quot; suggestion</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -229,13 +213,61 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: July 06, 2017
+                posted on: July 31, 2017
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The InternalsVisibleTo attribute is a well-known attribute for testing assemblies. The internal methods of an assembly become visible to the test project. This allows you to test the internal methods without using reflection, so your tests are more maintainable.If the assembly does not have a stron</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">C# 7 has introduced new features: pattern matching, our variables, tuples, and many more. It&#x27;s also introduced throw expression. This allows using the throw keyword in an expression. For instance:C#copy_foo = foo ?? throw new ArgumentNullException(nameof(foo));&#xA;parts.Length &gt; 0 ? parts[0] : thro</p>
+        </article>
+        <article id="article-2856">
+            <a href="https://ayende.com/blog/179105/error-handling-belongs-at-layer-7-policy" target="_blank">
+                <h2 class="title mb-6" id="article-2856">Error handling belongs at Layer 7 (policy)</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 28, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When you setup a RavenDB server securely, it doesn&#x2019;t require a valid X509 certificate to be able to connect to it.You might want to read that statement a few times to realize what I&#x2019;m saying. You don&#x2019;t need a certificate to connect to a RavenDB service. But on the other hand, we use client certificate to authenticate connections. So which is it?The problem is with the specific OSI layer that we are talking about. When using SSL / TLS you can require a client certificate on connection. That ensures that only connections with a client certificate can be processed by the server. This is almost what we want, but it has the sad effect of having really poor error reporting capabilities.For example, let us assume that you are trying to connect to a secured RavenDB server without a certificate. If we just require client certificate, then the error would be raised a the SSL layer, giving you errors that look something like:&#xA;The connection has been closedCould not establish trust relationship for the SSL/TLSThis can also happen if there is a firewall in the middle, if enough packets were dropped, if there is a solar storm or just because it is Monday.Or, it can be because you don&#x2019;t have a certificate, your certificate expired, it is not known or you are trying to access a resource you are not authorized to.In all of those cases, the error you&#x2019;ll receive if you require &amp; validate the certificate at OSI Layer 6 is going, to put it plainly, suck. Just imagine trying to debug something like that in a protocol that by design is intended to be hard / impossible to eavesdrop to. Instead, we can allow access to the server without a certificate and enforce the required certificate at a higher level.That means that when you connect to RavenDB and you don&#x2019;t have a certificate, we&#x2019;ll accept the connect and then either give you an error (if you are an API) that you can reason about (because it will tell you what is wrong) or you&#x2019;ll be redirected into a nice error page (if you are using the browser). Alternatively, if you have a certificate and it is not valid for any number of reasons, RavenDB will tell you all about it.That reduce the amount of hair loss in the case of errors significantly.</p>
         </article>
         <article id="article-2857">
-            <a href="https://enterprisecraftsmanship.com/posts/how-to-request-information-from-multiple-microservices/" target="_blank">
-                <h2 class="title mb-6" id="article-2857">How to request information from multiple microservices?</h2>
+            <a href="https://ayende.com/blog/179042/keeping-track-on-long-running-branches" target="_blank">
+                <h2 class="title mb-6" id="article-2857">Keeping track on long running branches</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 27, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I talked about the Merge Games in somewhat of a jest, but more seriously, there is a lot to worry about once you have long running branches. In our case, it isn&#x2019;t so much that we have a lot of long running branches as we have a ton of changes that are happening in multiple branches in parallel and it sometimes can take a few weeks until the work is done and we can merge it all.This put a lot o pressure on the code review part of the process. One of the things that I really like with GitHub is the PR / review processes, and it works great when you have a small commits / PRs. The problem is that when you are talking about large scope of work, you are left with few options for proper review.One option is to get a PR with dozens of commits, and having to slog through each of them to understand what is going on. Another is to get a PR with a single commit, that contains a lot of changes. This means that you have to grasp the whole change in one shot. Either option is really hard, and can lead the reviewer to skim through the code.&#xA0; That isn&#x2019;t something that we want to do, instead, we really want to pay as much attention to the code as we did while writing it.My process for handling this is to lean heavily on GitHub. What I do is create a PR very early in the process, sometimes immediately after the first commit in that branch. That gives me the ability to review things incrementally. Instead of having to deal with it all at once, I can review the changes as they come in. Whenever one of the developers push their commits, I&#x2019;ll get a notification about be able to go over the details and comment on the spot.That shortens the feedback cycle and remove a lot of the complexity from the review process. It also means that we can more easily note that one developer is doing something that is also being done by another team, so we can integrate the work earlier in the process.</p>
+        </article>
+        <article id="article-2858">
+            <a href="https://www.meziantou.net/entity-framework-core-specifying-data-type-length-and-precision.htm" target="_blank">
+                <h2 class="title mb-6" id="article-2858">Entity Framework Core: Specifying data type length and precision</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: July 27, 2017
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Note: I use the preview version of Entity Framework Core 2.0 (2.0.0-preview2-final). Things may change after the final version is releasedORMs like Entity Framework Core provide great abstractions of the database. However, it should not prevent you from looking at the generated code. In this post,</p>
+        </article>
+        <article id="article-2859">
+            <a href="https://enterprisecraftsmanship.com/posts/how-i-tried-to-get-into-game-development-and-failed-part-3/" target="_blank">
+                <h2 class="title mb-6" id="article-2859">How I tried to get into game development and failed, part 3</h2>
             </a>
             <p class="mb-2">by Vladimir Khorikov</p>
             <p class="mb-6 flex gap-1.5">
@@ -245,47 +277,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: July 05, 2017
+                posted on: July 26, 2017
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is about how to work with information that is spread across multiple microservices.</p>
-        </article>
-        <article id="article-2858">
-            <a href="https://ayende.com/blog/178913/ravendb-4-0-on-mac-osx" target="_blank">
-                <h2 class="title mb-6" id="article-2858">RavenDB 4.0 on Mac OSX</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 05, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">So we just got this result:We are not in the process of making sure that it all actually works, but it is very encouraging that we have been able to get there.This will very likely be in the next beta build for RavenDB.</p>
-        </article>
-        <article id="article-2859">
-            <a href="https://ayende.com/blog/178823/ravendb-4-0-unbounded-results-sets" target="_blank">
-                <h2 class="title mb-6" id="article-2859">RavenDB 4.0</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: July 04, 2017
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Unbounded result sets are a pet peeve of mine. I have seen them destroy application performance more then once. With RavenDB, I decided to cut that problem at the knees and placed a hard limit on the number of results that you can get from the server. Unless you configured it differently, you couldn&#x2019;t get more than 1,024 results per query. I was very happy with this decisions, and there have been numerous cases where this has been able to save an application from serious issues.Unfortunately, users hated it. Even though it was configurable, and even though you could effectively turn it off, just the fact that it was there was enough to make people angry.Don&#x2019;t get me wrong, I absolutely understand some of the issues raised. In particular, if the data goes over a certain size we suddenly show wrong results or error, leaving the app in a &#x201C;we need to fix this NOW&#x201D;. It is an easy mistake to make. In fact, in this blog, I noticed a few months back that I couldn&#x2019;t get entries from 2014 to show up in the archive. The underlying reason was exactly that, I&#x2019;m getting the number of items per month, and I&#x2019;ve been blogging for more than 128 months, so the data got truncated. In RavenDB 4.0 we removed the limit. If you don&#x2019;t specify a limit in a query, you&#x2019;ll get exactly how many results there are in the database. You can ask RavenDB to raise an error if you didn&#x2019;t specify a limit clause, which is a way for you to verify that you won&#x2019;t run into this issue in production, but it is off by default and will probably better match the new user expectations.The underlying issue of loading too many results is still there, of course. And we still want to do something about it. What we did was raise alerts. I have made a query on a large set (160,000 results, about 400 MB in all) and the following popped up in the RavenDB Studio:This tells the admin that it have some information that it needs to look at. This is intentionally non obtrusive. When you click on the notifications, you&#x2019;ll get the following message.And if you&#x2019;ll click on the details, you&#x2019;ll see the actual details of the operations that triggered this warning.I actually created an issue so we&#x2019;ll supply you with more information (such as the index, the query, duration and the total size that it generated over the network). I think that this gives the admin enough information to act upon, but will not cause hardship to the application. This make it something that we Should Fix instead Get the OnCall Guy.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Final part of my story about game development. First part, second part.&#xA; Client side load balancing In the previous post, I wrote about performance optimizations. We figured that a single 1 CPU server in Azure could handle up to 600 simultaneous users spread across 3 game scenes (also known as game arenas; each scene takes one OS process).&#xA; Now we needed a mechanism for distributing the players across multiple servers and game scenes in those servers.</p>
         </article>
         <article id="article-2860">
-            <a href="https://ardalis.com/show-all-github-issues-assigned-to-me/" target="_blank">
-                <h2 class="title mb-6" id="article-2860">Show All GitHub Issues Assigned to Me</h2>
+            <a href="https://ayende.com/blog/179041/let-the-merge-games-begin" target="_blank">
+                <h2 class="title mb-6" id="article-2860">Let the Merge Games begin!</h2>
             </a>
-            <p class="mb-2">by Ardalis</p>
+            <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -293,9 +293,9 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: July 04, 2017
+                posted on: July 26, 2017
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m a big fan of GitHub and the workflow it provides. I find it to be very productive and collaborative, as well as lightweight. I work on&#x2026;Keep Reading &#x2192;</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">We currently have four different teams that are working on large modifications to RavenDB.Large modifications means that they are working on a feature for a relatively long time and very frequently need to do modifications to large swaths of the code base. Oh, and the common theme for all of them is that they are all big enough that it means that you cannot just merge back into the main branch. There are often a lot of failing tests or even uncompilable state during a long refactoring session.The good thing is that we are pretty good about making sure that we merge from the main branch on a regular basis. The bad thing is that once we start merging those big changes, the other large refactoring are going to have to deal with a lot of changes happening very quickly. Hence, the merge games. The fastest one of those team is able to hit the &#x201C;can we put this in the main branch&#x201D; point, the less work it is going to be for them. On the other hand, the slower you are in getting to that point, the more conflicts you are likely to run into and have to resolve. I don&#x2019;t think it would be a best seller book series and I doubt that I&#x2019;ll get a movie deal from it, but in a certain select group of people, I think that this will be an amazingly fun game (as long as you aren&#x2019;t the one left holding the shitty end of the merge conflicts).</p>
         </article>
         <div class="button flex justify-between">
             <a href="285.html"><span class="back arrow"></span></a>
@@ -312,7 +312,7 @@
             <ul class="flex flex-1 items-center gap-x-2 sm:flex-initial">
                 <li class="flex">
                     <p class="flex items-end gap-2 justify-center flex-wrap	">© Relatively General
-                        .NET 2025<span
+                        .NET 2026<span
                             class="inline-block">&nbsp;🚀&nbsp;Theme: Astro Cactus</span>
 
                         <a class="inline-block sm:hover:text-link" href="https://github.com/chrismwilliams/astro-cactus"
@@ -337,7 +337,7 @@
             class="px-4 py-2 sm:py-0 sm:hover:text-textColor sm:hover:underline" href="about.html"> About </a>
     </nav>
 </footer>
-<script src="js/script.js?id=af8f4559935e7bf5bf6015373793411d"></script>
+<script src='js/script-yhlcWZp2.js'></script>
 <script src="/pagefind/pagefind-ui.js"></script>
 
 <!-- Cookie Consent Banner -->

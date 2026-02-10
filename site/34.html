@@ -138,8 +138,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-331">
-            <a href="https://ayende.com/blog/201795-A/ravendb-performance-15-improvement-in-one-line" target="_blank">
-                <h2 class="title mb-6" id="article-331">RavenDB Performance: 15% improvement in one line</h2>
+            <a href="https://ayende.com/blog/201957-A/answer-what-does-this-code-do" target="_blank">
+                <h2 class="title mb-6" id="article-331">Answer</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -149,15 +149,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: December 02, 2024
+                posted on: January 22, 2025
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB is a database, a transactional one. This means that we have to reach the disk and wait for it to complete persisting the data to stable storage before we can confirm a transaction commit. That represents a major challenge for ensuring high performance because disks are slow. I&#x2019;m talking about disks, which can be rate-limited cloud disks, HDD, SSDs, or even NVMe. From the perspective of the database, all of them&#xA0;are slow. RavenDB spends a lot&#xA0;of time and effort making the system run fast, even though the disk is slow.An interesting problem we routinely encounter is that our test suite would literally cause disks to fail&#xA0;because we stress them beyond warranty limits. We actually keep a couple of those around, drives that have been stressed to the breaking point, because it lets us test unusual I/O patterns.We recently ran into strange benchmark results, and during the investigation, we realized we are actually running on one of those burnt-out drives. Here is what the performance looks like when writing 100K documents as fast as we can (10 active threads):As you can see, there is a huge&#xA0;variance in the results. To understand exactly why, we need to dig a bit deeper into how RavenDB handles I/O. You can observe this in the I/O Stats tab in the RavenDB Studio:There are actually three separate (and concurrent) sets of I/O operations that RavenDB uses:Blue - journal writes - unbuffered direct I/O - in the critical path for transaction performance because this is how RavenDB ensures that the D(urability) in ACID is maintained.Green - flushes - where RavenDB writes the modified data to the data file (until the flush, the modifications are kept in scratch buffers).Red - sync - forcing the data to reside in a persistent medium using fsync().The writes to the journal (blue) are the most important ones for performance, since we must wait for them to complete successfully before we can acknowledge that the transaction was committed. The other two ensure that the data actually reached the file and that we have safely stored it.It turns out that there is an interesting interaction between those three types. Both flushes (green) and syncs (red) can run concurrently with journal writes. But on bad disks, we may end up saturating the entire I/O bandwidth for the journal writes while we are flushing or syncing. In other words, the background work will impact the system performance. That only happens when you reach the physical limits of the hardware, but it is actually quite common when running in the cloud.To handle this scenario, RavenDB does a number&#xA0;of what I can only describe as shenanigans. Conceptually, here is how RavenDB works:def txn_merger(self):&#xD;&#xA;  while self._running:&#xD;&#xA;    with self.open_tx() as tx:&#xD;&#xA;      while tx.total_size &lt; MAX_TX_SIZE and tx.time &lt; MAX_TX_TIME:&#xD;&#xA;        curOp = self._operations.take()&#xD;&#xA;        if curOp is None:&#xD;&#xA;          break # no more operations&#xD;&#xA;        curOp.exec(tx)&#xD;&#xA;      tx.commit()&#xD;&#xA;      # here we notify the operations that we are done&#xD;&#xA;      tx.notify_ops_completed()The idea is that you submit the operation for the transaction merger, which can significantly&#xA0;improve the performance by merging multiple operations into a single disk write. The actual operations wait to be notified (which happens after the transaction successfully commits). If you want to know more about this, I have a full blog post on the topic. There is a lot&#xA0;of code to handle all sorts of edge cases, but that is basically the story. Notice that processing a transaction is actually composed of two&#xA0;steps. First, there is the execution of the transaction operations (which reside in the _operations&#xA0;queue), and then there is the actual commit(), where we write to the disk. It is the commit portion that takes a lot of time.Here is what the timeline will look like in this model:We execute the transaction, then wait for the disk. This means that we are unable to saturate either the disk or the CPU. That is a waste. To address that, RavenDB supports async commits (sometimes called early lock release). The idea is that while we are committing the previous transaction, we execute the next&#xA0;one. The code for that is something like this:def txn_merger(self):&#xD;&#xA;  prev_txn = completed_txn()&#xD;&#xA;  while self._running:&#xD;&#xA;    executedOps = []&#xD;&#xA;    with self.open_tx() as tx:&#xD;&#xA;      while tx.total_size &lt; MAX_TX_SIZE and tx.time &lt; MAX_TX_TIME:&#xD;&#xA;        curOp = self._operations.take()&#xD;&#xA;        if curOp is None:&#xD;&#xA;          break # no more operations&#xD;&#xA;        executedOps.append(curOp)&#xD;&#xA;        curOp.exec(tx)&#xD;&#xA;        if prev_txn.completed:&#xD;&#xA;           break&#xD;&#xA;      # verify success of previous commit&#xD;&#xA;      prev_txn.end_commit() &#xD;&#xA;      # only here we notify the operations that we are done&#xD;&#xA;      prev_txn.notify_ops_completed()&#xD;&#xA;      # start the commit in async manner&#xD;&#xA;      prev_txn = tx.begin_commit()The idea is that we start writing to the disk, and while that is happening, we are already processing the operations in the next&#xA0;transaction. In other words, this allows both writing to the disk and executing the transaction operations to happen concurrently. Here is what this looks like:This change has a huge impact on overall performance. Especially because it can smooth out a slow disk by allowing us to process the operations in the transactions while waiting for the disk. I wrote about this as well in the past. So far, so good, this is how RavenDB has behaved for about a decade or so. So what is the performance optimization?This deserves an explanation. What this piece of code does is determine whether the transaction would complete in a synchronous or asynchronous manner. It used&#xA0;to do that based on whether there were more operations to process in the queue. If we completed a transaction and needed to decide if to complete it asynchronously, we would check if there are additional operations in the queue (currentOperationsCount).The change modifies the logic so that we complete in an async manner if we executed&#xA0;any operation. The change is minor but has a really important effect on the system. The idea is that if we are going to write to the disk (since we have operations to commit), we&#x2019;ll always complete in an async manner, even if there are no more operations in the queue.The change is that the next&#xA0;operation will start processing immediately, instead of waiting for the commit to complete and only then starting to process. It is such a small change, but it had a huge impact on the system performance. Here you can see the effect of this change when writing 100K docs with 10 threads. We tested it on both a good disk and a bad one, and the results are really interesting. The bad disk chokes when we push a lot of data through it (gray line), and you can see it struggling to pick up. On the same disk, using the async version (yellow line), you can see it still struggles (because eventually, you need&#xA0;to hit the disk), but it is able to sustain much higher numbers and complete far&#xA0;more quickly (the yellow line ends before the gray one).On the good disk, which is able to sustain the entire load, we are still&#xA0;seeing an improvement (Blue is the new version, Orange is the old one). We aren&#x2019;t sure yet why the initial stage is slower (maybe just because this is the first test we ran), but even with the slower start, it was able to complete more quickly because its throughput is higher.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I previously asked&#xA0;what the code below does, and mentioned that it should give interesting insight into the kind of mindset and knowledge a candidate has. Take a look at the code again:#include &lt;stdio.h&gt;&#xD;&#xA;#include &lt;stdlib.h&gt;&#xD;&#xA;#include &lt;unistd.h&gt;&#xD;&#xA;#include &lt;fcntl.h&gt;&#xD;&#xA;#include &lt;errno.h&gt;&#xD;&#xA;#include &lt;sys/stat.h&gt;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;#define BUFFER_SIZE (3ULL * 1024 * 1024 * 1024) // 3GB in bytes&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;int main() {&#xD;&#xA;    int fd;&#xD;&#xA;    char *buffer;&#xD;&#xA;    struct stat st;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    buffer = (char *)malloc(BUFFER_SIZE);&#xD;&#xA;    if (buffer == NULL) {&#xD;&#xA;        return 1;&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    fd = open(&quot;large_file.bin&quot;, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);&#xD;&#xA;    if (fd == -1) {&#xD;&#xA;        return 2;&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    if (write(fd, buffer, BUFFER_SIZE) == -1) {&#xD;&#xA;        return 3;&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    if (fsync(fd) == -1) {&#xD;&#xA;        return 4;&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    if (close(fd) == -1) {&#xD;&#xA;        return 5;&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    if (stat(&quot;large_file.bin&quot;, &amp;st) == -1) {&#xD;&#xA;        return 6;&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    printf(&quot;File size: %.2f GB\n&quot;, (double)st.st_size / (1024 * 1024 * 1024));&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    free(buffer);&#xD;&#xA;    return 0;&#xD;&#xA;}This program will output: File size: 2.00 GBAnd it will write 2 GB of zeros to the file:~$ head  large_file.bin  | hexdump -C&#xD;&#xA;00000000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|&#xD;&#xA;*&#xD;&#xA;7ffff000The question is why? And the answer is quite simple. Linux has a limitation of about 2 GB for writes to the disk. Any write call that attempts to write more than that will only write that much, and you&#x2019;ll have to call the system again. This is not&#xA0;an error, mind. The write&#xA0;call is free to write less than&#xA0;the size of the buffer you passed to it.Windows has the same limit, but it is honest about itIn Windows, all write calls accept a 32-bit int as the size of the buffer, so this limitation is clearly communicated in the API. Windows will also ensure that for files, a WriteFile call that completes successfully writes the entire&#xA0;buffer to the disk.And why am I writing 2 GB of zeros? In the code above, I&#x2019;m using malloc(), not calloc(), so I wouldn&#x2019;t expect the values to be zero. Because this is a large allocation, malloc()&#xA0;calls the OS to provide us with the buffer directly, and the OS is contractually obligated to provide us with zeroed pages.</p>
         </article>
         <article id="article-332">
-            <a href="https://www.meziantou.net/nuget-packages-security-risks-and-best-practices.htm" target="_blank">
-                <h2 class="title mb-6" id="article-332">NuGet Packages: security risks and best practices</h2>
+            <a href="https://devblogs.microsoft.com/dotnet/introducing-winforms-analyzers/" target="_blank">
+                <h2 class="title mb-6" id="article-332">WinForms: Analyze This (Me in Visual Basic)</h2>
             </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-2">by Klaus Loeffelmann</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -165,15 +165,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: December 02, 2024
+                posted on: January 21, 2025
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">NuGet packages offer a convenient way to share code, but many developers download them without reviewing the contents or verifying updates when new versions are released. When you install a NuGet package, you are:Downloading code from unknown authors that has likely not been thoroughly reviewed by</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Your WinForms code might have issues&#x2014;maybe an Async call picked the wrong overload, or it&#x2019;s leaking data into resource files. Time to call in a code-shrink! So, WinForms, Analyze This!</p>
         </article>
         <article id="article-333">
-            <a href="https://devblogs.microsoft.com/dotnet/dotnet-9-nuget-resolver/" target="_blank">
-                <h2 class="title mb-6" id="article-333">Dramatically faster package restores with .NET 9&#x2019;s new NuGet resolver</h2>
+            <a href="https://andrewlock.net/creating-a-source-generator-part-13-providing-and-accessing-msbuild-settings-in-source-generators/" target="_blank">
+                <h2 class="title mb-6" id="article-333">Accessing MSBuild properties and user configuration from source generators</h2>
             </a>
-            <p class="mb-2">by Jeff Kluge</p>
+            <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -181,13 +181,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 27, 2024
+                posted on: January 21, 2025
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">.NET 9 introduces a new NuGet dependency graph resolver that dramatically improves package restore performance for large repositories. Learn how this reimagined approach reduces restore times from 30 minutes to just 2 minutes by creating a more efficient dependency graph with fewer nodes.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Creating a source generator - Part 13</p>
         </article>
         <article id="article-334">
-            <a href="https://ayende.com/blog/201763-A/ravendb-cloud-auto-scaling" target="_blank">
-                <h2 class="title mb-6" id="article-334">RavenDB Cloud</h2>
+            <a href="https://ayende.com/blog/201956-A/challenge-what-does-this-code-do" target="_blank">
+                <h2 class="title mb-6" id="article-334">Challenge</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -197,61 +197,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 26, 2024
+                posted on: January 20, 2025
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">RavenDB Cloud has a whole bunch&#xA0;of new features that were quietly launched over the past few months. I discuss them in this post. It turns out that the team keeps on delivering new stuff, faster than I can write about it.The following new auto-scaling feature is a really interesting one because it is pretty simple to understand and has some interesting implications for production.You need to explicitly enable auto-scaling on your cluster. Here is what that looks like:Once you enabled auto-scaling - which usually takes under a minute - you can click the Configure button to set your own policies:Here is what this looks like:The idea is very simple, we routinely measure the load on the system, and if we detect a high CPU threshold for a long time, we&#x2019;ll trigger scaling to the next tier (or maybe higher, see the Upscaling / Downscaling step options) to provide additional resources to the system. If there isn&#x2019;t enough load (as measured in CPU usage), we will downscale back to the lowest instance type. Conceptually, this is a simple setup. You use a lot of CPU, and you get a bigger machine that has more resources to use, until it all balances out. Now, let&#x2019;s talk about the implications of this feature. To start with, it means you only pay based on your actual load, and you don&#x2019;t need to over-provision for peak load. The design of this feature and RavenDB in general means that we can make scale-up and scale-down changes without&#xA0;any interruption in service. This allows you to let auto-scaling manage the size of your instances.In the image above, you may have noticed that I&#x2019;m using the PB line of products (PB10 &#x2026; PB50). That stands for burstable instances, which consume CPU credits when in use. How this interacts with auto-scaling is really interesting.As you use more CPU, you consume all the CPU credits, and your CPU usage becomes high. At this point, auto-scaling kicks in and moves you to a higher tier. That gives you both more baseline CPU credits and a higher CPU credits accrual rate. Together with zero downtime upscaling and downscaling, this means you can benefit from the burstable instances&#x27; lower cost without having to worry about running out of resources.Note that auto-scaling only applies to instances within the same family. So if you are running on burstable instances, you&#x2019;ll get scaling from burstable instances, and if you are running on the P series (non-burstable), your auto-scaling will use P instances.Note that we offer auto-scaling for development instances as well. However, a development instance contains only a single RavenDB instance, so auto-scaling will trigger, but&#xA0;the instance will be inaccessible for up to two minutes while it scales.&#xA0;That isn&#x2019;t an issue for the production tier.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Here is a pretty simple C program, running on Linux. Can you tell me what you expect its output to be?#include &lt;stdio.h&gt;&#xD;&#xA;#include &lt;stdlib.h&gt;&#xD;&#xA;#include &lt;unistd.h&gt;&#xD;&#xA;#include &lt;fcntl.h&gt;&#xD;&#xA;#include &lt;errno.h&gt;&#xD;&#xA;#include &lt;sys/stat.h&gt;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;#define BUFFER_SIZE (3ULL * 1024 * 1024 * 1024) // 3GB in bytes&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;int main() {&#xD;&#xA;    int fd;&#xD;&#xA;    char *buffer;&#xD;&#xA;    struct stat st;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    buffer = (char *)malloc(BUFFER_SIZE);&#xD;&#xA;    if (buffer == NULL) {&#xD;&#xA;        return 1;&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    fd = open(&quot;large_file.bin&quot;, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);&#xD;&#xA;    if (fd == -1) {&#xD;&#xA;        return 2;&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    if (write(fd, buffer, BUFFER_SIZE) == -1) {&#xD;&#xA;        return 3;&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    if (fsync(fd) == -1) {&#xD;&#xA;        return 4;&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    if (close(fd) == -1) {&#xD;&#xA;        return 5;&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    if (stat(&quot;large_file.bin&quot;, &amp;st) == -1) {&#xD;&#xA;        return 6;&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    printf(&quot;File size: %.2f GB\n&quot;, (double)st.st_size / (1024 * 1024 * 1024));&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    free(buffer);&#xD;&#xA;    return 0;&#xD;&#xA;}And what happens when I run:head  large_file.bin  | hexdump -CThis shows both surprising behavior and serves as a good opening for discussion on a whole bunch&#xA0;of issues. In an interview setting, that can give us a lot of insight into the sort of knowledge a candidate has.</p>
         </article>
         <article id="article-335">
-            <a href="https://devblogs.microsoft.com/dotnet/evaluate-the-quality-of-your-ai-applications-with-ease/" target="_blank">
-                <h2 class="title mb-6" id="article-335">Evaluate the quality of your AI applications with ease</h2>
-            </a>
-            <p class="mb-2">by Wendy Breiding (SHE/HER)</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 26, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Get started with the new Microsoft.Extensions.AI.Evaluation library to kickstart your Intelligent Application eveluation journey.</p>
-        </article>
-        <article id="article-336">
-            <a href="https://andrewlock.net/understanding-security-headers-part-2-cross-origin-resource-policy-preventing-hotlinking/" target="_blank">
-                <h2 class="title mb-6" id="article-336">Cross-Origin-Resource-Policy: preventing hotlinking and XSSI attacks</h2>
-            </a>
-            <p class="mb-2">by Andrew Lock</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 26, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Understanding cross-origin security headers - Part 2</p>
-        </article>
-        <article id="article-337">
-            <a href="https://devblogs.microsoft.com/dotnet/dotnet9-openapi/" target="_blank">
-                <h2 class="title mb-6" id="article-337">OpenAPI document generation in .NET 9</h2>
-            </a>
-            <p class="mb-2">by Mike Kistler</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 25, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Introducing the New OpenAPI Document Generation Feature in .NET 9. Let&#x27;s take a look at what it is, how to use it, and how it streamlines API development in .NET.</p>
-        </article>
-        <article id="article-338">
-            <a href="https://www.meziantou.net/update-dependencies-in-nuspec-file-using-renovate.htm" target="_blank">
-                <h2 class="title mb-6" id="article-338">Update dependencies in nuspec file using Renovate</h2>
+            <a href="https://www.meziantou.net/using-roslyn-to-analyze-and-rewrite-code-in-a-solution.htm" target="_blank">
+                <h2 class="title mb-6" id="article-335">Using Roslyn to analyze and rewrite code in a solution</h2>
             </a>
             <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
             <p class="mb-6 flex gap-1.5">
@@ -261,15 +213,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 25, 2024
+                posted on: January 20, 2025
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">While nuspec files are not as common as they used to be, they are still used in some projects when you have special needs. For instance, Meziantou.DotNet.CodingStandard uses a nuspec file to create a package that supports all TFMs. Renovate is a tool to keep your dependencies up-to-date. It support</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;ve written a lot about Roslyn in the context of Roslyn Analyzers and Source Generators. You can also use Roslyn as a library to analyze and generate code. For instance, you can create a console application that loads a solution, find patterns, and rewrite code. While Roslyn Analyzers are tied to</p>
         </article>
-        <article id="article-339">
-            <a href="https://devblogs.microsoft.com/dotnet/introducing-dotnet-scaffold/" target="_blank">
-                <h2 class="title mb-6" id="article-339">dotnet scaffold &#x2013; Next Generation Content Creation for .NET</h2>
+        <article id="article-336">
+            <a href="https://ayende.com/blog/201924-B/production-post-mortem-inspecting-ourselves-to-death" target="_blank">
+                <h2 class="title mb-6" id="article-336">Production post-mortem</h2>
             </a>
-            <p class="mb-2">by Sayed Ibrahim Hashimi</p>
+            <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -277,13 +229,61 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 20, 2024
+                posted on: January 17, 2025
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Introducing a new command line tool dotnet scaffold, a new interactive way to create projects in .NET.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The problem was that this took time&#xA0;- many days or multiple weeks - for us to observe that. But we had the charts to prove that this was pretty consistent. If the RavenDB service was restarted (we did not&#xA0;have to restart the machine), the situation would instantly fix itself and then slowly degrade over time. The scenario in question was performance degradation over time. The metric in question was the average request latency, and we could track a small but consistent rise in this number over the course of days and weeks.&#xA0;The load on the server remained pretty much constant, but the latency of the requests grew.That the customer didn&#x2019;t notice that is an interesting story on its own. RavenDB will automatically prioritize the fastest node in the cluster to be the &#x201C;customer-facing&#x201D; one, and it alleviated the issue to such an extent that the metrics the customer usually monitors were fine. The RavenDB Cloud team looks at the entire system, so we started the investigation long before the problem warranted users&#x2019; attention.I hate&#xA0;these sorts of issues because they are really hard to figure out and subject to basically every caveat under the sun. In this case, we basically had exactly nothing to go on. The workload was pretty consistent, and I/O, memory, and CPU usage were acceptable. There was no starting point to look at.Those are also big&#xA0;machines, with hundreds of GB of RAM and running heavy workloads. These machines have great disks and a lot of CPU power to spare. What is going on here?After a long while, we got a good handle on what is actually going on. When RavenDB starts, it creates memory maps of the file it is working with. Over time, as needed, RavenDB will map, unmap, and remap as needed. A process that has been running for a long while, with many databases and indexes operating, will have a lot&#xA0;of work done in terms of memory mapping.In Linux, you can inspect those details by running:$ cat /proc/22003/smaps&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;600a33834000-600a3383b000 r--p 00000000 08:30 214585                     /data/ravendb/Raven.Server&#xD;&#xA;Size:                 28 kB&#xD;&#xA;KernelPageSize:        4 kB&#xD;&#xA;MMUPageSize:           4 kB&#xD;&#xA;Rss:                  28 kB&#xD;&#xA;Pss:                  26 kB&#xD;&#xA;Shared_Clean:          4 kB&#xD;&#xA;Shared_Dirty:          0 kB&#xD;&#xA;Private_Clean:        24 kB&#xD;&#xA;Private_Dirty:         0 kB&#xD;&#xA;Referenced:           28 kB&#xD;&#xA;Anonymous:             0 kB&#xD;&#xA;LazyFree:              0 kB&#xD;&#xA;AnonHugePages:         0 kB&#xD;&#xA;ShmemPmdMapped:        0 kB&#xD;&#xA;FilePmdMapped:         0 kB&#xD;&#xA;Shared_Hugetlb:        0 kB&#xD;&#xA;Private_Hugetlb:       0 kB&#xD;&#xA;Swap:                  0 kB&#xD;&#xA;SwapPss:               0 kB&#xD;&#xA;Locked:                0 kB&#xD;&#xA;THPeligible:    0&#xD;&#xA;VmFlags: rd mr mw me dw&#xD;&#xA;600a3383b000-600a33847000 r-xp 00006000 08:30 214585                     /data/ravendb/Raven.Server&#xD;&#xA;Size:                 48 kB&#xD;&#xA;KernelPageSize:        4 kB&#xD;&#xA;MMUPageSize:           4 kB&#xD;&#xA;Rss:                  48 kB&#xD;&#xA;Pss:                  46 kB&#xD;&#xA;Shared_Clean:          4 kB&#xD;&#xA;Shared_Dirty:          0 kB&#xD;&#xA;Private_Clean:        44 kB&#xD;&#xA;Private_Dirty:         0 kB&#xD;&#xA;Referenced:           48 kB&#xD;&#xA;Anonymous:             0 kB&#xD;&#xA;LazyFree:              0 kB&#xD;&#xA;AnonHugePages:         0 kB&#xD;&#xA;ShmemPmdMapped:        0 kB&#xD;&#xA;FilePmdMapped:         0 kB&#xD;&#xA;Shared_Hugetlb:        0 kB&#xD;&#xA;Private_Hugetlb:       0 kB&#xD;&#xA;Swap:                  0 kB&#xD;&#xA;SwapPss:               0 kB&#xD;&#xA;Locked:                0 kB&#xD;&#xA;THPeligible:    0&#xD;&#xA;VmFlags: rd ex mr mw me dwHere you can see the first page of entries from this file. Just starting up RavenDB (with no databases created) will generate close to 2,000 entries. The smaps&#xA0;virtual file can be really invaluable for figuring out certain types of problems. In the snippet above, you can see that we have some executable memory ranges mapped, for example.The problem is that over time, memory becomes fragmented, and we may end up with an smaps file that contains tens of thousands (or even hundreds of thousands) of entries.Here is the result of running perf top&#xA0;on the system, you can see that the top three items that hogs most of the resources are related to smaps&#xA0;accounting.This file provides such useful information that we monitor it on a regular basis. It turns out that this can have&#x2026; interesting effects. Consider that while we are running the scan through all the memory mapping, we may need to change&#xA0;the memory mapping for the process. That leads to contention&#xA0;on the kernel locks that protect the mapping, of course. It&#x2019;s expensive to generate the smaps&#xA0;fileReading from /proc/[pid]/smaps&#xA0;is not a simple file read. It involves the kernel gathering detailed memory statistics (e.g., memory regions, page size, resident/anonymous/shared memory usage) for each virtual memory area (VMA) of the process. For large processes with many memory mappings, this can be computationally expensive as the kernel has to gather the required information every time /proc/[pid]/smaps&#xA0;is accessed.When /proc/[pid]/smaps is read, the kernel needs to access memory-related structures. This may involve taking locks on certain parts of the process&#x2019;s memory management system. If this is done too often or across many large processes, it could lead to contention or slow down the process itself, especially if other processes are accessing or modifying memory at the same time.If the number of memory mappings is high, and the frequency with which we monitor is short&#x2026; I hope you can see where this is going. We effectively spent so much time running over this file that we blocked other operations. This wasn&#x2019;t an issue when we just started the process, because the number of memory mappings was small, but as we worked on the system and the number of memory mappings grew&#x2026; we eventually started hitting contention. The solution was two-fold. We made sure that there is only ever a single thread that would read the information from the smaps (previously it might have been triggered from multiple locations). &#xA0;We added some throttling to ensure that we aren&#x2019;t hammering the kernel with requests for this file too often (returning cached information if needed) and we switched from using smaps&#xA0;to using smaps_rollup&#xA0;instead. The rollup version provides much better performance, since it deals with summary data only.With those changes in place, we deployed to production and waited. The result was flat latency numbers and another item that the Cloud team could strike off the board successfully.</p>
+        </article>
+        <article id="article-337">
+            <a href="https://devblogs.microsoft.com/dotnet/meet-the-dotnet-team-at-ndc-london-2025/" target="_blank">
+                <h2 class="title mb-6" id="article-337">Meet the .NET Team at NDC London 2025</h2>
+            </a>
+            <p class="mb-2">by Mehul Harry</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 16, 2025
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Meet the .NET team at NDC London 2025 to explore the latest in .NET 9, Azure, and AI-powered development through keynotes, sessions, and 1:1 meetups.</p>
+        </article>
+        <article id="article-338">
+            <a href="https://ayende.com/blog/201923-B/accidenal-complexity-a-tale-of-two-guids" target="_blank">
+                <h2 class="title mb-6" id="article-338">Accidenal complexity: A tale of two GUIDs</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 15, 2025
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">For a new feature in RavenDB, I needed to associate each transaction with a source ID. The underlying idea is that I can aggregate transactions from multiple sources in a single location, but I need to be able to distinguish between transactions from A and B.Luckily, I had the foresight to reserve space in the Transaction Header, I had a whole 16 bytes available for me. Separately, each Voron database (the underlying storage engine that we use) has a unique Guid identifier. And a Guid is 16 bytes&#x2026; so everything is pretty awesome.There was just one issue. I needed to be able to read transactions as part of the recovery of the database, but we stored the database ID inside&#xA0;the database itself. I figured out that I could also put a copy of the database ID in the global file header and was able to move forward. This is part of a much larger change, so I was going full steam ahead when I realized something pretty awful. That database Guid that I was relying on was already being used as the physical identifier of the storage as part of the way RavenDB distributes data. The reason it matters is that under certain circumstances, we may need to change that. If we change the database ID, we lose the association with the transactions for that database, leading to a whole big mess. I started sketching out a design for figuring out that the database ID has changed, re-writing all the transactions in storage, and&#x2026; a colleague said: why don&#x2019;t we use another ID?It hit me like a ton of bricks. I was using the existing database Guid because it was already there, so it seemed natural to want to reuse it. But there was no benefit in doing that. Instead, it added a lot more complexity because I was adding (many) additional responsibilities to the value that it didn&#x2019;t have before.Creating a Guid is pretty easy, after all, and I was able to dedicate one I called Journal ID to this purpose. The existing Database ID is still there, and it is completely unrelated to it. Changing the Database ID has no impact on the Journal ID, so the problem space is radically simplified.I had to throw away heaps&#xA0;of complexity because of a single comment. I used the Database ID because it was there, never considering having a dedicated value for it. That single suggestion led to a better, simpler design and faster delivery. It is funny how you can sometimes be so focused on the problem at hand, when a step back will give you a much wider view and a better path to the solution.</p>
+        </article>
+        <article id="article-339">
+            <a href="https://devblogs.microsoft.com/dotnet/net-and-net-framework-january-2025-servicing-releases-updates/" target="_blank">
+                <h2 class="title mb-6" id="article-339">.NET and .NET Framework January 2025 servicing releases updates</h2>
+            </a>
+            <p class="mb-2">by Tara,Rahul</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: January 14, 2025
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Welcome to our combined .NET servicing updates for January 2025. Let&#x27;s get into the latest release of .NET &amp; .NET Framework, here is a quick overview of what&#x27;s new in these releases:&#xA;&#xA;&#xA; &#x9;&#xA; &#x9;&#xA; &#x9;&#xA;&#xA;&#xA;Security improvements&#xA;&#xA0;&#xA;&#xA;&#xA;This month you will find several CVEs that have been fixed this month:&#xA;&#xA;&#xA;&#xA;.NET January 2025 Updates&#xA;&#xA0;&#xA;&#xA;&#xA;Below you will find a detailed list of everything from the .NET release for January 2025 including .NET 9.0.1 and .NET 8.0.12:&#xA;&#xA;&#xA;&#xA;.NET Improvements&#xA;&#xA0;&#xA;&#xA;&#xA;&#xA; &#x9;&#xA; &#x9;&#xA; &#x9;&#xA; &#x9;&#xA; &#x9;&#xA;&#xA;Share feedback about this release in the&#xA0;Release feedback issue.&#xA;&#xA;&#xA;....</p>
         </article>
         <article id="article-340">
-            <a href="https://andrewlock.net/understanding-security-headers-part-1-cross-origin-opener-policy-preventing-attacks-from-popups/" target="_blank">
-                <h2 class="title mb-6" id="article-340">Cross-Origin-Opener-Policy: preventing attacks from popups</h2>
+            <a href="https://andrewlock.net/creating-a-source-generator-part-12-reading-compilation-options-and-csharp-version-in-source-generators/" target="_blank">
+                <h2 class="title mb-6" id="article-340">Reading compilation options and the C# version in source generators</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -293,9 +293,9 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 19, 2024
+                posted on: January 14, 2025
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Understanding cross-origin security headers - Part 1</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Creating a source generator - Part 12</p>
         </article>
         <div class="button flex justify-between">
             <a href="33.html"><span class="back arrow"></span></a>
@@ -312,7 +312,7 @@
             <ul class="flex flex-1 items-center gap-x-2 sm:flex-initial">
                 <li class="flex">
                     <p class="flex items-end gap-2 justify-center flex-wrap	">© Relatively General
-                        .NET 2025<span
+                        .NET 2026<span
                             class="inline-block">&nbsp;🚀&nbsp;Theme: Astro Cactus</span>
 
                         <a class="inline-block sm:hover:text-link" href="https://github.com/chrismwilliams/astro-cactus"
@@ -337,7 +337,7 @@
             class="px-4 py-2 sm:py-0 sm:hover:text-textColor sm:hover:underline" href="about.html"> About </a>
     </nav>
 </footer>
-<script src="js/script.js?id=af8f4559935e7bf5bf6015373793411d"></script>
+<script src='js/script-yhlcWZp2.js'></script>
 <script src="/pagefind/pagefind-ui.js"></script>
 
 <!-- Cookie Consent Banner -->

@@ -138,10 +138,10 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-311">
-            <a href="https://ayende.com/blog/201860-C/performance-discovery-managed-vs-unmanaged-memory" target="_blank">
-                <h2 class="title mb-6" id="article-311">Performance discovery</h2>
+            <a href="https://ardalis.com/when-qa-keeps-finding-bugs/" target="_blank">
+                <h2 class="title mb-6" id="article-311">When QA Keeps Finding Bugs</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Ardalis</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -149,15 +149,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: January 03, 2025
+                posted on: February 12, 2025
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When building RavenDB, we occasionally have to deal with some ridiculous numbers in both size and scale. In one of our tests, we ran into an interesting problem. Here are the performance numbers of running a particular query 3 times.First Run: 19,924 msSecond Run: 3,181 msThird Run: 1,179 msThose are not good numbers, so we dug into this to try to figure out what is going on. Here is the query that we are running:from index &#x27;IntFloatNumbers-Lucene&#x27; where Int &gt; 0And the key here is that this index covers 400 million documents, all of which are actually greater than 0. So this is actually a pretty complex task for the database to handle, mostly because of the internals of how Lucene works. Remember that we provide both&#xA0;the first page of the results as well as its total number. So we have to go through the entire result set to find out how many items we have. That is a lot of work. But it turns out that most of the time here isn&#x2019;t actually processing the query, but dealing with the GC. Here are some entries from the GC log while the queries were running:2024-12-12T12:39:40.4845987Z, Type: GC, thread id: 30096, duration: 2107.9972ms, index: 25, generation: 2, reason: Induced&#xD;&#xA;2024-12-12T12:39:53.1359744Z, Type: GC, thread id: 30096, duration: 1650.9207ms, index: 26, generation: 2, reason: Induced&#xD;&#xA;2024-12-12T12:40:07.5835527Z, Type: GC, thread id: 30096, duration: 1629.1771ms, index: 27, generation: 2, reason: Induced&#xD;&#xA;2024-12-12T12:40:20.2205602Z, Type: GC, thread id: 30096, duration: 776.24ms, index: 28, generation: 2, reason: InducedThat sound you heard was me going: Ouch!Remember that this query actually goes through 400M results. Here are the details about its Memory Usage &amp; Object Count:Number of objects for GC&#xA0;(under LuceneIndexPersistence): 190M (~12.63GB)Managed Memory: 13.01GBUnmanaged Memory: 4.53MBWhat is going on? It turns out that Lucene handles queries such as Int&gt;0&#xA0;by creating an array with all the unique values, something similar to:string[] sortedTerms = new string[190_000_000];&#xD;&#xA;long[] termPostingListOffset = new long[190_000_000];This isn&#x2019;t exactly&#xA0;how it works, mind. But the details don&#x2019;t really matter for this story. The key here is that we have an array with a sorted list of terms, and in this case, we have a lot&#xA0;of terms.Those values are cached, so they aren&#x2019;t actually allocated and thrown away each time we query. However, remember that the .NET GC uses a Mark &amp; Sweep algorithm. Here is the core part of the Mark portion of the algorithm:long _marker;&#xD;&#xA;void Mark()&#xD;&#xA;{&#xD;&#xA;    var currentMarker = &#x2B;&#x2B;_marker;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    foreach (var root in GetRoots())&#xD;&#xA;    {&#xD;&#xA;        Mark(root);&#xD;&#xA;    }&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    void Mark(object o)&#xD;&#xA;    {&#xD;&#xA;        // already visited&#xD;&#xA;        if (GetMarket(o) == currentMarker)&#xD;&#xA;            return;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;        foreach (var child in GetReferences(node))&#xD;&#xA;        {&#xD;&#xA;            Mark(child);&#xD;&#xA;        }&#xD;&#xA;    }&#xD;&#xA;}Basically, start from the roots (static variables, items on the stack, etc.), scan the reachable object graph, and mark all the objects in use. The code above is generic, of course (and basically pseudo-code), but let&#x2019;s consider what the performance will be like when dealing with an array of 190M strings. It has to scan&#xA0;the entire thing, which means it is proportional to the number of objects. And we do have quite a lot of those. The problem was the number of managed objects, so we pulled all of those out. We moved the term storage to unmanaged memory, outside the purview of the GC. As a result, we now have the following Memory Usage &amp; Object Count:Number of objects for GC&#xA0;(under LuceneIndexPersistence): 168K (~6.64GB)Managed Memory: 6.72GBUnmanaged Memory: 1.32GBLooking at the GC logs, we now have:2024-12-16T18:33:29.8143148Z, Type: GC, thread id: 8508, duration: 93.6835ms, index: 319, generation: 2, reason: Induced&#xD;&#xA;2024-12-16T18:33:30.7013255Z, Type: GC, thread id: 8508, duration: 142.1781ms, index: 320, generation: 2, reason: Induced&#xD;&#xA;2024-12-16T18:33:31.5691610Z, Type: GC, thread id: 8508, duration: 91.0983ms, index: 321, generation: 2, reason: Induced&#xD;&#xA;2024-12-16T18:33:37.8245671Z, Type: GC, thread id: 8508, duration: 112.7643ms, index: 322, generation: 2, reason: InducedSo the GC time is now in the range of 100ms, instead of several seconds. This change helps both reduce overall GC pause times and greatly reduce the amount of CPU spent on managing garbage. Those are still big queries, but now we can focus on executing the query, rather than managing maintenance tasks. Incidentally, those sorts of issues are one of the key reasons why we built Corax, which can process queries directly on top of persistent structures, without needing to materialize anything from the disk.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A developer manager recently reached out with a concern: their new QA team member was finding too many bugs, leading to frustration among&#x2026;Keep Reading &#x2192;</p>
         </article>
         <article id="article-312">
-            <a href="https://ayende.com/blog/201859-C/sometimes-its-the-hardware" target="_blank">
-                <h2 class="title mb-6" id="article-312">Sometimes it&#x27;s the hardware</h2>
+            <a href="https://devblogs.microsoft.com/dotnet/announcing-generative-ai-for-beginners-dotnet/" target="_blank">
+                <h2 class="title mb-6" id="article-312">Announcing Generative AI for Beginners &#x2013; .NET</h2>
             </a>
-            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-2">by Pablo Lopes</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -165,15 +165,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: December 31, 2024
+                posted on: February 12, 2025
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">An issue&#xA0;was recently raised with a really scary title: Intermittent Index corruption: VoronUnrecoverableErrorException. Those are the kinds of issues that you know&#xA0;are going to be complex. Fixing such issues in the past was usually a Task Force effort and quite a challenge. We asked for more information and started figuring out who would handle the issue (given the time of the year) when the user came back with:After pressing the disk check issue with our hosting provider, we found out that one of the disks was reporting an error but according to our hosting, it was only because the manufacturer&#x27;s guarantee expired, and not the actual disk failure. We swapped the disk anyway, and so far we are not seeing the issue.I&#x2019;m so happy that I can close that issue &#x1F642;</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Introducing a new practical course designed for the .NET community to explore the world of Generative AI.</p>
         </article>
         <article id="article-313">
-            <a href="https://devblogs.microsoft.com/dotnet/top-dotnet-videos-live-streams-of-2024/" target="_blank">
-                <h2 class="title mb-6" id="article-313">Top .NET Videos &amp; Live Streams of 2024</h2>
+            <a href="https://devblogs.microsoft.com/dotnet/dotnet-and-dotnet-framework-february-2025-servicing-updates/" target="_blank">
+                <h2 class="title mb-6" id="article-313">.NET and .NET Framework February 2025 servicing releases updates</h2>
             </a>
-            <p class="mb-2">by James Montemagno</p>
+            <p class="mb-2">by Tara,Rahul</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -181,15 +181,15 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: December 30, 2024
+                posted on: February 11, 2025
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let&#x27;s take a look back at the amazing .NET videos, events, and live streams from 2024!</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A recap of the latest servicing updates for .NET and .NET Framework for February 2025.</p>
         </article>
         <article id="article-314">
-            <a href="https://www.meziantou.net/signing-commits-in-git-using-ssh-keys-on-windows.htm" target="_blank">
-                <h2 class="title mb-6" id="article-314">Signing commits in Git using SSH keys on Windows</h2>
+            <a href="https://devblogs.microsoft.com/dotnet/csharp-on-visual-studio-code-just-got-better-with-enhancements-to-csharp-dev-kit/" target="_blank">
+                <h2 class="title mb-6" id="article-314">C# Dev Kit Updates: .NET Aspire, Hot Reload, and More!</h2>
             </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-2">by Wendy Breiding (SHE/HER)</p>
             <p class="mb-6 flex gap-1.5">
                     <span>
                         <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
@@ -197,93 +197,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: December 30, 2024
+                posted on: February 11, 2025
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Signing commits in Git is a way to verify the authenticity and integrity of your commits. This ensures that the commits are indeed made by you and have not been tampered with. On Windows, it&#x27;s easy to set up SSH-Agent for easy signature. Here&#x27;s how you can do it.First, you need to install SSH on Wi</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Exploring the latest features and enhancements in the C# Dev Kit for VS Code including .NET Aspire orchestration support, new hot reload features, enhanced debugging capabilities, and more!</p>
         </article>
         <article id="article-315">
-            <a href="https://devblogs.microsoft.com/dotnet/critical-dotnet-install-links-are-changing/" target="_blank">
-                <h2 class="title mb-6" id="article-315">Critical: .NET Install links are changing</h2>
-            </a>
-            <p class="mb-2">by Richard Lander</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 26, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">The .NET installers and archives distribution method is currently changing unexpectedly. This change may impact your development, CI, and production infrastructure. It is crucial to validate if you are affected and monitor for any downtime or disruptions.</p>
-        </article>
-        <article id="article-316">
-            <a href="https://ayende.com/blog/201828-B/isnt-it-ironic-money-isnt-transactional" target="_blank">
-                <h2 class="title mb-6" id="article-316">Isn&#x27;t it ironic: Money isn&#x27;t transactional</h2>
-            </a>
-            <p class="mb-2">by Oren Eini</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 24, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I write a transactional database for a living, and the best example of why we want transactions is transferring money between accounts. It is ironic, therefore, that there is no&#xA0;such thing as transactions for money transfers in the real world.&#xD;&#xA;If you care to know why, go back 200 years and consider how a bank would operate in an environment without instant communication. I would actually recommend doing that, it is a great case study in distributed system design. For example, did you know that the Templars used cryptography to send money almost a thousand years ago?&#xD;&#xA;Recently I was reviewing my bank transactions and I found the following surprise. This screenshot is from yesterday (Dec 18), and it looks like a payment that I made is still &#x201C;stuck in the tubes&#x201D; two and a half weeks later.&#xD;&#xA;&#xA0;&#xD;&#xA;I got in touch with the supplier in question to apologize for the delay. They didn&#x2019;t understand what I was talking about. Here is what they see when they go to their bank, they got&#xA0;the money.&#xD;&#xA;&#xA0;&#xD;&#xA;For fun, look at the number of different dates that you can see in their details.&#xD;&#xA;Also, as of right now, my bank account still shows the money as pending approval (to be sent out from my&#xA0;bank).&#xD;&#xA;I might want to recommend that they use a different database. Or maybe I should just convince the bank to approve the payment by the time of the next&#xA0;invoice and see if I can get a bit of that infinite money glitch.</p>
-        </article>
-        <article id="article-317">
-            <a href="https://devblogs.microsoft.com/dotnet/top-dotnet-blogs-posts-of-2024/" target="_blank">
-                <h2 class="title mb-6" id="article-317">Top .NET Blogs Posts of 2024</h2>
-            </a>
-            <p class="mb-2">by James Montemagno</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 23, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Let&#x27;s take a look back at the top .NET blogs from 2024 from exciting announcements, deep dives on new features, and so much more.</p>
-        </article>
-        <article id="article-318">
-            <a href="https://www.meziantou.net/reading-usn-journal-with-dotnet.htm" target="_blank">
-                <h2 class="title mb-6" id="article-318">Reading USN Journal with .NET</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 23, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">If you want to detect when a file is created, modified, or deleted, you can use the FileSystemWatcher class in .NET. However, this is only available when the application is running. What if you want to detect changes that occurred while the application was not running? The USN Journal is a feature</p>
-        </article>
-        <article id="article-319">
-            <a href="https://devblogs.microsoft.com/dotnet/dotnet-conf-2024-recap/" target="_blank">
-                <h2 class="title mb-6" id="article-319">.NET Conf 2024 Recap &#x2013; Celebrating .NET 9, AI, Community, &amp; More</h2>
-            </a>
-            <p class="mb-2">by .NET Team</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: December 17, 2024
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">.NET Conf 2024 is over, but you can catch up with all the announcement and fun with video recordings, slides, demos, and more.</p>
-        </article>
-        <article id="article-320">
-            <a href="https://andrewlock.net/building-latex-projects-on-windows-easily-with-docker/" target="_blank">
-                <h2 class="title mb-6" id="article-320">Building LaTeX projects on Windows easily with Docker</h2>
+            <a href="https://andrewlock.net/preventing-client-side-cross-site-scripting-vulnerabilities-with-trusted-types/" target="_blank">
+                <h2 class="title mb-6" id="article-315">Preventing client-side cross-site-scripting vulnerabilities with Trusted Types</h2>
             </a>
             <p class="mb-2">by Andrew Lock</p>
             <p class="mb-6 flex gap-1.5">
@@ -293,9 +213,89 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: December 17, 2024
+                posted on: February 11, 2025
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe how I build LaTeX projects on a Windows machine by using Docker and the blang/latex image&#x2026;</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe how the Trusted Types Content-Security-Policy feature can protect you against cross-site-scripting attacks.&#x2026;</p>
+        </article>
+        <article id="article-316">
+            <a href="https://ayende.com/blog/201955-A/ravendb-7-1-next-gen-pagers" target="_blank">
+                <h2 class="title mb-6" id="article-316">RavenDB 7.1</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 10, 2025
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Even though RavenDB 7.0 isn&#x2019;t quite out of the gate yet (expect the release very&#xA0;soon), I want to start talking about the RavenDB 7.1 release. This release is going to represent the biggest change in RavenDB in about 7 years, and at the same time, it is expected to be a complete non-event for most people.We care enough about performance that we have both a dedicated team to verify it&#xA0;as well as really talented people whose sole job is to run benchmarks and optimize RavenDB. This year, the goal was to test RavenDB&#x2019;s performance when running on large&#xA0;machines (many hundreds of GBs or RAM, dozens of cores, etc). The idea was to find bottlenecks and remove them, and we quickly found a few. Performance optimization is often a very repetitive process. Find a problem, figure out the root cause, and move on. It is a process full of small changes and 0.1% improvements. The key is that if you practice this routinely, you end up with real measurable results over time, since your changes compound. Most of the time, these are the changes you celebrate:Here you can see a 6.6% increase in the number of operations per millisecond. That is a pretty big change, especially since it affects reading documents from storage. We were roughly two months into this process when we ran into the end of the line. The scenario in question was 95% reads / 5% writes, with the idea of seeing how quickly the system responds under load, but without stressing it to the limits. Take a look at our findings:What you can see here is that creating a transaction is&#xA0;costly, andover 50% of that cost is due to contention over a lock. We didn&#x2019;t notice that until we had a lot&#xA0;of cores to go around, since there wasn&#x2019;t a sufficient number of threads actively contending for this lock. Once we started looking for it, the problem was very apparent and visible on smaller machines as well. RavenDB creates a single transaction per request, so that means we are spending a lot of time doing essentially nothing useful. What is worse, this is actively&#xA0;spinning. So the more cores we have, the more CPU we&#x2019;ll use and the less useful work we&#x2019;ll do. Yuck!When we looked at the root cause, the problem became pretty apparent. Take a look at the following snippet:_txCreation.EnterReadLock(); // creating read transaction&#xD;&#xA;try&#xD;&#xA;{&#xD;&#xA;    _cancellationTokenSource.Token.ThrowIfCancellationRequested();&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    tx = new LowLevelTransaction(previous.LowLevelTransaction, transactionPersistentContext, context);&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    ActiveTransactions.Add(tx);&#xD;&#xA;}&#xD;&#xA;finally&#xD;&#xA;{&#xD;&#xA;    _txCreation.ExitReadLock();&#xD;&#xA;}&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;using (PreventNewTransactions()) // during commit of write transaction&#xD;&#xA;{&#xD;&#xA;    if (tx.Committed &amp;&amp; tx.FlushedToJournal)&#xD;&#xA;        Interlocked.Exchange(ref _transactionsCounter, tx.Id);&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    State = tx.State;&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    Journal.Applicator.OnTransactionCommitted(tx);&#xD;&#xA;    ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();&#xD;&#xA;    Journal.UpdateCacheForJournalSnapshots();&#xD;&#xA;&#xD;&#xA;&#xD;&#xA;    tx.OnAfterCommitWhenNewTransactionsPrevented();&#xD;&#xA;}What happens is that during the commit of a write transaction we need to make updates to a bunch of places. We also need all new read transactions to see all our changes at once. So during commit, we take a short lock to update a couple of locations. And when we create a write transaction, we hold a read lock to be able to properly read all those values safely.This particular code (and the approach in general) dates back to the very early days of Voron:On one hand, I look at this code and cringe internally. On the other&#xA0;hand, it has served us really well for a long time. Of course, on the gripping hand, that code has been around for long enough to have grown some barnacles. Notice the OnAfterCommitWhenNewTransactionsPrevented() call we have there? It is meant to allow other operations&#xA0;that need to run while no read transactions are allowed, in order to maintain in-memory consistency. Fixing this issue was both straightforward and quite complex at the same time. Instead of storing all the data in various places, I introduced the following record:record EnvironmentStateRecord(&#xD;&#xA;    Pager.State DataPagerState, &#xD;&#xA;    long TransactionId,&#xD;&#xA;    ImmutableDictionary&lt;long, PageFromScratchBuffer&gt; ScratchPagesTable,&#xD;&#xA;    TreeRootHeader Root,&#xD;&#xA;    long NextPageNumber,&#xD;&#xA;    (long Number, long Last4KWritePosition) Journal,&#xD;&#xA;    object ClientState);The actual details of what it does aren&#x2019;t really that interesting. What is important is that we have an immutable record that is being generated by the write transaction. That record contains all the database state that we carry over between transactions. When we want to publish this state, we can just make a single atomic write to a pointer, no need for a lock.Of course, it can&#x2019;t&#xA0;be that simple. We needed to essentially convert large portions of the code to take their state from the environment record and provide a way for higher-level code to add their own state to the record on write. That took about two months of hard&#xA0;work, I think. Not complicated work, just grinding through all of those places, figuring out the best way to represent that, and making all the necessary changes. Unfortunately, that wasn&#x2019;t the only lock convoy we found. Files inside RavenDB are held by a class called Pager (since it serves pages&#xA0;of data). A file (Pager) may hold multiple States, which is a fancy way of referring to a memory-mapped range we use. The Pager may hold multiple such&#xA0;mapping concurrently. For example, if we increase the file size, we need to map the memory again&#xA0;- so for a certain period of time, we have two such mappings.A transaction may create a reference to such a state (and thus may access the mapping) for its lifetime. At the end of the transaction, we can release the state, and if it is the last reference, we&#x2019;ll close the mapping. This is implemented using the following code:This runs for multiple&#xA0;Pagers for each transaction, mind you. The actual AddRef()&#xA0;call is very cheap, but the lock&#x2026;public void AddRef() =&gt; Interlocked.Increment(ref _refs);As you can see from the image, this is also pretty old code. The problem was how to deal with the issue. I have&#xA0;to be able to keep track of the mapped memory if a transaction is using it, but at the same time, I want to dispose of it quickly if it isn&#x2019;t being used. The answer to this question was to lean on the GC. Instead of implementing AddRef()&#xA0;/ Release(), I hold the Pager.State&#xA0;object and handle disposal in the finalizer. If there is a reference to it, the finalizer isn&#x2019;t called, so this gives me the exact behavior I want, for free. However&#x2026; I also need to be able to dispose of this explicitly when closing the pager. A common scenario is that I&#x2019;m closing the Pager and deleting the directory. If I have an outstanding reference to the file, that will fail. Here is how I&#x2019;m dealing with the issue. The Pager holds a Weak-Reference to the State and may explicitly dispose of it:public void Dispose()&#xD;&#xA;{&#xD;&#xA;    foreach (WeakReference&lt;State&gt; state in _states)&#xD;&#xA;    {&#xD;&#xA;        if (state.TryGetTarget(out var v))&#xD;&#xA;        {&#xD;&#xA;            v.Dispose();&#xD;&#xA;        }&#xD;&#xA;    }&#xD;&#xA;}That also allowed me to refactor the way we deal with files in general inside Voron. The first version of Voron did everything in managed code (including significant P/Invoke and cross-platform work). At some point, we introduced a native DLL (PAL - Platform Abstraction Layer - written in C) that allowed us to have a more consistent API.The issue was that there was no clean division of labor between the native C code and the managed code, and some responsibilities were split between them in a way that wasn&#x2019;t very clean. RavenDB is using ZigTo be rather more exact, I&#x2019;m using Zig as a build system to make cross-compilation a lot&#xA0;easier. I initially moved everything to use Zig, but it turns out that Zig isn&#x2019;t able to produce DLLs that would run properly on older versions of Windows. At least, nothing that I did convinced Zig to give me something that wouldn&#x2019;t fail to load. So we are still using MSVC to compile for Windows and then Zig to both Linux &amp; Mac (x64 &amp; ARM). If you have good ideas on how to solve that, I would really appreciate it.As a final thought, this work took several months, and when I got to the end, we got a pull request with some interesting numbers (&#x2B;11.3K LOC, -11.2K LOC). I have to admit that I feel a bit bad about that for the reviewers &#x1F642;. I was really hoping that I would get a net negative result in the number of lines changed, but that couldn&#x2019;t be helped. The end result is that all of our state is now far simpler, but we didn&#x2019;t actually change&#xA0;anything in the way we behave. We removed two frequently hit lock convoys and allowed RavenDB to be far more efficient. How efficient? Well&#x2026; that is a bit complex to answer, because we didn&#x2019;t stop here. There are more things that happened in RavenDB 7.1 that I need to talk to you about. We&#x2019;ll cover them in my next post.</p>
+        </article>
+        <article id="article-317">
+            <a href="https://devblogs.microsoft.com/dotnet/mtp-adoption-frameworks/" target="_blank">
+                <h2 class="title mb-6" id="article-317">Microsoft.Testing.Platform: Now Supported by All Major .NET Test Frameworks</h2>
+            </a>
+            <p class="mb-2">by Amaury Lev&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 10, 2025
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">All major .NET testing frameworks are now supporting Microsoft.Testing.Platform. Whether you are using Expecto, MSTest, NUnit, TUnit, or xUnit.net, you can now leverage the new testing platform to run your tests.</p>
+        </article>
+        <article id="article-318">
+            <a href="https://www.meziantou.net/using-snapshot-testing-to-validate-ef-core-schema.htm" target="_blank">
+                <h2 class="title mb-6" id="article-318">Using Snapshot Testing to validate EF Core schema</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 10, 2025
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">When using Entity Framework Core, I prefer to view the generated schema as SQL. This allows me to easily validate what EF is doing behind the scenes and ensures that no attributes are missed, such as accidentally using nvarchar(max).My main objectives are:Be notified when the schema changesReview t</p>
+        </article>
+        <article id="article-319">
+            <a href="https://devblogs.microsoft.com/dotnet/dotnet-9-networking-improvements/" target="_blank">
+                <h2 class="title mb-6" id="article-319">.NET 9 Networking Improvements</h2>
+            </a>
+            <p class="mb-2">by M&#xE1;&#x148;a,Natalia,Anton</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 06, 2025
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Introducing new networking features in .NET 9 including HTTP space, HttpClientFactory, security and more!</p>
+        </article>
+        <article id="article-320">
+            <a href="https://devblogs.microsoft.com/dotnet/servicing-release-advisory-aspnetcore-23/" target="_blank">
+                <h2 class="title mb-6" id="article-320">ASP.NET Core on .NET Framework servicing release advisory: ASP.NET Core 2.3</h2>
+            </a>
+            <p class="mb-2">by Daniel Roth</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: February 04, 2025
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">ASP.NET Core 2.1 has been reshipped as ASP.NET Core 2.3 to help users on the unsupported ASP.NET Core 2.2 move to a supported version.</p>
         </article>
         <div class="button flex justify-between">
             <a href="31.html"><span class="back arrow"></span></a>
@@ -312,7 +312,7 @@
             <ul class="flex flex-1 items-center gap-x-2 sm:flex-initial">
                 <li class="flex">
                     <p class="flex items-end gap-2 justify-center flex-wrap	">© Relatively General
-                        .NET 2025<span
+                        .NET 2026<span
                             class="inline-block">&nbsp;🚀&nbsp;Theme: Astro Cactus</span>
 
                         <a class="inline-block sm:hover:text-link" href="https://github.com/chrismwilliams/astro-cactus"
@@ -337,7 +337,7 @@
             class="px-4 py-2 sm:py-0 sm:hover:text-textColor sm:hover:underline" href="about.html"> About </a>
     </nav>
 </footer>
-<script src="js/script.js?id=af8f4559935e7bf5bf6015373793411d"></script>
+<script src='js/script-yhlcWZp2.js'></script>
 <script src="/pagefind/pagefind-ui.js"></script>
 
 <!-- Cookie Consent Banner -->

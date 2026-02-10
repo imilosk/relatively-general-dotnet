@@ -138,8 +138,8 @@
 <main id="main" data-pagefind-body>
     <section aria-label="Blog post list">
         <article id="article-1481">
-            <a href="https://ayende.com/blog/192323-A/ill-be-speaking-on-build-stuff-conference-this-week" target="_blank">
-                <h2 class="title mb-6" id="article-1481">I&#x2019;ll be speaking on Build Stuff conference this week</h2>
+            <a href="https://ayende.com/blog/192705-A/the-bug-in-valgrind" target="_blank">
+                <h2 class="title mb-6" id="article-1481">The bug in Valgrind</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -149,29 +149,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 09, 2020
+                posted on: December 18, 2020
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ll be speaking in the Build Stuff conference about the design of RavenDB Cloud, how we built the backend and control plane for a multi cloud, highly available database as a service platform.&#xA;The key concept that I&#x2019;m going to be talking about is that we need simplicity, in the design, in development and in operations.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Valgrind is an essential tool for anyone who is working with native code, especially if you are running C or C&#x2B;&#x2B; code. I have a codebase that is about 15,000 lines of C code, and Valgrind is absolutely essential for me to check my work. It has caught quite a few of my slips.I recently switched systems and when running the same code using Valgrind, I started to get annoying warnings, like this:==16896==&#xA;--16896-- WARNING: Serious error when reading debug info&#xA;--16896-- When reading debug info from /tmp/test.txt:&#xA;--16896-- can&#x27;t read file to inspect ELF header&#xA;==16896==The key issue is that this is, as you can imagine, a data file, why is Valgrind attempting to read ELF details from the file? It took me a while to narrow things down, but I found that I could reproduce this easily with the following code:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          #define _GNU_SOURCE             /* See feature_test_macros(7) */&#xA;        &#xA;        &#xA;          &#xA;          #include &lt;fcntl.h&gt;&#xA;        &#xA;        &#xA;          &#xA;          #include &lt;stdio.h&gt;&#xA;        &#xA;        &#xA;          &#xA;          #include &lt;sys/types.h&gt;&#xA;        &#xA;        &#xA;          &#xA;          #include &lt;sys/stat.h&gt;&#xA;        &#xA;        &#xA;          &#xA;          #include &lt;unistd.h&gt;&#xA;        &#xA;        &#xA;          &#xA;          #include &lt;fcntl.h&gt;&#xA;        &#xA;        &#xA;          &#xA;          #include &lt;sys/mman.h&gt;&#xA;        &#xA;        &#xA;          &#xA;           &#xA;        &#xA;        &#xA;          &#xA;          int main() {&#xA;        &#xA;        &#xA;          &#xA;              int fd = open(&quot;test.txt&quot;, O_RDWR|O_CREAT|O_TRUNC|O_DSYNC|O_DIRECT|O_CLOEXEC, S_IRUSR | S_IWUSR);&#xA;        &#xA;        &#xA;          &#xA;           &#xA;        &#xA;        &#xA;          &#xA;              if(fd == -1) { &#xA;        &#xA;        &#xA;          &#xA;                  printf(&quot;file can&#x27;t be opened\n&quot;);&#xA;        &#xA;        &#xA;          &#xA;                  return 1;&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;              &#xA;        &#xA;        &#xA;          &#xA;              int ret = ftruncate(fd, 256*1024);&#xA;        &#xA;        &#xA;          &#xA;              if(ret == -1){&#xA;        &#xA;        &#xA;          &#xA;                  printf(&quot;file can&#x27;t be extended\n&quot;);&#xA;        &#xA;        &#xA;          &#xA;                  return 1;&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;              char* buf = mmap(0, 1024*64, PROT_READ, MAP_SHARED , fd, 0);&#xA;        &#xA;        &#xA;          &#xA;              if(buf == MAP_FAILED){&#xA;        &#xA;        &#xA;          &#xA;                  printf(&quot;cannot map\n&quot;);&#xA;        &#xA;        &#xA;          &#xA;                  return 1;&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;           &#xA;        &#xA;        &#xA;          &#xA;              munmap(buf, 1024*64);&#xA;        &#xA;        &#xA;          &#xA;              close(fd);&#xA;        &#xA;        &#xA;          &#xA;           &#xA;        &#xA;        &#xA;          &#xA;              return 0;&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          a.c&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;If you&#x2019;ll run this code with the following command, you should see the warning:clang a.c &amp;&amp; valgrind&#xA0;&#xA0; ./a.outNote that this is with clang 10.0.0-4ubuntu1 and valgrind-3.16.1. I decided to check what Valgrind is doing using strace, which gave the following output:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          openat(AT_FDCWD, &quot;test.txt&quot;, O_RDWR|O_CREAT|O_TRUNC|O_DSYNC|O_DIRECT|O_CLOEXEC, 0600) = 3&#xA;        &#xA;        &#xA;          &#xA;          ftruncate(3, 262144)                    = 0&#xA;        &#xA;        &#xA;          &#xA;          mmap(0x4a4d000, 262144, PROT_READ, MAP_SHARED|MAP_FIXED, 3, 0) = 0x4a4d000&#xA;        &#xA;        &#xA;          &#xA;          statx(3, &quot;&quot;, AT_STATX_SYNC_AS_STAT|AT_EMPTY_PATH, STATX_ALL, {stx_mask=STATX_ALL, stx_attributes=0, stx_mode=S_IFREG|0600, stx_size=262144, ...}) = 0&#xA;        &#xA;        &#xA;          &#xA;          readlink(&quot;/proc/self/fd/3&quot;, &quot;/tmp/test.txt&quot;, 4096) = 13&#xA;        &#xA;        &#xA;          &#xA;          statx(AT_FDCWD, &quot;/tmp/test.txt&quot;, AT_STATX_SYNC_AS_STAT, STATX_ALL, {stx_mask=STATX_ALL, stx_attributes=0, stx_mode=S_IFREG|0600, stx_size=262144, ...}) = 0&#xA;        &#xA;        &#xA;          &#xA;          pread64(3, 0x1002ea98a0, 1024, 0)       = -1 EINVAL (Invalid argument)&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          strace.log&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;Digging a little deeper, let&#x2019;s highlight the root cause of this:openat(AT_FDCWD, &quot;test.txt&quot;, O_RDWR|O_CREAT|O_TRUNC|O_DSYNC|O_DIRECT|O_CLOEXEC, 0600) = 3mmap(0x4a4d000, 262144, PROT_READ, MAP_SHARED|MAP_FIXED, 3, 0) = 0x4a4d000pread64(3, 0x1002ea98a0, 1024, 0) = -1 EINVAL (Invalid argument)I&#x2019;m opening the test.txt file using the O_DIRECT file, which limits the kind of things that you can do with the file. In particular, it means that all access should be on page aligned memory. The pread64() call is not using a page aligned buffer to read from the file.What is interesting is that my code isn&#x2019;t issuing any such call, this is coming from inside of Valgrind itself. In particular, I believe that this is the offending piece of code: di_notify_mmap is called whenever we map code, and is complex. The basic issue is that it does not respect the limits of files created with O_DIRECT and that causes the pread() call to fail. At this point, Valgrind outputs the warning.Brief look at the code indicate that this should be fine. This is a data mapping, not executable mapping, but it still make the attempt. Debugging into Valgrind is beyond the scope of what I want to do. For now, I changed things so any mmap() won&#x2019;t use the file descriptor with O_DIRECT, and that resolved things for me.</p>
         </article>
         <article id="article-1482">
-            <a href="https://www.meziantou.net/rendering-raw-unescaped-html-in-blazor.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1482">Rendering raw/unescaped HTML in Blazor</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 09, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">By default, everything you write in a razor file is escaped to prevent any injection. This is very nice to be safe by default. But there are some use cases where you want to generate an HTML string in the code and render it as-is. For instance, you can convert a markdown string to HTML and render i</p>
-        </article>
-        <article id="article-1483">
-            <a href="https://ayende.com/blog/192289-A/spending-political-capital" target="_blank">
-                <h2 class="title mb-6" id="article-1483">Spending political capital</h2>
+            <a href="https://ayende.com/blog/192673-A/ravendb-node-js-typescript-client-5-0-released" target="_blank">
+                <h2 class="title mb-6" id="article-1482">RavenDB Node.JS / TypeScript client 5.0 released</h2>
             </a>
             <p class="mb-2">by Oren Eini</p>
             <p class="mb-6 flex gap-1.5">
@@ -181,109 +165,13 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: November 06, 2020
+                posted on: December 17, 2020
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">As I&#x2019;m writing this, there seem to be a huge amount of furor over the US elections. I don&#x2019;t want to get into that particular mess, but I had a few idle thoughts about how to fix one of the root issues here. The fact that the system of voting we use is based on pen &amp; paper and was designed when a computer was a job title for a practical mathematician. A large part of the problem is that we have to wait for a particular date, and there are polls, which seems to be used for information and misinformation at the same time. This means that people are basically trying to vote with insufficient information. It would be much more straightforward if the whole system was transparent and iterative. Note: This is a blog post I&#x2019;m writing to get this idea out of my head. I did very little research and I&#x2019;m aware that there is probably a wide body of proposals in the area, which I didn&#x2019;t look at.The typical manner I have seen suggested for solving the election problem is to ensure the following properties:Verifying that my vote was counted properly.Verifying that the total votes were counted fairly.(maybe) Making it hard / impossible to show a 3rd party who I voted to.The last one is obviously pretty hard to do, but is important to prevent issues with pressuring people to vote for particular candidates.I don&#x2019;t have the cryptographic chops to come up with such a system, not do I think that it would be particularly advisable. I would rather come up with a different approach entirely. In my eyes, we can have a system where we have the following:The government issues each voter with a token (coin) that they can spend. That will probably get you to think about blockchains, but I don&#x2019;t think this is a good idea. If we are talking about technical details, let&#x2019;s say that the government issues a certificate to each voter (who generates their own private key, obviously).The voter can then give that voting coin to a 3rd party. For example, but signing a vote for a particular candidate using their certificate. These coins can then be &#x201C;spent&#x201D; during election. The winner of the election is the candidate that got more than 50% of the total coins spent. As it currently stands, this is a pretty horrible system. To start with, this means that it is painfully obvious who voted for whom. I think that a transparent voting record might be a good idea in general, but there are multitude of problems with that. So like many great ideas in theory, we shouldn&#x2019;t allow it. This is usually where [complex cryptography] comes into play, but I think that a much better option would be to introduce the notion of brokers into the mix. What do I mean?While you could spend your coin directly on a particular candidate, you could also spend it at a broker. That broker is then delegated to use your vote. You may use a party affiliated broker or a neutral one. Imagine a 2 party system when you have the Olive party and the Opal party. I&#x2019;m using obscure colors here to try to reduce any meaning people will read into the color choices. For what it&#x2019;s worth, red &amp; blue as party colors have opposite meaning in the states and Israel, which is confusing.Let&#x2019;s take two scenarios into considerations:A voter spend their coin on the Olive Political Action Committee, who is known to support Olive candidates. In this case, you can clearly track who they want to vote for. Note that they aren&#x2019;t voting directly for a candidate, because they want to delegate their vote to a trusted party to manage that.A voter spend their coin on a Private Broker #435. While they do that, they instruct the broker to pass their vote to the Olive PAC broker, or a particular candidate, etc. The idea is that the private broker is taking votes from enough people that while it is possible to know that you went through a particular broker, you can&#x2019;t know who you voted for. The broker itself obviously know, but that is similar to tracking the behavior of a voting booth, which also allows you to discover who voted to whom. I think that it is possible to set things up so the broker itself won&#x2019;t be able to make this association, however. Secured Sum would work, probably. A key point for me is that this is an issue that is internal to a particular broker, not relevant to the system as a whole.So far, I don&#x2019;t think that I&#x2019;m doing too much, but the idea here is that I want to take things further. Instead of stopping the system there, we allow to change the vote. In other words, instead of having to vote blindly, we can look at the results and adjust them. In the Apr 2019 Israeli election, over 330 thousands votes were discarded because they didn&#x2019;t reach the minimum threshold. That was mostly because the polls were wrong, because I don&#x2019;t think that people would have voted for those parties if they knew that they are on the verge. Being able to look at that and then adjust the votes would allow all those votes to be counted. Taking this further, once we have the system of brokers and electronic votes in place, there is no reason to do an election once every N years. Instead, we can say that the coins are literal political capital. In order to remain in office, the elected officials must keep holding over 50% of the amount of spent coins. It would probably be advisable to actually count these on a weekly / bi-weekly basis, but doing this on a short time intervals means that there is going to be a lot more accountability. Speaking from Israel&#x2019;s point of view, there have been sadly numerous cases where candidates campaigned on A, then did the exact opposite once elected. There is even a couple of famous sayings about it:We promised, but didn&#x2019;t promise to fulfil.What you see from here you can&#x2019;t see from there.Note that this is likely to result in more populist system, since the elected officials are going to pay attention to the electorate on an ongoing basis, rather than just around election time. I can think of a few ways to handle that. For example, once seated, for a period of time, you&#x2019;ll need &gt; 50% of the coins to get an elected official out of office.A few more details:For places like the states, where you vote for multiple things at the same time (local, state, federal house &amp; senate, president), you&#x2019;ll get multiple coins to spend, and can freely spend them in different locations. Or, via a broker, designate that they are to be spend on particular directions.A large part of the idea is that a voter can withdraw their coin from a broker or candidate at any time.Losing the key isn&#x2019;t a big deal. You go to the government, revoke your pervious certificate and get a new one. The final computation will simply ignore any revoked coins.The previous point is also important to dealing with people who died or moved. It is trivial to ensure that the dead don&#x2019;t vote in this scheme, and you can verify that a single person don&#x2019;t have coins from multiple different locations.The implications of such a system are interesting, in my eyes. The idea is that you delegate the vote to someone you trust, directly or indirectly. That can be a candidate, but most likely will be a group. The usual term in the states in PAC, I believe. The point is that you then have active oversight by the electorate on the elected officials. Over seven years ago I wrote a post about what I most dislike in the current election system. You are forced to vote on your top issue, but you usually have a far more complex system of values that you have to balance. For example, let&#x2019;s say that my priorities are:National securityFiscal policyHealthcareAccess to violet flowersI may have to balance between a candidate that want to ban violet flowers but propose to lower taxes or a candidate that wants to raise taxes and want to legalize violet flowers. Which one do I choice? If I can shift my vote as needed, I can make that determination at the right political time. During the budget month, my votes goes to $PreferredFiscalPolicy candidate and then if they don&#x2019;t follow my preferences on violet flowers, I can shift. This will have the benefit of killing the polls industry, since you can just look at where the political capital is. And it will allow the electorate to have a far greater control over the government. I assume that elected officials will then be paying very careful attention to how much political capital they have to spend and act accordingly. I wonder if I should file this post under science fiction, because that might make a good background for world building. What do you think of this system? And what do you think the effects of it would be?</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m very happy to announce that the TypeScript / Node.js client API for RavenDB was recently updated to 5.0. This release updates the API to support Time Series API and bulk insert. Beyond the new API and functionality, we have also put a lot of effort into the ergonomics of this release. One of the major changes that was made was to the way you use indexes in the API. Thanks to Yawar Jamal are due, for suggesting this improvement and sending the initial PR. What does this means? Well, here is an index definition in the new version:&#xA;    &#xA;      &#xA;        &#xA;  &#xA;    &#xA;    &#xA;&#xA;        &#xA;&#xA;&#xA;  &#xA;  &#xA;  &#xA;    &#xA;&#xA;    &#xA;      This file contains bidirectional Unicode text that may be interpreted or compiled differently than what appears below. To review, open the file in an editor that reveals hidden Unicode characters.&#xA;      Learn more about bidirectional Unicode characters&#xA;    &#xA;&#xA;&#xA;              Show hidden characters&#xA;&#xA;&#xA;&#xA;&#xA;  &#xA;    &#xA;    &#xA;&#xA;&#xA;&#xA;  &#xA;        &#xA;          &#xA;          class UsersSearch extends AbstractJavaScriptIndexCreationTask&lt;User&gt; {&#xA;        &#xA;        &#xA;          &#xA;              public constructor() {&#xA;        &#xA;        &#xA;          &#xA;                  super();&#xA;        &#xA;        &#xA;          &#xA;                  this.map(User, u =&gt; ({ // search across multiple fields&#xA;        &#xA;        &#xA;          &#xA;                    query: [u.email, u.email.split(&#x27;@&#x27;), u.name, u.alias, u.username]&#xA;        &#xA;        &#xA;          &#xA;                  }));&#xA;        &#xA;        &#xA;          &#xA;              }&#xA;        &#xA;        &#xA;          &#xA;          }&#xA;        &#xA;  &#xA;&#xA;&#xA;&#xA;    &#xA;&#xA;  &#xA;&#xA;&#xA;      &#xA;      &#xA;        view raw&#xA;        &#xA;          index.ts&#xA;        &#xA;        hosted with &#x2764; by GitHub&#xA;      &#xA;    &#xA;&#xA;The actual index definition isn&#x2019;t that interesting. You can see a longer explanation of exactly what I&#x2019;m doing in this post. What is really interesting is that I can define this using code, no messing about with strings. This is checked by the compiler and is going to give you a similar developer experience as using Linq in .NET.I also mentioned ergonomics, right? Let&#x2019;s look at some of the other features that you now get from the client. It&#x2019;s funny, because this has nothing to do with code execution, but is very important to just Getting Things Done.Take a look at this:Even though we are passing a string to the query, we have intellisense to assist us and warn about typos.That applies all over the API, so you don&#x2019;t really have to make an effort, It Just Works.</p>
         </article>
-        <article id="article-1484">
-            <a href="https://www.meziantou.net/csharp9-init-only-properties-are-not-read-only.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1484">C#9 - init-only properties are not read-only at runtime</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 04, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">C#9 adds the concept of init-only properties. These properties can be set when creating the object and become get only once object creation has been completed.C#copyclass Person&#xA;{&#xA;    public string Name { get; init; }&#xA;    public string Username { get; init; }&#xA;}&#xA;&#xA;void A()&#xA;{&#xA;    var author = new Pers</p>
-        </article>
-        <article id="article-1485">
-            <a href="https://ardalis.com/estimates-are-necessary/" target="_blank">
-                <h2 class="title mb-6" id="article-1485">Estimates Are Necessary</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 03, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This is the fifth and last of the 5 Laws of Software Estimates. I expanded on the fourth law of software estimates in my previous article&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-1486">
-            <a href="https://ardalis.com/attempt-made-to-access-socket/" target="_blank">
-                <h2 class="title mb-6" id="article-1486">Solved - An attempt was made to access a socket in a way forbidden</h2>
-            </a>
-            <p class="mb-2">by Ardalis</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 03, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x27;m assuming you&#x27;re here because you are seeing this error and are wondering why: The reason is most likely due to a Windows Update that&#x2026;Keep Reading &#x2192;</p>
-        </article>
-        <article id="article-1487">
-            <a href="https://andrewlock.net/deploying-asp-net-core-applications-to-kubernetes-part-10-creating-an-exec-host-deployment-for-running-one-off-commands/" target="_blank">
-                <h2 class="title mb-6" id="article-1487">Creating an &#x27;exec-host&#x27; deployment for running one-off commands</h2>
-            </a>
-            <p class="mb-2">by Andrew Lock</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 03, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Deploying ASP.NET Core applications to Kubernetes - Part 10</p>
-        </article>
-        <article id="article-1488">
-            <a href="https://enterprisecraftsmanship.com/posts/domain-model-purity-lazy-loading/" target="_blank">
-                <h2 class="title mb-6" id="article-1488">Domain model purity and lazy loading</h2>
-            </a>
-            <p class="mb-2">by Vladimir Khorikov</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 02, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m continuing the topic of domain model purity. Last time, we talked about domain model purity in the context of getting the current date and time. Today, we&#x2019;ll discuss it with regards to lazy loading.</p>
-        </article>
-        <article id="article-1489">
-            <a href="https://www.meziantou.net/how-to-get-asp-net-core-logs-in-the-output-of-xunit-tests.htm" target="_blank">
-                <h2 class="title mb-6" id="article-1489">How to get ASP.NET Core logs in the output of xUnit tests</h2>
-            </a>
-            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
-            <p class="mb-6 flex gap-1.5">
-                    <span>
-                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
-                             xmlns="http://www.w3.org/2000/svg"><path
-                                xmlns="http://www.w3.org/2000/svg"
-                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
-                    </span>
-                posted on: November 02, 2020
-            </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Automated tests are very useful to validate that your application behaves correctly. When a test fails, this means something&#x27;s wrong in your code. But this also means you&#x27;ll have to debug your code&#x2026; In this case, you need to get all the possible information to understand what happened.If your appli</p>
-        </article>
-        <article id="article-1490">
-            <a href="https://www.stevejgordon.co.uk/additional-http-sockets-dns-and-tls-telemetry-in-dotnet-5" target="_blank">
-                <h2 class="title mb-6" id="article-1490">Additional HTTP, Sockets, DNS and TLS Telemetry in .NET 5</h2>
+        <article id="article-1483">
+            <a href="https://www.stevejgordon.co.uk/playing-with-csharp-9-top-level-programs-records-and-elasticsearch-dotnet" target="_blank">
+                <h2 class="title mb-6" id="article-1483">Playing with C#9 Top-level Programs, Records and Elasticsearch.NET</h2>
             </a>
             <p class="mb-2">by Steve Gordon</p>
             <p class="mb-6 flex gap-1.5">
@@ -293,9 +181,121 @@
                                 xmlns="http://www.w3.org/2000/svg"
                                 d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
                     </span>
-                posted on: October 30, 2020
+                posted on: December 16, 2020
             </p>
-            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post, I describe and demonstrate some of the new telemetry and event counters from sources such as HTTP, Sockets, DNS and TLS.</p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">This post is for C# Advent Calendar 2020 organized by Matthew Groves. I recommend that you check out some of the other posts being published throughout December! In this post, I thought it was long overdue that I spent a little time playing around with some new C# 9 language features. C# 9 introduced quite [&#x2026;]</p>
+        </article>
+        <article id="article-1484">
+            <a href="https://ayende.com/blog/192641-A/nhibernate-profiler-entity-framework-profiler-6-0-rtmed" target="_blank">
+                <h2 class="title mb-6" id="article-1484">NHibernate Profiler &amp; Entity Framework Profiler 6.0 RTMed!</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 16, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;m very happy to announce that we have recently released version 6.0 of Entity Framework Profiler and NHibernate Profiler. Here are some of the highlights:&#xA;&#xA;This new version brings quite a lot to the table. We applied a lot of lessons to optimize the performance of the profiler so it can process events faster and in a more efficient manner. We also fully integrated it with the async/await model that became so popular. For Entity Framework users, we now support all versions of EF, running on .NET 4.7 all the way to .NET 5.0 and anything in between.&#xA;What I think is the crown jewels of this release, however, is the new Azure integration feature. We initially built this feature to allow you to profiler serverless code and Azure Functions, but it turned out that this is really useful.&#xA;The Profiler Azure Integration allows you to setup a storage container on Azure that would accept the profiled output from your application. Pretty simple, right? The profiler application will monitor the container and show you the events as they are written, so even if you don&#x2019;t have direct access to profiler the code (very common on serverless / Azure scenarios), you can still profiler your code. That helps a lot as well when talking about running inside containers, Kubernetes, etc. The usual way the profiler and the application communicate is over a TCP channel, but given the myriad of network topologies that are now in common use, this can get complex. By utilizing Azure Integration, we can resolve the whole solution and give you a seamless way to handle profile your code.&#xA;On demand profiling of your code is just one part of the new feature. You can now do continuous profiling of your system.&#xA0;Because we throw the events into a blob container in Azure, and given that the data is compressed and cheap to store, you can now afford to simply record all the queries in your application and come back to it a few days or weeks later and look into interesting behaviors.&#xA;That is also a large part of why we worked on improving our performance, we expect to be dealing with a lot of data.&#xA;You are also able to specify a certain timeframe for this kind of profiling, as well as specify whatever we should remove the data after looking on it or retain it. The new profiling feature gives you a way to answer: &#x201C;What queries run in production on Monday between 9:17 and 10:22 AM&#x201D;. This comes with all of the usual benefits of the profiler, meaning that:&#xA;&#xA;You can correlate each query to the exact line of code that triggered it.&#xA;The profiler analyze the database interaction and raise alerts on bad behaviors.&#xA;&#xA;The last part is done not on a single query but with access to the full state of the system. It can allow you to find hot spots in your program, patterns of data access that leads to much higher latency and cost a lot more money.&#xA;To celebrate the new release, we are offering the profilers with 20% discount for the new quarter as well as offer a bundling option. You can get the Entity Framework Profiler or the NHibernate Profiler bundled with our Cosmos DB Profiler.</p>
+        </article>
+        <article id="article-1485">
+            <a href="https://ardalis.com/data-deficient-messages/" target="_blank">
+                <h2 class="title mb-6" id="article-1485">Data Deficient Messages</h2>
+            </a>
+            <p class="mb-2">by Ardalis</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 16, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">A common feature of distributed architectures is message-based communication between systems or microservices. Whether using a message bus&#x2026;Keep Reading &#x2192;</p>
+        </article>
+        <article id="article-1486">
+            <a href="https://andrewlock.net/should-i-use-self-contained-or-framework-dependent-publishing-in-docker-images/" target="_blank">
+                <h2 class="title mb-6" id="article-1486">Should I use self-contained or framework-dependent publishing in Docker images?</h2>
+            </a>
+            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 15, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I compare the impact of the framework-dependent vs self-contained mode on Docker image size, taking layer caching into account&#x2026;</p>
+        </article>
+        <article id="article-1487">
+            <a href="https://www.meziantou.net/never-forget-a-if-when-multi-targeting-dotnet-libraries-or-applications.htm" target="_blank">
+                <h2 class="title mb-6" id="article-1487">Never forget a #if when multi-targeting .NET libraries or applications</h2>
+            </a>
+            <p class="mb-2">by G&#xE9;rald Barr&#xE9;</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 14, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">It&#x27;s very easy to multitarget a library in the csproj. All you need to do is listing all target frameworks in the TargetFrameworks element:csproj (MSBuild project file)copy&lt;Project Sdk=&quot;Microsoft.NET.Sdk&quot;&gt;&#xA;  &lt;PropertyGroup&gt;&#xA;    &lt;TargetFrameworks&gt;net5.0;netstandard2.1;netstandard2.</p>
+        </article>
+        <article id="article-1488">
+            <a href="https://enterprisecraftsmanship.com/posts/handling-unique-constraint-violations/" target="_blank">
+                <h2 class="title mb-6" id="article-1488">How to handle unique constraint violations</h2>
+            </a>
+            <p class="mb-2">by Vladimir Khorikov</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 08, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">Today, we&#x2019;ll discuss how to best handle unique constraint violations.</p>
+        </article>
+        <article id="article-1489">
+            <a href="https://ayende.com/blog/192609-C/speaking-at-azure-israel-advanced-cosmos-db" target="_blank">
+                <h2 class="title mb-6" id="article-1489">Speaking at Azure Israel: Advanced Cosmos DB</h2>
+            </a>
+            <p class="mb-2">by Oren Eini</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 08, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">I&#x2019;ll be speaking at the Azure Israel group at the end of this month, you can register here:In this session, Oren Eini will discuss how you can use Azure Cosmos DB in your application. We&#x27;ll go over data models, proper design, and best practices for building applications using Cosmos DB.We are going to look into some of the common pitfalls with regards to both performance and cost.</p>
+        </article>
+        <article id="article-1490">
+            <a href="https://andrewlock.net/using-action-results-and-content-negotiation-with-route-to-code/" target="_blank">
+                <h2 class="title mb-6" id="article-1490">Using action results and content negotiation with &quot;route-to-code&quot; APIs</h2>
+            </a>
+            <p class="mb-2">by Andrew Lock</p>
+            <p class="mb-6 flex gap-1.5">
+                    <span>
+                        <svg width="1.25rem" fill="currentColor" viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg"><path
+                                xmlns="http://www.w3.org/2000/svg"
+                                d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z"></path></svg>
+                    </span>
+                posted on: December 08, 2020
+            </p>
+            <p class="max-w-full w-full line-clamp-5 text-justify mb-20">In this post I describe how to use content negotiation with route-to-code by executing ActionResults.&#x2026;</p>
         </article>
         <div class="button flex justify-between">
             <a href="148.html"><span class="back arrow"></span></a>
@@ -312,7 +312,7 @@
             <ul class="flex flex-1 items-center gap-x-2 sm:flex-initial">
                 <li class="flex">
                     <p class="flex items-end gap-2 justify-center flex-wrap	">© Relatively General
-                        .NET 2025<span
+                        .NET 2026<span
                             class="inline-block">&nbsp;🚀&nbsp;Theme: Astro Cactus</span>
 
                         <a class="inline-block sm:hover:text-link" href="https://github.com/chrismwilliams/astro-cactus"
@@ -337,7 +337,7 @@
             class="px-4 py-2 sm:py-0 sm:hover:text-textColor sm:hover:underline" href="about.html"> About </a>
     </nav>
 </footer>
-<script src="js/script.js?id=af8f4559935e7bf5bf6015373793411d"></script>
+<script src='js/script-yhlcWZp2.js'></script>
 <script src="/pagefind/pagefind-ui.js"></script>
 
 <!-- Cookie Consent Banner -->
